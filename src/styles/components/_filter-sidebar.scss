@@ -1,0 +1,106 @@
+.filter {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 80px; // Adjust this value based on your navbar height
+  height: calc(100vh - 80px); // Subtract navbar height
+  overflow-y: auto; // Allow scrolling if content is too long
+
+  &__card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    padding: 1.5rem;
+  }
+
+  &__header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #000000;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #000000;
+  }
+
+  &__section {
+    margin-bottom: 1.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__subtitle {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 0.75rem;
+  }
+
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+      display: none;
+    }
+  }
+
+  &__checkbox {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #000000;
+    border-radius: 0.25rem;
+    position: relative;
+    transition: all 0.2s ease;
+
+    input:checked + & {
+      background-color: #000000;
+      border-color: #000000;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    color: #000000;
+    font-weight: 500;
+  }
+
+  // Hide on mobile
+  @media (max-width: 768px) {
+    display: none;
+  }
+}

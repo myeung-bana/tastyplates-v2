@@ -1,0 +1,19 @@
+.restaurant-card {
+  &__tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  &__tag {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 0.25rem 0.5rem; // Reduced horizontal padding
+    border-radius: 0.25rem; // Changed to smaller border radius for rectangle shape
+    font-size: 0.55rem;
+    font-weight: 500;
+    white-space: nowrap;
+    text-transform: uppercase; // Optional: makes tags look more distinct
+    letter-spacing: 0.025em; // Optional: slightly improves readability of uppercase text
+  }
+}

@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "base/_variables.scss";
+@import "base/_typography.scss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+// Global Styles
+body {
+  font-family: $font-sans;
+  color: $color-gray-800;
+  background-color: $color-white;
+  margin: 0;
+  padding: 3rem 0 0 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: $color-primary;
+  font-family: $font-sans;
+}
+
+a {
+  color: $color-primary;
+  text-decoration: none;
+  font-family: $font-sans;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

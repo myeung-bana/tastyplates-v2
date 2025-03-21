@@ -1,0 +1,131 @@
+@import "@/styles/base/_variables.scss";
+@import "@/styles/base/_typography.scss";
+
+.lists-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-8;
+}
+
+.create-list-form {
+  display: flex;
+  gap: $spacing-4;
+  margin-bottom: $spacing-8;
+
+  .list-name-input {
+    padding: $spacing-2;
+    border: 1px solid $color-gray-300;
+    border-radius: 4px;
+    flex: 1;
+    max-width: 300px;
+  }
+}
+
+.lists-container {
+  display: grid;
+  gap: $spacing-8;
+}
+
+.list-section {
+  background: $color-white;
+  border-radius: 8px;
+  padding: $spacing-4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-4;
+
+    h2 {
+      margin: 0;
+      color: $color-gray-800;
+    }
+  }
+}
+
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: $spacing-4;
+}
+
+.restaurant-card {
+  border: 1px solid $color-gray-300;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+    .restaurant-actions {
+      opacity: 1;
+    }
+  }
+}
+
+.restaurant-image-container {
+  position: relative;
+  height: 160px;
+
+  .restaurant-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .restaurant-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: $spacing-2;
+    background: rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+}
+
+.restaurant-info {
+  padding: $spacing-2;
+
+  h3 {
+    margin: 0;
+    color: $color-gray-800;
+  }
+
+  .cuisine {
+    color: $color-gray-800;
+    font-size: 0.9rem;
+    margin: $spacing-2 0;
+  }
+
+  .rating {
+    color: $color-primary;
+    font-weight: 600;
+  }
+}
+
+.move-select {
+  padding: $spacing-2;
+  border: none;
+  border-radius: 4px;
+  background: $color-white;
+  color: $color-gray-800;
+  font-size: 0.9rem;
+}
+
+.icon-button {
+  padding: $spacing-2;
+  background: none;
+  border: none;
+  color: $color-gray-800;
+  cursor: pointer;
+
+  &:hover {
+    color: $color-primary;
+  }
+}

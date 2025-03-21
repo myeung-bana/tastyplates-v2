@@ -1,0 +1,136 @@
+@import "@/styles/base/_variables.scss";
+@import "@/styles/base/_typography.scss";
+
+.profile-section {
+  background: $color-white;
+  border-radius: 8px;
+  padding: $spacing-4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: $spacing-8;
+
+  h2 {
+    color: $color-gray-800;
+    margin-bottom: $spacing-4;
+  }
+}
+
+.profile-info-container {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: $spacing-8;
+  align-items: start;
+}
+
+.profile-image-section {
+  .profile-image-wrapper {
+    position: relative;
+    width: 150px;
+    height: 150px;
+
+    .profile-image {
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .image-upload-button {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: $color-primary;
+      color: $color-white;
+      padding: $spacing-base;
+      border-radius: 50%;
+      cursor: pointer;
+
+      &:hover {
+        background: $color-primary-dark;
+      }
+    }
+  }
+}
+
+.profile-details {
+  display: grid;
+  gap: $spacing-4;
+}
+
+.field {
+  display: grid;
+  gap: $spacing-base;
+
+  label {
+    font-weight: 600;
+    color: $color-gray-800;
+  }
+
+  input {
+    padding: $spacing-base;
+    border: 1px solid $color-gray-300;
+    border-radius: 4px;
+    font-family: $font-sans;
+
+    &:disabled {
+      background-color: $color-gray-300;
+    }
+  }
+}
+
+.palate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $spacing-4;
+}
+
+.palate-card {
+  background: $color-gray-300;
+  padding: $spacing-4;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &.selected {
+    background: linear-gradient(
+      to bottom right,
+      $color-primary,
+      $color-primary-dark
+    );
+    color: $color-white;
+
+    h3 {
+      color: $color-white;
+    }
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.password-form {
+  max-width: 400px;
+  display: grid;
+  gap: $spacing-4;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: $spacing-8;
+}
+
+.dashboard-button {
+  padding: $spacing-base $spacing-4;
+  background: $color-primary;
+  color: $color-white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: $spacing-base;
+
+  &:hover {
+    background: $color-primary-dark;
+  }
+}
