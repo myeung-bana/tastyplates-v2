@@ -10,7 +10,7 @@ type tParams = { slug: string };
 
 const ListsDetailPage = () => {
   const params = useParams();
-  const slug = params.slug;
+  const slug = params?.slug;
 
   const currentList = lists.find((list) => list.id === slug);
 

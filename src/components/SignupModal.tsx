@@ -7,7 +7,7 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { restaurants } from "@/data/dummyRestaurants";
 import Link from "next/link";
-import RegisterPage from "@/app/register/page";
+import RegisterPage from "@/pages/Register/Register";
 
 interface SignupModalProps {
   isOpen: boolean;

@@ -24,7 +24,7 @@ export const reviewlist: ReviewList[] = [
         date: "March 15, 2024",
         comment:
           "The burgers here are absolutely amazing! The meat is always perfectly cooked and juicy.",
-        images: ["/images/Photos-Review1.png", "/images/food-review-001.jpg"],
+        images: ["/images/Photos-Review1.png", "/images/food-review-001.jpg", "/images/Photos-Review1.png", "/images/food-review-001.jpg", "/images/Photos-Review1.png", "/images/food-review-001.jpg"],
         userImage: "/profile-icon.svg",
       },
       {
@@ -81,7 +81,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440004",
+        id: "550e8400-e29b-41d4-a716-446655440004f",
         authorId: "111e4567-e89b-12d3-a456-426614174001",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 5,
@@ -91,7 +91,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440005",
+        id: "550e8400-e29b-41d4-a716-446655440005f",
         authorId: "222e4567-e89b-12d3-a456-426614174002",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 4,
@@ -101,7 +101,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440004",
+        id: "550e8400-e29b-41d4-a716-446655440004g",
         authorId: "111e4567-e89b-12d3-a456-426614174001",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 5,
@@ -111,7 +111,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440005",
+        id: "550e8400-e29b-41d4-a716-446655440005g",
         authorId: "222e4567-e89b-12d3-a456-426614174002",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 4,
@@ -121,7 +121,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440004",
+        id: "550e8400-e29b-41d4-a716-446655440004h",
         authorId: "111e4567-e89b-12d3-a456-426614174001",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 5,
@@ -131,7 +131,7 @@ export const reviewlist: ReviewList[] = [
         userImage: "/profile-icon.svg",
       },
       {
-        id: "550e8400-e29b-41d4-a716-446655440005",
+        id: "550e8400-e29b-41d4-a716-446655440005d",
         authorId: "222e4567-e89b-12d3-a456-426614174002",
         restaurantId: "550e8400-e29b-41d4-a716-446655440000", // Burger House
         rating: 4,

@@ -1,9 +1,14 @@
 import React from "react";
 import Image from "next/image";
-import { FiHeart, FiMessageCircle, FiStar } from "react-icons/fi";
-import "@/styles/pages/_restaurant-details.scss";
+import { FiHeart, FiMessageCircle, FiStar, FiThumbsUp } from "react-icons/fi";
 import { palates } from "@/data/dummyPalate";
 import { users } from "@/data/dummyUsers";
+import PhotoSlider from "./Restaurant/Details/PhotoSlider";
+
+// Styles
+import "@/styles/pages/_restaurant-details.scss";
+import 'slick-carousel/slick/slick-theme.css'
+import 'slick-carousel/slick/slick.css'
 
 interface ReviewBlockProps {
   review: {
@@ -53,33 +58,36 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           </div>
         </div>
         <div className="review-block__rating">
-          <FiStar className="review-block__star" /> <span>{review.rating}</span>
+          {[...Array(review.rating)].map((i, index) =>
+            <FiStar key={index} className="review-block__star fill-[#31343F] stroke-none w-3.5 h-3.5" />
+          )}
         </div>
       </div>
-      <div className="review-block__image-container">
+      <div className="review-block__content">
+        <p className="review-block__text">{review.comment}</p>
+      </div>
+      <div className="">
         {" "}
-        {review.images.length > 0 && (
+        {/* {review.images.length > 0 && review.images?.map((image) => (
           <Image
-            src={review.images[0]} // Display the first image from the review
+            src={image} // Display the first image from the review
             alt="Review"
             width={400}
             height={400}
             className="review-block__image"
           />
-        )}
+        ))} */}
+        <PhotoSlider reviewPhotos={review.images} />
       </div>
-      <div className="review-block__content">
-        <div className="review-block__actions">
+      <div className="review-block__actions">
           <button className="review-block__action-btn">
-            <FiHeart />
-            <span>2</span>
+            <FiThumbsUp className="w-[21px] h-auto stroke-[#494D5D]"/>
+            <span className="ml-2 text-center">2</span>
           </button>
-          <button className="review-block__action-btn">
+          {/* <button className="review-block__action-btn">
             <FiMessageCircle />
-          </button>
+          </button> */}
         </div>
-        <p className="review-block__text">{review.comment}</p>
-      </div>
     </div>
   );
 };

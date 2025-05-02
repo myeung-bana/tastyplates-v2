@@ -12,6 +12,7 @@ import { Review } from "@/data/dummyReviews";
 import { cuisines } from "@/data/dummyCuisines";
 import ReviewModal from "@/components/ReviewModal";
 import { useState } from "react";
+import { DollarSign } from "lucide-react";
 
 type tParams = { slug: string };
 
@@ -39,7 +40,7 @@ export default function RestaurantDetail() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const params = useParams();
-  const slug = params.slug;
+  const slug = params?.slug;
 
   const restaurant = restaurants.find((r) => r.id.toString() === slug);
 
@@ -85,87 +86,153 @@ export default function RestaurantDetail() {
   };
 
   return (
-    <div className="restaurant-detail">
-      <div className="restaurant-detail__hero">
-        <Image
-          src={restaurant.image}
-          alt={restaurant.name}
-          fill
-          className="restaurant-detail__hero-image"
-          priority
-        />
-        <div className="restaurant-detail__hero-overlay"></div>
-      </div>
-
+    <div className="restaurant-detail mt-10">
       <div className="restaurant-detail__container">
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
-            <h1 className="restaurant-detail__name">{restaurant.name}</h1>
-            <div className="restaurant-detail__meta">
-              <div className="restaurant-detail__cuisine">
-                {restaurant.cuisineIds.map((cuisineId) => {
-                  const cuisine = cuisines.find((c) => c.id === cuisineId);
-                  return cuisine ? (
-                    <span key={cuisine.id} className="cuisine-tag">
-                      {cuisine.name}
+            <div className="flex justify-between">
+              <div>
+                <h1 className="restaurant-detail__name">{restaurant.name}</h1>
+                <div className="restaurant-detail__meta">
+                  <div className="restaurant-detail__cuisine">
+                    {restaurant.cuisineIds.map((cuisineId) => {
+                      const cuisine = cuisines.find((c) => c.id === cuisineId);
+                      return cuisine ? (
+                        <span key={cuisine.id} className="cuisine-tag">
+                          &#8226; {cuisine.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                  <div className="restaurant-detail__price">
+                    <span>{restaurant.priceRange}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-row flex-nowrap gap-4">
+                <button
+                  className="restaurant-detail__review-button"
+                  onClick={() => setIsReviewModalOpen(true)}
+                >
+                  Write a Review
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-row gap-6">
+              <div className="rounded-l-[24px] relative restaurant-detail__hero w-2/3">
+                <Image
+                  src={restaurant.image}
+                  alt={restaurant.name}
+                  fill
+                  className="restaurant-detail__image rounded-[24px] w-full h-[307px]"
+                  priority
+                />
+              </div>
+              <div className="flex items-center justify-center rounded-[24px] text-center w-1/3">
+                <div className="restaurant-detail__details">
+                  <div className="restaurant-detail__detail-item">
+                    <FiMapPin />
+                    <span>{restaurant.address}</span>
+                  </div>
+                  <div className="restaurant-detail__detail-item">
+                    <FiPhone />
+                    <span>{restaurant.phone}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 mt-10">
+              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-l-3xl pt-4 pb-2">
+                <h1 className="font-bold">Rating</h1>
+                <div className="rating-summary w-full">
+                  <div className="rating-column">
+                    <h3>Chinese Palate</h3>
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-[#E36B00] text-2xl font-medium">{japaneseAvgRating}</span>
+                    </div>
+                    <span className="review-count">
+                      ({japanesePalateReviews.length} reviews)
                     </span>
-                  ) : null;
-                })}
-              </div>
-              <div className="restaurant-detail__price">
-                <FiDollarSign />
-                <span>{restaurant.priceRange}</span>
-              </div>
-            </div>
-            <div className="restaurant-detail__details">
-              <div className="restaurant-detail__detail-item">
-                <FiMapPin />
-                <span>{restaurant.address}</span>
-              </div>
-              <div className="restaurant-detail__detail-item">
-                <FiPhone />
-                <span>{restaurant.phone}</span>
-              </div>
-            </div>
-            <div className="rating-summary">
-              <div className="rating-column">
-                <h3>Japanese Palate Rating</h3>
-                <div className="rating-value">
-                  <FiStar />
-                  <span>{japaneseAvgRating}</span>
+                  </div>
+                  <div className="h-[85%] border-l border-[#CACACA]"></div>
+                  <div className="rating-column">
+                    <h3>Overall Rating</h3>
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-[#E36B00] text-2xl font-medium">{overallAvgRating}</span>
+                    </div>
+                    <span className="review-count">
+                      ({allReviews.length} reviews)
+                    </span>
+                  </div>
+                  <div className="h-[85%] border-l border-[#CACACA]"></div>
+                  <div className="rating-column">
+                    <h3>Restaurant Palate</h3>
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-[#E36B00] text-2xl font-medium">{italianMexicanAvgRating}</span>
+                    </div>
+                    <span className="review-count">
+                      ({italianMexicanPalateReviews.length} reviews)
+                    </span>
+                  </div>
                 </div>
-                <span className="review-count">
-                  ({japanesePalateReviews.length} reviews)
-                </span>
               </div>
+              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-r-3xl pt-4 pb-2">
+                <h1 className="font-bold">Community Recognition</h1>
+                <div className="rating-summary w-full">
+                  <div className="rating-column">
+                    <Image src='/flag.svg' height={40} width={40} alt="Flag icon" />
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-xl font-medium">{japaneseAvgRating}</span>
+                    </div>
+                    <span className="text-sm">
+                      Must Revisit
+                    </span>
+                  </div>
 
-              <div className="rating-column">
-                <h3>Overall Rating</h3>
-                <div className="rating-value">
-                  <FiStar />
-                  <span>{overallAvgRating}</span>
-                </div>
-                <span className="review-count">
-                  ({allReviews.length} reviews)
-                </span>
-              </div>
+                  <div className="rating-column">
+                    <Image src='/phone.svg' height={40} width={40} alt="Flag icon" />
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-xl font-medium">{overallAvgRating}</span>
+                    </div>
+                    <span className="text-sm">
+                      Insta-Worthy
+                    </span>
+                  </div>
 
-              <div className="rating-column">
-                <h3>Restaurant Palate Rating</h3>
-                <div className="rating-value">
-                  <FiStar />
-                  <span>{italianMexicanAvgRating}</span>
+                  <div className="rating-column">
+                    <Image src='/cash.svg' height={40} width={40} alt="Flag icon" />
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-xl font-medium">{italianMexicanAvgRating}</span>
+                    </div>
+                    <span className="text-sm">
+                      Value for Money
+                    </span>
+                  </div>
+                  <div className="rating-column">
+                    <Image src='/helmet.svg' height={40} width={40} alt="Flag icon" />
+                    <div className="rating-value">
+                      {/* <FiStar className="fill-yellow-500" /> */}
+                      <span className="text-xl font-medium">{italianMexicanAvgRating}</span>
+                    </div>
+                    <span className="text-sm">
+                      Best Service
+                    </span>
+                  </div>
                 </div>
-                <span className="review-count">
-                  ({italianMexicanPalateReviews.length} reviews)
-                </span>
               </div>
             </div>
           </div>
         </div>
 
         <div className="restaurant-detail__content">
-          <div className="restaurant-detail__description">
+          {/* <div className="restaurant-detail__description">
             <h2>About</h2>
             <p>{restaurant.description}</p>
           </div>
@@ -199,14 +266,8 @@ export default function RestaurantDetail() {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
           <div className="restaurant-detail__reviews">
-            <button
-              className="restaurant-detail__review-button"
-              onClick={() => setIsReviewModalOpen(true)}
-            >
-              Write a Review
-            </button>
             <RestaurantReviews reviewlist={[restaurantReviews]} />
           </div>
         </div>

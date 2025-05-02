@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FiStar, FiClock, FiMapPin, FiMessageCircle } from "react-icons/fi";
+import { MdOutlineMessage } from "react-icons/md";
+import { FaRegHeart, FaStar} from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
@@ -36,47 +38,59 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   };
   const cuisineNames = getCuisineNames(restaurant.cuisineIds);
   return (
-    <Link href={`/restaurants/${restaurant.id}`} className="restaurant-card">
-      <div className="restaurant-card__image">
+    <div className="restaurant-card">
+      <div className="restaurant-card__image relative">
         <Image
           src={restaurant.image}
           alt={restaurant.name}
-          width={400}
-          height={200}
+          width={304}
+          height={228}
           className="restaurant-card__img"
         />
-        <span className="restaurant-card__price">{restaurant.priceRange}</span>
-      </div>
-
-      <div className="restaurant-card__content">
-        <div className="restaurant-card__header">
-          <h2 className="restaurant-card__name">{restaurant.name}</h2>
-          <div className="restaurant-card__rating">
-            <FiStar className="restaurant-card__icon" />
-            <span>{restaurant.rating}</span>
-          </div>
-        </div>
-
-        <div className="restaurant-card__tags">
-          {cuisineNames.map((cuisineName, index) => (
-            <span key={index} className="restaurant-card__tag">
-              {cuisineName}
-            </span> // Loop through cuisine names
-          ))}
-        </div>
-
-        <div className="restaurant-card__info">
-          <div className="restaurant-card__location">
-            <FiMapPin className="restaurant-card__icon" />
-            <span>{restaurant.location}</span>
-          </div>
-          <div className="restaurant-card__location">
-            <FiMessageCircle className="restaurant-card__icon" />
-            <span>{reviewsCount}</span>
-          </div>
+        {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
+        <div className="flex flex-col gap-2 absolute top-4 right-4 text-[#31343F]">
+          <button className="rounded-full p-2 bg-white" onClick={(e) => e.stopPropagation()}>
+            <FaRegHeart />
+          </button>
+          <button className="rounded-full p-2 bg-white">
+            <MdOutlineMessage />
+          </button>
         </div>
       </div>
-    </Link>
+      <Link href={`/restaurants/${restaurant.id}`}>
+        <div className="restaurant-card__content">
+          <div className="restaurant-card__header">
+            <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
+            <div className="restaurant-card__rating">
+              <FaStar className="restaurant-card__icon -mt-1" />
+              <span>{restaurant.rating}</span>
+              <span>({restaurant.reviews})</span>
+            </div>
+          </div>
+
+          <div className="restaurant-card__info">
+            <div className="restaurant-card__location">
+              {/* <FiMapPin className="restaurant-card__icon" /> */}
+              <span className="line-clamp-2">{restaurant.location}</span>
+            </div>
+            {/* <div className="restaurant-card__location">
+              <FiMessageCircle className="restaurant-card__icon" />
+              <span>{reviewsCount}</span>
+            </div> */}
+          </div>
+
+          <div className="restaurant-card__tags">
+            {cuisineNames.map((cuisineName, index) => (
+              <span key={index} className="restaurant-card__tag">
+                &#8226; {cuisineName}
+              </span> // Loop through cuisine names
+            ))}
+            &nbsp;&#8226; $
+          </div>
+
+        </div>
+      </Link>
+    </div>
   );
 };
 

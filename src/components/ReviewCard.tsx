@@ -48,35 +48,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
     .filter((name) => name); // Filter out any null values
 
   return (
-    <div className={`review-card !w-[${width}]`}>
-      {/* <div className="review-card__header">
-        <div className="review-card__user-info">
-          <h3>{restaurant?.name}</h3>
-          <Link
-            href={`/restaurants/${data.id}`}
-            className="review-card__restaurant"
-          >
-            {restaurant?.address}
-          </Link>
-          <div className="review-block__palate-tags">
-            {restaurantPalateNames?.map((tag, index) => (
-              <span key={index} className="review-block__palate-tag">
-                {tag}{" "}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="review-card__rating">
-          <FiStar className="review-card__star" />
-          <span>{data.rating}</span>
-        </div>
-      </div> */}
-      {/* <ModalPopup modalIsOpen={isModalOpen} closeModal={() => setIsModalOpen(false)}>
-        <div className="flex flex-col gap-4 h-[400px] w-[250px]">
-          <h1 className="text-black font-black">HELLO WORLD</h1>
-          <img src={selectedReview?.images[0]} alt="" />
-        </div>
-      </ModalPopup> */}
+    <div className={`review-card !w-[${width}px]`}>
       <ReviewDetailModal
         data={data}
         isOpen={isModalOpen}
@@ -103,7 +75,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             className="review-card__user-image !rounded-2xl"
           />
           <div className="review-card__user-info">
-            <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-xs !font-bold">
+            <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-sm !font-bold">
               {author?.name || "Unknown User"}
             </h3>
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
