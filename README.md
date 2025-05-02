@@ -14,6 +14,14 @@ pnpm dev
 bun dev
 ```
 
+### Development
+
+```bash
+$ git clone chronostep@chronostep.git.backlog.com:/INTIME_TRACKER_COMMERCIAL/RADTastyPlates.git    # cloning the repository(if cloning fails, add your ssh public key in the backlog: https://chronostep.backlog.com/EditUserSshKey.action)
+$ npm i --legacy-peer-deps # install all packages via npm
+$ npm run dev
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
