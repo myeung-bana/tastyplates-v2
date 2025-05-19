@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import CustomSelect from "@/components/ui/Select/Select";
+import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import {
   Modal,
   ModalContent,
@@ -13,103 +15,135 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/modal";
+import { Key } from "@react-types/shared";
+import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
+
+interface UserSession {
+  username: string;
+  email: string;
+  birthdate?: string;
+  gender?: string;
+}
 
 const OnboardingOnePage = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const router = useRouter();
+  
+  // Get initial data from localStorage instead of URL params
+  const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
+  
+  const [email, setEmail] = useState(storedData.email || "");
+  const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
+  const [gender, setGender] = useState(storedData.gender || "");
+  const [name, setName] = useState(storedData.username || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [customGender, setCustomGender] = useState("");
+  const [pronoun, setPronoun] = useState("");
+  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement registration logic
-    console.log("Registration attempt:", {
-      name,
-      email,
-      password,
-      confirmPassword,
-    });
+
+    let formattedBirthdate = "";
+    if (birthdate) {
+      const dateObj = new Date(birthdate);
+      if (!isNaN(dateObj.getTime())) {
+        formattedBirthdate = dateObj.toISOString().split("T")[0];
+      }
+    }
+
+    // Update localStorage with new data
+    const updatedData = {
+      ...storedData,
+      username: name,
+      birthdate: formattedBirthdate,
+      gender,
+      customGender: gender === "custom" ? customGender : undefined,
+      pronoun: gender === "custom" ? pronoun : undefined,
+      palates: Array.from(selectedPalates).join(","),
+    };
+    
+    localStorage.setItem('registrationData', JSON.stringify(updatedData));
+    router.push("/onboarding2");
   };
 
-  const formFields = [
+  const handleGenderChange = (value: string) => {
+    console.log("Gender changed to:", value);
+    setGender(value);
+    // Reset custom gender fields when switching genders
+    if (value !== "custom") {
+      setCustomGender("");
+      setPronoun("");
+    }
+  };
+
+  const handlePalateChange = (keys: Set<Key>) => {
+    setSelectedPalates(keys);
+  };
+
+  const baseFormFields = [
     {
       label: "Username",
       type: "text",
-      placeholder: "User name",
-      value: "JulienChang",
+      placeholder: "Enter your username",
+      value: name,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
     },
     {
       label: "Birthdate",
       type: "date",
-      placeholder: "Birth date",
-      value: "15/06/1990",
-    },
-    {
-      label: "",
-      type: "select",
-      placeholder: "Select Gender",
-      defaultValue: "0",
-      className: "w-full !bg-[#E36B00]",
-      itemClassName:
-        "w-full t !bg-[#E36B00]ext-sm leading-9 font-medium text-left",
-      contentClassName: "w-full !bg-[#E36B00]",
-      triggerClassName: "relative w-full h !bg-[#E36B00]-[48px]",
-      valuePlaceholder: "nationality",
-      valueClassName: "",
-      groupClassName: "w-full !bg-[#E36B00]",
-      items: [
-        {
-          key: "1",
-          value: "+81",
-          label: "Toggle +81",
-          content: <div>+81</div>,
-        },
-        {
-          key: "2",
-          value: "+63",
-          label: "Toggle +63",
-          content: <div>+63</div>,
-        },
-        {
-          key: "3",
-          value: "+90",
-          label: "Toggle +90",
-          content: <div>+90</div>,
-        },
-      ],
+      placeholder: "Select your birthdate",
+      value: birthdate,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
     },
     {
       label: "Gender",
       type: "select",
       placeholder: "Select Gender",
-      defaultValue: "0",
-      className: "md:w-[220px] !bg-[#E36B00]",
-      itemClassName:
-        "md:w-[220px] t !bg-[#E36B00]ext-sm leading-9 font-medium text-left",
-      contentClassName: "md:w-[220px] !bg-[#E36B00]",
-      triggerClassName: "relative w-full h !bg-[#E36B00]-[48px]",
-      valuePlaceholder: "nationality",
-      valueClassName: "",
-      groupClassName: "md:w-[220px] !bg-[#E36B00]",
-      items: [
-        // {
-        //   value: '+81',
-        //   label: 'Toggle +81',
-        //   content: <div>+81</div>,
-        // },
-        // {
-        //   value: '+63',
-        //   label: 'Toggle +63',
-        //   content: <div>+63</div>,
-        // },
-        // {
-        //   value: '+90',
-        //   label: 'Toggle +90',
-        //   content: <div>+90</div>,
-        // },
-      ],
+      defaultValue: gender || "0",
+      className: "w-full",
+      value: gender,
+      onChange: handleGenderChange,
+      items: genderOptions.map(option => ({
+        ...option,
+        content: <div>{option.content}</div>
+      })),
+    },
+  ];
+
+  const customGenderFields = gender === "custom" ? [
+    {
+      label: "Custom Gender",
+      type: "text",
+      placeholder: "What's your gender?",
+      value: customGender,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
+    },
+    {
+      label: "Pronoun",
+      type: "select",
+      placeholder: "Select your pronoun",
+      defaultValue: pronoun || "0",
+      className: "w-full",
+      value: pronoun,
+      onChange: (value: string) => setPronoun(value),
+      items: pronounOptions,
+    },
+  ] : [];
+
+  // Combine base fields with custom gender fields first, then add palate at the end
+  const formFields = [
+    ...baseFormFields,
+    ...(gender === "custom" ? customGenderFields : []),
+    {
+      label: "Palate (Select up to 2 palates)",
+      type: "multiple-select",
+      placeholder: "Select your palate",
+      value: selectedPalates,
+      onChange: handlePalateChange,
+      items: palateOptions,
     },
   ];
 
@@ -133,22 +167,25 @@ const OnboardingOnePage = () => {
                 key={index}
                 className="auth__form-group mt-6 w-full shrink-0"
               >
-                <label htmlFor="email" className="auth__label">
+                <label htmlFor={field.label?.toLowerCase()} className="auth__label">
                   {field.label}
                 </label>
                 <div className="auth__input-group">
-                  {field.type == "text" || field.type == "date" ? (
+                  {field.type === "select" ? (
+                    <CustomSelect {...field} />
+                  ) : field.type === "multiple-select" ? (
+                    <CustomMultipleSelect {...field} />
+                  ) : (
                     <input
                       type={field.type}
-                      id="email"
+                      id={field.label?.toLowerCase()}
                       className="auth__input"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={field.placeholder}
+                      value={field.value}
+                      onChange={field.onChange}
                       required
+                      disabled={field.disabled}
                     />
-                  ) : (
-                    <CustomSelect {...field} />
                   )}
                 </div>
               </div>
@@ -157,7 +194,7 @@ const OnboardingOnePage = () => {
               type="submit"
               className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
             >
-              Continue
+              Save and Continue
             </button>
           </form>
         </div>

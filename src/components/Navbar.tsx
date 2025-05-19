@@ -11,6 +11,8 @@ import Image from "next/image";
 import CustomPopover from "./ui/Popover/Popover";
 import { FaCaretDown } from "react-icons/fa";
 import { PiCaretDown } from "react-icons/pi";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -19,13 +21,20 @@ const navigationItems = [
 ];  
 
 export default function Navbar(props: any) {
+  const { isSignedIn, setSignedIn } = useAuth();
+  const router = useRouter();
   const { isLandingPage = false, hasSearchBar = false } = props;
   console.log(isLandingPage, 'props')
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
-  let isSignedIn = true
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    setSignedIn(false);
+    router.push('/');
+  };
 
   const onCloseSignup = () => setIsOpenSignup(false);
 
@@ -172,7 +181,10 @@ export default function Navbar(props: any) {
                         <Link href="/settings" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Settings
                         </Link>
-                        <button className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <button 
+                          onClick={handleLogout}
+                          className='text-left pl-3.5 pr-12 py-3.5 font-semibold'
+                        >
                           Log Out
                         </button>
                       </div>

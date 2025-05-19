@@ -4,15 +4,85 @@ import Link from "next/link";
 import { FiMail, FiLock } from "react-icons/fi";
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "@/lib/firebase";
+import { FirebaseError } from 'firebase/app';
+import { UserRepository } from '@/repositories/userRepository';
+import { useRouter } from 'next/navigation';
+import { ILoginCredentials } from '@/interfaces/user';
+import { useAuth } from '@/contexts/AuthContext';
 
 const LoginPage = () => {
+  const { setSignedIn } = useAuth();
+  const router = useRouter()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log("Login attempt:", { email, password });
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const credentials: ILoginCredentials = { email, password };
+      const response = await UserRepository.login(credentials);
+      
+      // Set auth state
+      setSignedIn(true);
+      router.push('/dashboard'); // or wherever you want to redirect
+      
+    } catch (error: any) {
+      setError(error.message || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      const result = await signInWithPopup(auth, provider);
+      
+      try {
+        // const response = await UserRepository.handleGoogleAuth(
+        //   result.user.email || "",
+        //   await result.user.getIdToken()
+        // );
+        
+        // Set auth state and redirect
+        setSignedIn(true);
+        router.push('/dashboard');
+        
+      } catch (error: any) {
+        if (error.message === 'GOOGLE_USER_NOT_REGISTERED') {
+          // Redirect to registration with Google data
+          localStorage.setItem('registrationData', JSON.stringify({
+            email: result.user.email,
+            username: result.user.displayName,
+            googleAuth: true,
+            googleToken: await result.user.getIdToken()
+          }));
+          router.push('/onboarding');
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/cancelled-popup-request') {
+          // User cancelled the popup, no need to show error
+          return;
+        }
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,8 +128,12 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <button type="submit" className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl">
-              Continue
+            <button 
+              type="submit" 
+              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Loading...' : 'Continue'}
             </button>
             <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
               <hr className="w-full border-t border-[#494D5D]"/>
@@ -67,7 +141,11 @@ const LoginPage = () => {
               <hr className="w-full border-t border-[#494D5D]"/>
             </div>
 
-            <button type="submit" className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center">
+            <button 
+              type="button"
+              onClick={loginWithGoogle}
+              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center"
+            >
               <FcGoogle className="h-5 w-5 object-contain mr-2" />
               <span>Continue with Google</span>
             </button>

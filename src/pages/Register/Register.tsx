@@ -2,9 +2,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc"
+import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "@/lib/firebase";
+import { FirebaseError } from 'firebase/app';
+
+interface UserSession {
+  username: string;
+  email: string;
+  birthdate?: string;
+  gender?: string;
+}
 
 const RegisterPage = () => {
   const [name, setName] = useState("");
@@ -12,21 +22,47 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string>("");
   const router = useRouter()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement registration logic
-    console.log("Registration attempt:", {
-      name,
+    // Save basic info to localStorage
+    localStorage.setItem('registrationData', JSON.stringify({
       email,
-      password,
-      confirmPassword,
-    });
-    router.push('/onboarding1')
+      password
+    }));
+    router.push('/onboarding');
   };
 
-  const toggleShowPassword = () => setShowPassword(!showPassword)
+  const toggleShowPassword = () => setShowPassword(!showPassword);
+
+  const signUpWithGoogle = async () => {
+    try {
+      setError("");
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Save to localStorage instead of URL params
+      localStorage.setItem('registrationData', JSON.stringify({
+        username: user.displayName || "",
+        email: user.email || "",
+        password: "", // No password needed for Google auth
+        googleAuth: true
+      }));
+      
+      router.push('/onboarding');
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/cancelled-popup-request') {
+          return;
+        }
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
+    }
+  };
 
   return (
     <div className="auth flex flex-col justify-center items-start">
@@ -88,7 +124,11 @@ const RegisterPage = () => {
               <hr className="w-full border-t border-[#494D5D]"/>
             </div>
 
-            <button type="submit" className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center">
+            <button
+              type="button"
+              onClick={signUpWithGoogle}
+              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center"
+            >
               <FcGoogle className="h-5 w-5 object-contain mr-2" />
               <span>Continue with Google</span>
             </button>
