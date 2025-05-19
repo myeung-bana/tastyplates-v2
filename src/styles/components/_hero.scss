@@ -1,6 +1,10 @@
 .hero {
-  padding: 4rem 0;
-  background-color: #fafafa;
+  padding: 6rem 0 2.875rem 0;
+  // background-color: #fafafa;
+
+  @media (max-width: 767px) {
+    padding: 7.25rem 0 3.875rem 0;
+  }
 
   &__container {
     max-width: 80rem;
@@ -30,12 +34,13 @@
   &__title {
     font-size: 2.5rem;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1;
     margin-bottom: 1.5rem;
-    color: #1f2937;
+    text-align: center;
+    color: #FCFCFC;
 
-    @media (min-width: 768px) {
-      font-size: 3.5rem;
+    @media (max-width: 767px) {
+      font-size: 1.5rem;
     }
 
     span {
@@ -45,9 +50,15 @@
 
   &__description {
     font-size: 1.125rem;
-    color: #4b5563;
+    color: #FCFCFC;
     margin-bottom: 2rem;
     line-height: 1.7;
+    font-weight: 500;
+    text-align: center;
+
+    @media (max-width: 767px) {
+      font-size: .875rem;
+    }
   }
 
   &__actions {
@@ -111,26 +122,24 @@
 
   &__search-wrapper {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 1rem;
     background-color: white;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
+    padding: 0.875rem;
+    border-radius: 50px;
     box-shadow: 0 0 10px 1px #E5E5E5;
 
-    @media (min-width: 768px) {
-      flex-direction: row;
-      align-items: center;
+    @media (max-width: 767px) {
       padding: 0.5rem;
     }
   }
 
   &__search-location,
   &__search-restaurant {
-    display: flex;
     align-items: center;
     padding: 0.5rem 1rem;
-    background-color: #f9fafb;
+    background-color: transparent;
     border-radius: 0.375rem;
     flex: 1;
   }
@@ -140,6 +149,11 @@
     width: 1.25rem;
     height: 1.25rem;
     margin-right: 0.75rem;
+
+    @media (max-width: 767px) {
+      width: 1rem;
+      height: 1rem;
+    }
   }
 
   &__search-input {
@@ -168,10 +182,10 @@
   }
 
   &__search-button {
-    background-color: #2563eb;
+    background-color: #E36B00;
     color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.375rem;
+    padding: 0.75rem;
+    border-radius: 9999px;
     font-weight: 500;
     transition: background-color 0.2s ease;
     white-space: nowrap;
@@ -180,8 +194,8 @@
       background-color: #1d4ed8;
     }
 
-    @media (min-width: 768px) {
-      padding: 0.75rem 2rem;
+    @media (max-width: 767px) {
+      padding: 0.5rem;
     }
   }
 }
