@@ -1,9 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
-import Link from "next/link";
-import { FiEye, FiEyeOff } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
@@ -13,30 +10,27 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
 } from "@heroui/modal";
 import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
 
-interface UserSession {
-  username: string;
-  email: string;
-  birthdate?: string;
-  gender?: string;
-}
-
 const OnboardingOnePage = () => {
   const router = useRouter();
-  
+
+  // Redirect if registrationData is missing
+  useEffect(() => {
+    const storedData = localStorage.getItem('registrationData');
+    if (!storedData) {
+      router.replace('/');
+    }
+  }, [router]);
+
   // Get initial data from localStorage instead of URL params
   const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
   
-  const [email, setEmail] = useState(storedData.email || "");
   const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
   const [gender, setGender] = useState(storedData.gender || "");
   const [name, setName] = useState(storedData.username || "");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [customGender, setCustomGender] = useState("");

@@ -21,7 +21,7 @@ const navigationItems = [
 ];  
 
 export default function Navbar(props: any) {
-  const { isSignedIn, setSignedIn } = useAuth();
+  const { isSignedIn, setSignedIn, setToken, token } = useAuth();
   const router = useRouter();
   const { isLandingPage = false, hasSearchBar = false } = props;
   console.log(isLandingPage, 'props')
@@ -31,8 +31,10 @@ export default function Navbar(props: any) {
   const [navBg, setNavBg] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
     setSignedIn(false);
+    setToken(null);
+    localStorage.clear();
+    sessionStorage.clear();
     router.push('/');
   };
 
@@ -51,10 +53,21 @@ export default function Navbar(props: any) {
 
   return (
     <>
-      <SignupModal isOpen={isOpenSignup} onClose={onCloseSignup} />
+      <SignupModal
+        isOpen={isOpenSignup}
+        onClose={onCloseSignup}
+        onOpenSignin={() => {
+          setIsOpenSignup(false);
+          setIsOpenSignin(true);
+        }}
+      />
       <SigninModal
         isOpen={isOpenSignin}
         onClose={() => setIsOpenSignin(false)}
+        onOpenSignup={() => {
+          setIsOpenSignin(false);
+          setIsOpenSignup(true);
+        }}
       />
       <nav className={`navbar backdrop-blur-sm ${isLandingPage ? 'bg-transparent' : 'bg-white border-b border-[#CACACA]' }`}>
         <div className={`navbar__container ${!isLandingPage ? 'py-2' : 'py-3'}`}>

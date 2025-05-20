@@ -1,21 +1,18 @@
 "use client";
-import { useState, useRef } from "react";
-import Link from "next/link";
+import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
-import { UserRepository } from '@/repositories/userRepository';
+import Spinner from "@/components/LoadingSpinner";
+import { UserService } from "@/services/UserService";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [aboutMe, setAboutMe] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,11 +26,13 @@ const OnboardingTwoPage = () => {
   };
 
   const handleImageClick = () => {
+    if (isLoading) return;
     fileInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     // Get registration data from localStorage
     const registrationData = JSON.parse(localStorage.getItem('registrationData') || '{}');
@@ -47,17 +46,25 @@ const OnboardingTwoPage = () => {
       aboutMe,
     };
 
-
-    await UserRepository.registerUser(completeRegistration);
+    await UserService.registerUser(completeRegistration);
 
     localStorage.removeItem('registrationData');
     setMessage("Registration successful!");
     setMessageType("success");
 
     setTimeout(() => {
+      setIsLoading(false);
       router.push("/");
     }, 1500);
   }
+
+  // Redirect if registrationData is missing
+  useEffect(() => {
+    const storedData = localStorage.getItem('registrationData');
+    if (!storedData) {
+      router.replace('/');
+    }
+  }, [router]);
 
   return (
     <div className="auth flex flex-col justify-center items-start">
@@ -97,6 +104,7 @@ const OnboardingTwoPage = () => {
                 onChange={handleImageUpload}
                 accept="image/*"
                 className="hidden"
+                disabled={isLoading}
               />
               <div
                 className="absolute -bottom-1 -right-1 cursor-pointer"
@@ -150,13 +158,27 @@ const OnboardingTwoPage = () => {
             <div className="flex justify-center gap-4">
               <button
                 type="submit"
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium"
+                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center"
+                disabled={isLoading}
               >
+                {isLoading && (
+                  <span className="mr-2">
+                    <Spinner size={20} className="text-white" />
+                  </span>
+                )}
                 Done
               </button>
-              <Link href="/" className="text-sm text-black-700 underline font-medium self-center">
+              <button
+                disabled={isLoading}
+                type="button"
+                className="text-sm text-black-700 underline font-medium self-center"
+                onClick={() => {
+                  localStorage.removeItem('registrationData');
+                  router.push("/");
+                }}
+              >
                 I’ll Do It Later
-              </Link>
+              </button>
             </div>
             {/* Success/Error Message */}
             {message && (

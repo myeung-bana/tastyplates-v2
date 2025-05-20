@@ -1,77 +1,52 @@
-import { ApiService } from '@/services/api';
-import { IUserRegistration, IWordPressResponse, ILoginCredentials, IJWTResponse } from '@/interfaces/user';
-
-interface GoogleAuthResponse {
-    exists: boolean;
-    user?: {
-        email: string;
-        username: string;
-    };
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
 export class UserRepository {
-    static async registerUser(userData: any): Promise<any> {
-        const formattedData = {
-            username: userData.username, // done
-            email: userData.email, // done
-            password: userData.password, // done
-            birthdate: userData.birthdate, 
-            gender: userData.gender, 
-            custom_gender: userData.customGender,
-            pronoun: userData.pronoun,
-            palates: userData.palates,
-            profile_image: userData.profileImage,
-            about_me: userData.aboutMe,
-            is_google_user: !!userData.googleAuth,
-            google_token: userData.googleToken || null
-        };
+    private static async request(endpoint: string, options: RequestInit, jsonResponse = false): Promise<any> {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+        });
 
-        await ApiService.registerUser<any>(formattedData);
+        if (jsonResponse) {
+            return response.json();
+        }
+
+        return response;
     }
 
-    static async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
-        try {
-            const response = await ApiService.login<IJWTResponse>({
-                email: credentials.email,
-                password: credentials.password as string
-            });
-            
-            // Store JWT token
-            if (response.token) {
-                localStorage.setItem('auth_token', response.token);
-            }
-            
-            return response;
-        } catch (error) {
-            console.error('Login error:', error);
-            throw new Error('Invalid credentials');
-        }
+    static async registerUser<T>(data: any): Promise<T> {
+        return this.request('/wp-json/wp/v2/users', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
     }
 
-    static async handleGoogleAuth(email: string, googleToken: string): Promise<IJWTResponse> {
-        try {
-            // First check if user exists
-            const checkResponse = await ApiService.checkGoogleUser<GoogleAuthResponse>(email);
-            
-            if (checkResponse.exists) {
-                // User exists, proceed with login
-                const loginResponse = await ApiService.loginWithGoogle<IJWTResponse>({
-                    email,
-                    googleToken
-                });
-                
-                if (loginResponse.token) {
-                    localStorage.setItem('auth_token', loginResponse.token);
-                }
-                
-                return loginResponse;
-            } else {
-                // User doesn't exist, throw error to redirect to registration
-                throw new Error('GOOGLE_USER_NOT_REGISTERED');
-            }
-        } catch (error) {
-            console.error('Google auth error:', error);
-            throw error;
-        }
+    static async login<T>(credentials: { email: string; password: string }): Promise<T> {
+        return this.request('/wp-json/jwt-auth/v1/token', {
+            method: 'POST',
+            body: JSON.stringify({
+                username: credentials.email,
+                password: credentials.password
+            }),
+        }, true);
+    }
+
+    static async checkGoogleUser<T>(email: string): Promise<T> {
+        return this.request('/wp-json/wp/v2/users/google-check', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        }, true);
+    }
+
+    static async checkEmailExists<T>(email: string): Promise<T> {
+        return this.request('/wp-json/wp/v2/users/check-email', {
+            method: 'POST',
+            body: JSON.stringify({
+                email
+            }),
+        }, true);
     }
 }
