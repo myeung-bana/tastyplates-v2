@@ -31,7 +31,6 @@ const OnboardingOnePage = () => {
   const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
   const [gender, setGender] = useState(storedData.gender || "");
   const [name, setName] = useState(storedData.username || "");
-  const [showPassword, setShowPassword] = useState(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [customGender, setCustomGender] = useState("");
   const [pronoun, setPronoun] = useState("");
@@ -141,27 +140,25 @@ const OnboardingOnePage = () => {
     },
   ];
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
-
   return (
-    <div className="auth flex flex-col justify-center items-start">
-      <div className="auth__container !max-w-[672px] w-full">
-        <h1 className="auth__header">Create account</h1>
-        <div className="auth__card !py-4 !rounded-3xl border border-[#CACACA] !w-[672px]">
-          <p className="auth__subtitle">Step 1 of 2</p>
-          <h1 className="auth__title !text-xl !font-semibold">
+    <div className="min-h-screen px-2 pt-8 sm:px-1">
+      <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
+        <h1 className="auth__header text-2xl sm:text-3xl">Create account</h1>
+        <div className="auth__card py-4 rounded-4xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
+          <p className="auth__subtitle text-base sm:text-lg">Step 1 of 2</p>
+          <h1 className="auth__title text-lg sm:!text-xl font-semibold">
             Basic Information
           </h1>
           <form
-            className="auth__form border-y !max-w-[672px] w-full border-[#CACACA] !gap-4 !pb-6"
+            className="auth__form border-y max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
             {formFields.map((field: any, index: number) => (
               <div
                 key={index}
-                className="auth__form-group mt-6 w-full shrink-0"
+                className="auth__form-group mt-4 sm:mt-6 mb-4 sm:mb-0 w-full shrink-0"
               >
-                <label htmlFor={field.label?.toLowerCase()} className="auth__label">
+                <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
                   {field.label}
                 </label>
                 <div className="auth__input-group">
@@ -173,7 +170,7 @@ const OnboardingOnePage = () => {
                     <input
                       type={field.type}
                       id={field.label?.toLowerCase()}
-                      className="auth__input"
+                      className="auth__input text-sm sm:text-base"
                       placeholder={field.placeholder}
                       value={field.value}
                       onChange={field.onChange}
@@ -186,7 +183,7 @@ const OnboardingOnePage = () => {
             ))}
             <button
               type="submit"
-              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
+              className="auth__button !bg-[#E36B00] mt-0 rounded-xl w-full sm:w-auto text-base sm:text-lg"
             >
               Save and Continue
             </button>

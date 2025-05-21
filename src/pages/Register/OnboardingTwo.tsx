@@ -67,16 +67,16 @@ const OnboardingTwoPage = () => {
   }, [router]);
 
   return (
-    <div className="auth flex flex-col justify-center items-start">
-      <div className="auth__container !max-w-[672px] w-full">
-        <h1 className="auth__header">Create account</h1>
-        <div className="auth__card !py-4 !rounded-3xl border border-[#CACACA] !w-[672px]">
-          <p className="auth__subtitle">Step 2 of 2</p>
-          <h1 className="auth__title !text-xl !font-semibold">Set Up Profile</h1>
+    <div className="min-h-screen bg-white px-2 pt-8 sm:px-1">
+      <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
+        <h1 className="auth__header text-2xl sm:text-3xl">Create account</h1>
+        <div className="auth__card py-4 rounded-3xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
+          <p className="auth__subtitle text-sm sm:text-base">Step 2 of 2</p>
+          <h1 className="auth__title text-lg sm:!text-xl font-semibold">Set Up Profile</h1>
           {/* Avatar section */}
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 overflow-hidden">
                 <div className="w-full h-full flex items-center justify-center">
                   {profileImage ? (
                     <img
@@ -155,10 +155,10 @@ const OnboardingTwoPage = () => {
             </div>
 
             {/* Buttons */}
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button
                 type="submit"
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center"
+                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center w-full sm:w-auto"
                 disabled={isLoading}
               >
                 {isLoading && (
@@ -171,7 +171,7 @@ const OnboardingTwoPage = () => {
               <button
                 disabled={isLoading}
                 type="button"
-                className="text-sm text-black-700 underline font-medium self-center"
+                className="text-sm text-black-700 underline font-medium self-center w-full sm:w-auto"
                 onClick={() => {
                   localStorage.removeItem('registrationData');
                   router.push("/");
