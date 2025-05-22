@@ -14,6 +14,7 @@ interface Review {
   user: string;
   rating: number;
   date: string;
+  title?: string,
   comment: string;
   images: string[];
   userImage: string;
@@ -64,8 +65,8 @@ export default function RestaurantReviews({
   ]
   return (
     <section className="restaurant-reviews">
-      <div className={cn("flex justify-between", "")}>
-        <h2 className="text-2xl font-medium">Reviews</h2>
+      <div className="flex justify-between items-center">
+        <h2>Reviews</h2>
         <div className="flex gap-4">
           <div className="search-bar">
             <select
@@ -96,12 +97,12 @@ export default function RestaurantReviews({
         items={tabs}
         classNames={{
           base: 'w-full border-b',
-          panel: 'py-4 px-0',
+          panel: 'py-4 md:py-8 px-0',
           tabList: 'gap-4 w-fit relative rounded-none p-0 overflow-x-hidden',
           cursor: "w-full bg-[#31343F]",
           tab: "px-6 py-3 h-[44px] font-semibold font-inter",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#31343F]",
+            "group-data-[selected=true]:text-[#31343F] text-xs md:text-base font-semibold text-[#31343F]",
         }}
         variant="underlined"
       >

@@ -48,12 +48,12 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           className="restaurant-card__img"
         />
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
-        <div className="flex flex-col gap-2 absolute top-4 right-4 text-[#31343F]">
+        <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
           <button className="rounded-full p-2 bg-white" onClick={(e) => e.stopPropagation()}>
-            <FaRegHeart />
+            <FaRegHeart className="size-3 md:size-4" />
           </button>
           <button className="rounded-full p-2 bg-white">
-            <MdOutlineMessage />
+            <MdOutlineMessage className="size-3 md:size-4" />
           </button>
         </div>
       </div>
@@ -64,14 +64,14 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
             <div className="restaurant-card__rating">
               <FaStar className="restaurant-card__icon -mt-1" />
               <span>{restaurant.rating}</span>
-              <span>({restaurant.reviews})</span>
+              {/* <span>({restaurant.reviews})</span> */}
             </div>
           </div>
 
           <div className="restaurant-card__info">
             <div className="restaurant-card__location">
               {/* <FiMapPin className="restaurant-card__icon" /> */}
-              <span className="line-clamp-2">{restaurant.location}</span>
+              <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.location}</span>
             </div>
             {/* <div className="restaurant-card__location">
               <FiMessageCircle className="restaurant-card__icon" />

@@ -4,6 +4,10 @@
     height: 370px;
     width: 100%;
 
+    @media (max-width: 767px) {
+      height: 239px;
+    }
+
     &-overlay {
       position: absolute;
       inset: 0;
@@ -26,6 +30,10 @@
     margin: auto;
     padding: 1rem;
     position: relative;
+
+    @media (max-width: 767px) {
+      padding: 0;
+    }
   }
 
   &__header {
@@ -34,6 +42,10 @@
     padding: 2rem;
     margin-bottom: 2rem;
     // box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+
+    @media (max-width: 767px) {
+      padding: 0;
+    }
   }
 
   &__name {
@@ -41,6 +53,10 @@
     font-weight: 500;
     color: #1f2937;
     margin-bottom: 0.5rem;
+
+    @media (max-width: 767px) {
+      font-size: 1.125rem;
+    }
   }
 
   &__meta {
@@ -83,8 +99,13 @@
   &__content {
     background: white;
     border-radius: 1rem;
-    padding: 2rem;
+    padding: 0 2rem;
     margin-bottom: 2rem;
+
+    @media (max-width: 767px) {
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
   }
 
   &__description,
@@ -103,6 +124,10 @@
       color: #4b5563;
       line-height: 1.6;
     }
+
+    @media (max-width: 767px) {
+      margin-bottom: 0;
+    }
   }
 
   &__review-button {
@@ -115,10 +140,17 @@
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 
     &:hover {
       // background-color: #1d4ed8;
       text-decoration: underline;
+    }
+
+    @media (max-width: 767px) {
+      font-size: 14px;
     }
   }
 }
@@ -194,10 +226,14 @@
   margin-top: 3rem;
 
   h2 {
-    margin-bottom: 1.5rem;
     font-size: 1.5rem;
-    font-weight: 600;
-    color: #1f2937; // Matches other headings
+    font-weight: 500;
+    color: #1B1B1B;
+    margin-top: 1rem;
+
+    @media (max-width: 767px) {
+      font-size: 1.125rem;
+    }
   }
 }
 
@@ -207,11 +243,16 @@
   flex-wrap: wrap; // Allow items to wrap if necessary
   gap: 10px; // Space between items
 
+  @media (max-width: 767px) {
+    gap: 8px;
+  }
+
   .restaurant-detail__rating,
   .restaurant-detail__cuisine,
   .restaurant-detail__price {
     display: flex; // Ensure each item is also a flex container
     align-items: center; // Center items vertically
+    gap: 0.5rem;
   }
 }
 
@@ -290,13 +331,13 @@
 // _restaurant-details.scss
 
 .review-block {
-  background-color: #fff; // White background for the review block
+  // background-color: #fff; // White background for the review block
   // border: 1px solid #e0e0e0; // Light gray border
   border-radius: 8px; // Rounded corners
-  padding: 16px; // Padding inside the block
-  margin-bottom: 16px; // Space between review blocks
+  // padding: 16px; // Padding inside the block
+  // margin-bottom: 16px; // Space between review blocks
   // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
-  transition: box-shadow 0.3s ease; // Smooth transition for hover effect
+  // transition: box-shadow 0.3s ease; // Smooth transition for hover effect
 
   &:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); // Darker shadow on hover
@@ -309,6 +350,10 @@
     align-items: start; // Center items vertically
     margin-bottom: 12px; // Space below the header
     gap: 10px;
+
+    @media (max-width: 767px) {
+      gap: 0.5rem;
+    }
   }
 
   &__user {
@@ -327,8 +372,14 @@
   }
 
   &__username {
-    font-weight: bold; // Bold username
-    color: #333; // Dark text color
+    font-size: 1rem;
+    font-weight: 500; // Medium username
+    color: #31343F; // Dark text color
+
+    @media (max-width: 767px) {
+      font-size: 10px;
+      line-height: 12px;
+    }
   }
 
   &__restaurant {
@@ -363,6 +414,11 @@
     width: 304px;
     height: 228px; // Responsive image
     object-fit: cover;
+
+    @media (max-width: 767px) {
+      width: 240px;
+      height: 180px;
+    }
   }
 
   &__content {
@@ -380,7 +436,7 @@
     color: #007bff; // Blue color for icons
     cursor: pointer; // Pointer cursor on hover
     display: flex; // Flexbox for icon and text
-    align-items: center; // Center items vertically
+    align-items: end; // Center items vertically
     margin-right: 16px; // Space between buttons
 
     &:hover {
@@ -390,7 +446,11 @@
 
   &__text {
     font-size: 1rem; // Standard font size for review text
-    color: #333; // Dark text color
+    color: #31343F; // Dark text color
+
+    @media (max-width: 767px) {
+      font-size: 0.75rem;
+    }
   }
 
   &__timestamp {
@@ -404,6 +464,11 @@
 
 .review-block__palate-tags {
   margin-top: 4px; // Space above the tags
+
+  @media (max-width: 767px) {
+    margin-top: 0;
+    line-height: 14px;
+  }
 }
 
 .review-block__palate-tag {
@@ -414,6 +479,11 @@
   padding: 4px 8px; // Padding inside the tag
   margin-right: 4px; // Space between tags
   font-size: 0.8rem; // Smaller font size for tags
+
+  @media (max-width: 767px) {
+    padding: 2px 4px;
+    font-size: 0.5rem;
+  }
 }
 
 .cuisine-tag {
@@ -424,11 +494,15 @@
   border-radius: 12px; // Rounded corners
   // margin: 5px; // Margin for spacing between tags
   font-size: 14px; // Font size
-  font-weight: 500; // Font weight
+  font-weight: 400; // Font weight
   transition: background-color 0.3s; // Transition for hover effect
 
   &:hover {
     background-color: #e0e0e0; // Darker background on hover
+  }
+
+  @media (max-width: 767px) {
+    padding: 0;
   }
 }
 
@@ -442,19 +516,32 @@
   color: #000000;
   background-color: var(--background-secondary);
   border-radius: 8px;
-
+}
   .rating-column {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     text-align: center;
-    padding: 1rem;
+    padding: 0 1rem;
     gap: 0.5rem;
+    white-space: pre;
+    align-items: center;
+    margin: 1rem 0;
+
+    @media (max-width: 767px) {
+      gap: 0.25rem;
+      padding: 0;
+      margin: 0;
+    }
 
     h3 {
       font-size: 1rem;
       // margin-bottom: 0.5rem;
+
+      @media (max-width: 767px) {
+        font-size: 0.65rem;
+      }
     }
 
     .rating-value {
@@ -471,12 +558,18 @@
     }
 
     .review-count {
+      color: #494D5D;
       font-size: 0.75rem;
       color: var(--text-secondary);
+      font-weight: 500;
       // margin-top: 0.5rem;
+
+      @media (max-width: 767px) {
+        font-size: 10px;
+      }
     }
   }
-}
+
 
 .slick-track {
   margin: 0 !important;
@@ -496,4 +589,12 @@
   -moz-padding-start: 12px;
   background-color: transparent;
   /* Remove default arrow */
+
+  @media (max-width: 767px) {
+    padding: 8px 12px;
+    -webkit-padding-end: 12px;
+    -moz-padding-end: 12px;
+    -webkit-padding-start: 8px;
+    -moz-padding-start: 8px;
+  }
 }
