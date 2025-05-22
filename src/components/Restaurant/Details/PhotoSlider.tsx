@@ -158,7 +158,7 @@ export default function PhotoSlider({
               <div
                 key={index}
                 style={{
-                  width: index != reviewPhotos.length - 1 ? 334 : 304,
+                  width: width > 767 ? index != reviewPhotos.length - 1 ?   334 : 304 : index != reviewPhotos.length - 1 ? 248 : 240 ,
                   height: 228,
                   paddingRight: 30,
                 }}

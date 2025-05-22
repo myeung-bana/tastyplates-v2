@@ -37,12 +37,12 @@ const RestaurantPage = () => {
       <div className="restaurants min-h-[70vh] font-inter">
         {/* <h1 className="restaurants__title">Restaurants Near You</h1> */}
         <div className="restaurants__container">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
             <Filter onFilterChange={handleFilterChange} />
-            <div className="search-bar">
+            <div className="search-bar hidden sm:block">
                 <input
                   type="text"
-                  placeholder="Search by Listing Name..."
+                  placeholder="Search by Listing Name"
                   value={searchTerm}
                   onFocus={() => setShowDropdown(true)} // Show dropdown on focus
                   onChange={(e) => setSearchTerm(e.target.value)}

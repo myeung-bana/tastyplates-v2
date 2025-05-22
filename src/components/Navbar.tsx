@@ -55,7 +55,7 @@ export default function Navbar(props: any) {
         }`}
       >
         <div
-          className={`navbar__container py-0 ${
+          className={`navbar__container py-0 flex flex-col justify-center ${
             !isLandingPage ? "sm:py-2" : "sm:py-3"
           }`}
         >
@@ -69,7 +69,7 @@ export default function Navbar(props: any) {
                 >
                   <svg
                     className="h-6 w-6"
-                    stroke="#FCFCFC"
+                    stroke={`${isLandingPage ? '#FCFCFC' : '#31343F'}`}
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -116,8 +116,8 @@ export default function Navbar(props: any) {
               </div>
             </div>
             {hasSearchBar && (
-              <div>
-                <div className="flex gap-2.5 items-center border border-[#E5E5E5] !p-[5px] !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
+              <div className="hidden md:block">
+                <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                   <div className="hero__search-restaurant !bg-transparent">
                     {/* <FiSearch className="hero__search-icon" /> */}
                     {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
@@ -151,10 +151,10 @@ export default function Navbar(props: any) {
                   </div>
                   <button
                     type="submit"
-                    className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
+                    className="rounded-full size-8 p-2 text-center !bg-[#E36B00]"
                     // disabled={!location || !cuisine}
                   >
-                    <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
+                    <FiSearch className="size-4 stroke-white" />
                   </button>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function Navbar(props: any) {
                   <CustomPopover
                     align="bottom-end"
                     trigger={
-                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 flex flex-row flex-nowrap items-center gap-2 text-white">
+                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white">
                         <span
                           className={`${
                             isLandingPage ? "!text-white" : "text-[#494D5D]"
@@ -249,6 +249,26 @@ export default function Navbar(props: any) {
               )}
             </div>
           </div>
+          {hasSearchBar && (
+              <div className="mb-4 md:hidden">
+                <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
+                  <div className="hero__search-restaurant !bg-transparent">
+                    <input
+                      type="text"
+                      placeholder="Start Your Search"
+                      className="hero__search-input text-center"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="hero__search-button !rounded-full h-8 w-8 text-center"
+                    // disabled={!location || !cuisine}
+                  >
+                    <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
 
         {/* Mobile menu */}
