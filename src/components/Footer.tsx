@@ -31,16 +31,16 @@ export default function Footer({
 }: Props) {
   return (
     <footer className="bg-[#F1F1F1] text-[#31343F]">
-      <div className={`px-4 sm:px-6 lg:px-0 ${isShowLinks ? 'pt-12' : ''} w-full max-w-[80rem] mx-auto`}>
+      <div className={`px-3 sm:px-6 lg:px-0 ${isShowLinks ? 'pt-12' : ''} w-full max-w-[80rem] mx-auto`}>
         {/* Main footer content */}
         {isShowLinks && (
-          <div className="flex flex-row flex-wrap justify-start items-start gap-8 md:gap-[122px]">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-start items-start gap-6 sm:gap-8 md:gap-[122px]">
             {/* Company Info Column */}
             <div className="max-w-[500px] w-full">
-              <h2 className="text-[#31343F] text-lg font-semibold mb-4">
+              <h2 className="text-[#31343F] text-xs sm:text-lg font-semibold mb-4">
                 TastyPlates
               </h2>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-xs sm:text-sm mb-4">
                 Discover and book the best restaurants in your area.
               </p>
               <div className="flex space-x-4">
@@ -81,12 +81,12 @@ export default function Footer({
             {/* Links Columns */}
             {/* <div className="grid grid-cols-3 gap-8"> */}
               {/* Company Links */}
-              <div className="px-[5px]">
-                <h3 className="text-[#31343F] font-semibold mb-4">Company</h3>
+              <div className="sm:px-[5px]">
+                <h3 className="text-[#31343F] text-xs sm:text-base font-semibold mb-4">Company</h3>
                 <ul className="space-y-3">
                   {footerLinks.company.map((link) => (
                     <li key={link.name}>
-                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] font-semibold">
+                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] text-xs sm:text-base font-semibold">
                         {link.name}
                       </a>
                     </li>
@@ -95,12 +95,12 @@ export default function Footer({
               </div>
 
               {/* Legal Column */}
-              <div className=" px-2.5">
-                <h3 className="text-[#31343F] font-semibold mb-4">Legal</h3>
+              <div className="sm:px-2.5">
+                <h3 className="text-[#31343F] text-xs sm:text-base font-semibold mb-4">Legal</h3>
                 <ul className="space-y-3">
                   {footerLinks.legal.map((link) => (
                     <li key={link.name}>
-                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] font-semibold">
+                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] text-xs sm:text-base font-semibold">
                         {link.name}
                       </a>
                     </li>
@@ -110,11 +110,11 @@ export default function Footer({
 
               {/* Support Links */}
               <div>
-                <h3 className="text-[#31343F] font-semibold mb-4">Support</h3>
+                <h3 className="text-[#31343F] text-xs sm:text-base font-semibold mb-4">Support</h3>
                 <ul className="space-y-3">
                   {footerLinks.support.map((link) => (
                     <li key={link.name}>
-                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] font-semibold">
+                      <a href={link.href} className="hover:text-[#494D5D] text-[#494D5D] text-xs sm:text-base font-semibold">
                         {link.name}
                       </a>
                     </li>
@@ -126,7 +126,7 @@ export default function Footer({
           </div>
         )}
         {isShowCopyright && (
-        <div className={`${isShowLinks ? 'mt-10 border-t border-[#CACACA]' : ''} py-6`}>
+        <div className={`${isShowLinks ? 'mt-6 sm:mt-10 border-t border-[#CACACA]' : ''} text-sm sm:text-base py-6`}>
           <p className="text-[#31343F]">
             &copy; {new Date().getFullYear()} TastyPlates. All rights
             reserved.
