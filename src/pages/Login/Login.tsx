@@ -1,22 +1,107 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
-import { FiMail, FiLock } from "react-icons/fi";
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
+import { signInWithPopup } from "firebase/auth";
+import { auth, provider } from "@/lib/firebase";
+import { FirebaseError } from 'firebase/app';
+import { useRouter } from 'next/navigation';
+import { UserService } from '@/services/UserService';
+import { ILoginCredentials } from '@/interfaces/user';
+import { useAuth } from '@/contexts/AuthContext';
+import Spinner from "@/components/LoadingSpinner";
 
-const LoginPage = () => {
+interface LoginPageProps {
+  onOpenSignup?: () => void;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
+  const { setSignedIn, setToken } = useAuth();
+  const router = useRouter()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log("Login attempt:", { email, password });
+    setMessage('');
+    setIsLoading(true);
+
+    try {
+      const credentials: ILoginCredentials = { email, password };
+      const response = await UserService.login(credentials);
+
+      console.log("Login response:", response);
+      const status = response?.data?.status ?? response?.status ?? null;
+      if (status == 403) {
+        setMessage('Login failed. Please try again.');
+        setMessageType("error");
+        return;
+      } else if (response?.token) {
+        setMessage("Login successful!");
+        setMessageType("success");
+        setSignedIn(true);
+        setToken(response.token);
+        router.push('/dashboard');
+      } else {
+        setMessage(response?.message);
+        setMessageType("error");
+      }
+    } catch (error: any) {
+      setMessage(error.message);
+      setMessageType("error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    try {
+      setMessage('');
+      await signInWithPopup(auth, provider).then(async (result) => {
+        setIsLoading(true);
+        const response = await UserService.handleGoogleAuth(
+          result.user.email || "",
+        );
+        if (response.status == 200) {
+          setMessage("Login successful!");
+          setMessageType("success");
+          setSignedIn(true);
+          setToken(response.token);
+          router.push('/dashboard');
+        } else {
+          setMessage(response.message);
+          setMessageType("error");
+          setSignedIn(false);
+        }
+      });
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        if (error.code == 'auth/cancelled-popup-request' || error.code == 'auth/popup-closed-by-user') {
+          setIsLoading(false);
+          setMessageType("error");
+          return;
+        }
+        setMessage(error.message);
+        setMessageType("error");
+      } else {
+        setMessage("An unexpected error occurred");
+        setMessageType("error");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="auth">
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <Spinner size={48} className="text-[#E36B00]" />
+        </div>
+      )}
       <div className="auth__container">
         <div className="auth__card">
           <h1 className="auth__title">Login</h1>
@@ -58,26 +143,49 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <button type="submit" className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl">
+            <button
+              type="submit"
+              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
+              disabled={isLoading}
+            >
               Continue
             </button>
             <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
-              <hr className="w-full border-t border-[#494D5D]"/>
+              <hr className="w-full border-t border-[#494D5D]" />
               or
-              <hr className="w-full border-t border-[#494D5D]"/>
+              <hr className="w-full border-t border-[#494D5D]" />
             </div>
 
-            <button type="submit" className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center">
+            <button
+              disabled={isLoading}
+              type="button"
+              onClick={loginWithGoogle}
+              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center"
+            >
               <FcGoogle className="h-5 w-5 object-contain mr-2" />
               <span>Continue with Google</span>
             </button>
           </form>
-
+          {message && (
+            <div
+              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === "success"
+                  ? "bg-green-100 text-green-700 border border-green-300"
+                  : "bg-red-100 text-red-700 border border-red-300"
+                }`}
+              dangerouslySetInnerHTML={{ __html: message }}
+            />
+          )}
           <p className="auth__footer !mt-3.5">
-            Already have an account?{" "}
-            <Link href="/login" className="auth__link !text-[#494D5D]">
-              Log in
-            </Link>
+            New to TastyPlates?{" "}
+            <a
+              className="auth__link !text-[#494D5D] cursor-pointer"
+              onClick={e => {
+                e.preventDefault();
+                onOpenSignup && onOpenSignup();
+              }}
+            >
+              Sign Up
+            </a>
           </p>
         </div>
       </div>
