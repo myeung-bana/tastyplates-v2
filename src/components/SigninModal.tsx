@@ -13,12 +13,14 @@ interface SigninModalProps {
   isOpen: boolean;
   onClose: () => void;
   data?: any;
+  onOpenSignup?: () => void;
 }
 
 const SigninModal: React.FC<SigninModalProps> = ({
   data = [],
   isOpen,
   onClose,
+  onOpenSignup,
 }) => {
 //   const [rating, setRating] = useState(0);
 
@@ -30,7 +32,7 @@ const SigninModal: React.FC<SigninModalProps> = ({
         <button className="review-modal__close !top-6" onClick={onClose}>
           <FiX />
         </button>
-        <LoginPage />
+        <LoginPage onOpenSignup={onOpenSignup} />
       </div>
     </div>
   );
