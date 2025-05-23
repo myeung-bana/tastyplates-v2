@@ -13,10 +13,17 @@ const OnboardingTwoPage = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [aboutMeError, setAboutMeError] = useState<string | null>(null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setProfileError(null);
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        setProfileError("Profile image must be less than 5MB.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
@@ -33,6 +40,14 @@ const OnboardingTwoPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAboutMeError(null);
+
+    // About Me validation
+    if (aboutMe.length > 500) {
+      setAboutMeError("The text must be 500 characters or less.");
+      setIsLoading(false);
+      return;
+    }
 
     // Get registration data from localStorage
     const registrationData = JSON.parse(localStorage.getItem('registrationData') || '{}');
@@ -136,6 +151,9 @@ const OnboardingTwoPage = () => {
               </div>
             </div>
           </div>
+          {profileError && (
+                <div className="text-red-600 text-xs mt-2 text-center">{profileError}</div>
+              )}
 
           {/* About Me Textarea */}
           <form onSubmit={handleSubmit}>
@@ -151,7 +169,13 @@ const OnboardingTwoPage = () => {
                 onChange={(e) => setAboutMe(e.target.value)}
                 placeholder="Tell us a little about yourself! Share your interests, background, or food that you like."
                 className="w-full border border-gray-300 rounded-md p-3 text-sm resize-none"
+                readOnly={isLoading}
               />
+              <div className="flex justify-between items-center mt-1">
+                {aboutMeError && (
+                  <span className="text-red-600 text-xs">{aboutMeError}</span>
+                )}
+              </div>
             </div>
 
             {/* Buttons */}

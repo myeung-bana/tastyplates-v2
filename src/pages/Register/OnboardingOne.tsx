@@ -35,9 +35,40 @@ const OnboardingOnePage = () => {
   const [customGender, setCustomGender] = useState("");
   const [pronoun, setPronoun] = useState("");
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [birthdateError, setBirthdateError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    let hasError = false;
+    setUsernameError(null);
+    setBirthdateError(null);
+
+    // Username validation
+    if (!name || name.length > 20) {
+      setUsernameError("Username must be 1-20 characters.");
+      hasError = true;
+    }
+
+    // Birthdate validation (must be 18+)
+    if (!birthdate) {
+      setBirthdateError("Birthdate is required.");
+      hasError = true;
+    } else {
+      const birth = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
+      const actualAge = isBirthdayPassed ? age : age - 1;
+      if (isNaN(birth.getTime()) || actualAge < 18) {
+        setBirthdateError("You must be at least 18 years old.");
+        hasError = true;
+      }
+    }
+
+    if (hasError) return;
 
     let formattedBirthdate = "";
     if (birthdate) {
@@ -179,6 +210,13 @@ const OnboardingOnePage = () => {
                     />
                   )}
                 </div>
+                {/* Validation errors */}
+                {field.label === "Username" && usernameError && (
+                  <div className="text-red-600 text-xs mt-1">{usernameError}</div>
+                )}
+                {field.label === "Birthdate" && birthdateError && (
+                  <div className="text-red-600 text-xs mt-1">{birthdateError}</div>
+                )}
               </div>
             ))}
             <button
