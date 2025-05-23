@@ -18,7 +18,7 @@ export class UserRepository {
     }
 
     static async registerUser<T>(data: any): Promise<T> {
-        return this.request('/wp-json/wp/v2/users', {
+        return this.request('/wp-json/wp/v2/api/users', {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -35,14 +35,14 @@ export class UserRepository {
     }
 
     static async checkGoogleUser<T>(email: string): Promise<T> {
-        return this.request('/wp-json/wp/v2/users/google-check', {
+        return this.request('/wp-json/wp/v2/api/users/google-check', {
             method: 'POST',
             body: JSON.stringify({ email }),
         }, true);
     }
 
     static async checkEmailExists<T>(email: string): Promise<T> {
-        return this.request('/wp-json/wp/v2/users/check-email', {
+        return this.request('/wp-json/wp/v2/api/users/check-email', {
             method: 'POST',
             body: JSON.stringify({
                 email
