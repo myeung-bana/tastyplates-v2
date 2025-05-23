@@ -87,7 +87,7 @@ const AddListingPage = (props: any) => {
 
   return (
     <>
-      <div className="font-inter mt-20">
+      <div className="font-inter mt-16 md:mt-20 max-w-[82rem] px-3 md:px-6 lg:p-0">
         {!isLoading ? (
           <div className="flex flex-col justify-center items-center">
             {step == 0 && (
@@ -111,117 +111,123 @@ const AddListingPage = (props: any) => {
               </div>
             )}
             {step == 1 && (
-              <form
-                className="listing__form max-w-[672px] w-full my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
-                onSubmit={submitReview}
-              >
-                <div className="text-center">
-                  <p className="text-[#494D5D] text-sm font-medium">
-                    Step 1 of 2
+              <>
+                <h1 className="mt-8 text-lg md:text-2xl text-[#31343F] text font-medium">Add Listing</h1>
+                <form
+                  className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+                  onSubmit={submitReview}
+                >
+                  <div className="text-center">
+                    <p className="text-[#494D5D] text-[10px] md:text-sm font-medium">
+                      Step 1 of 2
+                    </p>
+                    <h1 className="text-[#31343F] text-sm md:text-xl font-medium mt-2">
+                      Listing Details
+                    </h1>
+                  </div>
+                  <div className="listing__form-group">
+                    <label className="listing__label">Title</label>
+                    <div className="listing__input-group">
+                      <input
+                        type="text"
+                        name="name"
+                        className="listing__input"
+                        placeholder="Listing Name"
+                        value={listing.name}
+                        onChange={(e) => {}}
+                      />
+                    </div>
+                  </div>
+                  <div className="listing__form-group">
+                    <label className="listing__label">Category</label>
+                    <div className="listing__input-group">
+                      <select
+                        className="listing__input"
+                      >
+                        {categories.map((category: any, index) => 
+                            <option value={category.key} key={index}>{category.label}</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="listing__form-group">
+                    <label className="listing__label">
+                      Palate (Select up to 2 palates)
+                    </label>
+                    <div className="listing__input-group">
+                      <select
+                        className="listing__input"
+                      >
+                        {categories.map((category: any, index) => 
+                            <option value={category.key} key={index}>{category.label}</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="listing__form-group">
+                    <label className="listing__label">Address</label>
+                    <div className="listing__input-group">
+                      <input
+                        type="text"
+                        name="name"
+                        className="listing__input"
+                        placeholder="Enter address"
+                        value={listing.address}
+                        onChange={(e) => {}}
+                      />
+                    </div>
+                    <div className="flex flex-nowrap gap-2 items-center">
+                      <CiLocationOn className="size-4 md:size-5" />
+                      <button type="button" className="cursor-pointer border-b border-[#494D5D] font-semibold text-sm md:text-base text-[#494D5D]">
+                        Use my Current Location
+                      </button>
+                    </div>
+                  </div>
+                  <div className="listing__form-group">
+                    <label className="listing__label">Price</label>
+                    <div className="listing__listing-checkbox-grid !gap-0 border-[1.5px] border-[#797979] rounded-xl p-2">
+                      {prices.map((price, index) =>  (
+                          <div key={index} className={`listing-checkbox-item w-[192px] ${index < prices.length - 1 ? 'border-r-[1.5px]' : ''} border-[#797979] !rounded-none`}>
+                              <input
+                              type="checkbox"
+                              name="price"
+                              value={price.value}
+                              onChange={handleChangeCheckbox}
+                              className="listing-checkbox"
+                              />
+                              <label
+                              htmlFor={`listing-${index}`}
+                              className="listing-checkbox-label"
+                              >
+                              {price.name}
+                              </label>
+                          </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs md:text-sm text-[#31343F]">
+                  By submitting listing, you agree to TastyPlates’s'&nbsp;<br></br>
+                    <Link
+                      href="/writing-guidelines"
+                      className="underline"
+                      target="_blank"
+                    >
+                      Listing Guidelines
+                    </Link>
                   </p>
-                  <h1 className="text-[#31343F] text-xl font-medium mt-2">
-                    Listing Details
-                  </h1>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">Title</label>
-                  <div className="listing__input-group">
-                    <input
-                      type="text"
-                      name="name"
-                      className="listing__input"
-                      placeholder="Listing Name"
-                      value={listing.name}
-                      onChange={(e) => {}}
-                    />
-                  </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">Category</label>
-                  <div className="listing__input-group">
-                    <CustomSelect
-                      className=""
-                      placeholder="Select a category"
-                      items={categories}
-                    />
-                  </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">
-                    Palate (Select up to 2 palates)
-                  </label>
-                  <div className="listing__input-group">
-                    <CustomSelect
-                      mode="multiple"
-                      max={2}
-                      placeholder="Select a category"
-                      items={categories}
-                    />
-                  </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">Address</label>
-                  <div className="listing__input-group">
-                    <input
-                      type="text"
-                      name="name"
-                      className="listing__input"
-                      placeholder="Enter address"
-                      value={listing.address}
-                      onChange={(e) => {}}
-                    />
-                  </div>
-                  <div className="flex flex-nowrap gap-2 items-center">
-                    <CiLocationOn className="size-5" />
-                    <button className="cursor-pointer underline font-semibold text-[#494D5D]">
-                      Use my Current Location
+                  <div className="flex gap-3 md:gap-4 items-center">
+                    <button className="listing__button" onClick={changeStep}>
+                      Continue
+                    </button>
+                    <button
+                      className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                      type="submit"
+                    >
+                      Save and Exit
                     </button>
                   </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">Price</label>
-                  <div className="listing__listing-checkbox-grid border-1.5 border-[#797979] rounded-xl">
-                    {prices.map((price, index) =>  (
-                        <div key={index} className="listing-checkbox-item w-[192px]">
-                            <input
-                            type="checkbox"
-                            name="price"
-                            value={price.value}
-                            onChange={handleChangeCheckbox}
-                            className="listing-checkbox"
-                            />
-                            <label
-                            htmlFor={`listing-${index}`}
-                            className="listing-checkbox-label"
-                            >
-                            {price.name}
-                            </label>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-[#31343F]">
-                  By posting review, you agree to TastyPlates'&nbsp;
-                  <Link
-                    href="/writing-guidelines"
-                    className="underline"
-                    target="_blank"
-                  >
-                    Writing Guidelines
-                  </Link>
-                </p>
-                <div className="flex gap-4 items-center">
-                  <button className="listing__button" onClick={changeStep}>
-                    Continue
-                  </button>
-                  <button
-                    className="underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center"
-                    type="submit"
-                  >
-                    Save and exit
-                  </button>
-                </div>
-              </form>
+                </form>
+              </>
             )}
             {step == 2 && (
               <form

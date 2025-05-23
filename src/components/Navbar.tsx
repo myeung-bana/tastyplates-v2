@@ -364,7 +364,7 @@ export default function Navbar(props: any) {
                               Write a Review
                             </Link>
                             <Link
-                              href="/listing/add"
+                              href="/listing/step-1"
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Add a Listing

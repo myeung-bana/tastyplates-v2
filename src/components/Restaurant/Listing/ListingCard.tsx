@@ -6,6 +6,7 @@ import "@/styles/components/_listing-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import { useState } from "react";
+import { FaStar } from "react-icons/fa";
 
 interface Restaurant {
   id: string;
@@ -41,7 +42,7 @@ const ListingCard = ({ restaurant, onDelete }: ListingCardProps) => {
 
   return (
     <div className="relative overflow-hidden rounded-md">
-      <div className="restaurant-card__image !h-[222px] relative">
+      <div className="restaurant-card__image relative">
         <Image
           src={restaurant.image}
           alt={restaurant.name}
@@ -50,7 +51,7 @@ const ListingCard = ({ restaurant, onDelete }: ListingCardProps) => {
           className="restaurant-card__img"
         />
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
-        <div className="flex flex-col gap-2 absolute top-4 right-4 text-[#31343F]">
+        <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
           <button
             className="rounded-full p-2 bg-white"
             onClick={() => onDelete()}
@@ -65,12 +66,17 @@ const ListingCard = ({ restaurant, onDelete }: ListingCardProps) => {
             <h2 className="restaurant-card__name line-clamp-1 w-[220px]">
               {restaurant.name}
             </h2>
+            <div className="restaurant-card__rating">
+              <FaStar className="restaurant-card__icon -mt-1" />
+              <span>{restaurant.rating}</span>
+              {/* <span>({restaurant.reviews})</span> */}
+            </div>
           </div>
 
           <div className="restaurant-card__info">
             <div className="restaurant-card__location">
               {/* <FiMapPin className="restaurant-card__icon" /> */}
-              <span className="line-clamp-2">{restaurant.location}</span>
+              <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.location}</span>
             </div>
           </div>
 
@@ -82,7 +88,6 @@ const ListingCard = ({ restaurant, onDelete }: ListingCardProps) => {
             ))}
             &nbsp;&#8226; $
           </div>
-          <h6 className="text-xs font-medium text-[#31343F]">12/2/25</h6>
         </div>
       </Link>
     </div>

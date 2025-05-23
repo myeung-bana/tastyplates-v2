@@ -48,6 +48,11 @@
       font-size: 1rem;
       font-weight: 600;
       color: #31343F;
+
+      @media (max-width: 767px) {
+        font-size: 12px;
+        line-height: 1;
+      }
     }
   
     &__input-group {
@@ -75,6 +80,7 @@
       font-size: 0.875rem;
       color: #1f2937;
       transition: border-color 0.2s ease;
+
   
       &::placeholder {
         color: #9ca3af;
@@ -83,6 +89,10 @@
       &:focus {
         outline: none;
         border-color: #2563eb;
+      }
+
+      @media (max-width: 767px) {
+        font-size: 12px;
       }
     }
   
@@ -103,6 +113,11 @@
       &:focus {
         outline: none;
         box-shadow: 0 0 0 2px #93c5fd;
+      }
+
+      @media (max-width: 767px) {
+        padding: 0.5rem 1rem;
+        font-size: 14px;
       }
     }
   
@@ -125,11 +140,12 @@
   
     &__listing-checkbox-grid {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.5rem;
       margin-top: 0.5rem;
       .listing-checkbox-item {
         display: flex;
+        justify-content: center;
         align-items: center;
         gap: 0.5rem;
         background-color: transparent;
@@ -185,6 +201,10 @@
           color: #374151;
           cursor: pointer;
           user-select: none;
+        }
+
+        @media (max-width: 767px) {
+          padding: 0.5rem 0.75rem;
         }
       }
   
