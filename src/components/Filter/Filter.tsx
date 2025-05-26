@@ -1,5 +1,6 @@
-import { FiFilter } from "react-icons/fi";
+import { GiRoundStar } from 'react-icons/gi';
 import "@/styles/components/filter.scss";
+import { MdStar, MdStarOutline } from 'react-icons/md';
 
 interface FilterProps {
   onFilterChange?: (filterType: string, value: string) => void;
@@ -31,11 +32,13 @@ const Filter = ({ onFilterChange }: FilterProps) => {
         <div className="filter__section">
           <button className="filter__options">
             <span className="filter__label">Badges</span>
+            <img src="/images/arrow_warm_up.svg" className="size-4 sm:size-5" alt="arrow up" />
           </button>
         </div>
 
         <div className="filter__section">
           <div className="filter__options">
+            <img src="/star.svg" className="size-4 sm:size-5" alt="star" />
             <span className="filter__label">Rating</span>
           </div>
         </div>

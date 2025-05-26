@@ -13,6 +13,7 @@ import { cuisines } from "@/data/dummyCuisines";
 import ReviewModal from "@/components/ReviewModal";
 import { useState } from "react";
 import { DollarSign } from "lucide-react";
+import { FaPen, FaRegHeart } from "react-icons/fa";
 
 type tParams = { slug: string };
 
@@ -86,74 +87,92 @@ export default function RestaurantDetail() {
   };
 
   return (
-    <div className="restaurant-detail mt-10">
+    <div className="restaurant-detail mt-32 md:mt-10">
       <div className="restaurant-detail__container">
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
-            <div className="flex justify-between">
-              <div>
-                <h1 className="restaurant-detail__name">{restaurant.name}</h1>
-                <div className="restaurant-detail__meta">
-                  <div className="restaurant-detail__cuisine">
-                    {restaurant.cuisineIds.map((cuisineId) => {
-                      const cuisine = cuisines.find((c) => c.id === cuisineId);
-                      return cuisine ? (
-                        <span key={cuisine.id} className="cuisine-tag">
-                          &#8226; {cuisine.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                  <div className="restaurant-detail__price">
-                    <span>{restaurant.priceRange}</span>
+            <div className="flex flex-col-reverse md:flex-col">
+              <div className="flex flex-col md:flex-row justify-between px-4 md:px-0">
+                <div className="mt-6 md:mt-0">
+                  <h1 className="restaurant-detail__name">{restaurant.name}</h1>
+                  <div className="restaurant-detail__meta">
+                    <div className="restaurant-detail__cuisine">
+                      {restaurant.cuisineIds.map((cuisineId, index) => {
+                        const cuisine = cuisines.find(
+                          (c) => c.id === cuisineId
+                        );
+                        return cuisine ? (
+                          <div className="flex items-center gap-2" key={cuisine.id}>
+                            {index > 0 && <span>&#8226;</span>}
+                            <span className="cuisine-tag">
+                              {cuisine.name}
+                            </span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                    &#8226;
+                    <div className="restaurant-detail__price">
+                      <span>{restaurant.priceRange}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex flex-row flex-nowrap gap-4">
+                  <button
+                    className="restaurant-detail__review-button"
+                    onClick={() => setIsReviewModalOpen(true)}
+                  >
+                    <FaPen className="size-4 md:size-5" />
+                    <span className="underline">Write a Review</span>
+                  </button>
+                  <button
+                    className="restaurant-detail__review-button"
+                    onClick={() => setIsReviewModalOpen(true)}
+                  >
+                    <FaRegHeart className="size-4 md:size-5" />
+                    <span className="underline">Save</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-row flex-nowrap gap-4">
-                <button
-                  className="restaurant-detail__review-button"
-                  onClick={() => setIsReviewModalOpen(true)}
-                >
-                  Write a Review
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-row gap-6">
-              <div className="rounded-l-[24px] relative restaurant-detail__hero w-2/3">
-                <Image
-                  src={restaurant.image}
-                  alt={restaurant.name}
-                  fill
-                  className="restaurant-detail__image rounded-[24px] w-full h-[307px]"
-                  priority
-                />
-              </div>
-              <div className="flex items-center justify-center rounded-[24px] text-center w-1/3">
-                <div className="restaurant-detail__details">
-                  <div className="restaurant-detail__detail-item">
-                    <FiMapPin />
-                    <span>{restaurant.address}</span>
-                  </div>
-                  <div className="restaurant-detail__detail-item">
-                    <FiPhone />
-                    <span>{restaurant.phone}</span>
+              <div className="flex flex-row gap-6">
+                <div className="md:rounded-l-3xl relative restaurant-detail__hero w-2/3">
+                  <Image
+                    src={restaurant.image}
+                    alt={restaurant.name}
+                    fill
+                    className="restaurant-detail__image md:rounded-3xl w-full h-[307px]"
+                    priority
+                  />
+                </div>
+                <div className="items-center justify-center rounded-3xl text-center w-1/3 hidden md:flex">
+                  <div className="restaurant-detail__details">
+                    <div className="restaurant-detail__detail-item">
+                      <FiMapPin />
+                      <span>{restaurant.address}</span>
+                    </div>
+                    <div className="restaurant-detail__detail-item">
+                      <FiPhone />
+                      <span>{restaurant.phone}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 mt-10">
-              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-l-3xl pt-4 pb-2">
-                <h1 className="font-bold">Rating</h1>
+            <div className="grid grid-cols-1 lg:grid-cols-2 mt-10 mx-4 lg:mx-0">
+              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-t-2xl lg:rounded-none lg:rounded-l-3xl pt-4 pb-2">
+                <h1 className="text-xs lg:text-base font-bold">Rating</h1>
                 <div className="rating-summary w-full">
                   <div className="rating-column">
                     <h3>Chinese Palate</h3>
                     <div className="rating-value">
                       {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-[#E36B00] text-2xl font-medium">{japaneseAvgRating}</span>
+                      <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                        {japaneseAvgRating}
+                      </span>
                     </div>
                     <span className="review-count">
-                      ({japanesePalateReviews.length} reviews)
+                      {japanesePalateReviews.length} reviews
                     </span>
                   </div>
                   <div className="h-[85%] border-l border-[#CACACA]"></div>
@@ -161,10 +180,12 @@ export default function RestaurantDetail() {
                     <h3>Overall Rating</h3>
                     <div className="rating-value">
                       {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-[#E36B00] text-2xl font-medium">{overallAvgRating}</span>
+                      <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                        {overallAvgRating}
+                      </span>
                     </div>
                     <span className="review-count">
-                      ({allReviews.length} reviews)
+                      {allReviews.length} reviews
                     </span>
                   </div>
                   <div className="h-[85%] border-l border-[#CACACA]"></div>
@@ -172,58 +193,88 @@ export default function RestaurantDetail() {
                     <h3>Restaurant Palate</h3>
                     <div className="rating-value">
                       {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-[#E36B00] text-2xl font-medium">{italianMexicanAvgRating}</span>
+                      <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                        {italianMexicanAvgRating}
+                      </span>
                     </div>
                     <span className="review-count">
-                      ({italianMexicanPalateReviews.length} reviews)
+                      {italianMexicanPalateReviews.length} reviews
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-r-3xl pt-4 pb-2">
-                <h1 className="font-bold">Community Recognition</h1>
-                <div className="rating-summary w-full">
-                  <div className="rating-column">
-                    <Image src='/flag.svg' height={40} width={40} alt="Flag icon" />
-                    <div className="rating-value">
-                      {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-xl font-medium">{japaneseAvgRating}</span>
+              <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
+                <h1 className="text-xs lg:text-base font-bold">Community Recognition</h1>
+                <div className="w-full flex flex-col lg:flex-row items-center justify-center gap-6 my-5 lg:gap-0 lg:my-0">
+                  <div className="flex items-center w-full">
+                    <div className="rating-column w-full border-r border-[#CACACA]">
+                      <Image
+                        src="/flag.svg"
+                        height={40}
+                        width={40}
+                        className="size-6 md:size-10"
+                        alt="Flag icon"
+                      />
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-lg md:text-xl font-medium">
+                          {japaneseAvgRating}
+                        </span>
+                      </div>
+                      <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
                     </div>
-                    <span className="text-sm">
-                      Must Revisit
-                    </span>
+                    {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
+                    <div className="rating-column w-full lg:border-r border-[#CACACA]">
+                      <Image
+                        src="/phone.svg"
+                        height={40}
+                        width={40}
+                        className="size-6 md:size-10"
+                        alt="phone icon"
+                      />
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-lg md:text-xl font-medium">
+                          {overallAvgRating}
+                        </span>
+                      </div>
+                      <span className="text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
+                    </div>
                   </div>
-
-                  <div className="rating-column">
-                    <Image src='/phone.svg' height={40} width={40} alt="Flag icon" />
-                    <div className="rating-value">
-                      {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-xl font-medium">{overallAvgRating}</span>
+                  <div className="flex items-center w-full">
+                    <div className="rating-column w-full border-r border-[#CACACA]">
+                      <Image
+                        src="/cash.svg"
+                        height={40}
+                        width={40}
+                        className="size-6 md:size-10"
+                        alt="cash icon"
+                      />
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-lg md:text-xl font-medium">
+                          {italianMexicanAvgRating}
+                        </span>
+                      </div>
+                      <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
                     </div>
-                    <span className="text-sm">
-                      Insta-Worthy
-                    </span>
-                  </div>
-
-                  <div className="rating-column">
-                    <Image src='/cash.svg' height={40} width={40} alt="Flag icon" />
-                    <div className="rating-value">
-                      {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-xl font-medium">{italianMexicanAvgRating}</span>
+                    {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
+                    <div className="rating-column w-full">
+                      <Image
+                        src="/helmet.svg"
+                        height={40}
+                        width={40}
+                        className="size-6 md:size-10"
+                        alt="helmet icon"
+                      />
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-lg md:text-xl font-medium">
+                          {italianMexicanAvgRating}
+                        </span>
+                      </div>
+                      <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>
                     </div>
-                    <span className="text-sm">
-                      Value for Money
-                    </span>
-                  </div>
-                  <div className="rating-column">
-                    <Image src='/helmet.svg' height={40} width={40} alt="Flag icon" />
-                    <div className="rating-value">
-                      {/* <FiStar className="fill-yellow-500" /> */}
-                      <span className="text-xl font-medium">{italianMexicanAvgRating}</span>
-                    </div>
-                    <span className="text-sm">
-                      Best Service
-                    </span>
                   </div>
                 </div>
               </div>

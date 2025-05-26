@@ -48,19 +48,23 @@
     display: none;
     align-items: center;
 
-    @media (min-width: 640px) {
-      display: flex;
-      margin-left: 1.5rem;
-      gap: 2rem;
-    }
-
     a {
       color: #111827; // gray-900
-      padding: 0.5rem 0.75rem;
+      padding: 0.5rem;
       border-radius: 0.375rem;
 
       &:hover {
         color: #6b7280; // gray-500
+      }
+    }
+
+    @media (min-width: 640px) {
+      display: flex;
+      margin-left: 1.5rem;
+      gap: 2rem;
+
+      a {
+        padding: 0.5rem 0.75rem;
       }
     }
   }
@@ -93,7 +97,7 @@
   &__auth {
     display: flex;
     gap: 1rem;
-    margin-top: 1rem;
+    // margin-top: 1rem;
     align-items: center;
 
     @media (min-width: 768px) {
@@ -105,15 +109,15 @@
   &__button {
     padding: 0.375rem 0.75rem; // Reduced padding
     border-radius: 3.125rem;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.875rem; // Smaller font size
     text-decoration: none;
     transition: all 0.2s ease;
     white-space: nowrap; // Prevents text wrapping
 
     &--secondary {
-      color: #4b5563;
-      background-color: transparent;
+      color: #31343f;
+      background-color: #FCFCFC;
       border: 1px solid #e5e7eb;
 
       &:hover {
@@ -123,12 +127,12 @@
     }
 
     &--primary {
-      color: #4b5563;
-      background-color: transparent;
+      color: #31343f;
+      background-color: #FCFCFC;
       border: 1px solid transparent;
 
       &:hover {
-        background-color: transparent;
+        background-color: #FCFCFC;
       }
     }
   }

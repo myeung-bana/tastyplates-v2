@@ -60,13 +60,13 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           alt="Review"
           width={400}
           height={400}
-          className="review-card__image !-full !w-full !object-cover rounded-2xl max-h-[405px] hover:cursor-pointer"
+          className="review-card__image rounded-2xl max-h-[226px] sm:max-h-[405px] hover:cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />
       </div>
 
       <div className="review-card__content">
-        <div className="review-card__user">
+        <div className="review-card__user mb-2">
           <Image
             src={author?.image || "/profile-icon.svg"} // Fallback image if author is not found
             alt={author?.name || "User"} // Fallback name if author is not found
@@ -75,7 +75,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             className="review-card__user-image !rounded-2xl"
           />
           <div className="review-card__user-info">
-            <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-sm !font-bold">
+            <h3 className="review-card__username line-clamp-1">
               {author?.name || "Unknown User"}
             </h3>
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
@@ -87,9 +87,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             </div>
           </div>
         </div>
-        <br></br>
-        <p className="text-sm font-semibold w-[304] line-clamp-1">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
-        <p className="review-card__text w-[304] text-sm font-normal line-clamp-2">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
+        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
+        <p className="review-card__text w-[304] text-[10px] sm:text-sm font-normal line-clamp-2">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>
