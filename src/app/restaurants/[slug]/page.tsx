@@ -4,7 +4,7 @@ import { notFound, useParams } from "next/navigation";
 import { FiStar, FiMapPin, FiPhone, FiDollarSign } from "react-icons/fi";
 import { getRestaurantReviews } from "@/utils/reviewUtils";
 import RestaurantReviews from "@/components/RestaurantReviews";
-import { restaurants } from "@/data/dummyRestaurants";
+import { GetListingBySlugData, GetListingsData, restaurants } from "@/data/dummyRestaurants";
 import "@/styles/pages/_restaurant-details.scss";
 import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
@@ -13,6 +13,10 @@ import { cuisines } from "@/data/dummyCuisines";
 import ReviewModal from "@/components/ReviewModal";
 import { useState } from "react";
 import { DollarSign } from "lucide-react";
+import { useQuery } from "@apollo/client";
+import { GET_RESTAURANT_BY_SLUG } from "@/app/graphql/queries";
+import { FaPen, FaRegHeart } from "react-icons/fa";
+
 
 type tParams = { slug: string };
 
@@ -37,31 +41,59 @@ const filterReviewsByPalate = (reviews: Review[], targetPalates: string[]) => {
 };
 
 export default function RestaurantDetail() {
+
+  
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-
+  
   const params = useParams();
-  const slug = params?.slug;
+  const slug = params?.slug as string;
 
-  const restaurant = restaurants.find((r) => r.id.toString() === slug);
+  const { data, loading, error } = useQuery<GetListingBySlugData>(GET_RESTAURANT_BY_SLUG, {
+    variables: { slug },
+    skip: !slug,
+  });
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+const restaurant = data?.listing
+  ? {
+      id: data.listing.id,
+      slug: data.listing.slug,
+      name: data.listing.title,
+      image: data.listing.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      rating: 4.5,
+      cuisineNames: data.listing.cuisines?.nodes.map(c => c.name) || [],
+      cuisineIds: [],
+      location: data.listing.locations?.nodes.map(l => l.name).join(", ") || "",
+      priceRange: "$$",
+      address: data.listing.address || "Not provided",
+      phone: "", // no phone field in query yet
+      reviews: 0,
+      description: data.listing.content || "",
+    }
+  : null;
+
 
   if (!restaurant) {
     notFound();
   }
 
-  const restaurantId = restaurant?.id;
 
-  const restaurantReviews = {
-    reviews: getRestaurantReviews(restaurantId).map((review) => ({
-      ...review,
-      id: review.id, // keep existing id mapping
-      content: review.comment,
-      likes: 0,
-      comments: [],
-      user: review.authorId,
-      userImage: users.find((u) => u.id === review.authorId)?.image || "",
-      timestamp: review.date,
-    })),
-  };
+
+const restaurantId = restaurant.id;
+const restaurantReviews = {
+  reviews: getRestaurantReviews(restaurantId).map((review) => ({
+    ...review,
+    id: review.id,
+    content: review.comment,
+    likes: 0,
+    comments: [],
+    user: review.authorId,
+    userImage: users.find((u) => u.id === review.authorId)?.image || "",
+    timestamp: review.date,
+  })),
+};
 
   const allReviews = restaurantReviews.reviews;
   const japanesePalateReviews = filterReviewsByPalate(allReviews, ["Japanese"]);
@@ -86,57 +118,67 @@ export default function RestaurantDetail() {
   };
 
   return (
+    // <h1>n</h1>
     <div className="restaurant-detail mt-10">
       <div className="restaurant-detail__container">
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
-            <div className="flex justify-between">
-              <div>
-                <h1 className="restaurant-detail__name">{restaurant.name}</h1>
-                <div className="restaurant-detail__meta">
-                  <div className="restaurant-detail__cuisine">
-                    {restaurant.cuisineIds.map((cuisineId) => {
-                      const cuisine = cuisines.find((c) => c.id === cuisineId);
-                      return cuisine ? (
-                        <span key={cuisine.id} className="cuisine-tag">
-                          &#8226; {cuisine.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                  <div className="restaurant-detail__price">
-                    <span>{restaurant.priceRange}</span>
+            <div className="flex flex-col-reverse md:flex-col">
+              <div className="flex flex-col md:flex-row justify-between px-4 md:px-0">
+                <div className="mt-6 md:mt-0">
+                  <h1 className="restaurant-detail__name">{restaurant.name}</h1>
+                  <div className="restaurant-detail__meta">
+                    <div className="restaurant-detail__cuisine">
+                    {restaurant.cuisineNames.map((cuisineName, index) => (
+                      <div className="flex items-center gap-2" key={cuisineName}>
+                        {index > 0 && <span>&#8226;</span>}
+                        <span className="cuisine-tag">{cuisineName}</span>
+                      </div>
+                    ))}
+                    </div>
+                    &#8226;
+                    <div className="restaurant-detail__price">
+                      <span>{restaurant.priceRange}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex flex-row flex-nowrap gap-4">
+                  <button
+                    className="restaurant-detail__review-button"
+                    onClick={() => setIsReviewModalOpen(true)}
+                  >
+                    <FaPen className="size-4 md:size-5" />
+                    <span className="underline">Write a Review</span>
+                  </button>
+                  <button
+                    className="restaurant-detail__review-button"
+                    onClick={() => setIsReviewModalOpen(true)}
+                  >
+                    <FaRegHeart className="size-4 md:size-5" />
+                    <span className="underline">Save</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex flex-row flex-nowrap gap-4">
-                <button
-                  className="restaurant-detail__review-button"
-                  onClick={() => setIsReviewModalOpen(true)}
-                >
-                  Write a Review
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-row gap-6">
-              <div className="rounded-l-[24px] relative restaurant-detail__hero w-2/3">
-                <Image
-                  src={restaurant.image}
-                  alt={restaurant.name}
-                  fill
-                  className="restaurant-detail__image rounded-[24px] w-full h-[307px]"
-                  priority
-                />
-              </div>
-              <div className="flex items-center justify-center rounded-[24px] text-center w-1/3">
-                <div className="restaurant-detail__details">
-                  <div className="restaurant-detail__detail-item">
-                    <FiMapPin />
-                    <span>{restaurant.address}</span>
-                  </div>
-                  <div className="restaurant-detail__detail-item">
-                    <FiPhone />
-                    <span>{restaurant.phone}</span>
+              <div className="flex flex-row gap-6">
+                <div className="md:rounded-l-3xl relative restaurant-detail__hero w-2/3">
+                  <Image
+                    src={restaurant.image != null ? restaurant.image : "/images/Photos-Review-12.png"}
+                    alt={restaurant.name}
+                    fill
+                    className="restaurant-detail__image md:rounded-3xl w-full h-[307px]"
+                    priority
+                  />
+                </div>
+                <div className="items-center justify-center rounded-3xl text-center w-1/3 hidden md:flex">
+                  <div className="restaurant-detail__details">
+                    <div className="restaurant-detail__detail-item">
+                      <FiMapPin />
+                      <span>{restaurant.address}</span>
+                    </div>
+                    <div className="restaurant-detail__detail-item">
+                      <FiPhone />
+                      <span>{restaurant.phone}</span>
+                    </div>
                   </div>
                 </div>
               </div>

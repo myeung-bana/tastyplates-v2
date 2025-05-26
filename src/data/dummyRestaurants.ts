@@ -327,3 +327,53 @@ export const restaurants = [
     ],
   },
 ];
+
+
+
+export interface Listing {
+  id: string;
+  title: string;
+  slug: string;
+  address: string;
+  content: string;
+  featuredImage?: {
+    node: {
+      sourceUrl: string;
+    };
+  };
+  cuisines: {
+    nodes: { 
+      id: string
+      name: string
+
+    }[];
+  };
+  locations: {
+    nodes: { name: string }[];
+  };
+}
+
+export interface CuisineNode {
+  id: string;
+  name: string;
+}
+
+export interface Cuisines {
+  nodes: CuisineNode[];
+}
+
+export interface AllCuisines {
+  cuisines: Cuisines;
+}
+
+
+export interface GetListingsData {
+  listings: {
+    nodes: Listing[];
+  };
+}
+
+export interface GetListingBySlugData {
+  listing: Listing | null;
+}
+

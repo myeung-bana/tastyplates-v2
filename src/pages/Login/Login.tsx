@@ -6,7 +6,7 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "@/lib/firebase";
 import { FirebaseError } from 'firebase/app';
 import { useRouter } from 'next/navigation';
-import { UserService } from '@/services/UserService';
+import { UserService } from '@/services/userService';
 import { ILoginCredentials } from '@/interfaces/user';
 import { useAuth } from '@/contexts/AuthContext';
 import Spinner from "@/components/LoadingSpinner";

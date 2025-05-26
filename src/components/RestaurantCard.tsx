@@ -6,6 +6,7 @@ import { FaRegHeart, FaStar} from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
+import Photo from "../../public/images/Photos-Review-12.png";
 
 interface Restaurant {
   id: string;
@@ -13,7 +14,8 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineIds: string[];
+  cuisineIds?: string[];
+  cuisineNames?: string[];   
   location: string;
   priceRange: string;
   address: string;
@@ -22,21 +24,23 @@ interface Restaurant {
   description: string;
 }
 
+
 interface RestaurantCardProps {
   restaurant: Restaurant;
 }
 
 const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
+  // console.log(restaurant);
   const getCuisineNames = (cuisineIds: string[]) => {
     return cuisineIds
       .map((id) => {
         const cuisine = cuisines.find((c) => c.id === id);
-        return cuisine ? cuisine.name : null; // Return the cuisine name or null if not found
+        return cuisine ? cuisine.name : null;
       })
-      .filter((name) => name); // Filter out any null values
+      .filter((name) => name);
   };
-  const cuisineNames = getCuisineNames(restaurant.cuisineIds);
+  const cuisineNames = restaurant.cuisineNames ?? [];
   return (
     <div className="restaurant-card">
       <div className="restaurant-card__image relative">
@@ -57,7 +61,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           </button>
         </div>
       </div>
-      <Link href={`/restaurants/${restaurant.id}`}>
+        <Link href={`/restaurants/${restaurant.slug}`}>
         <div className="restaurant-card__content">
           <div className="restaurant-card__header">
             <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
@@ -83,7 +87,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
             {cuisineNames.map((cuisineName, index) => (
               <span key={index} className="restaurant-card__tag">
                 &#8226; {cuisineName}
-              </span> // Loop through cuisine names
+              </span>
             ))}
             &nbsp;&#8226; $
           </div>

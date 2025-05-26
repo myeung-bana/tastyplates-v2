@@ -10,12 +10,12 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       // Add your WordPress domain
-      "your-wordpress-site.com",
+      "wordpress.test",
       "localhost",
     ],
   },
   env: {
-    WORDPRESS_API_URL: "https://your-wordpress-site.com/graphql",
+    WORDPRESS_API_URL: "https://wordpress.test/graphql",
   },
 };
 
