@@ -36,6 +36,10 @@
       display: flex;
       flex-direction: column;
       gap: 2rem;
+
+      @media (max-width: 767px) {
+        gap: 1rem;
+      }
     }
   
     &__form-group {
@@ -106,10 +110,6 @@
       cursor: pointer;
       transition: background-color 0.2s ease;
   
-      &:hover {
-        // background-color: #1d4ed8;
-      }
-  
       &:focus {
         outline: none;
         box-shadow: 0 0 0 2px #93c5fd;
@@ -139,17 +139,24 @@
     }
   
     &__listing-checkbox-grid {
-      display: flex;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 0.5rem;
       margin-top: 0.5rem;
-      .listing-checkbox-item {
-        display: flex;
-        justify-content: center;
-        align-items: center;
+
+      // Responsive adjustments
+      @media (max-width: 767px) {
+        // grid-template-columns: repeat(2, minmax(0, 1fr)); // Switch to single column on mobile
         gap: 0.5rem;
-        background-color: transparent;
-        border-radius: 50px;
+    }
+      .listing-checkbox-item {
+        // display: flex;
+        // justify-content: center;
+        // align-items: center;
+        // gap: 0.5rem;
+        // background-color: transparent;
+        width: 100%;
+        border-radius: 8px;
         padding: 0.75rem 1.5rem;
         position: relative;
   
@@ -166,26 +173,6 @@
           // position: relative;
           // transition: all 0.2s ease;
   
-          &:checked {
-            // background-color: #6366f1;
-            // border-color: #6366f1;
-            + .listing-checkbox-item {
-              background-color: #1d4ed8;
-            }
-            &::after {
-              content: "";
-              position: absolute;
-              left: 50%;
-              top: 50%;
-              transform: translate(-50%, -50%);
-              width: 0.75rem;
-              height: 0.75rem;
-              background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z'/%3E%3C/svg%3E");
-              background-size: contain;
-              background-repeat: no-repeat;
-            }
-          }
-  
           // &:hover:not(:checked) {
           //   border-color: #6366f1;
           // }
@@ -200,20 +187,18 @@
           font-size: 0.875rem;
           color: #374151;
           cursor: pointer;
-          user-select: none;
+          // user-select: none;
+          width: 100%;
+          text-align: center;
+          white-space: pre;
         }
 
         @media (max-width: 767px) {
           padding: 0.5rem 0.75rem;
+          font-size: 0.75rem;
         }
       }
-  
-      // Responsive adjustments
-      @media (max-width: 480px) {
-        .listing-checkbox-grid {
-          grid-template-columns: 1fr; // Switch to single column on mobile
-        }
-      }
+
     }
   }
   

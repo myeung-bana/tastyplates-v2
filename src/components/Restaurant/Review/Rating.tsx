@@ -6,7 +6,7 @@ const  Star = ({ selected = false, onSelect }: {selected: boolean, onSelect: () 
       <GiRoundStar
         color={selected ? '#31343F' : '#CACACA'}
         onClick={onSelect}
-        className='cursor-pointer h-[26px] w-[26px]'
+        className='cursor-pointer size-6 md:size-8'
       />
     );
   }
@@ -22,7 +22,7 @@ export default function Rating({ totalStars = 5, defaultRating = 0, onRating } :
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
         <div className='flex gap-1'>
             {Array.from({ length: totalStars }, (_, i) => (
                 <Star
@@ -32,7 +32,7 @@ export default function Rating({ totalStars = 5, defaultRating = 0, onRating } :
                 />
             ))}
         </div>
-        <span className='text-xl'>{rating.toFixed(1)}</span>
+        <span className='text-sm md:text-xl text-center'>{rating.toFixed(1)}</span>
     </div>
   );
 }
