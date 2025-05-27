@@ -6,6 +6,7 @@ import { FaRegHeart, FaStar} from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
+import { useRouter } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -28,6 +29,7 @@ interface RestaurantCardProps {
 
 const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
+  const router = useRouter()
   const getCuisineNames = (cuisineIds: string[]) => {
     return cuisineIds
       .map((id) => {
@@ -37,6 +39,11 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
       .filter((name) => name); // Filter out any null values
   };
   const cuisineNames = getCuisineNames(restaurant.cuisineIds);
+
+  const addReview = () => {
+    router.push('/add-review')
+  }
+
   return (
     <div className="restaurant-card">
       <div className="restaurant-card__image relative">
@@ -52,7 +59,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           <button className="rounded-full p-2 bg-white" onClick={(e) => e.stopPropagation()}>
             <FaRegHeart className="size-3 md:size-4" />
           </button>
-          <button className="rounded-full p-2 bg-white">
+          <button onClick={addReview} className="rounded-full p-2 bg-white">
             <MdOutlineMessage className="size-3 md:size-4" />
           </button>
         </div>
