@@ -9,11 +9,12 @@
   &__card {
     background-color: transparent;
     border-radius: 0.5rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    // box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     padding: 1.5rem;
     display: flex;
-    justify-content: space-evenly;
+    justify-content: flex-start;
     gap: 1rem;
+    flex-wrap: wrap;
 
     @media (max-width: 767px) {
       gap: 0.5rem;

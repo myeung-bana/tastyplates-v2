@@ -1,12 +1,9 @@
 "use client";
 import React, { FormEvent, useState } from "react";
-import FilterSidebar from "@/components/FilterSidebar";
 import RestaurantCard from "@/components/RestaurantCard";
-import Footer from "@/components/Footer";
 import "@/styles/pages/_restaurants.scss";
 import { Restaurant, restaurants } from "@/data/dummyRestaurants";
 import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
-import Filter from "@/components/Filter/Filter";
 import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
 import CustomModal from "@/components/ui/Modal/Modal";
@@ -39,11 +36,11 @@ const ListingPage = () => {
 
   return (
     <>
-      <div className="font-inter max-w-[80rem] mx-auto mt-10">
-        <div className="mt-8 flex flex-col justify-center items-center">
-            <h1 className="text-2xl text-[#31343F] text font-medium">Find a listing to review</h1>
-            <form onSubmit={handleSearch} className="my-10  max-w-[525px] w-full">
-                <div className="hero__search-wrapper !p-3.5 !rounded-[50px] gap-6 border border-[#E5E5E5]">
+      <div className="font-inter max-w-[82rem] mx-auto mt-16">
+        <div className="py-6 md:py-8 flex flex-col justify-center items-center">
+            <h1 className="text-lg md:text-2xl text-[#31343F] text font-medium">Find a listing to review</h1>
+            <form onSubmit={handleSearch} className="my-6 md:my-10 max-w-[525px] w-full px-6 lg:px-0">
+                <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                     <div className="hero__search-restaurant !bg-transparent">
                         <FiSearch className="hero__search-icon" />
                         <input
@@ -56,26 +53,30 @@ const ListingPage = () => {
                     </div>
                     <button
                         type="submit"
-                        className="rounded-full text-[#FCFCFC] h-[44px] font-semibold w-fit px-6 py-3 text-center bg-[#E36B00]"
+                        className="rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00]"
                     >
                         Search
                     </button>
                 </div>
             </form>
-          <div className="restaurants__content mt-10">
-            <h1 className="text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
-            <div className="restaurants__grid mt-8">
-                {restaurants.map((restaurant: Restaurant, index: number) => (
-                  <ListingCard key={index} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
-                ))}
+          <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__content">
+              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
+              <div className="restaurants__grid mt-6 md:mt-8">
+                  {restaurants.map((restaurant: Restaurant, index: number) => (
+                    <ListingCard key={index} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
+                  ))}
+              </div>
             </div>
           </div>
-          <div className="restaurants__content mt-10">
-            <h1 className="text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
-            <div className="restaurants__grid mt-8">
-              {restaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={rest} />
-              ))}
+          <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__content">
+              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
+              <div className="restaurants__grid mt-6 md:mt-8">
+                {restaurants.map((rest) => (
+                  <RestaurantCard key={rest.id} restaurant={rest} />
+                ))}
+              </div>
             </div>
           </div>
         </div>
