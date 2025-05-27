@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       // Add your WordPress domain
-      "wordpress.test",
+      "your-wordpress-site.com",
       "localhost",
     ],
   },
