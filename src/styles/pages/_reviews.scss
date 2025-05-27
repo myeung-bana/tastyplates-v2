@@ -1,25 +1,44 @@
 .reviews {
+  margin-top: -2.5rem;
   padding: 4rem 0;
   background-color: #f9fafb;
+
+  @media (max-width: 767px) {
+    margin-top: -2.5rem;
+    padding: 1.5rem 0;
+  }
 
   &__container {
     max-width: 90rem; // Increased from 80rem to accommodate 4 cards
     margin: 0 auto;
     padding: 0 1rem;
+
+    @media (max-width: 767px) {
+      padding: 0 .75rem;
+    }
   }
 
   &__title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1f2937;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #1B1B1B;
     text-align: center;
     margin-bottom: 0.5rem;
+
+    @media (max-width: 767px) {
+      font-size: 1.25rem;
+    }
   }
 
   &__subtitle {
     text-align: center;
-    color: #6b7280;
+    color: #494D5D;
     margin-bottom: 3rem;
+    font-size: 1rem;
+
+    @media (max-width: 767px) {
+      font-size: .75rem;
+    }
   }
 
   &__grid {
@@ -74,9 +93,13 @@
   }
 
   &__username {
-    font-weight: 600;
-    color: #1f2937;
-    font-size: 0.875rem;
+    font-weight: 500;
+    color: #31343F;
+    font-size: 0.75rem;
+
+    @media (max-width: 767px) {
+      font-size: 0.625rem;
+    }
   }
 
   &__restaurant {
@@ -114,7 +137,11 @@
   }
 
   &__content {
-    padding: 1rem;
+    padding: 0.5rem 1rem 0 1rem;
+
+    @media (max-width: 767px) {
+      padding: 0.5rem 0 0 0;
+    }
   }
 
   &__actions {
@@ -140,10 +167,9 @@
   }
 
   &__text {
-    font-size: 0.875rem;
     color: #4b5563;
     margin-bottom: 0.5rem;
-    line-height: 1.5;
+    line-height: 1;
   }
 
   &__timestamp {

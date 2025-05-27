@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { FiHeart, FiMessageCircle, FiStar, FiThumbsUp } from "react-icons/fi";
+import { BiLike } from "react-icons/bi";
 import { palates } from "@/data/dummyPalate";
 import { users } from "@/data/dummyUsers";
 import PhotoSlider from "./Restaurant/Details/PhotoSlider";
@@ -18,6 +19,7 @@ interface ReviewBlockProps {
     user: string;
     rating: number;
     date: string;
+    title?: string,
     comment: string;
     images: string[];
     userImage: string;
@@ -42,7 +44,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             alt={author?.name || "User"} // Fallback name if author is not found
             width={40}
             height={40}
-            className="review-block__user-image"
+            className="review-block__user-image size-6 md:size-10"
           />
           <div className="review-block__user-info">
             <h3 className="review-block__username">
@@ -59,11 +61,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
         <div className="review-block__rating">
           {[...Array(review.rating)].map((i, index) =>
-            <FiStar key={index} className="review-block__star fill-[#31343F] stroke-none w-3.5 h-3.5" />
+            <FiStar key={index} className="review-block__star fill-[#31343F] stroke-none size-3 md:size-3.5" />
           )}
         </div>
       </div>
       <div className="review-block__content">
+        <h3 className="text-xs md:text-base font-medium mb-2">{review?.title ?? 'Sample'}</h3>
         <p className="review-block__text">{review.comment}</p>
       </div>
       <div className="">
@@ -81,8 +84,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       </div>
       <div className="review-block__actions">
           <button className="review-block__action-btn">
-            <FiThumbsUp className="w-[21px] h-auto stroke-[#494D5D]"/>
-            <span className="ml-2 text-center">2</span>
+            <BiLike className="size-6 fill-[#494D5D]"/>
+            <span className="ml-2 text-center leading-6">2</span>
           </button>
           {/* <button className="review-block__action-btn">
             <FiMessageCircle />

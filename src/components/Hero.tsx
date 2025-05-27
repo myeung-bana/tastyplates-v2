@@ -1,5 +1,6 @@
 "use client";
 import { FiSearch, FiMapPin, FiNavigation } from "react-icons/fi";
+import { MdStore } from "react-icons/md";
 import { useState } from "react";
 import "@/styles/components/_hero.scss";
 import Image from "next/image";
@@ -68,21 +69,36 @@ const Hero = () => {
     console.log("Searching for:", { cuisine, location });
   };
 
+  const searchByListingName = () => {
+    console.log('search by listing name')
+  }
+
   return (
-    <section className="hero mx-auto !pt-24">
+    <section className="hero mx-auto">
       <div className="hero__container mx-auto">
         <div className="hero__content z-20 mx-auto">
-          <img src='/images/hero-bg.png' width={1980} height={538} className="absolute inset-0 w-full -z-10 object-cover" alt="Hero background" />
-          <h1 className="hero__title sm:!text-white !text-[40px] leading-[48px] font-bold text-center">
+          <img src='/images/hero-bg.png' width={1980} height={538} className="absolute inset-0 w-full -z-10 h-[538px] object-cover hidden sm:block" alt="Hero background" />
+          <img src='/images/hero-bg-sp.png' width={640} height={466} className="absolute inset-0 w-full h-[466px] -z-10 object-left-top object-cover sm:hidden" alt="Hero background" />
+          <h1 className="hero__title">
             Discover & Share Amazing Restaurants
           </h1>
-          <p className="hero__description sm:!text-white !text-xl font-bold text-center">
+          <p className="hero__description">
             Find and share your favourite restaurants based on your palate.
           </p>
-
           <form onSubmit={handleSearch} className="hero__search">
-            <div className="hero__search-wrapper !p-3.5 !rounded-[50px]">
-              <div className="hero__search-restaurant !bg-transparent">
+            <div className="hero__search-wrapper">
+              <div className="hero__search-restaurant text-center sm:hidden">
+                {/* <FiSearch className="hero__search-icon" /> */}
+                {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
+                <input
+                  type="text"
+                  placeholder="Start Your Search"
+                  className="hero__search-input text-center"
+                  value={cuisine}
+                  onChange={(e) => setCuisine(e.target.value)}
+                />
+              </div>
+              <div className="hero__search-restaurant hidden sm:flex">
                 {/* <FiSearch className="hero__search-icon" /> */}
                 {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
                 <input
@@ -94,7 +110,7 @@ const Hero = () => {
                 />
               </div>
               <div className="hero__search-divider"></div>
-              <div className="hero__search-restaurant !bg-transparent">
+              <div className="hero__search-restaurant hidden sm:flex">
                 {/* <FiSearch className="hero__search-icon" /> */}
                 <input
                   type="text"
@@ -105,7 +121,7 @@ const Hero = () => {
                 />
               </div>
               <div className="hero__search-divider"></div>
-              <div className="hero__search-location !bg-transparent">
+              <div className="hero__search-location hidden sm:flex">
                 {/* <FiMapPin className="hero__search-icon" /> */}
                 <input
                   type="text"
@@ -130,13 +146,19 @@ const Hero = () => {
               </div>
               <button
                 type="submit"
-                className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
+                className="hero__search-button h-8 w-8 sm:h-11 sm:w-11 text-center"
                 disabled={!location || !cuisine}
               >
-                <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
+                <FiSearch className="hero__search-icon stroke-white" />
               </button>
             </div>
           </form>
+          <div className="flex gap-2 justify-center mt-6 items-center">
+            <MdStore className="size-4 sm:size-5 fill-[#FCFCFC]" />
+              <button onClick={searchByListingName} className="border-b border-[#FCFCFC] font-semibold text-sm sm:text-base text-[#FCFCFC] leading-5">
+              Search by Listing Name
+            </button>
+          </div>
         </div>
       </div>
     </section>
