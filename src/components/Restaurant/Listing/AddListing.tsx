@@ -91,7 +91,7 @@ const AddListingPage = (props: any) => {
     console.log("listing", listing);
     setListing({
       ...listing,
-      prices: [
+      recogniton: [
         e.target.value == 1,
         e.target.value == 2,
         e.target.value == 3,
@@ -335,14 +335,13 @@ const AddListingPage = (props: any) => {
                 <div className="listing__form-group">
                   <label className="listing__label">Title</label>
                   <div className="listing__input-group">
-                    <input
-                      type="text"
-                      name="name"
-                      className="listing__input"
+                    <textarea
+                      name="title"
+                      className="listing__input resize-vertical"
                       placeholder="Title of your review"
-                      value={""}
-                      onChange={(e) => {}}
-                    />
+                      defaultValue="Title of your review"
+                      rows={2}
+                    ></textarea>
                   </div>
                 </div>
                 <div className="listing__form-group">
@@ -364,8 +363,8 @@ const AddListingPage = (props: any) => {
                     Upload Photos(Max 6 Photos)
                   </label>
                   <div className="submitRestaurants__input-group">
-                    <label className="flex gap-2 items-center rounded-xl py-3 px-6 border border-[#494D5D] w-fit cursor-pointer">
-                      <MdOutlineFileUpload className="size-5" />
+                    <label className="flex gap-2 items-center rounded-xl py-2 px-4 md:py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
+                      <MdOutlineFileUpload className="size-4 md:size-5" />
                       <input
                         type="file"
                         name="image"
@@ -376,7 +375,7 @@ const AddListingPage = (props: any) => {
                         multiple
                         max={6}
                       />
-                      <span className="text-[#494D5D] font-semibold">
+                      <span className="text-sm md:text-base text-[#494D5D] font-semibold">
                         Upload
                       </span>
                     </label>
@@ -405,7 +404,7 @@ const AddListingPage = (props: any) => {
                       <div
                         key={tag.id}
                         className={`listing-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${
-                          listing?.prices?.length && listing.prices[index]
+                          listing?.recognition?.length && listing.recognition[index]
                             ? "bg-[#F1F1F1]"
                             : "bg-transparent"
                         }`}
@@ -444,7 +443,7 @@ const AddListingPage = (props: any) => {
                     Writing Guidelines
                   </Link>
                 </p>
-                <div className="flex gap-3 md:gap-4 items-center">
+                <div className="flex justify-center gap-3 md:gap-4 items-center">
                   <button type="submit" className="listing__button">
                     Submit Listing
                   </button>

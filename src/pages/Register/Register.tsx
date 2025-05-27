@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
 import { auth, provider } from "@/lib/firebase";
 import { FirebaseError } from 'firebase/app';
-import { UserService } from '@/services/UserService';
+import { UserService } from '@/services/userService';
 import Spinner from "@/components/LoadingSpinner";
 
 interface RegisterPageProps {
