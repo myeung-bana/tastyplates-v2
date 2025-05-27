@@ -6,6 +6,7 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
+import { MdClose } from "react-icons/md";
 export default function CustomModal(props: any) {
   const {
     isOpen,
@@ -14,7 +15,7 @@ export default function CustomModal(props: any) {
     content,
     hasFooter = false,
     footer,
-    onOpenChange
+    onOpenChange,
   } = props;
 
   return (
@@ -23,19 +24,29 @@ export default function CustomModal(props: any) {
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         classNames={{
-          // body: "py-6",
-          // backdrop: "bg-[#292f46]/50 backdrop-opacity-40",
-          // base: "border-[#292f46] text-[#a8b0d3]",
-          // header: "border-b-[1px] border-[#292f46]",
-          // footer: "border-t-[1px] border-[#292f46]",
+          body: "py-4 md:py-6 bg-transparent text-xs md:text-base",
+          backdrop: "bg-black/20 backdrop-opacity-10",
+          base: "border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl",
+          header: cn(
+            "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg"
+          ),
+          footer: "!pt-0",
           closeButton: "hidden",
         }}
+        placement="center"
         closeButton={false}
+        // disableAnimation
       >
         <ModalContent>
           <ModalHeader className="flex flex-col text-center gap-1 justify-center border-b border-[#CACACA] text-xl">
             {header}
           </ModalHeader>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="absolute top-5 right-5"
+          >
+            <MdClose className="size-4 md:size-6" />
+          </button>
           <ModalBody>
             <p>{content}</p>
           </ModalBody>
@@ -44,7 +55,7 @@ export default function CustomModal(props: any) {
               <button
                 onClick={setIsOpen}
                 className={cn(
-                  "bg-[#E36B00] rounded-xl text-center justify-center w-full py-3 px-6"
+                  "bg-[#E36B00] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6"
                 )}
               >
                 Done
