@@ -150,13 +150,14 @@ export default function RestaurantDetail() {
                   </div>
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
-                  <button
+                  <a
+                    href="/add-review"
                     className="restaurant-detail__review-button"
-                    onClick={() => setIsReviewModalOpen(true)}
+                    // onClick={() => setIsReviewModalOpen(true)}
                   >
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
-                  </button>
+                  </a>
                   <button
                     className="restaurant-detail__review-button"
                     onClick={() => setIsReviewModalOpen(true)}
