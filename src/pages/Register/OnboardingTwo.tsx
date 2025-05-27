@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/LoadingSpinner";
-import { UserService } from "@/services/UserService";
+import { UserService } from "@/services/userService";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
