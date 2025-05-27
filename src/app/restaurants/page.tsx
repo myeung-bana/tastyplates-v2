@@ -1,134 +1,193 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import FilterSidebar from "@/components/FilterSidebar";
 import RestaurantCard from "@/components/RestaurantCard";
 import Footer from "@/components/Footer";
 import "@/styles/pages/_restaurants.scss";
-import { AllCuisines, GetListingsData } from "@/data/dummyRestaurants";
-import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
 import Filter from "@/components/Filter/Filter";
-import { useQuery } from "@apollo/client";
-import{ GET_ALL_CUISINES, GET_LISTINGS} from "@/app/graphql/queries";
-import client  from "@/app/graphql/client";
 import SkeletonCard from "@/components/SkeletonCard";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { Listing } from "@/interfaces/restaurant/restaurant";
+import { CuisineNode } from "@/interfaces/cuisines/cuisines";
+import { useDebounce } from "use-debounce";
 
-const RestaurantPage = () => {
-const [searchTerm, setSearchTerm] = useState("");
-const [showDropdown, setShowDropdown] = useState(false);
-
-
-  // Filter restaurants based on the selected cuisine type
-// const ITEMS_PER_PAGE = 10;
-const { data: listingsData, loading: listingsLoading, error: listingsError } = useQuery<GetListingsData>(GET_LISTINGS);
-const { data: cuisinesData, loading: cuisinesLoading, error: cuisinesError } = useQuery<AllCuisines>(GET_ALL_CUISINES);
-
-  
-  if (listingsLoading) {
-    return (
-      <div className="restaurants__grid">
-      {[...Array(6)].map((_, i) => (
-        <SkeletonCard key={i} />
-      ))}
-    </div>
-  );
+interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  rating: number;
+  cuisineNames: string[];
+  location: string;
+  priceRange: string;
 }
 
+const RestaurantPage = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [cuisines, setCuisines] = useState<CuisineNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [afterCursor, setAfterCursor] = useState<string | null>(null);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
-const restaurants = listingsData?.listings.nodes.map((item) => ({
-  id: item.id,
-  slug: item.slug,
-  name: item.title,
-  image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png", 
-  rating: 4.5,
-  cuisineNames: item.cuisines?.nodes.map((c) => c.name) || [],
-  cuisineIds: item.cuisines?.nodes.map((c) => c.id) || [],
-  location: item.locations?.nodes.map((l) => l.name).join(", ") || "Unknown",
-  priceRange: "$$", 
-  address: item.address || "Not provided",
-  phone: "", 
-  reviews: 0,
-  description: item.content || "",
-}));
-
-const filteredRestaurants = searchTerm
-  ? restaurants?.filter((restaurant) =>
-      restaurant.cuisineNames.some((name) =>
-        name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    )
-  : restaurants;
-
-
-  const handleFilterChange = (filterType: string, value: string) => {
-    // TODO: Implement filter logic
-    console.log(`Filter changed: ${filterType} = ${value}`);
+// Helper: transform GraphQL node to Restaurant
+  const transformNodes = (nodes: any[]): Restaurant[] => {
+    return nodes.map((item: any) => ({
+      id: item.id,
+      slug: item.slug,
+      name: item.title,
+      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      rating: 4.5, // Default rating since it's not in the API response
+      cuisineNames: item.cuisines?.nodes.map((c: any) => c.name) || [],
+      location: item.locations?.nodes.map((l: any) => l.name).join(", ") || "Default Location",
+      priceRange: item.priceRange || "$$",
+      fieldMultiCheck90: item.fieldMultiCheck90 || ""
+    }));
   };
 
-const handleCuisineSelect = (cuisineName: string) => {
-  setSearchTerm(cuisineName);
-  setShowDropdown(false);
-};
+  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+    setLoading(true);
+    try {
+      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const transformed = transformNodes(data.nodes);
 
-const clearFilter = () => {
-  setSearchTerm("");
-};
+      setRestaurants(prev => {
+        if (!after) {
+          // New search: replace list
+          return transformed;
+        }
+        // Pagination: append unique restaurants only
+        const all = [...prev, ...transformed];
+        const uniqueMap = new Map(all.map(r => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      setAfterCursor(data.pageInfo.endCursor);
+      setHasMore(data.pageInfo.hasNextPage);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  console.log(restaurants);
+
+  useEffect(() => {
+    fetchRestaurants("", 8, null);
+  }, []);
+
+  useEffect(() => {
+    fetchRestaurants(debouncedSearchTerm, 8, null);
+  }, [debouncedSearchTerm]);
+
+  const loadMore = useCallback(() => {
+    if (hasMore && !loading) {
+      fetchRestaurants(debouncedSearchTerm,8, afterCursor);
+    }
+  }, [afterCursor, hasMore, loading]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 1 }
+    );
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+    return () => {
+      if (loaderRef.current) observer.unobserve(loaderRef.current);
+    };
+  }, [loadMore]);
+
+  const filteredRestaurants = searchTerm
+    ? restaurants.filter((restaurant) =>
+      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    : restaurants;
 
 
   return (
-    <>
-      <div className="restaurants min-h-[70vh] font-inter">
-        {/* <h1 className="restaurants__title">Restaurants Near You</h1> */}
-        <div className="restaurants__container">
-          <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
-            <Filter onFilterChange={handleFilterChange} />
-            <div className="search-bar hidden sm:block">
-                <input
-                  type="text"
-                  placeholder="Search by Cuisine"
-                  value={searchTerm}
-                  onFocus={() => setShowDropdown(true)}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-bar__input"
-                />
-
+    <div className="restaurants min-h-[70vh] font-inter">
+      <div className="restaurants__container">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
+          <Filter onFilterChange={() => { }} />
+          <div className="search-bar hidden sm:block relative">
+            <input
+              type="text"
+              placeholder="Search by Listing Name"
+              value={searchTerm}
+              onFocus={() => setShowDropdown(true)}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-bar__input"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-2 text-sm text-gray-500 hover:text-black"
+              >
+                ✕
+              </button>
+            )}
             {showDropdown && (
-              <div className="cuisine-dropdown absolute bg-white shadow-lg z-10 w-full">
-                {cuisinesData?.cuisines.nodes.map((cuisine) => (
-                  <div
-                    key={cuisine.id}
-                    className="cuisine-dropdown__item p-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => handleCuisineSelect(cuisine.name)}
-                  >
-                    {cuisine.name}
-                  </div>
-                ))}
+              <div className="cuisine-dropdown absolute bg-white shadow-lg z-10 w-full max-h-60 overflow-auto">
+                {restaurants
+                  .filter((rest) =>
+                    rest.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((rest) => (
+                    <div
+                      key={rest.id}
+                      className="cuisine-dropdown__item p-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        setSearchTerm(rest.name);
+                        setShowDropdown(false);
+                      }}
+                    >
+                      {rest.name}
+                    </div>
+                  ))}
               </div>
             )}
-            </div>
-                  {searchTerm && (
-                    <button
-                      onClick={clearFilter}
-                      className="clear-filter-btn absolute right-2 top-2 text-sm text-gray-500 hover:text-black"
-                    >
-                      ✕
-                    </button>
-                  )}
-          </div>
-          <div className="restaurants__content">
-            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
-            <div className="restaurants__grid">
-            {filteredRestaurants?.length ? (
-                filteredRestaurants.map((rest) => (
-                  <RestaurantCard key={rest.id} restaurant={rest} />
-                ))
-              ) : (
-                <p className="text-gray-500">No restaurants match your filter.</p>
-              )}
-            </div>
+
           </div>
         </div>
+
+        <div className="restaurants__content">
+          <div className="restaurants__grid">
+            {filteredRestaurants.map((rest) => (
+              <RestaurantCard key={rest.id} restaurant={rest} />
+            ))}
+            {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+          <div ref={loaderRef} className="mt-4 w-full text-center">
+            {loading && hasMore ? (
+              <div className="restaurants__grid">
+                {[...Array(4)].map((_, i) => (
+                  <SkeletonCard key={`loader-${i}`} />
+                ))}
+              </div>
+            ) : hasMore ? (
+              <div className="restaurants__grid">
+                {[...Array(4)].map((_, i) => (
+                  <SkeletonCard key={`loader-${i}`} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400">No more results</p>
+            )}
+          </div>
+
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 

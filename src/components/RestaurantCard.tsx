@@ -14,16 +14,10 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineIds?: string[];
-  cuisineNames?: string[];   
+  cuisineNames: string[];
   location: string;
   priceRange: string;
-  address: string;
-  phone: string;
-  reviews: number;
-  description: string;
 }
-
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -41,6 +35,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
       .filter((name) => name);
   };
   const cuisineNames = restaurant.cuisineNames ?? [];
+
   return (
     <div className="restaurant-card">
       <div className="restaurant-card__image relative">
@@ -89,7 +84,6 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
                 &#8226; {cuisineName}
               </span>
             ))}
-            &nbsp;&#8226; $
           </div>
 
         </div>
