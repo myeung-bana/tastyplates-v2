@@ -13,6 +13,8 @@ import ReviewModal from "@/components/ReviewModal";
 import { FaPen, FaRegHeart } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
+import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
+import { Dialog } from "@headlessui/react";
 
 
 type tParams = { slug: string };
@@ -29,7 +31,6 @@ const filterReviewsByPalate = (reviews: Review[], targetPalates: string[]) => {
     const user = users.find((user) => user.id === review.authorId);
     if (!user) return false;
 
-    // Check if any of the user's palates match the target palates
     return user.palateIds.some((palateId) => {
       const palate = palates.find((p) => p.id === palateId);
       return palate && targetPalates.includes(palate.name);
@@ -56,24 +57,25 @@ export default function RestaurantDetail() {
           name: data.title,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
           cuisines: data.cuisines?.nodes || [],
-          location: data.locations?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
+          countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
-          address: data.address || "Not provided",
           phone: data.phone || "Not provided",
           description: data.content || "",
           listingStreet: data.listingStreet || "",
-          fieldMultiCheck90: data.fieldMultiCheck90
-            ? data.fieldMultiCheck90.split("|").map((c: string) => c.trim()).filter(Boolean)
-            : [],
-
+          listingCategories: data.listingCategories?.nodes?.map((c: { name: string }) => c.name) || [],
           listingDetails: {
-            googleMapUrl: data.listingDetails?.googleMapUrl || "",
+            googleMapUrl: {
+              latitude: data.listingDetails?.googleMapUrl?.latitude || "",
+              longitude: data.listingDetails?.googleMapUrl?.longitude || "",
+              streetAddress: data.listingDetails?.googleMapUrl?.streetAddress || "",
+            },
             latitude: data.listingDetails?.latitude || "",
             longitude: data.listingDetails?.longitude || "",
             menuUrl: data.listingDetails?.menuUrl || "",
             openingHours: data.listingDetails?.openingHours || "",
             phone: data.listingDetails?.phone || "",
           },
+
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -85,6 +87,10 @@ export default function RestaurantDetail() {
   }, [slug]);
 
   console.log(restaurant);
+
+  const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
+  const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
+  const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
 
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
@@ -143,6 +149,7 @@ export default function RestaurantDetail() {
                         </div>
                       ))}
                     </div>
+                      <span>{restaurant.listingStreet}</span>
                     &#8226;
                     <div className="restaurant-detail__price">
                       <span>{restaurant.priceRange}</span>
@@ -153,7 +160,7 @@ export default function RestaurantDetail() {
                   <a
                     href="/add-review"
                     className="restaurant-detail__review-button"
-                    // onClick={() => setIsReviewModalOpen(true)}
+                  // onClick={() => setIsReviewModalOpen(true)}
                   >
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
@@ -179,46 +186,38 @@ export default function RestaurantDetail() {
                 </div>
                 <div className="items-center justify-center rounded-3xl text-center w-1/3 hidden md:flex">
                   <div className="restaurant-detail__details">
-                    <div className="restaurant-detail__detail-item">
-                      <FiMapPin />
-                      <span>{restaurant.listingStreet || restaurant.address}</span>
+                    <div className="rounded-xl overflow-hidden shadow-md border border-gray-200 max-w-md bg-white">
+                      {lat && lng ? (
+                        <div className="cursor-pointer">
+                          <RestaurantMap lat={lat} lng={lng} small />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500">
+                          <FiMapPin className="w-5 h-5 mr-2" />
+                          <span>Map location not available</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-2 p-4">
+                        <FiMapPin className="w-5 h-5 text-gray-600 mt-1" />
+                        <p className="text-sm text-gray-800 leading-snug">
+                          {address || 'Address not provided'}
+                        </p>
+                      </div>
                     </div>
+
                     <div className="restaurant-detail__detail-item">
                       <FiPhone />
                       <span>{restaurant.listingDetails?.phone || restaurant.phone}</span>
                     </div>
                     {restaurant.listingDetails?.openingHours && (
                       <div className="restaurant-detail__detail-item" key="opening-hours">
-                        <span>🕒 {restaurant.listingDetails.openingHours}</span>
+                        <span>🕒 {restaurant.listingDetails?.openingHours}</span>
                       </div>
                     )}
                     {restaurant.fieldMultiCheck90 && restaurant.fieldMultiCheck90.length > 0 && (
                       <div className="restaurant-detail__detail-item" key="field-multi-check">
                         <span>🏷️ {restaurant.fieldMultiCheck90.join(" | ")}</span>
-                      </div>
-                    )}
-                    {restaurant.listingDetails?.menuUrl && (
-                      <div className="restaurant-detail__detail-item" key="menu-url">
-                        <a
-                          href={restaurant.listingDetails.menuUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#E36B00] hover:underline"
-                        >
-                          📋 View Menu
-                        </a>
-                      </div>
-                    )}
-                    {restaurant.listingDetails?.googleMapUrl && (
-                      <div className="restaurant-detail__detail-item" key="map-url">
-                        <a
-                          href={restaurant.listingDetails.googleMapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#E36B00] hover:underline"
-                        >
-                          🗺️ View on Map
-                        </a>
                       </div>
                     )}
                   </div>

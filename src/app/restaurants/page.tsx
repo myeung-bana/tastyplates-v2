@@ -8,7 +8,6 @@ import Filter from "@/components/Filter/Filter";
 import SkeletonCard from "@/components/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
-import { CuisineNode } from "@/interfaces/cuisines/cuisines";
 import { useDebounce } from "use-debounce";
 
 interface Restaurant {
@@ -18,7 +17,7 @@ interface Restaurant {
   image: string;
   rating: number;
   cuisineNames: string[];
-  location: string;
+  countries: string;
   priceRange: string;
 }
 
@@ -27,24 +26,21 @@ const RestaurantPage = () => {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [showDropdown, setShowDropdown] = useState(false);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [cuisines, setCuisines] = useState<CuisineNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
-// Helper: transform GraphQL node to Restaurant
-  const transformNodes = (nodes: any[]): Restaurant[] => {
-    return nodes.map((item: any) => ({
+  const transformNodes = (nodes: Listing[]): Restaurant[] => {
+    return nodes.map((item) => ({
       id: item.id,
       slug: item.slug,
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5, // Default rating since it's not in the API response
-      cuisineNames: item.cuisines?.nodes.map((c: any) => c.name) || [],
-      location: item.locations?.nodes.map((l: any) => l.name).join(", ") || "Default Location",
-      priceRange: item.priceRange || "$$",
-      fieldMultiCheck90: item.fieldMultiCheck90 || ""
+      rating: 4.5, 
+      cuisineNames: item.cuisines || [],
+      countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
+      priceRange: "$$"
     }));
   };
 
@@ -86,7 +82,7 @@ const RestaurantPage = () => {
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
-      fetchRestaurants(debouncedSearchTerm,8, afterCursor);
+      fetchRestaurants(debouncedSearchTerm, 8, afterCursor);
     }
   }, [afterCursor, hasMore, loading]);
 
