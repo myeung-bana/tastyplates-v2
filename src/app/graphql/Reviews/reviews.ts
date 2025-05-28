@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 
 export const GET_ALL_RECENT_REVIEWS = gql`
-  query GetReviews($first: Int = 8, $after: String) {
+  query GetReviews($first: Int = 16, $after: String) {
     comments(
       where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
       first: $first

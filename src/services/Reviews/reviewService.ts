@@ -1,7 +1,7 @@
 import { ReviewRepository } from "@/repositories/Reviews/reviewRepository";
 
 export class ReviewService {
-    static async fetchAllReviews(first = 8, after: string | null = null) {
+    static async fetchAllReviews(first = 16, after: string | null = null) {
         try {
             const response = await ReviewRepository.getAllReviews(first, after);
             return response;
