@@ -30,7 +30,7 @@ export default function CustomModal(props: any) {
           header: cn(
             "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg"
           ),
-          footer: "!pt-0",
+          footer: "!p-4 !pt-0 !justify-center",
           closeButton: "hidden",
         }}
         placement="center"
