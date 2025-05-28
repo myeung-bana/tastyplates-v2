@@ -2,12 +2,15 @@ export interface Listing {
     id: string;
     title: string;
     slug: string;
-    address: string;
     content: string;
     listingStreet: string;
-    fieldMultiCheck90: string;
+    cuisines: string[];
     listingDetails: {
-        googleMapUrl: string;
+        googleMapUrl: {
+            latitude: string
+            longitude: string
+            streetAddress: string
+        }
         latitude: string;
         longitude: string;
         menuUrl: string;
@@ -19,13 +22,13 @@ export interface Listing {
             sourceUrl: string;
         };
     };
-    cuisines: {
+    listingCategories: {
         nodes: {
             id: string
             name: string
         }[];
     };
-    locations: {
+    countries: {
         nodes: { name: string }[];
     };
 }

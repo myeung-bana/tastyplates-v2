@@ -11,30 +11,21 @@ export const GET_LISTINGS = gql`
                 id
                 title
                 slug
-                address
                 content
-                fieldMultiCheck90
                 listingStreet
-                listingDetails {
-                    phone
-                    openingHours
-                    menuUrl
-                    longitude
-                    latitude
-                    googleMapUrl
-                }
+                cuisines
                 featuredImage {
                     node {
                         sourceUrl
                     }
                 }
-                cuisines {
+                listingCategories {
                     nodes {
                         id
                         name
                     }
                 }
-                locations {
+                countries {
                     nodes {
                         name
                     }
@@ -50,9 +41,8 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         id
         title
         slug
-        address
         content
-        fieldMultiCheck90
+        cuisines
         listingStreet
                 listingDetails {
                     phone
@@ -60,32 +50,27 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                     menuUrl
                     longitude
                     latitude
-                    googleMapUrl
+                    googleMapUrl {
+                        latitude
+                        longitude
+                        streetAddress
+                    }
                 }
             featuredImage {
                 node {
                     sourceUrl
                 }
             }
-        cuisines {
+        listingCategories {
             nodes {
                 name
             }
         }
-        comments {
-            nodes {
-                content
-                listingCommentReview {
-                    rate
-                    recommendations
-                }
-            }
-        }
-        locations {
+        countries {
                 nodes {
                     name
                 }
             }
         }
     }`
-;
+    ;
