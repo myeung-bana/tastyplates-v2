@@ -5,6 +5,7 @@ import CustomModal from "../ui/Modal/Modal";
 import { useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
+import { cuisines } from "@/data/dummyCuisines";
 
 interface FilterProps {
   onFilterChange?: (filterType: string, value: string) => void;
@@ -63,22 +64,29 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       <CustomModal
         header="Cuisine"
         content={
-          <CustomPopover
-            align="bottom-end"
-            trigger={
-              <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-[#31343F]">
-                <span className="text-[#31343F] text-center font-semibold">
-                  All
-                </span>
-                <PiCaretDown className="fill-[#494D5D] size-5" />
-              </button>
-            }
-            content={
-              <div className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
-                Hello World
-              </div>
-            }
-          />
+          <>
+            <label htmlFor="" className="text-xs md:text-base font-semibold">Category</label>
+            <CustomPopover
+              align="bottom-end"
+              trigger={
+                  <button className="border border-[#797979] rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                    <span className="text-[#31343F] text-center font-semibold">
+                      All
+                    </span>
+                    <PiCaretDown className="fill-[#494D5D] size-5" />
+                  </button>
+                // </>
+              }
+              content={
+                <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                  <div className="py-2 px-4 bg-[#F1F1F1] text-sm md:text-lg">All</div>
+                  {cuisines.map((cuisine: any) =>
+                    <div className="py-2 px-4 bg-transparent text-sm md:text-lg">{cuisine.name}</div>
+                  )}
+                </div>
+              }
+            />
+          </>
         }
         hasFooter
         footer={
@@ -87,7 +95,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               Reset
             </button>
             <button className="rounded-[8px] bg-[#E36B00] py-2 px-16 text-[#FCFCFC] text-sm md:text-lg font-semibold">
-              Reset
+              Apply
             </button>
           </div>
         }

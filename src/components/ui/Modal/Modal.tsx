@@ -47,7 +47,7 @@ export default function CustomModal(props: any) {
           >
             <MdClose className="size-4 md:size-6" />
           </button>
-          <ModalBody>
+          <ModalBody className="flex">
             {content}
           </ModalBody>
           <ModalFooter>
