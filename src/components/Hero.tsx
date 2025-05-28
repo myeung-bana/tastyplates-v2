@@ -87,9 +87,7 @@ const Hero = () => {
           </p>
           <form onSubmit={handleSearch} className="hero__search">
             <div className="hero__search-wrapper">
-              <div className="hero__search-restaurant text-center sm:hidden">
-                {/* <FiSearch className="hero__search-icon" /> */}
-                {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
+              <div className="hero__search-restaurant text-center md:!hidden">
                 <input
                   type="text"
                   placeholder="Start Your Search"
@@ -98,31 +96,23 @@ const Hero = () => {
                   onChange={(e) => setCuisine(e.target.value)}
                 />
               </div>
-              <div className="hero__search-restaurant hidden sm:flex">
-                {/* <FiSearch className="hero__search-icon" /> */}
-                {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
+              <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start">
+                <label className="text-sm md:text-lg font-medium text-[#31343F]">
+                  My Palate
+                </label>
                 <input
                   type="text"
-                  placeholder="Search Ethnic"
+                  placeholder="Search Palate"
                   className="hero__search-input"
                   value={cuisine}
                   onChange={(e) => setCuisine(e.target.value)}
                 />
               </div>
               <div className="hero__search-divider"></div>
-              <div className="hero__search-restaurant hidden sm:flex">
-                {/* <FiSearch className="hero__search-icon" /> */}
-                <input
-                  type="text"
-                  placeholder="Add Cuisine"
-                  className="hero__search-input"
-                  value={cuisine}
-                  onChange={(e) => setCuisine(e.target.value)}
-                />
-              </div>
-              <div className="hero__search-divider"></div>
-              <div className="hero__search-location hidden sm:flex">
-                {/* <FiMapPin className="hero__search-icon" /> */}
+              <div className="hero__search-location !hidden md:!flex flex-col !items-start">
+                <label className="text-sm md:text-lg font-medium text-[#31343F]">
+                  Location
+                </label>
                 <input
                   type="text"
                   placeholder="Search location"
