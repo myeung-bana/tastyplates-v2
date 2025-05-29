@@ -13,16 +13,43 @@ import {
 } from "@heroui/modal";
 import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
+import Cookies from "js-cookie";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
 
-  // Redirect if registrationData is missing
   useEffect(() => {
-    const storedData = localStorage.getItem('registrationData');
+    let storedData = localStorage.getItem('registrationData');
+    const googleAuth = Cookies.get('googleAuth');
+    const email = Cookies.get('email');
+    const username = Cookies.get('username');
+
+    if (!storedData && googleAuth === 'true') {
+      const registrationData = {
+        username: username || "",
+        email: email || "",
+        password: "",
+        googleAuth: true
+      };
+      localStorage.setItem('registrationData', JSON.stringify(registrationData));
+      storedData = JSON.stringify(registrationData);
+    }
+
     if (!storedData) {
       router.replace('/');
+      window.history.pushState(null, '', '/');
     }
+  }, [router]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      router.replace('/');
+      window.history.pushState({}, '', '/');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [router]);
 
   // Get initial data from localStorage instead of URL params
@@ -30,7 +57,7 @@ const OnboardingOnePage = () => {
   
   const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
   const [gender, setGender] = useState(storedData.gender || "");
-  const [name, setName] = useState(storedData.username || "");
+  const [name, setName] = useState(storedData.username || Cookies.get('username') || "");
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [customGender, setCustomGender] = useState("");
   const [pronoun, setPronoun] = useState("");

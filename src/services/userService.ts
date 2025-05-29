@@ -55,4 +55,34 @@ export class UserService {
             throw error;
         }
     }
+
+    static async getCurrentUser(token?: string): Promise<any> {
+        try {
+            const response = await UserRepository.getCurrentUser<any>(token);
+            return response;
+        } catch (error) {
+            console.error('Get user by ID error:', error);
+            throw new Error('Failed to fetch user data');
+        }
+    }
+
+    static async updateUserFields(data: any, token?: any): Promise<any> {
+        try {
+            const response = await UserRepository.updateUserFields<any>(data, token);
+            return response;
+        } catch (error) {
+            console.error('Update user fields error:', error);
+            throw new Error('Failed to update user fields');
+        }
+    }
+
+    static async validatePassword(password: string, token?: any): Promise<any> {
+        try {
+            const response = await UserRepository.validatePassword(password, token);
+            return response;
+        } catch (error) {
+            console.error('Validate password error:', error);
+            throw new Error('Failed to validate password');
+        }
+    }
 }

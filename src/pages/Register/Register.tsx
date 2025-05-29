@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
@@ -9,6 +9,9 @@ import { auth, provider } from "@/lib/firebase";
 import { FirebaseError } from 'firebase/app';
 import { UserService } from '@/services/userService';
 import Spinner from "@/components/LoadingSpinner";
+import { signIn } from "next-auth/react";
+import Cookies from "js-cookie";
+import { removeAllCookies } from "@/utils/removeAllCookies";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -21,6 +24,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [error, setError] = useState<string>("");
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const googleError = Cookies.get('googleError');
+    if (googleError) {
+      setError(decodeURIComponent(googleError));
+      removeAllCookies();
+    }
+  }, [router]);
 
   const checkEmailExists = async (email: string) => {
     const checkEmail = await UserService.checkEmailExists(email);
@@ -72,22 +83,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     try {
       setError("");
       localStorage.removeItem('registrationData');
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      setIsLoading(true);
-      // Check if email from google already exists
-      const emailExists = await checkEmailExists(user.email || "");
-      if (!emailExists) {
-        return;
-      }
+      removeAllCookies();
+      // Set a cookie to indicate signup intent
+      Cookies.set('auth_type', 'signup', { path: '/', sameSite: 'lax' });
 
-      // Save to localStorage instead of URL params
-      localStorage.setItem('registrationData', JSON.stringify({
-        username: user.displayName || "",
-        email: user.email || "",
-        password: "", // No password needed for Google auth
-        googleAuth: true
-      }));
+      const result = await signIn('google', {
+        redirect: false,
+        callbackUrl: '/',
+      });
+
+      console.log("Google sign-in result:", result);
+      return;
+      // setIsLoading(true);
+      // // Check if email from google already exists
+      // const emailExists = await checkEmailExists(user.email || "");
+      // if (!emailExists) {
+      //   return;
+      // }
+
+      // // Save to localStorage instead of URL params
+      // localStorage.setItem('registrationData', JSON.stringify({
+      //   username: user.displayName || "",
+      //   email: user.email || "",
+      //   password: "", // No password needed for Google auth
+      //   googleAuth: true
+      // }));
 
       router.push('/onboarding');
     } catch (error) {
