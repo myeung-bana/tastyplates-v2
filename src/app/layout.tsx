@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@/styles/global.scss";
-import ApolloProviderWrapper from "@/components/ApolloProviderWrapper";
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
@@ -18,7 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+            {children}
         </AuthProvider>
       </body>
     </html>
