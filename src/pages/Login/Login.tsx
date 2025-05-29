@@ -1,28 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
-import { signInWithPopup } from "firebase/auth";
-import { auth, provider } from "@/lib/firebase";
-import { FirebaseError } from 'firebase/app';
+import { signIn } from "next-auth/react";
 import { useRouter } from 'next/navigation';
-import { UserService } from '@/services/userService';
-import { ILoginCredentials } from '@/interfaces/user';
-import { useAuth } from '@/contexts/AuthContext';
 import Spinner from "@/components/LoadingSpinner";
+import { removeAllCookies } from "@/utils/removeAllCookies";
+import Cookies from "js-cookie";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
-  const { setSignedIn, setToken } = useAuth();
-  const router = useRouter()
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+
+  useEffect(() => {
+    const googleError = Cookies.get('googleError');
+    if (googleError) {
+      setMessage(decodeURIComponent(googleError));
+      setMessageType("error");
+      removeAllCookies();
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,27 +37,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
     setIsLoading(true);
 
     try {
-      const credentials: ILoginCredentials = { email, password };
-      const response = await UserService.login(credentials);
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: true,
+        callbackUrl: '/'
+      });
 
-      console.log("Login response:", response);
-      const status = response?.data?.status ?? response?.status ?? null;
-      if (status == 403) {
+      if (result?.error) {
         setMessage('Login failed. Please try again.');
         setMessageType("error");
-        return;
-      } else if (response?.token) {
-        setMessage("Login successful!");
-        setMessageType("success");
-        setSignedIn(true);
-        setToken(response.token);
-        router.push('/dashboard');
-      } else {
-        setMessage(response?.message);
-        setMessageType("error");
+      } else if (result?.ok) {
+        router.push('/');
       }
     } catch (error: any) {
-      setMessage(error.message);
+      setMessage(error.message || "An unexpected error occurred");
       setMessageType("error");
     } finally {
       setIsLoading(false);
@@ -59,41 +60,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
 
   const loginWithGoogle = async () => {
     try {
-      setMessage('');
-      await signInWithPopup(auth, provider).then(async (result) => {
+        setMessage('');
+        removeAllCookies();
         setIsLoading(true);
-        const response = await UserService.handleGoogleAuth(
-          result.user.email || "",
-        );
-        if (response.status == 200) {
-          setMessage("Login successful!");
-          setMessageType("success");
-          setSignedIn(true);
-          setToken(response.token);
-          router.push('/dashboard');
-        } else {
-          setMessage(response.message);
-          setMessageType("error");
-          setSignedIn(false);
-        }
-      });
-    } catch (error) {
-      if (error instanceof FirebaseError) {
-        if (error.code == 'auth/cancelled-popup-request' || error.code == 'auth/popup-closed-by-user') {
-          setIsLoading(false);
-          setMessageType("error");
-          return;
-        }
-        setMessage(error.message);
+        await signIn('google', {
+            redirect: true,
+            callbackUrl: '/'
+        });
+    } catch (error: any) {
+        setMessage("Google login failed");
         setMessageType("error");
-      } else {
-        setMessage("An unexpected error occurred");
-        setMessageType("error");
-      }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   return (
     <div className="auth">
