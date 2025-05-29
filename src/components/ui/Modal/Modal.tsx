@@ -16,6 +16,7 @@ export default function CustomModal(props: any) {
     hasFooter = false,
     footer,
     onOpenChange,
+    classNames,
   } = props;
 
   return (
@@ -24,14 +25,15 @@ export default function CustomModal(props: any) {
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         classNames={{
-          body: "py-4 md:py-6 bg-transparent text-xs md:text-base",
-          backdrop: "bg-black/20 backdrop-opacity-10",
-          base: "border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl",
+          body: cn("py-4 md:py-6 bg-transparent text-xs md:text-base", classNames?.body),
+          backdrop: cn("bg-black/20 backdrop-opacity-10", classNames?.backdrop),
+          base: cn("border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl", classNames?.base),
           header: cn(
-            "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg"
+            "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg",
+            classNames?.header
           ),
-          footer: "!p-4 !pt-0 !justify-center",
-          closeButton: "hidden",
+          footer: cn("!p-4 !pt-0 !justify-center", classNames?.footer),
+          closeButton: cn("hidden", classNames?.closeButton),
         }}
         placement="center"
         closeButton={false}
