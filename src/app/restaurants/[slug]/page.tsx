@@ -43,9 +43,11 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session, status } = useSession();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (!session || !restaurantSlug) return;
+    let isMounted = true;
+    if (!session || !restaurantSlug || initialized) return;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
       headers: {
@@ -56,12 +58,19 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       credentials: "include",
     })
       .then(res => res.json())
-      .then(data => setSaved(data.status === "saved"));
+      .then(data => {
+        if (isMounted) setSaved(data.status === "saved");
+      })
+      .finally(() => {
+        if (isMounted) setInitialized(true);
+      });
+    return () => { isMounted = false; };
   }, [restaurantSlug, session]);
 
   const handleToggle = async () => {
-    if (!session) return; // Optionally show login modal
+    if (!session) return;
     setLoading(true);
+    setSaved(prev => !prev);
     const action = saved ? "unsave" : "save";
     const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
@@ -76,6 +85,15 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     setSaved(data.status === "saved");
     setLoading(false);
   };
+
+  if (!initialized) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2" disabled>
+        <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
+        <span className="underline text-gray-400">Loading…</span>
+      </button>
+    );
+  }
 
   return (
     <button
