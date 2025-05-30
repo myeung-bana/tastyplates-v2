@@ -11,6 +11,8 @@ import Image from "next/image";
 import CustomPopover from "./ui/Popover/Popover";
 import { FaCaretDown } from "react-icons/fa";
 import { PiCaretDown } from "react-icons/pi";
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -19,13 +21,22 @@ const navigationItems = [
 ];
 
 export default function Navbar(props: any) {
+  const { isSignedIn, setSignedIn, setToken, token } = useAuth();
+  const router = useRouter();
   const { isLandingPage = false, hasSearchBar = false } = props;
   console.log(isLandingPage, "props");
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
-  let isSignedIn = true;
+
+  const handleLogout = () => {
+    setSignedIn(false);
+    setToken(null);
+    localStorage.clear();
+    sessionStorage.clear();
+    router.push('/');
+  };
 
   const onCloseSignup = () => setIsOpenSignup(false);
 
@@ -42,10 +53,21 @@ export default function Navbar(props: any) {
 
   return (
     <>
-      <SignupModal isOpen={isOpenSignup} onClose={onCloseSignup} />
+      <SignupModal
+        isOpen={isOpenSignup}
+        onClose={onCloseSignup}
+        onOpenSignin={() => {
+          setIsOpenSignup(false);
+          setIsOpenSignin(true);
+        }}
+      />
       <SigninModal
         isOpen={isOpenSignin}
         onClose={() => setIsOpenSignin(false)}
+        onOpenSignup={() => {
+          setIsOpenSignin(false);
+          setIsOpenSignup(true);
+        }}
       />
       <nav
         className={`navbar backdrop-blur-sm ${
@@ -198,13 +220,13 @@ export default function Navbar(props: any) {
                     content={
                       <div className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
                         <Link
-                          href="/add-review"
+                          href="/listing"
                           className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                         >
                           Write a Review
                         </Link>
                         <Link
-                          href="/listing/add"
+                          href="/listing/explanation"
                           className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                         >
                           Add a Listing
@@ -239,7 +261,10 @@ export default function Navbar(props: any) {
                         >
                           Settings
                         </Link>
-                        <button className="text-left pl-3.5 pr-12 py-3.5 font-semibold">
+                        <button 
+                          onClick={handleLogout}
+                          className='text-left pl-3.5 pr-12 py-3.5 font-semibold'
+                        >
                           Log Out
                         </button>
                       </div>
@@ -358,13 +383,13 @@ export default function Navbar(props: any) {
                         content={
                           <div className="bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
                             <Link
-                              href="/add-review"
+                              href="/listing"
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Write a Review
                             </Link>
                             <Link
-                              href="/listing/add"
+                              href="/listing/explanation"
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Add a Listing

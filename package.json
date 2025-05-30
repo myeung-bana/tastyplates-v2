@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo-pack",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,8 +18,10 @@
     "@heroui/system": "^2.4.13",
     "@heroui/tabs": "^2.2.14",
     "@heroui/theme": "^2.4.13",
+    "apollo": "^2.34.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "firebase": "^11.6.1",
     "framer-motion": "^12.7.3",
     "graphql": "^16.9.0",
     "lucide-react": "^0.485.0",
@@ -35,7 +37,8 @@
     "slick-carousel": "^1.8.1",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
-    "tw-animate-css": "^1.2.5"
+    "tw-animate-css": "^1.2.5",
+    "use-debounce": "^10.0.4"
   },
   "devDependencies": {
     "@types/node": "^18.18.0",

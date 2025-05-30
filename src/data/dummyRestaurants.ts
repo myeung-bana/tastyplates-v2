@@ -11,6 +11,7 @@ export interface Restaurant {
   phone: string;
   reviews: number;
   description: string;
+  recognition?: boolean[]
 }
 
 export const restaurants = [
@@ -327,3 +328,9 @@ export const restaurants = [
     ],
   },
 ];
+
+
+
+
+
+

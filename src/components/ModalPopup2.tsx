@@ -3,29 +3,25 @@ import React, { useEffect, useState } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { users } from "@/data/dummyUsers";
-import { palates } from "@/data/dummyPalate";
-import { restaurants } from "@/data/dummyRestaurants";
+import { stripTags, formatDate } from "../lib/utils"
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { BsStarFill, BsStarHalf, BsStar } from 'react-icons/bs';
+import { ReviewModalProps } from "@/interfaces/Reviews/review";
 
 //styles
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
-
-interface ReviewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  data: any;
-}
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
   isOpen,
   onClose,
 }) => {
+  const [replies, setReplies] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -34,7 +30,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
-
   useEffect(() => {
     window.addEventListener("load", () => {
       if (typeof window !== "undefined") {
@@ -50,6 +45,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       window.removeEventListener("load", handleResize);
     };
   }, [data]);
+
+  useEffect(() => {
+    if (isOpen && data?.id) {
+      ReviewService.fetchCommentReplies(data.id).then(setReplies);
+    }
+  }, [isOpen, data?.id]);
+
   const handleResize = () => {
     setWidth(window.innerWidth);
   };
@@ -124,23 +126,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       },
     ],
   };
-  const author = users.find((user) => user.id === data.authorId);
-  const restaurant = restaurants.find(
-    (restaurant: any) => restaurant.id === data.restaurantId
-  );
-  const palateNames = author?.palateIds
-    .map((id) => {
-      const palate = palates.find((p) => p.id === id);
-      return palate ? palate.name : null; // Return the name or null if not found
-    })
-    .filter((name) => name); // Filter out any null values
 
-  const restaurantPalateNames = restaurant?.cuisineIds
-    .map((rid) => {
-      const palate = palates.find((p) => p.cuisineId === rid);
-      return palate ? palate.name : null; // Return the name or null if not found
-    })
-    .filter((name) => name); // Filter out any null values
+  const UserPalateNames = data.author?.node?.palates
+    ?.split("|")
+    .map((s: any) => s.trim())
+    .filter((s: any) => s.length > 0);
+  //   .map((id) => {
+  //     const palate = palates.find((p) => p.id === id);
+  //     return palate ? palate.name : null;
+  //   })
+  //   .filter((name) => name);
+
+  // const restaurantPalateNames = restaurant?.cuisineIds
+  //   .map((rid) => {
+  //     const palate = palates.find((p) => p.cuisineId === rid);
+  //     return palate ? palate.name : null;
+  //   })
+  //   .filter((name) => name); 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +161,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           <div className="review-card__image-container overflow-hidden">
             <Slider
               {...settings}
-              nextArrow={<NextArrow length={data.images.length} />}
+              nextArrow={<NextArrow length={data?.reviewImages?.length || 0} />}
               prevArrow={<PrevArrow />}
               beforeChange={(current: any) => {
                 setActiveSlide(current + 1);
@@ -169,34 +171,44 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               // }}
               lazyLoad="progressive"
             >
-              {data.images.map((image: string, index: any) => (
+              {Array.isArray(data?.reviewImages) && data.reviewImages.length > 0 ? (
+                data.reviewImages.map((image: any, index: number) => (
+                  <Image
+                    key={index}
+                    src={image?.sourceUrl}
+                    alt="Review"
+                    width={400}
+                    height={400}
+                    className="review-card__image !h-[520px] lg:!h-[640px]  xl:!h-[720px] !w-full !object-cover !rounded-t-3xl sm:!rounded-l-3xl sm:rounded-t-none"
+                  />
+                ))
+              ) : (
                 <Image
-                  key={index}
-                  src={image}
-                  alt="Review"
+                  src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                  alt="Default"
                   width={400}
                   height={400}
                   className="review-card__image !h-[520px] lg:!h-[640px]  xl:!h-[720px] !w-full !object-cover !rounded-t-3xl sm:!rounded-l-3xl sm:rounded-t-none"
                 />
-              ))}
+              )}
             </Slider>
           </div>
           <div className="review-card__content !m-2 sm:!m-0 !pb-10">
             <div className="flex justify-between pr-10 items-center">
               <div className="review-card__user">
                 <Image
-                  src={author?.image || "/profile-icon.svg"} // Fallback image if author is not found
-                  alt={author?.name || "User"} // Fallback name if author is not found
+                  src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+                  alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image !rounded-2xl"
                 />
                 <div className="review-card__user-info">
                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                    {author?.name || "Unknown User"}
+                    {data.author?.name || "Unknown User"}
                   </h3>
                   <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                    {palateNames?.map((tag: any, index: number) => (
+                    {UserPalateNames?.map((tag: any, index: number) => (
                       <span
                         key={index}
                         className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
@@ -220,23 +232,107 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             </div>
 
             <br></br>
-            <div className="overflow-y-auto max-h-[200px] sm:max-h-full">
-              <p className="text-sm font-semibold">
-                Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
-                vulputate libero et velit interdum, ac aliquet odio mattis.
-              </p>
-              <p className="review-card__text text-sm font-normal">
-                Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
-                vulputate libero et velit interdum, ac aliquet odio mattis.
-              </p>
-              <div className="review-card__rating pb-4 border-b border-[#CACACA]">
-                {Array.from({ length: data.rating }, (_, i) => (
-                  <FiStar
-                    key={i}
-                    className="review-card__star !fill-[#31343F] stroke-[#31343F]"
-                  />
-                ))}
-                <span className="review-card__timestamp">{data.date}</span>
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex flex-col h-full">
+                <div className="overflow-y-auto grow pr-1">
+                  <div className="shrink-0">
+                    <p className="text-sm font-semibold w-[304px] line-clamp-1">
+                      {stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}
+                    </p>
+                    <p className="review-card__text w-[304] text-sm font-normal">
+                      {stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                    </p>
+                    <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-1">
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const full = i + 1 <= data.reviewStars;
+                        const half = !full && i + 0.5 <= data.reviewStars;
+                        return full ? (
+                          <BsStarFill key={i} className="text-[#31343F]" />
+                        ) : half ? (
+                          <BsStarHalf key={i} className="text-[#31343F]" />
+                        ) : (
+                          <BsStar key={i} className="text-[#31343F]" />
+                        );
+                      })}
+                      <span className="review-card__timestamp ml-2">{formatDate(data.date)}</span>
+                    </div>
+                    {replies.length > 0 && (
+                      <div className="overflow-y-auto grow mt-4 border-t pt-4 pr-1">
+                        {replies.map((reply, index) => {
+                          const UserPalateNames = reply.author?.node?.palates
+                            ?.split("|")
+                            .map((s: string) => s.trim())
+                            .filter((s: string) => s.length > 0);
+
+                          return (
+                            <div key={index} className="reply flex items-start gap-3 mb-3">
+                              <Image
+                                src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
+                                alt={reply.author?.node?.name || "User"}
+                                width={28}
+                                height={28}
+                                className="rounded-full"
+                              />
+                              <div className="review-card__user-info">
+                                <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
+                                  {reply.author?.node?.name || "Unknown User"}
+                                </h3>
+
+                                <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+                                  {UserPalateNames?.map((tag: string, tagIndex: number) => (
+                                    <span
+                                      key={tagIndex}
+                                      className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                <p className="review-card__text w-[304] text-sm font-normal">
+                                  {stripTags(reply.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* {replies.length > 0 && (
+                      <div className="overflow-y-auto grow mt-4 border-t pt-4 pr-1">
+                        {replies.map((reply, index) => (
+                          
+                          <div key={index} className="reply flex items-start gap-3 mb-3">
+                            <Image
+                              src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
+                              alt={reply.author?.name || "User"}
+                              width={28}
+                              height={28}
+                              className="rounded-full"
+                            />
+                            <div className="review-card__user-info">
+                              <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
+                                {reply.author?.name || "Unknown User"}
+                              </h3>
+                              <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+                                {UserPalateNames?.map((tag: any, index: number) => (
+                                  <span
+                                    key={index}
+                                    className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                                  >
+                                    {tag}{" "}
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="review-card__text w-[304] text-sm font-normal">{stripTags(reply.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )} */}
+                  </div>
+                </div>
               </div>
               {/* <div className="review-card__header">
               <div className="review-card__user-info">
@@ -249,7 +345,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 </Link>
               </div>
               </div> */}
-              <div className="mt-20 lg:mt-40 xl:mt-[340px] border-t-[1px] border-[#CACACA] py-4">
+              <div className="shrink-0 border-t border-[#CACACA] pt-3 pb-10">
                 <div className="flex flex-row justify-start items-center gap-10">
                   <textarea
                     rows={1}
@@ -258,7 +354,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     className="p-2 border border-[#CACACA] resize-none"
                   ></textarea>
                   <div className="flex gap-2 flex-row items-center">
-                    <div className="realative text-center">
+                    <div className="relative text-center">
                       <button className="mt-2">
                         <FiThumbsUp className="shrink-0 stroke-[#31343F]" />
                       </button>

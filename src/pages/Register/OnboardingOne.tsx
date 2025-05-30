@@ -1,163 +1,229 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { FiEye, FiEyeOff } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc";
+import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import "@/styles/pages/_auth.scss";
 import CustomSelect from "@/components/ui/Select/Select";
+import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
 } from "@heroui/modal";
+import { Key } from "@react-types/shared";
+import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
 
 const OnboardingOnePage = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  // Redirect if registrationData is missing
+  useEffect(() => {
+    const storedData = localStorage.getItem('registrationData');
+    if (!storedData) {
+      router.replace('/');
+    }
+  }, [router]);
+
+  // Get initial data from localStorage instead of URL params
+  const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
+  
+  const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
+  const [gender, setGender] = useState(storedData.gender || "");
+  const [name, setName] = useState(storedData.username || "");
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [customGender, setCustomGender] = useState("");
+  const [pronoun, setPronoun] = useState("");
+  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [birthdateError, setBirthdateError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement registration logic
-    console.log("Registration attempt:", {
-      name,
-      email,
-      password,
-      confirmPassword,
-    });
+
+    let hasError = false;
+    setUsernameError(null);
+    setBirthdateError(null);
+
+    // Username validation
+    if (!name || name.length > 20) {
+      setUsernameError("Username must be 1-20 characters.");
+      hasError = true;
+    }
+
+    // Birthdate validation (must be 18+)
+    if (!birthdate) {
+      setBirthdateError("Birthdate is required.");
+      hasError = true;
+    } else {
+      const birth = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
+      const actualAge = isBirthdayPassed ? age : age - 1;
+      if (isNaN(birth.getTime()) || actualAge < 18) {
+        setBirthdateError("You must be at least 18 years old.");
+        hasError = true;
+      }
+    }
+
+    if (hasError) return;
+
+    let formattedBirthdate = "";
+    if (birthdate) {
+      const dateObj = new Date(birthdate);
+      if (!isNaN(dateObj.getTime())) {
+        formattedBirthdate = dateObj.toISOString().split("T")[0];
+      }
+    }
+
+    // Update localStorage with new data
+    const updatedData = {
+      ...storedData,
+      username: name,
+      birthdate: formattedBirthdate,
+      gender,
+      customGender: gender === "custom" ? customGender : undefined,
+      pronoun: gender === "custom" ? pronoun : undefined,
+      palates: Array.from(selectedPalates).join(","),
+    };
+    
+    localStorage.setItem('registrationData', JSON.stringify(updatedData));
+    router.push("/onboarding2");
   };
 
-  const formFields = [
+  const handleGenderChange = (value: string) => {
+    console.log("Gender changed to:", value);
+    setGender(value);
+    // Reset custom gender fields when switching genders
+    if (value !== "custom") {
+      setCustomGender("");
+      setPronoun("");
+    }
+  };
+
+  const handlePalateChange = (keys: Set<Key>) => {
+    setSelectedPalates(keys);
+  };
+
+  const baseFormFields = [
     {
       label: "Username",
       type: "text",
-      placeholder: "User name",
-      value: "JulienChang",
+      placeholder: "Enter your username",
+      value: name,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
     },
     {
       label: "Birthdate",
       type: "date",
-      placeholder: "Birth date",
-      value: "15/06/1990",
-    },
-    {
-      label: "",
-      type: "select",
-      placeholder: "Select Gender",
-      defaultValue: "0",
-      className: "w-full !bg-[#E36B00]",
-      itemClassName:
-        "w-full t !bg-[#E36B00]ext-sm leading-9 font-medium text-left",
-      contentClassName: "w-full !bg-[#E36B00]",
-      triggerClassName: "relative w-full h !bg-[#E36B00]-[48px]",
-      valuePlaceholder: "nationality",
-      valueClassName: "",
-      groupClassName: "w-full !bg-[#E36B00]",
-      items: [
-        {
-          key: "1",
-          value: "+81",
-          label: "Toggle +81",
-          content: <div>+81</div>,
-        },
-        {
-          key: "2",
-          value: "+63",
-          label: "Toggle +63",
-          content: <div>+63</div>,
-        },
-        {
-          key: "3",
-          value: "+90",
-          label: "Toggle +90",
-          content: <div>+90</div>,
-        },
-      ],
+      placeholder: "Select your birthdate",
+      value: birthdate,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
     },
     {
       label: "Gender",
       type: "select",
       placeholder: "Select Gender",
-      defaultValue: "0",
-      className: "md:w-[220px] !bg-[#E36B00]",
-      itemClassName:
-        "md:w-[220px] t !bg-[#E36B00]ext-sm leading-9 font-medium text-left",
-      contentClassName: "md:w-[220px] !bg-[#E36B00]",
-      triggerClassName: "relative w-full h !bg-[#E36B00]-[48px]",
-      valuePlaceholder: "nationality",
-      valueClassName: "",
-      groupClassName: "md:w-[220px] !bg-[#E36B00]",
-      items: [
-        // {
-        //   value: '+81',
-        //   label: 'Toggle +81',
-        //   content: <div>+81</div>,
-        // },
-        // {
-        //   value: '+63',
-        //   label: 'Toggle +63',
-        //   content: <div>+63</div>,
-        // },
-        // {
-        //   value: '+90',
-        //   label: 'Toggle +90',
-        //   content: <div>+90</div>,
-        // },
-      ],
+      defaultValue: gender || "0",
+      className: "w-full",
+      value: gender,
+      onChange: handleGenderChange,
+      items: genderOptions.map(option => ({
+        ...option,
+        content: <div>{option.content}</div>
+      })),
     },
   ];
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
+  const customGenderFields = gender === "custom" ? [
+    {
+      label: "Custom Gender",
+      type: "text",
+      placeholder: "What's your gender?",
+      value: customGender,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
+    },
+    {
+      label: "Pronoun",
+      type: "select",
+      placeholder: "Select your pronoun",
+      defaultValue: pronoun || "0",
+      className: "w-full",
+      value: pronoun,
+      onChange: (value: string) => setPronoun(value),
+      items: pronounOptions,
+    },
+  ] : [];
+
+  // Combine base fields with custom gender fields first, then add palate at the end
+  const formFields = [
+    ...baseFormFields,
+    ...(gender === "custom" ? customGenderFields : []),
+    {
+      label: "Palate (Select up to 2 palates)",
+      type: "multiple-select",
+      placeholder: "Select your palate",
+      value: selectedPalates,
+      onChange: handlePalateChange,
+      items: palateOptions,
+    },
+  ];
 
   return (
-    <div className="auth flex flex-col justify-center items-start">
-      <div className="auth__container !max-w-[672px] w-full">
-        <h1 className="auth__header">Create account</h1>
-        <div className="auth__card !py-4 !rounded-3xl border border-[#CACACA] !w-[672px]">
-          <p className="auth__subtitle">Step 1 of 2</p>
-          <h1 className="auth__title !text-xl !font-semibold">
+    <div className="min-h-screen px-2 pt-8 sm:px-1">
+      <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
+        <h1 className="auth__header text-2xl sm:text-3xl">Create account</h1>
+        <div className="auth__card py-4 rounded-4xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
+          <p className="auth__subtitle text-base sm:text-lg">Step 1 of 2</p>
+          <h1 className="auth__title text-lg sm:!text-xl font-semibold">
             Basic Information
           </h1>
           <form
-            className="auth__form border-y !max-w-[672px] w-full border-[#CACACA] !gap-4 !pb-6"
+            className="auth__form border-y max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
             {formFields.map((field: any, index: number) => (
               <div
                 key={index}
-                className="auth__form-group mt-6 w-full shrink-0"
+                className="auth__form-group mt-4 sm:mt-6 mb-4 sm:mb-0 w-full shrink-0"
               >
-                <label htmlFor="email" className="auth__label">
+                <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
                   {field.label}
                 </label>
                 <div className="auth__input-group">
-                  {field.type == "text" || field.type == "date" ? (
+                  {field.type === "select" ? (
+                    <CustomSelect {...field} />
+                  ) : field.type === "multiple-select" ? (
+                    <CustomMultipleSelect {...field} />
+                  ) : (
                     <input
                       type={field.type}
-                      id="email"
-                      className="auth__input"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id={field.label?.toLowerCase()}
+                      className="auth__input text-sm sm:text-base"
+                      placeholder={field.placeholder}
+                      value={field.value}
+                      onChange={field.onChange}
                       required
+                      disabled={field.disabled}
                     />
-                  ) : (
-                    <CustomSelect {...field} />
                   )}
                 </div>
+                {/* Validation errors */}
+                {field.label === "Username" && usernameError && (
+                  <div className="text-red-600 text-xs mt-1">{usernameError}</div>
+                )}
+                {field.label === "Birthdate" && birthdateError && (
+                  <div className="text-red-600 text-xs mt-1">{birthdateError}</div>
+                )}
               </div>
             ))}
             <button
               type="submit"
-              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
+              className="auth__button !bg-[#E36B00] mt-0 rounded-xl w-full sm:w-auto text-base sm:text-lg"
             >
-              Continue
+              Save and Continue
             </button>
           </form>
         </div>

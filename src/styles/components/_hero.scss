@@ -1,9 +1,9 @@
 .hero {
-  padding: 6rem 0 2.875rem 0;
+  padding: 6rem 0 8.75rem 0;
   // background-color: #fafafa;
 
   @media (max-width: 767px) {
-    padding: 7.25rem 0 3.875rem 0;
+    padding: 7.25rem 0 5rem 0;
   }
 
   &__container {
@@ -118,15 +118,19 @@
     @media (min-width: 1024px) {
       margin-left: 0;
     }
+
+    @media (max-width: 767px) {
+      max-width: 300px;
+    }
   }
 
   &__search-wrapper {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
     background-color: white;
-    padding: 0.875rem;
+    padding: 0.75rem 1.5rem;
     border-radius: 50px;
     box-shadow: 0 0 10px 1px #E5E5E5;
 
@@ -137,6 +141,7 @@
 
   &__search-location,
   &__search-restaurant {
+    display: flex;
     align-items: center;
     // padding: 0.5rem 1rem;
     background-color: transparent;
@@ -179,7 +184,7 @@
     @media (min-width: 768px) {
       display: block;
       width: 1px;
-      height: 2rem;
+      height: 2.5rem;
       background-color: #e5e7eb;
       margin: 0 0.5rem;
     }

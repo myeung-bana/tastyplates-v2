@@ -2,8 +2,12 @@
   &__tags {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    // margin-bottom: 1rem;
     align-items: center;
+
+    @media (max-width: 767px) {
+      font-size: 10px;
+    }
   }
 
   &__tag {
@@ -16,11 +20,15 @@
     text-align: center;
     text-transform: none; // Optional: makes tags look more distinct
     letter-spacing: 0.025em; // Optional: slightly improves readability of uppercase text
+
+    @media (max-width: 767px) {
+      font-size: 10px;
+    }
   }
 
   &__img {
-    width: 304px;
-    height: 222px;
+    // width: 304px;
+    // height: 222px;
     object-fit: cover;
     border-radius: 16px;
   }

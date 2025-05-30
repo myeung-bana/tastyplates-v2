@@ -4,48 +4,21 @@ import { FiStar } from "react-icons/fi";
 import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { restaurants } from "@/data/dummyRestaurants";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ModalPopup from "./ModalPopup";
 import ReviewDetailModal from "./ModalPopup2";
-
-interface ReviewedDataProps {
-  id: string;
-  authorId: string;
-  restaurantId: string;
-  rating: number;
-  date: string;
-  comment: string;
-  images: string[];
-  userImage: string;
-}
-
-interface ReviewCardProps {
-  data: ReviewedDataProps;
-  index: number
-  width: number
-}
+import { stripTags } from "../lib/utils"
+// import '@fortawesome/fontawesome-free/css/all.min.css';
+import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
-  const author = users.find((user) => user.id === data.authorId);
-  const restaurant = restaurants.find(
-    (restaurant) => restaurant.id === data.restaurantId
-  );
 
-  const palateNames = author?.palateIds
-    .map((id) => {
-      const palate = palates.find((p) => p.id === id);
-      return palate ? palate.name : null; // Return the name or null if not found
-    })
-    .filter((name) => name); // Filter out any null values
-
-  const restaurantPalateNames = restaurant?.cuisineIds
-    .map((rid) => {
-      const palate = palates.find((p) => p.cuisineId === rid);
-      return palate ? palate.name : null; // Return the name or null if not found
-    })
-    .filter((name) => name); // Filter out any null values
+ const UserPalateNames = data.author?.node?.palates
+  ?.split("|")
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0);
 
   return (
     <div className={`review-card !w-[${width}px]`}>
@@ -56,10 +29,14 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       />
       <div className="review-card__image-container">
         <Image
-          src={data.images[0]}
+          src={
+            Array.isArray(data.reviewImages) && data.reviewImages.length > 0
+            ? data.reviewImages[0].sourceUrl
+            : "http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+          }
           alt="Review"
           width={400}
-          height={400}
+          height={600}
           className="review-card__image rounded-2xl max-h-[226px] sm:max-h-[405px] hover:cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />
@@ -68,27 +45,40 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content">
         <div className="review-card__user mb-2">
           <Image
-            src={author?.image || "/profile-icon.svg"} // Fallback image if author is not found
-            alt={author?.name || "User"} // Fallback name if author is not found
+            src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+            alt={data.author?.node?.name || "User"}
             width={32}
             height={32}
-            className="review-card__user-image !rounded-2xl"
+            className="review-card__user-image"
           />
           <div className="review-card__user-info">
             <h3 className="review-card__username line-clamp-1">
-              {author?.name || "Unknown User"}
+              {data.author?.name || "Unknown User"}
             </h3>
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-              {palateNames?.map((tag, index) => (
-                <span key={index} className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]">
+              {UserPalateNames?.map((tag, index) => (
+                <span key={index} 
+                className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]">
                   {tag}{" "}
                 </span>
               ))}
             </div>
           </div>
+          <div className="rate-container ml-auto">
+              <div className="review-detail-meta">
+                <span className="ratings">
+                  <i className="fa fa-star">
+                  </i>
+                  <i className="rating-counter">
+                    {data.reviewStars}
+                  </i>
+               </span>
+              </div>
+          </div>
         </div>
-        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
-        <p className="review-card__text w-[304] text-[10px] sm:text-sm font-normal line-clamp-2">Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>
+        <br></br>
+        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
+        <p className="review-card__text w-[304] text-[10px] sm:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>
