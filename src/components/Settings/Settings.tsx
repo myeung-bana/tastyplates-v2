@@ -5,7 +5,6 @@ import CustomSelect from "@/components/ui/Select/Select";
 import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
 import { UserService } from "@/services/userService";
-
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return '';
   // Handle both formats: 5/14/1996 or 2002-01-14
@@ -240,7 +239,6 @@ const Settings = (props: any) => {
       setIsPersonalInfoLoading(true);
       const localKey = `userData_${session.user.email}`;
       const cached = typeof window !== "undefined" ? localStorage.getItem(localKey) : null;
-      console.log("Cached user data:", cached);
       if (cached) {
         const parsedData = JSON.parse(cached);
         setUserData(parsedData);
@@ -438,14 +436,14 @@ const Settings = (props: any) => {
                 className={`settings__label ${editable != "" && editable != "email"
                   ? "settings__label__disabled"
                   : ""
-                  }`}
+                  } ${isGoogleAuth ? "opacity-50" : ""}`}
               >
                 Email
               </label>
               <div
                 className={`settings__input-group ${editable != "" && editable != "email"
-                    ? "settings__input-group__disabled"
-                    : ""
+                  ? "settings__input-group__disabled"
+                  : ""
                   } ${isGoogleAuth ? "opacity-50" : ""}`}
               >
                 {isPersonalInfoLoading ? (
@@ -460,7 +458,7 @@ const Settings = (props: any) => {
                     disabled={isLoading}
                   />
                 ) : (
-                  userData?.user_email || userData?.email || ""
+                  userData?.email || userData?.user_email || ""
                 )}
               </div>
               {emailError && editable === "email" && (
@@ -495,7 +493,21 @@ const Settings = (props: any) => {
                     </button>
                   </>
                 )
-              ) : null}
+              ) : (
+                editable !== "email" ? (
+                  <button
+                    type="button"
+                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != "" || isGoogleAuth
+                      ? "settings__input-group__disabled opacity-50"
+                      : ""
+                      }`}
+                    onClick={() => setEditable("email")}
+                    disabled={editable !== "" || isGoogleAuth}
+                  >
+                    Edit
+                  </button>
+                ) : null
+              )}
             </div>
             <div className="settings__form-group">
               <label
@@ -571,109 +583,101 @@ const Settings = (props: any) => {
             <h1 className="text-[#31343F] text-2xl font-medium text-center">
               Security
             </h1>
-            {isGoogleAuth ? (
-              <p className="text-center text-sm text-gray-400 mt-2">
-                (Password management not available with Google Sign-in)
-              </p>
-            ) : (
-              <div className="settings__form-group">
-                <label
-                  className={`settings__label text-gray-400 ${editable != "" && editable != "password"
-                      ? "settings__label__disabled"
-                      : ""
-                    }`}
+            <div className="settings__form-group">
+              <label
+                className={`settings__label text-gray-400 ${isGoogleAuth ? "opacity-50" : ""
+                  } ${editable != "" && editable != "password"
+                    ? "settings__label__disabled"
+                    : ""
+                  }`}
+              >
+                Password
+              </label>
+              <div
+                className={
+                  `settings__input-group ${editable != "" && editable != "password"
+                    ? "settings__input-group__disabled"
+                    : ""
+                  } flex flex-col gap-2 ${isGoogleAuth ? "opacity-50" : ""}`
+                }
+              >
+                {editable == "password" ? (
+                  <>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      className="settings__input"
+                      placeholder="Current Password"
+                      value={passwordFields.current}
+                      onChange={(e) =>
+                        setPasswordFields({ ...passwordFields, current: e.target.value })
+                      }
+                      disabled={isPersonalInfoLoading || isLoading}
+                    />
+                    {passwordErrors.current && (
+                      <div className="text-xs text-red-600 mt-1">{passwordErrors.current}</div>
+                    )}
+                    <input
+                      type="password"
+                      name="newPassword"
+                      className="settings__input"
+                      placeholder="New Password"
+                      value={passwordFields.new}
+                      onChange={(e) =>
+                        setPasswordFields({ ...passwordFields, new: e.target.value })
+                      }
+                      disabled={isPersonalInfoLoading || isLoading}
+                    />
+                    {passwordErrors.new && (
+                      <div className="text-xs text-red-600 mt-1">{passwordErrors.new}</div>
+                    )}
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      className="settings__input"
+                      placeholder="Confirm Password"
+                      value={passwordFields.confirm}
+                      onChange={(e) =>
+                        setPasswordFields({ ...passwordFields, confirm: e.target.value })
+                      }
+                      disabled={isPersonalInfoLoading || isLoading}
+                    />
+                    {passwordErrors.confirm && (
+                      <div className="text-xs text-red-600 mt-1">{passwordErrors.confirm}</div>
+                    )}
+                  </>
+                ) : (
+                  <></>
+                )}
+              </div>
+              {editable !== "password" ? (
+                <button
+                  type="button"
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable !== "" ? "settings__input-group__disabled" : ""} ${isGoogleAuth ? "settings__input-group__disabled" : ""}`}
+                  onClick={() => setEditable("password")}
+                  disabled={editable !== "" || isGoogleAuth}
                 >
-                  Password
-                </label>
-                <div
-                  className={
-                    `settings__input-group ${editable != "" && editable != "password"
-                      ? "settings__input-group__disabled"
-                      : ""
-                    } flex flex-col gap-2 ${isGoogleAuth ? "opacity-50" : ""}`
-                  }
-                >
-                  {editable == "password" ? (
-                    <>
-                      <input
-                        type="password"
-                        name="currentPassword"
-                        className="settings__input"
-                        placeholder="Current Password"
-                        value={passwordFields.current}
-                        onChange={(e) =>
-                          setPasswordFields({ ...passwordFields, current: e.target.value })
-                        }
-                        disabled={isPersonalInfoLoading || isLoading}
-                      />
-                      {passwordErrors.current && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.current}</div>
-                      )}
-                      <input
-                        type="password"
-                        name="newPassword"
-                        className="settings__input"
-                        placeholder="New Password"
-                        value={passwordFields.new}
-                        onChange={(e) =>
-                          setPasswordFields({ ...passwordFields, new: e.target.value })
-                        }
-                        disabled={isPersonalInfoLoading || isLoading}
-                      />
-                      {passwordErrors.new && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.new}</div>
-                      )}
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        className="settings__input"
-                        placeholder="Confirm Password"
-                        value={passwordFields.confirm}
-                        onChange={(e) =>
-                          setPasswordFields({ ...passwordFields, confirm: e.target.value })
-                        }
-                        disabled={isPersonalInfoLoading || isLoading}
-                      />
-                      {passwordErrors.confirm && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.confirm}</div>
-                      )}
-                    </>
-                  ) : (
-                    <></>
-                  )}
-                </div>
-                {!isGoogleAuth && editable !== "password" ? (
+                  Update
+                </button>
+              ) : !isGoogleAuth ? (  // Only show Cancel/Save buttons if not Google auth
+                <>
                   <button
                     type="button"
-                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != ""
-                      ? "settings__input-group__disabled"
-                      : ""
-                      }`}
-                    onClick={() => setEditable("password")}
-                    disabled={editable !== "" || isGoogleAuth}
+                    className="absolute top-0 right-0 underline font-semibold leading-5"
+                    onClick={() => setEditable("")}
                   >
-                    Update
+                    Cancel
                   </button>
-                ) : !isGoogleAuth ? (  // Only show Cancel/Save buttons if not Google auth
-                  <>
-                    <button
-                      type="button"
-                      className="absolute top-0 right-0 underline font-semibold leading-5"
-                      onClick={() => setEditable("")}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="settings__button"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Saving..." : "Save and Continue"}
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            )}
+                  <button
+                    type="submit"
+                    className="settings__button"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : "Save and Continue"}
+                  </button>
+                </>
+              ) : null}
+            </div>
           </form>
         </div>
       </div>

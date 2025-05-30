@@ -56,6 +56,16 @@ export class UserService {
         }
     }
 
+    static async checkUsernameExists(username: string): Promise<any> {
+        try {
+            const response = await UserRepository.checkUsernameExists<any>(username);
+            return response;
+        } catch (error) {
+            console.error('Check username error:', error);
+            throw error;
+        }
+    }
+
     static async getCurrentUser(token?: string): Promise<any> {
         try {
             const response = await UserRepository.getCurrentUser<any>(token);
