@@ -10,6 +10,7 @@ import CustomModal from "@/components/ui/Modal/Modal";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
+import { CategoryService } from "@/services/category/categoryService";
 
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState<any>([]);
@@ -19,11 +20,19 @@ const AddListingPage = (props: any) => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const router = useRouter();
-  const categories = [
-    { key: "no-category", label: "Select a Category" },
-    { key: "category-1", label: "Category 1" },
-    { key: "category-2", label: "Category 2" },
-  ];
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+
+  useEffect(() => {
+    CategoryService.fetchCategories()
+      .then(setCategories)
+      .catch((error) => console.error(error))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p>Loading categories...</p>;
 
   const tags = [
     {
@@ -184,7 +193,7 @@ const AddListingPage = (props: any) => {
                         className="listing__input"
                         placeholder="Listing Name"
                         value={listing.name}
-                        onChange={(e) => {}}
+                        onChange={(e) => { }}
                       />
                     </div>
                   </div>
@@ -193,8 +202,8 @@ const AddListingPage = (props: any) => {
                     <div className="listing__input-group">
                       <select className="listing__input">
                         {categories.map((category: any, index) => (
-                          <option value={category.key} key={index}>
-                            {category.label}
+                          <option value={category.id} key={index}>
+                            {category.name}
                           </option>
                         ))}
                       </select>
@@ -223,7 +232,7 @@ const AddListingPage = (props: any) => {
                         className="listing__input"
                         placeholder="Enter address"
                         value={listing.address}
-                        onChange={(e) => {}}
+                        onChange={(e) => { }}
                       />
                     </div>
                     <div className="flex flex-nowrap gap-2 items-center">
@@ -245,11 +254,10 @@ const AddListingPage = (props: any) => {
                           className="flex flex-nowrap items-center gap-2"
                         >
                           <div
-                            className={`listing-checkbox-item ${
-                              listing?.prices?.length && listing.prices[index]
+                            className={`listing-checkbox-item ${listing?.prices?.length && listing.prices[index]
                                 ? "bg-[#F1F1F1]"
                                 : "bg-transparent"
-                            }`}
+                              }`}
                           >
                             <input
                               id={`price-${index}`}
@@ -272,9 +280,8 @@ const AddListingPage = (props: any) => {
                           </div>
                           {index < prices.length - 1 && (
                             <div
-                              className={`${
-                                index < prices.length - 1 ? "block" : "hidden"
-                              } my-auto border-r-[1.5px] h-4/5 border-[#797979] w-fit`}
+                              className={`${index < prices.length - 1 ? "block" : "hidden"
+                                } my-auto border-r-[1.5px] h-4/5 border-[#797979] w-fit`}
                             ></div>
                           )}
                         </div>
@@ -403,11 +410,10 @@ const AddListingPage = (props: any) => {
                     {tags.map((tag, index) => (
                       <div
                         key={tag.id}
-                        className={`listing-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${
-                          listing?.recognition?.length && listing.recognition[index]
+                        className={`listing-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${listing?.recognition?.length && listing.recognition[index]
                             ? "bg-[#F1F1F1]"
                             : "bg-transparent"
-                        }`}
+                          }`}
                       >
                         <Image
                           src={tag.icon}

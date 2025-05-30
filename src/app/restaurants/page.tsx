@@ -16,7 +16,7 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineNames: string[];
+  palatesNames: string[];
   countries: string;
   priceRange: string;
 }
@@ -38,7 +38,7 @@ const RestaurantPage = () => {
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
       rating: 4.5, 
-      cuisineNames: item.cuisines || [],
+      palatesNames: item.palates || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
     }));
@@ -52,10 +52,8 @@ const RestaurantPage = () => {
 
       setRestaurants(prev => {
         if (!after) {
-          // New search: replace list
           return transformed;
         }
-        // Pagination: append unique restaurants only
         const all = [...prev, ...transformed];
         const uniqueMap = new Map(all.map(r => [r.id, r]));
         return Array.from(uniqueMap.values());

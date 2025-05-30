@@ -15,7 +15,7 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineNames: string[];
+  palatesNames: string[];
   countries: string;
   priceRange: string;
 }
@@ -37,7 +37,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
       .filter((name) => name); // Filter out any null values
   };
   // const cuisineNames = getCuisineNames(restaurant.cuisineIds);
-  const cuisineNames = restaurant.cuisineNames ?? [];
+  const cuisineNames = restaurant.palatesNames ?? [];
 
   const addReview = () => {
     router.push('/add-review')

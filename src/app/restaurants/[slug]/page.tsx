@@ -56,7 +56,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-          cuisines: data.cuisines?.nodes || [],
+          palates: data.palates || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
           phone: data.phone || "Not provided",
@@ -142,7 +142,7 @@ export default function RestaurantDetail() {
                   <h1 className="restaurant-detail__name">{restaurant.name}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
-                      {restaurant.cuisines.map((cuisine: { id: string; name: string }, index: number) => (
+                      {restaurant.palates.map((cuisine: { id: string; name: string }, index: number) => (
                         <div className="flex items-center gap-2" key={`cuisine-${cuisine.id}-${index}`}>
                           {index > 0 && <span>&#8226;</span>}
                           <span className="cuisine-tag">{cuisine.name}</span>

@@ -14,7 +14,7 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineIds: string[];
+  palatesId: string[];
   location: string;
   priceRange: string;
   address: string;
@@ -38,7 +38,7 @@ const ListingCard = ({ restaurant, onDelete }: ListingCardProps) => {
       })
       .filter((name) => name); // Filter out any null values
   };
-  const cuisineNames = getCuisineNames(restaurant.cuisineIds);
+  const cuisineNames = getCuisineNames(restaurant.palatesId);
 
   return (
     <div className="relative overflow-hidden rounded-md">

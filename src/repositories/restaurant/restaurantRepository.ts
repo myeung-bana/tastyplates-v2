@@ -1,6 +1,6 @@
 import { gql } from "@apollo/client";
 import client from "@/app/graphql/client";
-import { GET_LISTINGS, GET_RESTAURANT_BY_SLUG } from "@/app/graphql/queries/restaurantQueries";
+import { GET_LISTINGS, GET_RESTAURANT_BY_SLUG } from "@/app/graphql/Restaurant/restaurantQueries";
 
 export const RestaurantRepository = {
     async getRestaurantBySlug(slug: string) {
@@ -24,5 +24,8 @@ export const RestaurantRepository = {
             pageInfo: data.listings.pageInfo,
         };
     }
+
+
+
 
 };

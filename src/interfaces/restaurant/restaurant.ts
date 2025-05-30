@@ -4,7 +4,7 @@ export interface Listing {
     slug: string;
     content: string;
     listingStreet: string;
-    cuisines: string[];
+    palates: string[];
     listingDetails: {
         googleMapUrl: {
             latitude: string
