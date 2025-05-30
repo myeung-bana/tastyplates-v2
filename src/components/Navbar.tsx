@@ -41,7 +41,7 @@ export default function Navbar(props: any) {
   const onCloseSignup = () => setIsOpenSignup(false);
 
   const changeNavBg = () => {
-    window.scrollY >= 800 ? setNavBg(true) : setNavBg(false);
+    window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
   };
 
   useEffect(() => {
@@ -70,9 +70,9 @@ export default function Navbar(props: any) {
         }}
       />
       <nav
-        className={`navbar backdrop-blur-sm ${
+        className={`navbar ${
           isLandingPage
-            ? "bg-transparent"
+            ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
             : "bg-white border-b border-[#CACACA]"
         }`}
       >
@@ -91,7 +91,7 @@ export default function Navbar(props: any) {
                 >
                   <svg
                     className="h-6 w-6"
-                    stroke={`${isLandingPage ? '#FCFCFC' : '#31343F'}`}
+                    stroke={`${isLandingPage && !navBg ? '#FCFCFC' : '#31343F'}`}
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -116,7 +116,7 @@ export default function Navbar(props: any) {
                 <Link href="/" className="flex-shrink-0 flex items-center">
                   <h1
                     className={`${
-                      isLandingPage ? "!text-white" : "text-[#494D5D]"
+                      isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                     }`}
                   >
                     TastyPlates
@@ -129,7 +129,7 @@ export default function Navbar(props: any) {
                     key={item.name}
                     href={item.href}
                     className={`${
-                      isLandingPage ? "!text-white" : "text-[#494D5D]"
+                      isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                     }`}
                   >
                     {item.name}
@@ -137,7 +137,7 @@ export default function Navbar(props: any) {
                 ))}
               </div>
             </div>
-            {hasSearchBar && (
+            {hasSearchBar || navBg && (
               <div className="hidden md:block">
                 <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                   <div className="hero__search-restaurant !bg-transparent">
@@ -205,14 +205,14 @@ export default function Navbar(props: any) {
                       <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white">
                         <span
                           className={`${
-                            isLandingPage ? "!text-white" : "text-[#494D5D]"
+                            isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                           } text-center font-semibold`}
                         >
                           Review
                         </span>
                         <PiCaretDown
                           className={`${
-                            isLandingPage ? "fill-white" : "fill-[#494D5D]"
+                            isLandingPage && !navBg ? "fill-white" : "fill-[#494D5D]"
                           } size-5`}
                         />
                       </button>
@@ -353,13 +353,13 @@ export default function Navbar(props: any) {
                     <>
                       <button
                         onClick={() => setIsOpenSignin(true)}
-                        className="navbar__button navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold hidden sm:block"
+                        className="navbar__button navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold"
                       >
                         Log In
                       </button>
                       <button
                         onClick={() => setIsOpenSignup(true)}
-                        className="navbar__button navbar__button--secondary rounded-[50px] !bg-white text-[#31343F] font-semibold"
+                        className="navbar__button navbar__button--secondary rounded-[50px] !bg-white text-[#31343F] font-semibold hidden sm:block"
                       >
                         Sign Up
                       </button>

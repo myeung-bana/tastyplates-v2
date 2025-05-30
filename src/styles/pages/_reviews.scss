@@ -132,7 +132,7 @@
     flex-shrink: 0;
 
     @media (max-width: 767px) {
-      height: 640px;
+      // height: 640px;
     }
   }
 
@@ -244,4 +244,21 @@
 .grid-item .content p {
   font-size: 14px;
   color: #666;
+}
+
+.ratings {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.rating-counter {
+  font-size: 1rem;
+  font-style: normal;
+  color: #31343F;
+  text-align: center;
+
+  @media (max-width: 767px) {
+    font-size: 0.75rem;
+  }
 }
