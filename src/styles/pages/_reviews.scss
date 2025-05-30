@@ -1,15 +1,15 @@
 .reviews {
-  margin-top: -2.5rem;
-  padding: 4rem 0;
+  margin-top: -5rem;
+  padding: 2.5rem 0;
   background-color: #f9fafb;
 
   @media (max-width: 767px) {
-    margin-top: -2.5rem;
+    margin-top: -2rem;
     padding: 1.5rem 0;
   }
 
   &__container {
-    max-width: 90rem; // Increased from 80rem to accommodate 4 cards
+    max-width: 82rem; // Increased from 80rem to accommodate 4 cards
     margin: 0 auto;
     padding: 0 1rem;
 
