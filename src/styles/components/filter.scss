@@ -1,5 +1,5 @@
 .filter {
-//   width: 280px;
+  //   width: 280px;
   flex-shrink: 0;
   position: sticky;
   top: 80px; // Adjust this value based on your navbar height
@@ -47,7 +47,7 @@
     margin-bottom: 0rem;
     padding: 0.75rem 1.5rem;
     border-radius: 50px;
-    border: 1px solid #494D5D;
+    border: 1px solid #494d5d;
     flex-shrink: 0;
 
     &:last-child {
@@ -62,7 +62,7 @@
   &__subtitle {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #494D5D;
+    color: #494d5d;
     margin-bottom: 0.75rem;
   }
 
@@ -111,7 +111,7 @@
 
   &__label {
     font-size: 1rem;
-    color: #494D5D;
+    color: #494d5d;
     font-weight: 600;
     line-height: 1.25rem;
 
