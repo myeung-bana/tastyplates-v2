@@ -11,8 +11,10 @@ import Link from "next/link";
 import ReviewCard from "../ReviewCard";
 import { Masonry } from "masonic";
 import { getAllReviews } from "@/utils/reviewUtils";
+import { useSession } from "next-auth/react";
 
 const Profile = () => {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const reviews = getAllReviews();
@@ -96,28 +98,37 @@ const Profile = () => {
     setShowDropdown(false); // Hide the dropdown after selection
   };
 
+  // Use session.user for profile details if available
+  const user = session?.user;
+
   return (
     <>
-        <div className="flex self-center justify-center items-center gap-8 mt-10 mb-8 max-w-[624px]">
-            <Image src="/profile-icon.svg" width={120} height={120} className="rounded-full" alt="profile" />
-            <div className="flex flex-col gap-4">
-                <div className="flex gap-4">
-                    <div>
-                        <h2 className="text-xl font-medium">JulienChange</h2>
-                        <div className="flex gap-1 mt-2">
-                            <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Malaysian</span>
-                            <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Chinese</span>
-                        </div>
-                    </div>
-                    <div>
-                        <Link href="/profile/edit" className="py-2 px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-sm">
-                            Edit Profile
-                        </Link>
-                    </div>
-                </div>
-                <p className="text-sm">Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.</p>
+      <div className="flex self-center justify-center items-center gap-8 mt-10 mb-8 max-w-[624px]">
+        <Image src={user?.image || "/profile-icon.svg"} width={120} height={120} className="rounded-full" alt="profile" />
+        <div className="flex flex-col gap-4 flex-1">
+          <div className="flex gap-4 items-start w-full">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-medium truncate">{user?.name || "JulienChang"}</h2>
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {/* Example: user.cuisines or user.languages if available */}
+                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Malaysian</span>
+                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Chinese</span>
+              </div>
             </div>
+            <div className="ml-auto">
+              <Link href="/profile/edit" className="py-2 px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-sm whitespace-nowrap">
+                Edit Profile
+              </Link>
+            </div>
+          </div>
+          <p className="text-sm">{user?.bio || "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}</p>
+          <div className="flex gap-6 mt-4 text-lg items-center">
+            <span><span className="font-bold">10</span> Reviews</span>
+            <span><span className="font-bold">5</span> Followers</span>
+            <span><span className="font-bold">25</span> Following</span>
+          </div>
         </div>
+      </div>
       <Tabs
         aria-label="Dynamic tabs"
         items={tabs}
