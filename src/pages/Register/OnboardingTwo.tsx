@@ -82,9 +82,9 @@ const OnboardingTwoPage = () => {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-white px-2 pt-8 sm:px-1">
+    <div className="px-2 pt-8 sm:px-1">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
-        <h1 className="auth__header text-2xl sm:text-3xl">Create account</h1>
+        <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
         <div className="auth__card py-4 rounded-3xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
           <p className="auth__subtitle text-sm sm:text-base">Step 2 of 2</p>
           <h1 className="auth__title text-lg sm:!text-xl font-semibold">Set Up Profile</h1>
@@ -158,7 +158,7 @@ const OnboardingTwoPage = () => {
           {/* About Me Textarea */}
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <label htmlFor="aboutMe" className="block font-medium mb-2">
+              <label htmlFor="aboutMe" className="block font-semibold mb-2">
                 About Me
               </label>
               <textarea
@@ -168,7 +168,7 @@ const OnboardingTwoPage = () => {
                 value={aboutMe}
                 onChange={(e) => setAboutMe(e.target.value)}
                 placeholder="Tell us a little about yourself! Share your interests, background, or food that you like."
-                className="w-full border border-gray-300 rounded-md p-3 text-sm resize-none"
+                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none"
                 readOnly={isLoading}
               />
               <div className="flex justify-between items-center mt-1">

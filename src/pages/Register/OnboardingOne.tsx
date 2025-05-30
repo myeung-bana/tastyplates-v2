@@ -166,13 +166,14 @@ const OnboardingOnePage = () => {
       value: birthdate,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
       disabled: isLoading,
+      className: "min-h-[48px]",
     },
     {
       label: "Gender",
       type: "select",
       placeholder: "Select Gender",
       defaultValue: gender || "0",
-      className: "w-full",
+      className: "min-h-[48px] border border-gray-200 rounded-lg",
       value: gender,
       onChange: handleGenderChange,
       items: genderOptions.map(option => ({
@@ -191,13 +192,14 @@ const OnboardingOnePage = () => {
       value: customGender,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
       disabled: isLoading,
+      className: "min-h-[48px] border border-gray-200 rounded-lg",
     },
     {
       label: "Pronoun",
       type: "select",
       placeholder: "Select your pronoun",
       defaultValue: pronoun || "0",
-      className: "w-full",
+      className: "min-h-[48px]",
       value: pronoun,
       onChange: (value: string) => setPronoun(value),
       items: pronounOptions,
@@ -221,22 +223,22 @@ const OnboardingOnePage = () => {
   ];
 
   return (
-    <div className="min-h-screen px-2 pt-8 sm:px-1">
+    <div className="px-2 pt-8 sm:px-1 h-auto">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
-        <h1 className="auth__header text-2xl sm:text-3xl">Create account</h1>
+        <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
         <div className="auth__card py-4 rounded-4xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
-          <p className="auth__subtitle text-base sm:text-lg">Step 1 of 2</p>
+          <p className="auth__subtitle text-sm sm:text-base">Step 1 of 2</p>
           <h1 className="auth__title text-lg sm:!text-xl font-semibold">
             Basic Information
           </h1>
           <form
-            className="auth__form border-y max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
+            className="auth__form max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
             {formFields.map((field: any, index: number) => (
               <div
                 key={index}
-                className="auth__form-group mt-4 sm:mt-6 mb-4 sm:mb-0 w-full shrink-0"
+                className="auth__form-group w-full shrink-0"
               >
                 <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
                   {field.label}
