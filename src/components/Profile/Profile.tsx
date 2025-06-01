@@ -12,11 +12,15 @@ import ReviewCard from "../ReviewCard";
 import { Masonry } from "masonic";
 import { getAllReviews } from "@/utils/reviewUtils";
 import { useSession } from "next-auth/react";
+import FollowersModal from "./FollowersModal";
+import FollowingModal from "./FollowingModal";
 
 const Profile = () => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
   const reviews = getAllReviews();
 
   const tabs = [
@@ -101,6 +105,29 @@ const Profile = () => {
   // Use session.user for profile details if available
   const user = session?.user;
 
+  // Dummy data for demonstration
+  const followers = [
+    { id: "1", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: false },
+    { id: "2", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: false },
+    { id: "3", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: false },
+    { id: "4", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: false },
+  ];
+  const following = [
+    { id: "1", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: true },
+    { id: "2", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: true },
+    { id: "3", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: true },
+    { id: "4", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: true },
+  ];
+
+  const handleFollow = (id: string) => {
+    // Implement follow logic here
+    alert(`Follow user ${id}`);
+  };
+  const handleUnfollow = (id: string) => {
+    // Implement unfollow logic here
+    alert(`Unfollow user ${id}`);
+  };
+
   return (
     <>
       <div className="flex self-center justify-center items-center gap-8 mt-10 mb-8 max-w-[624px]">
@@ -124,11 +151,35 @@ const Profile = () => {
           <p className="text-sm">{user?.bio || "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}</p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span><span className="font-bold">10</span> Reviews</span>
-            <span><span className="font-bold">5</span> Followers</span>
-            <span><span className="font-bold">25</span> Following</span>
+            <button
+              type="button"
+              className="font-bold text-primary hover:underline focus:outline-none"
+              onClick={() => setShowFollowers(true)}
+            >
+              <span className="font-bold">5</span> Followers
+            </button>
+            <button
+              type="button"
+              className="font-bold text-primary hover:underline focus:outline-none"
+              onClick={() => setShowFollowing(true)}
+            >
+              <span className="font-bold">25</span> Following
+            </button>
           </div>
         </div>
       </div>
+      <FollowersModal
+        open={showFollowers}
+        onClose={() => setShowFollowers(false)}
+        followers={followers}
+        onFollow={handleFollow}
+      />
+      <FollowingModal
+        open={showFollowing}
+        onClose={() => setShowFollowing(false)}
+        following={following}
+        onUnfollow={handleUnfollow}
+      />
       <Tabs
         aria-label="Dynamic tabs"
         items={tabs}
