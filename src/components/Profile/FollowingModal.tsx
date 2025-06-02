@@ -43,7 +43,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                 <div className="font-semibold truncate">{user.name}</div>
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {user.cuisines.map((cuisine) => (
-                    <span key={cuisine} className="bg-[#FDF0EF] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">{cuisine}</span>
+                    <span key={cuisine} className="bg-[#D56253] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]">{cuisine}</span>
                   ))}
                 </div>
               </div>

@@ -43,7 +43,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                 <div className="font-semibold truncate">{follower.name}</div>
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {follower.cuisines.map((cuisine) => (
-                    <span key={cuisine} className="bg-[#FDF0EF] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">{cuisine}</span>
+                    <span key={cuisine} className="bg-[#D56253] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]">{cuisine}</span>
                   ))}
                 </div>
               </div>
