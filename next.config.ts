@@ -9,13 +9,14 @@ const nextConfig: NextConfig = {
 
   images: {
     domains: [
-      // Add your WordPress domain
-      "your-wordpress-site.com",
+      "wordpress.test",
+      process.env.NEXT_PUBLIC_WP_API_URL || "",
       "localhost",
+      "secure.gravatar.com"
     ],
   },
   env: {
-    WORDPRESS_API_URL: "https://your-wordpress-site.com/graphql",
+    WORDPRESS_API_URL: process.env.NEXT_PUBLIC_WP_GRAPHQL_API_URL
   },
 };
 

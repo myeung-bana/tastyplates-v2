@@ -16,7 +16,7 @@ interface Restaurant {
   image: string;
   rating: number;
   cuisineNames: string[];
-  location: string;
+  countries: string;
   priceRange: string;
 }
 
@@ -78,7 +78,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           <div className="restaurant-card__info">
             <div className="restaurant-card__location">
               {/* <FiMapPin className="restaurant-card__icon" /> */}
-              <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.location}</span>
+              <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
             </div>
             {/* <div className="restaurant-card__location">
               <FiMessageCircle className="restaurant-card__icon" />

@@ -13,48 +13,71 @@ import {
 } from "@heroui/modal";
 import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
+import Cookies from "js-cookie";
+import { UserService } from '@/services/userService';
 
 const OnboardingOnePage = () => {
   const router = useRouter();
 
-  // Redirect if registrationData is missing
   useEffect(() => {
-    const storedData = localStorage.getItem('registrationData');
+    let storedData = localStorage.getItem('registrationData');
+    const googleAuth = Cookies.get('googleAuth');
+    const email = Cookies.get('email');
+    const username = Cookies.get('username');
+
+    if (!storedData && googleAuth === 'true') {
+      const registrationData = {
+        username: username || "",
+        email: email || "",
+        password: "",
+        googleAuth: true
+      };
+      localStorage.setItem('registrationData', JSON.stringify(registrationData));
+      storedData = JSON.stringify(registrationData);
+    }
+
     if (!storedData) {
       router.replace('/');
+      window.history.pushState(null, '', '/');
     }
+  }, [router]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      router.replace('/');
+      window.history.pushState({}, '', '/');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [router]);
 
   // Get initial data from localStorage instead of URL params
   const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
-  
+
   const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
   const [gender, setGender] = useState(storedData.gender || "");
-  const [name, setName] = useState(storedData.username || "");
+  const [name, setName] = useState(storedData.username || Cookies.get('username') || "");
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [customGender, setCustomGender] = useState("");
   const [pronoun, setPronoun] = useState("");
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [birthdateError, setBirthdateError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    let hasError = false;
+    setIsLoading(true);
     setUsernameError(null);
     setBirthdateError(null);
-
-    // Username validation
-    if (!name || name.length > 20) {
-      setUsernameError("Username must be 1-20 characters.");
-      hasError = true;
-    }
 
     // Birthdate validation (must be 18+)
     if (!birthdate) {
       setBirthdateError("Birthdate is required.");
-      hasError = true;
+      setIsLoading(true);
+      return;
     } else {
       const birth = new Date(birthdate);
       const today = new Date();
@@ -64,17 +87,36 @@ const OnboardingOnePage = () => {
       const actualAge = isBirthdayPassed ? age : age - 1;
       if (isNaN(birth.getTime()) || actualAge < 18) {
         setBirthdateError("You must be at least 18 years old.");
-        hasError = true;
+        setIsLoading(false);
+        return;
       }
     }
-
-    if (hasError) return;
 
     let formattedBirthdate = "";
     if (birthdate) {
       const dateObj = new Date(birthdate);
       if (!isNaN(dateObj.getTime())) {
         formattedBirthdate = dateObj.toISOString().split("T")[0];
+      }
+    }
+
+    // Username validation
+    if (!name || name.length > 20) {
+      setUsernameError("Username must be 1-20 characters.");
+      setIsLoading(false);
+      return;
+    } else {
+      try {
+        const response = await UserService.checkUsernameExists(name);
+        if (response.exists) {
+          setUsernameError(response.message);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        setUsernameError("Error checking username availability");
+        setIsLoading(false);
+        return;
       }
     }
 
@@ -88,8 +130,9 @@ const OnboardingOnePage = () => {
       pronoun: gender === "custom" ? pronoun : undefined,
       palates: Array.from(selectedPalates).join(","),
     };
-    
+
     localStorage.setItem('registrationData', JSON.stringify(updatedData));
+    setIsLoading(false);
     router.push("/onboarding2");
   };
 
@@ -114,6 +157,7 @@ const OnboardingOnePage = () => {
       placeholder: "Enter your username",
       value: name,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+      disabled: isLoading,
     },
     {
       label: "Birthdate",
@@ -121,6 +165,7 @@ const OnboardingOnePage = () => {
       placeholder: "Select your birthdate",
       value: birthdate,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
+      disabled: isLoading,
     },
     {
       label: "Gender",
@@ -134,6 +179,7 @@ const OnboardingOnePage = () => {
         ...option,
         content: <div>{option.content}</div>
       })),
+      disabled: isLoading,
     },
   ];
 
@@ -144,6 +190,7 @@ const OnboardingOnePage = () => {
       placeholder: "What's your gender?",
       value: customGender,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
+      disabled: isLoading,
     },
     {
       label: "Pronoun",
@@ -154,10 +201,11 @@ const OnboardingOnePage = () => {
       value: pronoun,
       onChange: (value: string) => setPronoun(value),
       items: pronounOptions,
+      disabled: isLoading,
     },
   ] : [];
 
-  // Combine base fields with custom gender fields first, then add palate at the end
+  // Update the palate field
   const formFields = [
     ...baseFormFields,
     ...(gender === "custom" ? customGenderFields : []),
@@ -168,6 +216,7 @@ const OnboardingOnePage = () => {
       value: selectedPalates,
       onChange: handlePalateChange,
       items: palateOptions,
+      disabled: isLoading,
     },
   ];
 
@@ -192,7 +241,7 @@ const OnboardingOnePage = () => {
                 <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
                   {field.label}
                 </label>
-                <div className="auth__input-group">
+                <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
                   {field.type === "select" ? (
                     <CustomSelect {...field} />
                   ) : field.type === "multiple-select" ? (
@@ -222,8 +271,9 @@ const OnboardingOnePage = () => {
             <button
               type="submit"
               className="auth__button !bg-[#E36B00] mt-0 rounded-xl w-full sm:w-auto text-base sm:text-lg"
+              disabled={isLoading}
             >
-              Save and Continue
+              {isLoading ? "Loading..." : "Save and Continue"}
             </button>
           </form>
         </div>

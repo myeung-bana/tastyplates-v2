@@ -16,10 +16,6 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
 
-useEffect(() => {
-  if (!isModalOpen && typeof window !== 'undefined') document.body.style.overflow = 'hidden'
-}, [isModalOpen])
-
   return (
     <div className={`review-card !w-[${width}px]`}>
       <ReviewDetailModal
@@ -42,7 +38,7 @@ useEffect(() => {
         />
       </div>
 
-      <div className="review-card__content">
+      <div className="review-card__content mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           <Image
             src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
