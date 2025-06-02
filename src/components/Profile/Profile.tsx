@@ -27,7 +27,7 @@ const Profile = () => {
 
   const reviews = getAllReviews();
   const user = session?.user;
-  const targetUserId = 29; // The user ID we want to view
+  const targetUserId = user?.id;
 
   useEffect(() => {
     if (!session?.accessToken) return;
