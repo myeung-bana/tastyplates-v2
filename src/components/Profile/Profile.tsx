@@ -23,6 +23,7 @@ const Profile = () => {
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bio, setBio] = useState<string>("");
 
   const reviews = getAllReviews();
   const user = session?.user;
@@ -113,13 +114,34 @@ const Profile = () => {
       }
     };
 
+    // Fetch user bio
+    const fetchBio = async () => {
+      try {
+        const res = await fetch(
+          `${WP_BASE}/wp-json/restaurant/v1/user-bio?user_id=${targetUserId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.accessToken}`
+            }
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setBio(data.bio || "");
+        }
+      } catch (err) {
+        console.error('Error fetching bio:', err);
+      }
+    };
+
     // Fetch all user data
     const fetchUserData = async () => {
       try {
         await Promise.all([
           fetchPalates(),
           fetchFollowers(),
-          fetchFollowing()
+          fetchFollowing(),
+          fetchBio()
         ]);
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -269,11 +291,8 @@ const Profile = () => {
                 Edit Profile
               </Link>
             </div>
-          </div>
-          <p className="text-sm">
-            {user && 'bio' in user && user.bio
-              ? user.bio
-              : "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}
+          </div>          <p className="text-sm">
+            {bio || "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span>
@@ -281,14 +300,14 @@ const Profile = () => {
             </span>
             <button
               type="button"
-              className="font-bold text-primary hover:underline focus:outline-none"
+              className="text-primary focus:outline-none"
               onClick={() => setShowFollowers(true)}
             >
               <span className="font-bold">{followers.length}</span> Followers
             </button>
             <button
               type="button"
-              className="font-bold text-primary hover:underline focus:outline-none"
+              className="text-primary focus:outline-none"
               onClick={() => setShowFollowing(true)}
             >
               <span className="font-bold">{following.length}</span> Following
