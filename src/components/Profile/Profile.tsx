@@ -17,54 +17,122 @@ import FollowingModal from "./FollowingModal";
 
 const Profile = () => {
   const { data: session } = useSession();
-  const [palates, setPalates] = useState<string[]>(
-    () => (session?.user?.palates && Array.isArray(session.user.palates) ? session.user.palates : [])
-  );
+  const [palates, setPalates] = useState<string[]>([]);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const reviews = getAllReviews();
   const user = session?.user;
+  const targetUserId = 29; // The user ID we want to view
 
   useEffect(() => {
-    if (
-      session?.user?.palates &&
-      Array.isArray(session.user.palates) &&
-      palates.length === 0
-    ) {
-      setPalates(session.user.palates);
-    }
+    if (!session?.accessToken) return;
+    const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
+    if (!WP_BASE) return;
 
+    // Fetch palates
     const fetchPalates = async () => {
-      if (!session?.user?.id) return;
-      const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
-      if (!WP_BASE) return;
-
       try {
         const res = await fetch(
-          `${WP_BASE}/wp-json/restaurant/v1/user-palates?user_id=${session.user.id}`
+          `${WP_BASE}/wp-json/restaurant/v1/user-palates?user_id=${targetUserId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.accessToken}`
+            }
+          }
         );
-        if (!res.ok) {
-          console.error("Failed to fetch palates:", res.status, await res.text());
-          return;
-        }
-        const data = await res.json();
-        if (Array.isArray(data.palates)) {
-          setPalates(data.palates);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.palates)) {
+            setPalates(data.palates);
+          }
         }
       } catch (err) {
-        console.error("Error fetching palates:", err);
+        console.error('Error fetching palates:', err);
       }
     };
-    fetchPalates();
-    // Only re-run if session.user.id changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+
+    // Fetch followers
+    const fetchFollowers = async () => {
+      try {
+        const res = await fetch(`${WP_BASE}/wp-json/v1/followers-list?user_id=${targetUserId}`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFollowers(
+            Array.isArray(data)
+              ? data.map((user: any) => ({
+                  id: user.id,
+                  name: user.name,
+                  cuisines: user.palates || [],
+                  image: user.image || "/profile-icon.svg",
+                  isFollowing: true,
+                }))
+              : []
+          );
+        } else {
+          setFollowers([]);
+        }
+      } catch (e) {
+        setFollowers([]);
+      }
+    };
+    
+    // Fetch following
+    const fetchFollowing = async () => {
+      try {
+        const res = await fetch(`${WP_BASE}/wp-json/v1/following-list?user_id=${targetUserId}`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFollowing(
+            Array.isArray(data)
+              ? data.map((user: any) => ({
+                  id: user.id,
+                  name: user.name,
+                  cuisines: user.palates || [],
+                  image: user.image || "/profile-icon.svg",
+                  isFollowing: true,
+                }))
+              : []
+          );
+        } else {
+          setFollowing([]);
+        }
+      } catch (e) {
+        setFollowing([]);
+      }
+    };
+
+    // Fetch all user data
+    const fetchUserData = async () => {
+      try {
+        await Promise.all([
+          fetchPalates(),
+          fetchFollowers(),
+          fetchFollowing()
+        ]);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [session?.accessToken]);
 
   const palateCuisineIds = useMemo(() => {
-    return cuisines
-      .filter((c) => palates.includes(c.name))
-      .map((c) => c.id);
+    return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
   }, [palates]);
 
   const filteredRestaurants = useMemo(() => {
@@ -76,19 +144,17 @@ const Profile = () => {
     );
   }, [palateCuisineIds]);
 
-  // Dummy data for demonstration
-  const followers = [
-    { id: "1", name: "YurioLim", cuisines: ["Malaysian", "Chinese"], isFollowing: false },
-    { id: "2", name: "AliceChen", cuisines: ["Taiwanese"], isFollowing: false },
-    { id: "3", name: "MarkFang", cuisines: ["Korean"], isFollowing: false },
-    { id: "4", name: "LilyWu", cuisines: ["Italian"], isFollowing: false },
-  ];
-  const following = [
-    { id: "10", name: "BobTang", cuisines: ["Italian"], isFollowing: true },
-    { id: "11", name: "CarolWang", cuisines: ["Thai"], isFollowing: true },
-    { id: "12", name: "DaveLee", cuisines: ["Mexican"], isFollowing: true },
-    { id: "13", name: "EveKim", cuisines: ["Japanese"], isFollowing: true },
-  ];
+  const safeRestaurant = (rest: any) => ({ cuisineNames: [], countries: [], ...rest });
+  const safeReviews = reviews.map((r: any, idx: number) => ({
+    databasedId: r.databasedId || idx,
+    reviewMainTitle: r.reviewMainTitle || r.title || '',
+    content: r.content || r.text || '',
+    uri: r.uri || '',
+    rating: r.rating || 0,
+    reviewer: r.reviewer || '',
+    date: r.date || '',
+    ...r,
+  }));
 
   const handleFollow = (id: string) => {
     // Implement follow logic here
@@ -106,7 +172,7 @@ const Profile = () => {
       label: "Reviews",
       content: (
         <Masonry
-          items={reviews}
+          items={safeReviews}
           render={ReviewCard}
           columnGutter={32}
           maxColumnWidth={304}
@@ -123,7 +189,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={rest} />
+                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
               ))}
             </div>
           </div>
@@ -138,7 +204,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={rest} />
+                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
               ))}
             </div>
           </div>
@@ -153,7 +219,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={rest} />
+                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
               ))}
             </div>
           </div>
@@ -205,8 +271,9 @@ const Profile = () => {
             </div>
           </div>
           <p className="text-sm">
-            {user?.bio ||
-              "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}
+            {user && 'bio' in user && user.bio
+              ? user.bio
+              : "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos."}
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span>
@@ -217,14 +284,14 @@ const Profile = () => {
               className="font-bold text-primary hover:underline focus:outline-none"
               onClick={() => setShowFollowers(true)}
             >
-              <span className="font-bold">5</span> Followers
+              <span className="font-bold">{followers.length}</span> Followers
             </button>
             <button
               type="button"
               className="font-bold text-primary hover:underline focus:outline-none"
               onClick={() => setShowFollowing(true)}
             >
-              <span className="font-bold">25</span> Following
+              <span className="font-bold">{following.length}</span> Following
             </button>
           </div>
         </div>
