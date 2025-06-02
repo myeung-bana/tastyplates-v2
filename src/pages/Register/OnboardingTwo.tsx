@@ -85,7 +85,7 @@ const OnboardingTwoPage = () => {
     <div className="px-2 pt-8 sm:px-1">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
         <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
-        <div className="auth__card py-4 rounded-3xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
+        <div className="auth__card py-4 !rounded-[24px] border border-[#CACACA] w-full sm:!w-[672px] bg-white">
           <p className="auth__subtitle text-sm sm:text-base">Step 2 of 2</p>
           <h1 className="auth__title text-lg sm:!text-xl font-semibold">Set Up Profile</h1>
           {/* Avatar section */}
@@ -168,7 +168,7 @@ const OnboardingTwoPage = () => {
                 value={aboutMe}
                 onChange={(e) => setAboutMe(e.target.value)}
                 placeholder="Tell us a little about yourself! Share your interests, background, or food that you like."
-                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none"
+                className="w-full border border-gray-300 rounded-[10px] p-3 text-sm resize-none"
                 readOnly={isLoading}
               />
               <div className="flex justify-between items-center mt-1">
@@ -195,7 +195,7 @@ const OnboardingTwoPage = () => {
               <button
                 disabled={isLoading}
                 type="button"
-                className="text-sm text-black-700 underline font-medium self-center w-full sm:w-auto"
+                className="text-sm text-black-700 underline font-bold self-center w-full sm:w-auto"
                 onClick={() => {
                   localStorage.removeItem('registrationData');
                   router.push("/");

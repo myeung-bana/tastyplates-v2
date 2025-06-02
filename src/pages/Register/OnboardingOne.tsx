@@ -154,26 +154,27 @@ const OnboardingOnePage = () => {
     {
       label: "Username",
       type: "text",
-      placeholder: "Enter your username",
+      placeholder: "Username",
       value: name,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
       disabled: isLoading,
+      className: "!rounded-[10px]"
     },
     {
       label: "Birthdate",
       type: "date",
-      placeholder: "Select your birthdate",
+      placeholder: "DD/MM/YYYY",
       value: birthdate,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
       disabled: isLoading,
-      className: "min-h-[48px]",
+      className: "relative",
     },
     {
       label: "Gender",
       type: "select",
-      placeholder: "Select Gender",
+      placeholder: "Select your gender",
       defaultValue: gender || "0",
-      className: "min-h-[48px] border border-gray-200 rounded-lg",
+      className: "min-h-[48px] border border-gray-200 rounded-[10px] text-sm",
       value: gender,
       onChange: handleGenderChange,
       items: genderOptions.map(option => ({
@@ -186,20 +187,20 @@ const OnboardingOnePage = () => {
 
   const customGenderFields = gender === "custom" ? [
     {
-      label: "Custom Gender",
+      label: "",
       type: "text",
       placeholder: "What's your gender?",
       value: customGender,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
       disabled: isLoading,
-      className: "min-h-[48px] border border-gray-200 rounded-lg",
+      className: "min-h-[48px] border border-gray-200 rounded-[10px]",
     },
     {
       label: "Pronoun",
       type: "select",
       placeholder: "Select your pronoun",
       defaultValue: pronoun || "0",
-      className: "min-h-[48px]",
+      className: "min-h-[48px] text-sm border border-gray-200 rounded-[10px]",
       value: pronoun,
       onChange: (value: string) => setPronoun(value),
       items: pronounOptions,
@@ -219,6 +220,7 @@ const OnboardingOnePage = () => {
       onChange: handlePalateChange,
       items: palateOptions,
       disabled: isLoading,
+      className: "!rounded-[10px] text-sm",
     },
   ];
 
@@ -226,7 +228,7 @@ const OnboardingOnePage = () => {
     <div className="px-2 pt-8 sm:px-1 h-auto">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
         <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
-        <div className="auth__card py-4 rounded-4xl border border-[#CACACA] w-full sm:!w-[672px] bg-white">
+        <div className="auth__card py-4 !rounded-[24px] border border-[#CACACA] w-full sm:!w-[672px] bg-white">
           <p className="auth__subtitle text-sm sm:text-base">Step 1 of 2</p>
           <h1 className="auth__title text-lg sm:!text-xl font-semibold">
             Basic Information
@@ -235,44 +237,71 @@ const OnboardingOnePage = () => {
             className="auth__form max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
-            {formFields.map((field: any, index: number) => (
-              <div
-                key={index}
-                className="auth__form-group w-full shrink-0"
-              >
-                <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
-                  {field.label}
-                </label>
-                <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
-                  {field.type === "select" ? (
-                    <CustomSelect {...field} />
-                  ) : field.type === "multiple-select" ? (
-                    <CustomMultipleSelect {...field} />
-                  ) : (
-                    <input
-                      type={field.type}
-                      id={field.label?.toLowerCase()}
-                      className="auth__input text-sm sm:text-base"
-                      placeholder={field.placeholder}
-                      value={field.value}
-                      onChange={field.onChange}
-                      required
-                      disabled={field.disabled}
-                    />
+            {formFields.map((field: any, index: number) => {
+              // Check if current field is custom gender and previous field was gender
+              const isCustomGenderField = gender === "custom" && field.label === "";
+              const groupClassName = isCustomGenderField 
+                ? "auth__form-group w-full shrink-0 -mt-4" 
+                : "auth__form-group w-full shrink-0";
+
+              return (
+                <div
+                  key={index}
+                  className={groupClassName}
+                >
+                  <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
+                    {field.label}
+                  </label>
+                  <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
+                    {field.type === "date" ? (
+                      <div className="relative">
+                        <input
+                          type={field.type}
+                          id={field.label?.toLowerCase()}
+                          className={`auth__input text-sm sm:text-base !rounded-[10px] ${
+                            !field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''
+                          }`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          required
+                          disabled={field.disabled}
+                        />
+                        {!field.value && (
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none !text-sm">
+                            DD/MM/YYYY
+                          </span>
+                        )}
+                      </div>
+                    ) : field.type === "select" ? (
+                      <CustomSelect {...field} />
+                    ) : field.type === "multiple-select" ? (
+                      <CustomMultipleSelect {...field} />
+                    ) : (
+                      <input
+                        type={field.type}
+                        id={field.label?.toLowerCase()}
+                        className={`auth__input text-sm sm:text-base ${field.className || ''}`}
+                        placeholder={field.placeholder}
+                        value={field.value}
+                        onChange={field.onChange}
+                        required
+                        disabled={field.disabled}
+                      />
+                    )}
+                  </div>
+                  {/* Validation errors */}
+                  {field.label === "Username" && usernameError && (
+                    <div className="text-red-600 text-xs mt-1">{usernameError}</div>
+                  )}
+                  {field.label === "Birthdate" && birthdateError && (
+                    <div className="text-red-600 text-xs mt-1">{birthdateError}</div>
                   )}
                 </div>
-                {/* Validation errors */}
-                {field.label === "Username" && usernameError && (
-                  <div className="text-red-600 text-xs mt-1">{usernameError}</div>
-                )}
-                {field.label === "Birthdate" && birthdateError && (
-                  <div className="text-red-600 text-xs mt-1">{birthdateError}</div>
-                )}
-              </div>
-            ))}
+              );
+            })}
             <button
               type="submit"
-              className="auth__button !bg-[#E36B00] mt-0 rounded-xl w-full sm:w-auto text-base sm:text-lg"
+              className="auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto"
               disabled={isLoading}
             >
               {isLoading ? "Loading..." : "Save and Continue"}
