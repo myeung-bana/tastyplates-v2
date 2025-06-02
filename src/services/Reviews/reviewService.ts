@@ -20,4 +20,19 @@ export class ReviewService {
             throw new Error('Failed to fetch comment replies');
         }
     }
+
+    static async postReview(reviewData: any, accessToken: string): Promise<any> {
+        const formattedData = {
+            post: reviewData.restaurantId,
+            author: reviewData.authorId,
+            content: reviewData.content || '',
+            review_main_title: reviewData.review_main_title || '',
+            review_stars: reviewData.review_stars || 0,
+            review_images_idz: reviewData.review_images_idz || [],
+            recognitions: reviewData.recognitions || [],
+        };
+        await ReviewRepository.createReview(formattedData, accessToken);
+
+        return formattedData;
+    }
 }

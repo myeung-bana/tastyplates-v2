@@ -184,7 +184,7 @@ export default function Navbar(props: any) {
                     }
                     content={
                       <div className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
-                        <Link href="/add-review" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href="/listing" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Write a Review
                         </Link>
                         <Link href="/listing/add" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>

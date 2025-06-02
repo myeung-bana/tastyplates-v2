@@ -1,7 +1,6 @@
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
-import type { Restaurant } from "@/data/dummyRestaurants";
 import { FiMail } from "react-icons/fi";
 import { palates } from "@/data/dummyPalate";
 import "@/styles/pages/_submit-restaurants.scss";
@@ -11,8 +10,46 @@ import { image } from "@heroui/theme";
 import Link from "next/link";
 import Image from "next/image";
 import CustomModal from "@/components/ui/Modal/Modal";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { useParams, useSearchParams } from "next/navigation";
+import ReviewSubmissionSkeleton from "@/components/ui/ReviewSubmissionSkeleton";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { useSession } from 'next-auth/react'
+
+interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  rating: number;
+  cuisineIds: string[];
+  location: string;
+  priceRange: string;
+  address: string;
+  phone: string;
+  reviews: number;
+  description: string;
+  recognition?: string[];
+}
 
 const ReviewSubmissionPage = () => {
+  const params = useParams() as { slug: string; id: string };
+  const restaurantId = params.id;
+  const { data: session } = useSession();
+  // const searchParams = useSearchParams();
+  // const restaurantId = searchParams?.get('id');
+  const [restaurantName, setRestaurantName] = useState('');
+  const [review_main_title, setReviewMainTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [review_stars, setReviewStars] = useState(0);
+  const [loading, setLoading] = useState(true);
+  // const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  // console.log('session', session?.accessToken);
+  // const { token, isSignedIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  // const [ratingError, setRatingError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+  const [uploadedImageError, setUploadedImageError] = useState('');
   const [restaurant, setRestaurant] = useState<
     Omit<Restaurant, "id" | "reviews">
   >({
@@ -28,6 +65,23 @@ const ReviewSubmissionPage = () => {
     description: "",
     recognition: []
   });
+
+  useEffect(() => {
+    const fetchName = async () => {
+      if (!restaurantId || !session?.accessToken) return;
+
+      try {
+        const data = await RestaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
+        setRestaurantName(data.title);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchName();
+  }, [restaurantId, session]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -55,39 +109,33 @@ const ReviewSubmissionPage = () => {
     },
   ];
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement | any>
-  ) => {
-    if (event.target.files && event.target.files?.length > 0) {
-      const selectedFile = event.target.files;
-      setSelectedFiles([]);
-      console.log(selectedFile.length, "length");
-      let imageList: string[] = [];
-      for (let i = 0; i < selectedFile.length; i++) {
-        let reader = new FileReader();
-        const file = selectedFile[i];
-        const length = selectedFile.length;
-        reader.onload = function (e) {
-          console.log(length, "length");
-          // console.log(reader.result as string, 'hello')
-          imageList.push(reader.result as string);
-          console.log(
-            imageList,
-            "image list 0",
-            i,
-            selectedFile.length,
-            selectedFile.length - 1
-          );
-          if (length - 1 == i) {
-            setSelectedFiles(imageList);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const files = Array.from(event.target.files);
 
+      if (files.length > 6) {
+        setUploadedImageError('You can Upload a maximum of 6 images.');
+        return;
+      }
+
+      const imageList: string[] = [];
+      let loadedImages = 0;
+
+      files.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (reader.result) {
+            imageList.push(reader.result as string);
+          }
+
+          loadedImages++;
+          if (loadedImages === files.length) {
+            setSelectedFiles(imageList);
             setIsDoneSelecting(true);
           }
-        }; // Would see a path?
+        };
         reader.readAsDataURL(file);
-        // console.log(selectedFile.length, 'length', url)
-      }
-      console.log(imageList, "image list");
+      });
     }
   };
 
@@ -100,12 +148,12 @@ const ReviewSubmissionPage = () => {
       const selectedOptions = Array.from(e.target.selectedOptions).map(
         (option) => option.value
       );
-      setRestaurant((prev) => ({
+      setRestaurant((prev: any) => ({
         ...prev,
         cuisineIds: selectedOptions,
       }));
     } else {
-      setRestaurant((prev) => ({
+      setRestaurant((prev: any) => ({
         ...prev,
         [name]:
           name === "rating" || name === "deliveryTime" ? Number(value) : value,
@@ -118,25 +166,67 @@ const ReviewSubmissionPage = () => {
   };
 
   const handleRating = (rate: number) => {
-    console.log("User rated:", rate);
+    setReviewStars(rate);
   };
 
-  const submitReview = (e: FormEvent) => {
+  const submitReview = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    let hasError = false;
+
+    // if (review_stars === 0) {
+    //   setRatingError('Rating is required.');
+    //   hasError = true;
+    // } else {
+    //   setRatingError('');
+    // }
+
+    if (content.trim() === '') {
+      setDescriptionError('Description is required.');
+      hasError = true;
+    } else {
+      setDescriptionError('');
+    }
+
+    if (hasError) return;
+
+    setIsLoading(true);
+
+    try {
+      const reviewData = {
+        restaurantId,
+        review_stars,
+        review_main_title,
+        content,
+        review_images_idz: selectedFiles,
+        recognitions: restaurant.recognition || [],
+      };
+
+      await ReviewService.postReview(reviewData, session?.accessToken ?? "");
+      setIsSubmitted(true);
+
+      // Reset form fields here:
+      setReviewStars(0);
+      setReviewMainTitle('');
+      setContent('');
+      setSelectedFiles([]);
+      setIsDoneSelecting(false);
+      setRestaurant({
+        ...restaurant,
+        recognition: [],
+      });
+    } catch (error) {
+      console.error('Failed to submit review:', error);
+    }
+    setIsLoading(false);
   };
 
-  const handleChangeRecognition = (e: any) => {
-    console.log("listing", restaurant);
-    setRestaurant({
-      ...restaurant,
-      recognition: [
-        e.target.value == 1,
-        e.target.value == 2,
-        e.target.value == 3,
-        e.target.value == 4,
-      ],
-    });
+  const handleChangeRecognition = (tagName: string) => {
+    setRestaurant((prev) => ({
+      ...prev,
+      recognition: prev.recognition?.includes(tagName)
+        ? prev.recognition.filter((name) => name !== tagName)
+        : [...(prev.recognition || []), tagName],
+    }));
   };
 
   const deleteSelectedFile = (index: string) => {
@@ -147,26 +237,30 @@ const ReviewSubmissionPage = () => {
     setSelectedFiles(selectedFiles.filter((item: string) => item != index))
   }
 
+  if (loading) return <ReviewSubmissionSkeleton />;
   return (
     <>
       <div className="submitRestaurants mt-16 md:mt-20">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
             <h1 className="submitRestaurants__title">
-              Chica Bonita Elegante - The Exchange TRX
+              {restaurantName}
             </h1>
             <form className="submitRestaurants__form" onSubmit={submitReview}>
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">Rating</label>
                 <div className="submitRestaurants__input-group">
                   <Rating
-                    defaultRating={0}
                     totalStars={5}
+                    defaultRating={review_stars}
                     onRating={handleRating}
                   />
                   <span className="text-[10px] leading-3 md:text-base">
                     Rating should be solely based on taste of the food
                   </span>
+                  {/* {ratingError && (
+                    <p className="text-red-600 text-sm mt-1">{ratingError}</p>
+                  )} */}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -176,7 +270,8 @@ const ReviewSubmissionPage = () => {
                     name="title"
                     className="listing__input resize-vertical"
                     placeholder="Title of your review"
-                    defaultValue="Title of your review"
+                    value={review_main_title}
+                    onChange={(e) => setReviewMainTitle(e.target.value)}
                     rows={2}
                   ></textarea>
                 </div>
@@ -185,14 +280,16 @@ const ReviewSubmissionPage = () => {
                 <label className="submitRestaurants__label">Description</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
-                    name="name"
+                    name="content"
                     className="submitRestaurants__input resize-vertical"
-                    placeholder="Restaurant Name"
-                    defaultValue={
-                      "Write a review about the food, service or ambiance of the restaurant"
-                    }
+                    placeholder="Write a review about the food, service or ambiance of the restaurant"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
                     rows={6}
                   ></textarea>
+                  {descriptionError && (
+                    <p className="text-red-600 text-sm mt-1">{descriptionError}</p>
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -216,6 +313,9 @@ const ReviewSubmissionPage = () => {
                       Upload
                     </span>
                   </label>
+                  {uploadedImageError && (
+                    <p className="text-red-600 text-sm mt-1">{uploadedImageError}</p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {/* {selectedFiles} */}
@@ -242,29 +342,20 @@ const ReviewSubmissionPage = () => {
                   Give Recognition
                 </label>
                 <div className="submitRestaurants__cuisine-checkbox-grid">
-                  {tags.map((tag, index) => (
-                    <div key={tag.id} className={`cuisine-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${
-                          restaurant?.recognition?.length && restaurant.recognition[index]
-                            ? "bg-[#F1F1F1]"
-                            : "bg-transparent"
-                        }`}>
-                      <Image src={tag.icon} width={24} height={24} alt="icon" />
-                      <input
-                        type="checkbox"
-                        id={`cuisine-${tag.id}`}
-                        name="cuisineIds"
-                        value={tag.id}
-                        onChange={handleChangeRecognition}
-                        className="cuisine-checkbox"
-                      />
-                      <label
-                        htmlFor={`cuisine-${tag.id}`}
-                        className="cuisine-checkbox-label"
+                  {tags.map((tag) => {
+                    const isSelected = restaurant.recognition?.includes(tag.name);
+                    return (
+                      <div
+                        key={tag.name}
+                        onClick={() => handleChangeRecognition(tag.name)}
+                        className={`cuisine-checkbox-item flex items-center cursor-pointer gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${isSelected ? "bg-[#cac9c9]" : "bg-transparent"
+                          }`}
                       >
-                        {tag.name}
-                      </label>
-                    </div>
-                  ))}
+                        <Image src={tag.icon} width={24} height={24} alt="icon" />
+                        <span>{tag.name}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               <p className="text-xs md:text-sm text-[#31343F]">
@@ -278,12 +369,30 @@ const ReviewSubmissionPage = () => {
                 </Link>
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
-                <button className="submitRestaurants__button" type="submit">
+                <button className="submitRestaurants__button flex items-center gap-2" type="submit">
+                  {isLoading && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-white"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                   Submit Listing
                 </button>
                 <button
                   className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
-                  type="submit"
+                  type="button"
                 >
                   Save and exit
                 </button>
@@ -293,7 +402,7 @@ const ReviewSubmissionPage = () => {
         </div>
         <CustomModal
           header="Review Posted"
-          content="Your review for Chica Bonita Elegante - The Exchange TRX is successfully posted."
+          content={`Your review for ${restaurantName} is successfully posted.`}
           isOpen={isSubmitted}
           setIsOpen={() => setIsSubmitted(!isSubmitted)}
         />

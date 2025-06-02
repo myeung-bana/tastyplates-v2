@@ -228,7 +228,7 @@ export default function RestaurantDetail() {
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
                   <a
-                    href="/add-review"
+                    href="/listing"
                     className="restaurant-detail__review-button"
                   >
                     <FaPen className="size-4 md:size-5" />

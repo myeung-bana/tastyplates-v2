@@ -9,6 +9,7 @@ export const GET_LISTINGS = gql`
             }
             nodes {
                 id
+                databaseId
                 title
                 slug
                 content
@@ -74,3 +75,13 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         }
     }`
     ;
+
+export const GET_RESTAURANT_BY_ID = gql`
+  query GetRestaurantByDatabaseId($id: ID!, $idType: ListingIdType!) {
+  listing(id: $id, idType: $idType) {
+    id
+    databaseId
+    title
+  }
+}
+`;

@@ -1,7 +1,24 @@
 import client from "@/app/graphql/client";
 import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES } from "@/app/graphql/Reviews/reviews";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 export class ReviewRepository {
+  private static async request(endpoint: string, options: RequestInit, jsonResponse = false): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (jsonResponse) {
+      return response.json();
+    }
+
+    return response;
+  }
+
   static async getAllReviews(first = 16, after: string | null = null) {
     const { data } = await client.query({
       query: GET_ALL_RECENT_REVIEWS,
@@ -21,5 +38,16 @@ export class ReviewRepository {
     });
 
     return data?.comment?.replies?.nodes || [];
+  }
+
+  static async createReview<T>(data: any, accessToken: string): Promise<T> {
+    return this.request('/wp-json/wp/v2/api/comments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
   }
 }
