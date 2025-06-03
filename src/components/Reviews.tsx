@@ -86,7 +86,7 @@ const Reviews = () => {
   }, [hasNextPage, loading]);
 
   return (
-    <section className="!w-full reviews !bg-white z-30 rounded-t-6 sm:rounded-t-10">
+    <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
       <div className="reviews__container">
         <h2 className="reviews__title">Latest Reviews</h2>
         <p className="reviews__subtitle">

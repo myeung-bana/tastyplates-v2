@@ -50,6 +50,13 @@ export class UserRepository {
         }, true);
     }
 
+    static async checkUsernameExists<T>(username: string): Promise<T> {
+        return this.request('/wp-json/wp/v2/api/users/check-username', {
+            method: 'POST',
+            body: JSON.stringify({ username })
+        }, true);
+    }
+
     static async getCurrentUser<T>(token?: string): Promise<T> {
         return this.request(
             '/wp-json/wp/v2/api/users/current',

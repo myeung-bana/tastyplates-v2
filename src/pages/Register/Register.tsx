@@ -87,29 +87,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       // Set a cookie to indicate signup intent
       Cookies.set('auth_type', 'signup', { path: '/', sameSite: 'lax' });
 
-      const result = await signIn('google', {
+      await signIn('google', {
         redirect: false,
         callbackUrl: '/',
       });
-
-      console.log("Google sign-in result:", result);
-      return;
-      // setIsLoading(true);
-      // // Check if email from google already exists
-      // const emailExists = await checkEmailExists(user.email || "");
-      // if (!emailExists) {
-      //   return;
-      // }
-
-      // // Save to localStorage instead of URL params
-      // localStorage.setItem('registrationData', JSON.stringify({
-      //   username: user.displayName || "",
-      //   email: user.email || "",
-      //   password: "", // No password needed for Google auth
-      //   googleAuth: true
-      // }));
-
-      router.push('/onboarding');
     } catch (error) {
       if (error instanceof FirebaseError) {
         if (error.code === 'auth/cancelled-popup-request') {

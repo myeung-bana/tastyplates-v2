@@ -36,7 +36,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           }
           alt="Review"
           width={400}
-          height={400}
+          height={600}
           className="review-card__image rounded-2xl max-h-[226px] sm:max-h-[405px] hover:cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />
@@ -49,7 +49,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             alt={data.author?.node?.name || "User"}
             width={32}
             height={32}
-            className="review-card__user-image !rounded-2xl"
+            className="review-card__user-image"
           />
           <div className="review-card__user-info">
             <h3 className="review-card__username line-clamp-1">
