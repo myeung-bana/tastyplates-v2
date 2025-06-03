@@ -11,6 +11,8 @@ import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { BsStarFill, BsStarHalf, BsStar } from 'react-icons/bs';
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
+import { useSession } from "next-auth/react";
+import { useFollowContext } from "./FollowContext";
 
 //styles
 import 'slick-carousel/slick/slick-theme.css'
@@ -21,6 +23,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { data: session } = useSession();
+  const { getFollowState, setFollowState } = useFollowContext();
   const [replies, setReplies] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -30,6 +34,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
   useEffect(() => {
     window.addEventListener("load", () => {
       if (typeof window !== "undefined") {
@@ -51,6 +57,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       ReviewService.fetchCommentReplies(data.id).then(setReplies);
     }
   }, [isOpen, data?.id]);
+
+  useEffect(() => {
+    if (isOpen && data?.author?.databaseId) {
+      setIsFollowing(getFollowState(data.author.databaseId));
+    }
+  }, [isOpen, data?.author?.databaseId, getFollowState]);
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -149,6 +161,84 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     onClose();
   };
 
+  const handleFollowAuthor = async () => {
+    if (!session?.accessToken) {
+      setIsShowSignup(true);
+      return;
+    }
+    // Always use the correct user id for the author (databaseId, integer)
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      alert("Author user ID is missing.");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ user_id: authorUserId }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.result !== "followed") {
+        console.error("Follow failed", result);
+        alert(result?.message || "Failed to follow user. Please try again.");
+        setIsFollowing(false);
+      } else {
+        setIsFollowing(true);
+        setFollowState(authorUserId, true);
+      }
+    } catch (err) {
+      console.error("Follow error", err);
+      alert("Failed to follow user. Please try again.");
+      setIsFollowing(false);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleUnfollowAuthor = async () => {
+    if (!session?.accessToken) {
+      setIsShowSignup(true);
+      return;
+    }
+    // Always use the correct user id for the author (databaseId, integer)
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      alert("Author user ID is missing.");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ user_id: authorUserId }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.result !== "unfollowed") {
+        console.error("Unfollow failed", result);
+        alert(result?.message || "Failed to unfollow user. Please try again.");
+        setIsFollowing(true);
+      } else {
+        setIsFollowing(false);
+        setFollowState(authorUserId, false);
+      }
+    } catch (err) {
+      console.error("Unfollow error", err);
+      alert("Failed to unfollow user. Please try again.");
+      setIsFollowing(true);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -213,17 +303,28 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         key={index}
                         className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
                       >
-                        {tag}{" "}
+                        {tag} {" "}
                       </span>
                     ))}
                   </div>
                 </div>
               </div>
               <button
-                onClick={() => setIsShowSignup(true)}
-                className="px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit"
+                onClick={() => {
+                  if (!session?.accessToken) {
+                    setIsShowSignup(true);
+                  } else if (isFollowing) {
+                    handleUnfollowAuthor();
+                  } else {
+                    handleFollowAuthor();
+                  }
+                }}
+                className="px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center"
+                disabled={followLoading}
               >
-                Follow
+                {followLoading ? (
+                  <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
+                ) : isFollowing ? "Following" : "Follow"}
               </button>
               <SignupModal
                 isOpen={isShowSignup}
