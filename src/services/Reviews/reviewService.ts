@@ -20,4 +20,14 @@ export class ReviewService {
             throw new Error('Failed to fetch comment replies');
         }
     }
+
+    static async fetchUserReviews(userId: number, token: string | null, first = 16, after: string | null = null) {
+        try {
+            const response = await ReviewRepository.getUserReviews(userId, token, first, after);
+            return response;
+        } catch (error) {
+            console.error('Error fetching user reviews:', error);
+            throw new Error('Failed to fetch user reviews');
+        }
+    }
 }

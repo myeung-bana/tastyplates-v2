@@ -1,5 +1,5 @@
 import client from "@/app/graphql/client";
-import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES } from "@/app/graphql/Reviews/reviews";
+import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviews";
 
 export class ReviewRepository {
   static async getAllReviews(first = 16, after: string | null = null) {
@@ -21,5 +21,22 @@ export class ReviewRepository {
     });
 
     return data?.comment?.replies?.nodes || [];
+  }
+
+  static async getUserReviews(userId: number, token: string | null, first = 16, after: string | null = null) {
+    const { data } = await client.query({
+      query: GET_USER_REVIEWS,
+      variables: { userId, first, after },
+      // context: {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`
+      //   }
+      // }
+    });
+
+    return {
+      reviews: data.comments.nodes ?? [],
+      pageInfo: data.comments.pageInfo ?? { endCursor: null, hasNextPage: false }
+    };
   }
 }

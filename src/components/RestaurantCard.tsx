@@ -9,7 +9,7 @@ import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
 
-interface Restaurant {
+export interface Restaurant {
   id: string;
   slug: string;
   name: string;
