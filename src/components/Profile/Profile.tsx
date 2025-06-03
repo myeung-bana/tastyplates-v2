@@ -42,7 +42,7 @@ const Profile = () => {
         `${WP_BASE}/wp-json/restaurant/v1/user-palates?user_id=${targetUserId}`,
         {
           headers: {
-            Authorization: `Bearer ${session.accessToken}`
+            Authorization: `Bearer ${session?.accessToken}`
           }
         }
       );
@@ -67,7 +67,7 @@ const Profile = () => {
         `${WP_BASE}/wp-json/restaurant/v1/user-bio?user_id=${targetUserId}`,
         {
           headers: {
-            Authorization: `Bearer ${session.accessToken}`
+            Authorization: `Bearer ${session?.accessToken}`
           }
         }
       );
@@ -253,6 +253,12 @@ const Profile = () => {
     ...r,
   }));
 
+  // Count user reviews (dummy data version)
+  const userReviewCount = useMemo(() => {
+    if (!user?.id) return 0;
+    return reviews.filter((r: any) => r.authorId === user.id).length;
+  }, [reviews, user?.id]);
+
   const handleFollow = async (id: string) => {
     if (!session?.accessToken) return;
     const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
@@ -411,7 +417,11 @@ const Profile = () => {
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span>
-              <span className="font-bold">10</span> Reviews
+              <span className="font-bold">
+                {loading ? (
+                  <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
+                ) : userReviewCount}
+              </span> Reviews
             </span>
             <button
               type="button"
