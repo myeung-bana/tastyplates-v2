@@ -6,6 +6,7 @@ import Image from "next/image";
 import { stripTags, formatDate } from "../lib/utils"
 import Link from "next/link";
 import SignupModal from "./SignupModal";
+import SigninModal from "./SigninModal";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
@@ -30,6 +31,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isShowSignup, setIsShowSignup] = useState(false);
+  const [isShowSignin, setIsShowSignin] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -59,10 +61,39 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   }, [isOpen, data?.id]);
 
   useEffect(() => {
-    if (isOpen && data?.author?.databaseId) {
-      setIsFollowing(getFollowState(data.author.databaseId));
+    // Only run this once the modal is open, we have a session token,
+    // and we can reliably read the author’s databaseId.
+    if (!isOpen) return;
+    if (!session?.accessToken) return;
+    // prefer `data.author.node.databaseId`, fallback to data.author.databaseId
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      setIsFollowing(false);
+      return;
     }
-  }, [isOpen, data?.author?.databaseId, getFollowState]);
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({ user_id: authorUserId }),
+          }
+        );
+        const result = await res.json();
+        setIsFollowing(!!result.is_following);
+        setFollowState(authorUserId, !!result.is_following);
+      } catch (err) {
+        console.error('Error fetching follow state:', err);
+        setIsFollowing(false);
+      }
+    })();
+  }, [isOpen, session?.accessToken, data.author]);
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -329,6 +360,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <SignupModal
                 isOpen={isShowSignup}
                 onClose={() => setIsShowSignup(false)}
+                onOpenSignin={() => {
+                  setIsShowSignup(false);
+                  setIsShowSignin(true);
+                }}
+              />
+              <SigninModal
+                isOpen={isShowSignin}
+                onClose={() => setIsShowSignin(false)}
+                onOpenSignup={() => {
+                  setIsShowSignin(false);
+                  setIsShowSignup(true);
+                }}
               />
             </div>
 
