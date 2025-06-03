@@ -51,7 +51,7 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           alt={restaurant.name}
           width={304}
           height={228}
-          className="restaurant-card__img"
+          className="restaurant-card__img cursor-pointer"
           onClick={addReview}
         />
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}

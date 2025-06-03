@@ -116,6 +116,8 @@ const ReviewSubmissionPage = () => {
       if (files.length > 6) {
         setUploadedImageError('You can Upload a maximum of 6 images.');
         return;
+      } else {
+        setUploadedImageError('');
       }
 
       const imageList: string[] = [];
@@ -230,8 +232,6 @@ const ReviewSubmissionPage = () => {
   };
 
   const deleteSelectedFile = (index: string) => {
-    console.log('selected', index)
-    console.log('selected files', selectedFiles.splice(1, 1))
     // let files = selectedFiles
     // files = files.splice(selectedFiles.splice(1))
     setSelectedFiles(selectedFiles.filter((item: string) => item != index))
@@ -284,7 +284,12 @@ const ReviewSubmissionPage = () => {
                     className="submitRestaurants__input resize-vertical"
                     placeholder="Write a review about the food, service or ambiance of the restaurant"
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => {
+                      setContent(e.target.value);
+                      if (e.target.value.trim() !== '') {
+                        setDescriptionError('');
+                      }
+                    }}
                     rows={6}
                   ></textarea>
                   {descriptionError && (

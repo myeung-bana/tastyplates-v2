@@ -35,4 +35,23 @@ export class ReviewService {
 
         return formattedData;
     }
+
+    static async fetchReviewDrafts( accessToken?: string): Promise<any[]> { 
+        try {
+            const drafts = await ReviewRepository.getReviewDrafts(accessToken);
+            return drafts;
+        } catch (error) {
+            console.error("Failed to fetch review drafts", error);
+            throw new Error('Failed to fetch review drafts');
+        }
+    }
+
+    static async deleteReviewDraft(draftId: number, accessToken?: string, force = false): Promise<void> {
+        try {
+            await ReviewRepository.deleteReviewDraft(draftId, accessToken, force);
+        } catch (error) {
+            console.error("Failed to delete review draft", error);
+            throw new Error('Failed to delete review draft');
+        }
+    }
 }

@@ -2,14 +2,16 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
-// import { Restaurant, restaurants } from "@/data/dummyRestaurants";
+// import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
 import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
 import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
-import CustomModal from "@/components/ui/Modal/Modal";
+import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
-
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { useSession } from "next-auth/react";
+import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
 interface Restaurant {
   id: string;
   databaseId: number;
@@ -22,60 +24,129 @@ interface Restaurant {
   priceRange: string;
 }
 
+
 const ListingPage = () => {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loading, setLoading] = useState(true);
   // const [hasMore, setHasMore] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
+  const [draftToDelete, setDraftToDelete] = useState<ReviewDraft | null>(null);
+  const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   // const [afterCursor, setAfterCursor] = useState<string | null>(null);
 
   //TEMPORARY DATA
   // Helper: transform GraphQL node to Restaurant
-    const transformNodes = (nodes: any[]): Restaurant[] => {
-      return nodes.map((item: any) => ({
-        id: item.id,
-        databaseId: item.databaseId || 0, // Default to 0 if not present
-        slug: item.slug,
-        name: item.title,
-        image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-        rating: 4.5, // Default rating since it's not in the API response
-        cuisineNames: item.cuisines || [],
-        countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
-        priceRange: "$$"
-      }));
-    };
-  
-    const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
-      setLoading(true);
-      try {
-        const data = await RestaurantService.fetchAllRestaurants(search, first, after);
-        const transformed = transformNodes(data.nodes);
-  
-        setRestaurants(prev => {
-          if (!after) {
-            // New search: replace list
-            return transformed;
-          }
-          // Pagination: append unique restaurants only
-          const all = [...prev, ...transformed];
-          const uniqueMap = new Map(all.map(r => [r.id, r]));
-          return Array.from(uniqueMap.values());
-        });
-  
-        // setAfterCursor(data.pageInfo.endCursor);
-        // setHasMore(data.pageInfo.hasNextPage);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const transformNodes = (nodes: any[]): Restaurant[] => {
+    return nodes.map((item: any) => ({
+      id: item.id,
+      databaseId: item.databaseId || 0, // Default to 0 if not present
+      slug: item.slug,
+      name: item.title,
+      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      rating: 4.5,
+      cuisineNames: item.cuisines || [],
+      countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
+      priceRange: "$$"
+    }));
+  };
 
-      useEffect(() => {
-        fetchRestaurants("", 8, null);
-      }, []);
+  const transformReviewDrafts = (nodes: any[]): ReviewDraft[] => {
+    return nodes.map((item: any) => ({
+      id: item.id,
+      post: item.post,
+      author: item.author,
+      authorName: item.author_name,
+      content: {
+        rendered: item.content?.rendered || "",
+        raw: item.content?.raw || ""
+      },
+      date: item.date,
+      link: item.link,
+      status: item.status,
+      type: item.type,
+      recognitions: item.recognitions || item.meta?.recognitions || [],
+      reviewImages: item.review_images?.map((img: any) => ({
+        databaseId: parseInt(img.id),
+        id: img.id.toString(),
+        sourceUrl: img.sourceUrl,
+      })) || [],
+      reviewMainTitle: item.review_main_title,
+      reviewStars: item.review_stars,
+    }));
+  };
+
+  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+    setLoading(true);
+    try {
+      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const transformed = transformNodes(data.nodes);
+
+      setRestaurants(prev => {
+        const limited = !after ? transformed.slice(0, 4) : transformed;
+        if (!after) {
+          // New search: replace list
+          return limited;
+        }
+        // Pagination: append unique restaurants only
+        const all = [...prev, ...transformed];
+        const uniqueMap = new Map(all.map(r => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      // setAfterCursor(data.pageInfo.endCursor);
+      // setHasMore(data.pageInfo.hasNextPage);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRestaurants("", 8, null);
+  }, []);
+
+  const fetchReviewDrafts = async () => {
+    setLoading(true);
+    try {
+      if (!session?.accessToken) return;
+
+      const data = await ReviewService.fetchReviewDrafts(session.accessToken);
+      const transformedDrafts = transformReviewDrafts(data);
+
+      setReviewDrafts(transformedDrafts.slice(0, 4));
+    } catch (error) {
+      console.error("Error fetching review drafts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviewDrafts();
+  }, [session?.accessToken]);
+
+  const confirmDeleteDraft = async (draftId: number) => {
+    if (!session?.accessToken) return;
+    try {
+      await ReviewService.deleteReviewDraft(draftId, session.accessToken, true);
+      setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
+      setDraftToDelete(null);
+      return true;  // success
+    } catch (error) {
+      console.error("Error deleting draft", error);
+      alert("Failed to delete draft.");
+      return false; // failure
+    }
+  };
+
+
+
+
 
   // Filter restaurants based on the selected cuisine type
   // const filteredRestaurants = restaurants.filter((restaurant) =>
@@ -89,13 +160,11 @@ const ListingPage = () => {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
-    console.log('here')
   }
 
-  const removeListing = (item: Restaurant, index: number) => {
-    setIsShowDelete(true)
-    console.log(item, 'item to remove')
-    restaurants.splice(index, 1)
+  const removeListing = (item: ReviewDraft) => {
+    setDraftToDelete(item);
+    setIsShowDelete(true);
   }
 
   const filteredRestaurants = searchTerm
@@ -129,18 +198,23 @@ const ListingPage = () => {
               </button>
             </div>
           </form>
-          {/* <div className="restaurants__container mt-6 md:mt-10 w-full">
+          <div className="restaurants__container mt-6 md:mt-10 w-full">
             <div className="restaurants__content">
               <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
               <div className="restaurants__grid mt-6 md:mt-8">
-                  {restaurants.map((restaurant: Restaurant, index: number) => (
-                    <ListingCard key={index} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
-                  ))}
+                {reviewDrafts.map((revDraft) => (
+                  <ListingCard
+                    key={revDraft.id}
+                    reviewDraft={revDraft}
+                    onDelete={() => removeListing(revDraft)}
+                  />
+                ))}
+                {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
               </div>
             </div>
-          </div> */}
+          </div>
           <div className="restaurants__container mt-6 md:mt-10 w-full">
-            <div className="restaurants__content mt-12">
+            <div className="restaurants__content mt-6 md:mt-10">
               <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
               <div className="restaurants__grid mt-6 md:mt-8">
                 {/* {restaurants.map((rest) => (
@@ -155,11 +229,23 @@ const ListingPage = () => {
           </div>
         </div>
       </div>
-      <CustomModal
+      <ReviewModal
         header="Delete this Draft?"
         content="Your draft will be removed."
         isOpen={isShowDelete}
-        setIsOpen={() => setIsShowDelete(!isShowDelete)}
+        setIsOpen={(open: any) => {
+          if (!isLoadingDelete) setIsShowDelete(open);
+        }}
+        onConfirm={async () => {
+          if (!draftToDelete) return;
+          setIsLoadingDelete(true);
+          const success = await confirmDeleteDraft(draftToDelete.id);
+          if (success) {
+            setIsShowDelete(false);
+          }
+          setIsLoadingDelete(false);
+        }}
+        loading={isLoadingDelete} // pass loading flag to modal
       />
     </>
   );
