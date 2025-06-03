@@ -20,10 +20,14 @@ interface RegisterPageProps {
 const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string>("");
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
 
   useEffect(() => {
     const googleError = Cookies.get('googleError');
@@ -48,11 +52,33 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     return true;
   }
 
+  const validatePasswords = () => {
+    let isValid = true;
+    setPasswordError("");
+    setConfirmPasswordError("");
+
+    if (password.length < 5) {
+      setPasswordError("Password must be at least 5 characters");
+      isValid = false;
+    }
+    if (password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match");
+      isValid = false;
+    }
+    return isValid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
     localStorage.removeItem('registrationData');
+
+    // Password validation
+    if (!validatePasswords()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Check if email already exists
@@ -78,6 +104,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   };
 
   const toggleShowPassword = () => setShowPassword(!showPassword);
+  const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
   const signUpWithGoogle = async () => {
     try {
@@ -147,7 +174,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                // required
                 />
                 {showPassword ? (
                   <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
@@ -155,6 +181,33 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                 )}
               </div>
+              {passwordError && (
+                <div className="text-red-600 text-xs mt-1">{passwordError}</div>
+              )}
+            </div>
+
+            <div className="auth__form-group">
+              <label htmlFor="confirmPassword" className="auth__label">
+                Confirm Password
+              </label>
+              <div className="auth__input-group">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  className="auth__input"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                {showConfirmPassword ? (
+                  <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                ) : (
+                  <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                )}
+              </div>
+              {confirmPasswordError && (
+                <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
+              )}
             </div>
             <div className="text-sm font-normal">
               By continuing, you agree to TastyPlates'&nbsp;
