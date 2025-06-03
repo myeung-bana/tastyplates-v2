@@ -29,7 +29,7 @@ const CustomSelect = (props: any) => {
           mainWrapper: "bg-white",
           listboxWrapper: "max-h-[400px]",
           listbox: "bg-white p-2",
-          value: "text-black",
+          value: props.value ? "text-black" : "text-gray-400",
           selectorIcon: "text-black",
           popoverContent: "bg-white",
         }}
