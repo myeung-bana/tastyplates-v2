@@ -6,14 +6,14 @@ import Navbar from "@/components/Navbar";
 const OnboardingPage = () => {
   return (
     <div className="flex flex-col min-h-screen font-[family-name:var(--font-geist-sans)]">
-      <Navbar />
+      <Suspense fallback={<div>Loading...</div>}>
         <main className="flex-1 w-full flex justify-center py-8 pt-20">
           <div className="w-full">
-          <Suspense fallback={<div>Loading...</div>}>
+            <Navbar />
             <OnboardingOnePage />
-          </Suspense>
           </div>
         </main>
+        </Suspense>
       <div className="mt-auto">
         <Footer isShowLinks={false} />
       </div>
