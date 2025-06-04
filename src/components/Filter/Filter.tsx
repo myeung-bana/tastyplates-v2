@@ -2,10 +2,11 @@ import { GiRoundStar } from "react-icons/gi";
 import "@/styles/components/filter.scss";
 import { MdStar, MdStarOutline } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
-import { useState } from "react";
+import { Key, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { cuisines } from "@/data/dummyCuisines";
+import { palateOptions } from "@/constants/formOptions";
 
 interface FilterProps {
   onFilterChange?: (filterType: string, value: string) => void;
@@ -14,7 +15,7 @@ interface FilterProps {
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [cuisine, setCuisine] = useState<string>("All");
   const [price, setPrice] = useState<boolean[]>([false, false, false]);
-  const [rating, setRating] = useState<number>(0)
+  const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
   const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
@@ -22,6 +23,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>("");
+  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
 
   const prices = [
     {
@@ -37,6 +39,19 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       value: "$$$",
     },
   ];
+  const handlePalateChange = (keys: Set<Key>) => {
+    console.log(keys, "keys");
+    setSelectedPalates(keys);
+  };
+
+  const palateList = {
+    label: "Palate (Select up to 2 palates)",
+    type: "multiple-select",
+    placeholder: "Select your palate",
+    value: selectedPalates,
+    onChange: handlePalateChange,
+    items: palateOptions,
+  };
 
   const onClickFilter = (type: string) => {
     setIsModalOpen(!isModalOpen);
@@ -122,7 +137,10 @@ const Filter = ({ onFilterChange }: FilterProps) => {
           </div>
 
           <div className="filter__section">
-            <button onClick={() => onClickFilter("rating")} className="filter__options">
+            <button
+              onClick={() => onClickFilter("rating")}
+              className="filter__options"
+            >
               <img src="/star.svg" className="size-4 sm:size-5" alt="star" />
               <span className="filter__label">Rating</span>
             </button>
@@ -196,35 +214,116 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     align="bottom-end"
                     onClose={isDropdownOpen}
                     trigger={
-                      <button className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                      <button
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]"
+                      >
                         <span className="text-[#31343F] text-center font-semibold">
-                          {cuisine}
+                          {selectedPalates}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                        <PiCaretDown
+                          className={`fill-[#494D5D] size-5 ${
+                            isDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
                       </button>
                       // </>
                     }
                     content={
                       <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
-                          onClick={() => selectFilter("All")}
-                          className={`py-2 px-4 ${
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            let set = new Set(
+                              selectedPalates || new Set<Key>()
+                            );
+                            if (set.has("All")) {
+                              set.delete("All");
+                            } else {
+                              set.add("All");
+                            }
+                            handlePalateChange?.(set);
+                          }}
+                          className={`w-full py-2 px-4 md:py-3 md:px-6 flex justify-between items-center gap-2 ${
                             cuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent"
-                          } text-sm md:text-lg font-semibold`}
+                          } text-sm md:text-lg font-semibold border-b border-[#E5E5E5]`}
                         >
-                          All
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="form-checkbox h-4 w-4 text-[#E36B00]"
+                              checked={selectedPalates?.has("All")}
+                              readOnly
+                            />
+                            <span className="font-medium">All</span>
+                          </div>
+                          <PiCaretDown
+                            className={`fill-[#494D5D] size-5 ${
+                              selectedPalates.has("All") ? "rotate-180" : ""
+                            }`}
+                          />
                         </div>
-                        {cuisines.map((item: any, index: number) => (
-                          <div
-                            onClick={() => selectFilter(item.name)}
-                            className={`py-2 px-4 ${
-                              cuisine == item.name
-                                ? "bg-[#F1F1F1]"
-                                : "bg-transparent"
-                            } text-sm md:text-lg font-semibold`}
-                            key={index}
-                          >
-                            {item.name}
+
+                        {palateOptions.map((item) => (
+                          <div key={item.key} className="">
+                            <div
+                              className="font-semibold flex items-center gap-2 py-2 px-4 md:py-3 md:px-6"
+                              onClick={(e: any) => {
+                                e.stopPropagation();
+                                let set = new Set(
+                                  selectedPalates || new Set<Key>()
+                                );
+                                if (set.has(item.key)) {
+                                  set.delete(item.key);
+                                } else {
+                                  set.add(item.key);
+                                }
+                                handlePalateChange?.(set);
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                checked={
+                                  selectedPalates?.has(item.key) ||
+                                  selectedPalates?.has("All")
+                                }
+                                readOnly
+                              />
+                              <label htmlFor="">{item.label}</label>
+                            </div>
+                            {item.children?.map((child) => (
+                              <div
+                                key={child.key}
+                                className="flex items-center gap-2 py-2 px-4 md:py-3 md:px-6 cursor-pointer hover:bg-gray-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newSelection = new Set(
+                                    selectedPalates || new Set<Key>()
+                                  );
+                                  if (newSelection.has(child.key)) {
+                                    newSelection.delete(child.key);
+                                  } else {
+                                    newSelection.add(child.key);
+                                  }
+                                  handlePalateChange?.(newSelection);
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                  checked={
+                                    selectedPalates?.has(child.key) ||
+                                    selectedPalates?.has(item.key) ||
+                                    selectedPalates?.has("All")
+                                  }
+                                  readOnly
+                                />
+                                <span className="font-medium">
+                                  {child.label}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         ))}
                       </div>
@@ -274,10 +373,23 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                 ))}
               </div>
             )}
-             {filterType == "Rating" && (
+            {filterType == "Rating" && (
               <div className="flex flex-col items-start gap-4">
-                <label htmlFor="rating" className="text-xs md:text-base font-semibold">Max {rating}</label>
-                <input type="range" id="rating" name="rating" value={rating} max="5" onChange={(e: any) => setRating(e.target.value)} className="w-full"></input>
+                <label
+                  htmlFor="rating"
+                  className="text-xs md:text-base font-semibold"
+                >
+                  Max {rating}
+                </label>
+                <input
+                  type="range"
+                  id="rating"
+                  name="rating"
+                  value={rating}
+                  max="5"
+                  onChange={(e: any) => setRating(e.target.value)}
+                  className="w-full"
+                ></input>
               </div>
             )}
           </>
