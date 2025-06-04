@@ -32,6 +32,11 @@ const OnboardingOnePage = () => {
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true); // Ensures code only runs after client-side mount
+  }, []);
 
   useEffect(() => {
     setHasMounted(true); // Ensures code only runs after client-side mount
@@ -62,6 +67,7 @@ const OnboardingOnePage = () => {
   useEffect(() => {
     if (!initialized) return;
 
+    if (!hasMounted) return;
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
