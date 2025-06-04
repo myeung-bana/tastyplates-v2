@@ -241,18 +241,6 @@ const Profile = () => {
     );
   }, [palateCuisineIds]);
 
-  const safeRestaurant = (rest: any) => ({ cuisineNames: [], countries: [], ...rest });
-  const safeReviews = reviews.map((r: any, idx: number) => ({
-    databasedId: r.databasedId || idx,
-    reviewMainTitle: r.reviewMainTitle || r.title || '',
-    content: r.content || r.text || '',
-    uri: r.uri || '',
-    rating: r.rating || 0,
-    reviewer: r.reviewer || '',
-    date: r.date || '',
-    ...r,
-  }));
-
   // Count user reviews (dummy data version)
   const userReviewCount = useMemo(() => {
     if (!user?.id) return 0;
@@ -310,7 +298,7 @@ const Profile = () => {
       label: "Reviews",
       content: (
         <Masonry
-          items={safeReviews}
+          items={reviews}
           render={ReviewCard}
           columnGutter={32}
           maxColumnWidth={304}
@@ -327,7 +315,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
+                <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
           </div>
@@ -342,7 +330,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
+                <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
           </div>
@@ -357,7 +345,7 @@ const Profile = () => {
           <div className="restaurants__content">
             <div className="restaurants__grid">
               {filteredRestaurants.map((rest) => (
-                <RestaurantCard key={rest.id} restaurant={safeRestaurant(rest)} />
+                <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
           </div>
