@@ -18,9 +18,9 @@ const footerLinks = {
     // { name: "COVID-19 Response", href: "/covid" },
   ],
   legal: [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Cookie Settings", href: "/cookies" },
+    { name: "Privacy Policy", href: "#" },
+    { name: "Terms of Service", href: "#" },
+    { name: "Cookie Settings", href: "#" },
     // { name: "Sitemap", href: "/sitemap" },
   ],
 }

@@ -17,6 +17,7 @@ export default function CustomModal(props: any) {
     footer,
     footerClass = "",
     onOpenChange,
+    classNames,
     baseClass = "",
     headerClass = "",
     contentClass = "",

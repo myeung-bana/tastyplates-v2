@@ -54,6 +54,7 @@ export default function Navbar(props: any) {
       // Clear error params if authenticated
       window.history.replaceState({}, '', window.location.pathname);
     }
+  // }, [searchParams, status]);
   }, [status]);
 
   useEffect(() => {
