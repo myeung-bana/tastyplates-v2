@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, {  useRef, useState, useEffect, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
@@ -14,6 +14,21 @@ import { getAllReviews } from "@/utils/reviewUtils";
 import { useSession } from "next-auth/react";
 import FollowersModal from "./FollowersModal";
 import FollowingModal from "./FollowingModal";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { Listing } from "@/interfaces/restaurant/restaurant";
+
+interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  rating: number;
+  cuisineNames: string[];
+  countries: string;
+  priceRange: string;
+  databaseId: number;
+}
+import { UserService } from '@/services/userService';
 
 const Profile = () => {
   const { data: session } = useSession();
@@ -22,10 +37,58 @@ const Profile = () => {
   const [showFollowing, setShowFollowing] = useState(false);
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [palatesLoading, setPalatesLoading] = useState(true);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [afterCursor, setAfterCursor] = useState<string | null>(null);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  const transformNodes = (nodes: Listing[]): Restaurant[] => {
+    return nodes.map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      name: item.title,
+      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      rating: 4.5,
+      databaseId: item.databaseId || 0, // Default to 0 if not present
+      cuisineNames: item.cuisines || [],
+      countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
+      priceRange: "$$"
+    }));
+  };
+
+  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+    setLoading(true);
+    try {
+      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const transformed = transformNodes(data.nodes);
+
+      setRestaurants(prev => {
+        if (!after) {
+          // New search: replace list
+          return transformed;
+        }
+        // Pagination: append unique restaurants only
+        const all = [...prev, ...transformed];
+        const uniqueMap = new Map(all.map(r => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      setAfterCursor(data.pageInfo.endCursor);
+      setHasMore(data.pageInfo.hasNextPage);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRestaurants("", 8, null);
+  }, []);
 
   const reviews = getAllReviews();
   const user = session?.user;
@@ -36,19 +99,9 @@ const Profile = () => {
   const fetchPalates = async () => {
     setPalatesLoading(true);
     try {
-      const res = await fetch(
-        `${WP_BASE}/wp-json/restaurant/v1/user-palates?user_id=${targetUserId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`
-          }
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.palates)) {
-          setPalates(data.palates);
-        }
+      const data = await UserService.getUserPalates(targetUserId!, session?.accessToken);
+      if (Array.isArray(data.palates)) {
+        setPalates(data.palates);
       }
     } catch (err) {
       console.error('Error fetching palates:', err);
@@ -60,138 +113,51 @@ const Profile = () => {
   // Fetch following
   const fetchFollowing = async () => {
     setFollowingLoading(true);
-    if (!session?.accessToken || !WP_BASE || !targetUserId) {
+    if (!session?.accessToken || !targetUserId) {
       setFollowingLoading(false);
       return [];
     }
-    try {
-      const res = await fetch(`${WP_BASE}/wp-json/v1/following-list?user_id=${targetUserId}`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const followingList = Array.isArray(data)
-          ? data.map((user: any) => ({
-              id: user.id,
-              name: user.name,
-              cuisines: user.palates || [],
-              image: user.image || "/profile-icon.svg",
-              isFollowing: true,
-            }))
-          : [];
-        setFollowing(followingList);
-        return followingList;
-      } else {
-        setFollowing([]);
-        return [];
-      }
-    } catch (e) {
-      setFollowing([]);
-      return [];
-    } finally {
-      setFollowingLoading(false);
-    }
+    const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+    setFollowing(followingList);
+    return followingList;
   };
 
   // Fetch followers
   const fetchFollowers = async (followingList?: any[]) => {
     setFollowersLoading(true);
-    if (!session?.accessToken || !WP_BASE || !targetUserId) {
+    if (!session?.accessToken || !targetUserId) {
       setFollowersLoading(false);
       return [];
     }
-    try {
-      const res = await fetch(`${WP_BASE}/wp-json/v1/followers-list?user_id=${targetUserId}`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const followingArr = followingList || following;
-        const followersList = Array.isArray(data)
-          ? data.map((user: any) => ({
-              id: user.id,
-              name: user.name,
-              cuisines: user.palates || [],
-              image: user.image || "/profile-icon.svg",
-              isFollowing: followingArr.some((f: any) => f.id === user.id),
-            }))
-          : [];
-        setFollowers(followersList);
-        return followersList;
-      } else {
-        setFollowers([]);
-        return [];
-      }
-    } catch (e) {
-      setFollowers([]);
-      return [];
-    } finally {
-      setFollowersLoading(false);
-    }
+    const followersList = await UserService.getFollowersList(
+      targetUserId,
+      followingList || following,
+      session.accessToken
+    );
+    setFollowers(followersList);
+    return followersList;
   };
 
   useEffect(() => {
-    if (!session?.accessToken) return;
-    if (!WP_BASE) return;
+    if (!session?.accessToken || !targetUserId) return;
 
     setLoading(true);
-    // Fetch palates, following, followers all in parallel (remove fetchBio)
     Promise.all([
       fetchPalates(),
       (async () => {
         setFollowingLoading(true);
         setFollowersLoading(true);
         try {
-          // Fetch following and followers in parallel
-          const [followingListRaw, followersListRaw] = await Promise.all([
-            (async () => {
-              const res = await fetch(`${WP_BASE}/wp-json/v1/following-list?user_id=${targetUserId}`, {
-                headers: { Authorization: `Bearer ${session.accessToken}` }
-              });
-              if (res.ok) {
-                const data = await res.json();
-                return Array.isArray(data)
-                  ? data.map((user: any) => ({
-                      id: user.id,
-                      name: user.name,
-                      cuisines: user.palates || [],
-                      image: user.image || "/profile-icon.svg",
-                      isFollowing: true,
-                    }))
-                  : [];
-              }
-              return [];
-            })(),
-            (async () => {
-              const res = await fetch(`${WP_BASE}/wp-json/v1/followers-list?user_id=${targetUserId}`, {
-                headers: { Authorization: `Bearer ${session.accessToken}` }
-              });
-              if (res.ok) {
-                const data = await res.json();
-                return Array.isArray(data)
-                  ? data.map((user: any) => ({
-                      id: user.id,
-                      name: user.name,
-                      cuisines: user.palates || [],
-                      image: user.image || "/profile-icon.svg",
-                    }))
-                  : [];
-              }
-              return [];
-            })(),
+          const [followingList, followersList] = await Promise.all([
+            UserService.getFollowingList(targetUserId, session.accessToken),
+            UserService.getFollowersList(targetUserId, [], session.accessToken)
           ]);
-          setFollowing(followingListRaw);
-          // Map isFollowing for followers using the just-fetched followingListRaw
-          setFollowers(
-            followersListRaw.map((user: any) => ({
-              ...user,
-              isFollowing: followingListRaw.some((f: any) => f.id === user.id),
-            }))
-          );
+
+          setFollowing(followingList);
+          setFollowers(followersList.map(user => ({
+            ...user,
+            isFollowing: followingList.some(f => f.id === user.id)
+          })));
         } finally {
           setFollowingLoading(false);
           setFollowersLoading(false);
@@ -200,20 +166,20 @@ const Profile = () => {
     ]).finally(() => {
       setLoading(false);
     });
-  }, [session?.accessToken, WP_BASE, targetUserId]);
+  }, [session?.accessToken, targetUserId]);
 
-  const palateCuisineIds = useMemo(() => {
-    return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
-  }, [palates]);
+  // const palateCuisineIds = useMemo(() => {
+  //   return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
+  // }, [palates]);
 
-  const filteredRestaurants = useMemo(() => {
-    if (palateCuisineIds.length === 0) {
-      return restaurants;
-    }
-    return restaurants.filter((rest) =>
-      rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
-    );
-  }, [palateCuisineIds]);
+  // const filteredRestaurants = useMemo(() => {
+  //   if (palateCuisineIds.length === 0) {
+  //     return restaurants;
+  //   }
+  //   return restaurants.filter((rest) =>
+  //     rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
+  //   );
+  // }, [palateCuisineIds]);
 
   // Count user reviews (dummy data version)
   const userReviewCount = useMemo(() => {
@@ -221,47 +187,21 @@ const Profile = () => {
     return reviews.filter((r: any) => r.authorId === user.id).length;
   }, [reviews, user?.id]);
 
-  const handleFollow = async (id: string) => {
+  const handleFollow = async (id: number) => {
     if (!session?.accessToken) return;
-    const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
-    try {
-      const res = await fetch(`${WP_BASE}/wp-json/v1/follow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: id }),
-      });
-      if (res.ok) {
-        // Refetch following first, then followers with the latest following list
-        const newFollowing = await fetchFollowing();
-        await fetchFollowers(newFollowing);
-      }
-    } catch (e) {
-      // handle error
+    const success = await UserService.followUser(id, session.accessToken);
+    if (success) {
+      const newFollowing = await fetchFollowing();
+      await fetchFollowers(newFollowing);
     }
   };
 
-  const handleUnfollow = async (id: string) => {
+  const handleUnfollow = async (id: number) => {
     if (!session?.accessToken) return;
-    const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
-    try {
-      const res = await fetch(`${WP_BASE}/wp-json/v1/unfollow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: id }),
-      });
-      if (res.ok) {
-        // Refetch following first, then followers with the latest following list
-        const newFollowing = await fetchFollowing();
-        await fetchFollowers(newFollowing);
-      }
-    } catch (e) {
-      // handle error
+    const success = await UserService.unfollowUser(id, session.accessToken);
+    if (success) {
+      const newFollowing = await fetchFollowing();
+      await fetchFollowers(newFollowing);
     }
   };
 
@@ -271,14 +211,15 @@ const Profile = () => {
       id: "reviews",
       label: "Reviews",
       content: (
-        <Masonry
-          items={reviews}
-          render={ReviewCard}
-          columnGutter={32}
-          maxColumnWidth={304}
-          columnCount={4}
-          maxColumnCount={4}
-        />
+        <div><p>reviews</p></div>
+        // <Masonry
+        //   items={reviews}
+        //   render={ReviewCard}
+        //   columnGutter={32}
+        //   maxColumnWidth={304}
+        //   columnCount={4}
+        //   maxColumnCount={4}
+        // />
       ),
     },
     {
@@ -287,8 +228,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -302,8 +244,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -317,8 +260,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -327,6 +271,25 @@ const Profile = () => {
       ),
     },
   ];
+  // Filter restaurants based on the selected cuisine type
+  // const filteredRestaurants = restaurants.filter((restaurant) =>
+  //   restaurant.cuisineIds.some((cuisineId) =>
+  //     cuisines
+  //       .find((cuisine) => cuisine.id === cuisineId)
+  //       ?.name.toLowerCase()
+  //       .includes(searchTerm.toLowerCase())
+  //   )
+  // );
+
+  const handleFilterChange = (filterType: string, value: string) => {
+    // TODO: Implement filter logic
+    console.log(`Filter changed: ${filterType} = ${value}`);
+  };
+
+  // const handleCuisineSelect = (cuisineName: string) => {
+  //   setSearchTerm(cuisineName); // Set the search term to the selected cuisine
+  //   setShowDropdown(false); // Hide the dropdown after selection
+  // };
 
   return (
     <>
@@ -342,11 +305,35 @@ const Profile = () => {
           <div className="flex gap-4 items-start w-full">
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-medium truncate">
-                {user?.name || "JulienChang"}
+                {loading ? (
+                  <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
+                ) : (
+                  user?.name || ""
+                )}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap">
-                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Japanese</span>
-                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Italian</span>
+                {loading ? (
+                  <>
+                    <span className="inline-block w-16 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
+                    <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
+                  </>
+                ) : (
+                  user?.palates?.split(/[|,]\s*/).map((palate, index) => {
+                    const capitalizedPalate = palate
+                      .trim()
+                      .split(' ')
+                      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                      .join(' ');
+                    return (
+                      <span
+                        key={index}
+                        className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]"
+                      >
+                        {capitalizedPalate}
+                      </span>
+                    );
+                  })
+                )}
               </div>
             </div>
             <div className="ml-auto">
@@ -359,7 +346,11 @@ const Profile = () => {
             </div>
           </div>
           <p className="text-sm">
-            Food lover. Adventurous eater. Always looking for the next best bite!
+            {loading ? (
+              <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              user?.about_me
+            )}
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span>

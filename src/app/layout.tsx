@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/global.scss";
 import SessionWrapper from "@/components/SessionWrapper";
+
 import { FollowProvider } from "@/components/FollowContext";
 export const metadata: Metadata = {
   title: "TastyPlates",

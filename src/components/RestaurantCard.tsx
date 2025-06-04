@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiStar, FiClock, FiMapPin, FiMessageCircle } from "react-icons/fi";
 import { MdOutlineMessage } from "react-icons/md";
-import { FaRegHeart, FaStar} from "react-icons/fa"
+import { FaRegHeart, FaStar } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 
 export interface Restaurant {
   id: string;
+  databaseId: number;
   slug: string;
   name: string;
   image: string;
@@ -26,7 +27,6 @@ interface RestaurantCardProps {
 
 const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
-  // console.log(restaurant);
   const router = useRouter()
   const getCuisineNames = (cuisineIds: string[]) => {
     return cuisineIds
@@ -40,9 +40,8 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   const cuisineNames = restaurant.cuisineNames ?? [];
 
   const addReview = () => {
-    router.push('/add-review')
+    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
   }
-
 
   return (
     <div className="restaurant-card">
@@ -52,19 +51,20 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
           alt={restaurant.name}
           width={304}
           height={228}
-          className="restaurant-card__img"
+          className="restaurant-card__img cursor-pointer"
+          onClick={addReview}
         />
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
         <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
           <button className="rounded-full p-2 bg-white" onClick={(e) => e.stopPropagation()}>
             <FaRegHeart className="size-3 md:size-4" />
           </button>
-          <button onClick={addReview} className="rounded-full p-2 bg-white">
+          <button className="rounded-full p-2 bg-white">
             <MdOutlineMessage className="size-3 md:size-4" />
           </button>
         </div>
       </div>
-        <Link href={`/restaurants/${restaurant.slug}`}>
+      <Link href={`/restaurants/${restaurant.slug}`}>
         <div className="restaurant-card__content">
           <div className="restaurant-card__header">
             <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
