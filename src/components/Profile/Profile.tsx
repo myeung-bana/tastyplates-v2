@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, {  useRef, useState, useEffect, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
@@ -14,6 +14,20 @@ import { getAllReviews } from "@/utils/reviewUtils";
 import { useSession } from "next-auth/react";
 import FollowersModal from "./FollowersModal";
 import FollowingModal from "./FollowingModal";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { Listing } from "@/interfaces/restaurant/restaurant";
+
+interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  rating: number;
+  cuisineNames: string[];
+  countries: string;
+  priceRange: string;
+  databaseId: number;
+}
 
 const Profile = () => {
   const { data: session } = useSession();
@@ -22,10 +36,58 @@ const Profile = () => {
   const [showFollowing, setShowFollowing] = useState(false);
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [palatesLoading, setPalatesLoading] = useState(true);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [afterCursor, setAfterCursor] = useState<string | null>(null);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
+
+  const transformNodes = (nodes: Listing[]): Restaurant[] => {
+    return nodes.map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      name: item.title,
+      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      rating: 4.5,
+      databaseId: item.databaseId || 0, // Default to 0 if not present
+      cuisineNames: item.cuisines || [],
+      countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
+      priceRange: "$$"
+    }));
+  };
+
+  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+    setLoading(true);
+    try {
+      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const transformed = transformNodes(data.nodes);
+
+      setRestaurants(prev => {
+        if (!after) {
+          // New search: replace list
+          return transformed;
+        }
+        // Pagination: append unique restaurants only
+        const all = [...prev, ...transformed];
+        const uniqueMap = new Map(all.map(r => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      setAfterCursor(data.pageInfo.endCursor);
+      setHasMore(data.pageInfo.hasNextPage);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRestaurants("", 8, null);
+  }, []);
 
   const reviews = getAllReviews();
   const user = session?.user;
@@ -202,18 +264,18 @@ const Profile = () => {
     });
   }, [session?.accessToken, WP_BASE, targetUserId]);
 
-  const palateCuisineIds = useMemo(() => {
-    return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
-  }, [palates]);
+  // const palateCuisineIds = useMemo(() => {
+  //   return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
+  // }, [palates]);
 
-  const filteredRestaurants = useMemo(() => {
-    if (palateCuisineIds.length === 0) {
-      return restaurants;
-    }
-    return restaurants.filter((rest) =>
-      rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
-    );
-  }, [palateCuisineIds]);
+  // const filteredRestaurants = useMemo(() => {
+  //   if (palateCuisineIds.length === 0) {
+  //     return restaurants;
+  //   }
+  //   return restaurants.filter((rest) =>
+  //     rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
+  //   );
+  // }, [palateCuisineIds]);
 
   // Count user reviews (dummy data version)
   const userReviewCount = useMemo(() => {
@@ -271,14 +333,15 @@ const Profile = () => {
       id: "reviews",
       label: "Reviews",
       content: (
-        <Masonry
-          items={reviews}
-          render={ReviewCard}
-          columnGutter={32}
-          maxColumnWidth={304}
-          columnCount={4}
-          maxColumnCount={4}
-        />
+        <div><p>reviews</p></div>
+        // <Masonry
+        //   items={reviews}
+        //   render={ReviewCard}
+        //   columnGutter={32}
+        //   maxColumnWidth={304}
+        //   columnCount={4}
+        //   maxColumnCount={4}
+        // />
       ),
     },
     {
@@ -287,8 +350,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -302,8 +366,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -317,8 +382,9 @@ const Profile = () => {
       content: (
         <div className="restaurants__container">
           <div className="restaurants__content">
+            {/* <h2> I'm a Japanese Palate searching for ...</h2> */}
             <div className="restaurants__grid">
-              {filteredRestaurants.map((rest) => (
+              {restaurants.map((rest) => (
                 <RestaurantCard key={rest.id} restaurant={rest} />
               ))}
             </div>
@@ -327,6 +393,25 @@ const Profile = () => {
       ),
     },
   ];
+  // Filter restaurants based on the selected cuisine type
+  // const filteredRestaurants = restaurants.filter((restaurant) =>
+  //   restaurant.cuisineIds.some((cuisineId) =>
+  //     cuisines
+  //       .find((cuisine) => cuisine.id === cuisineId)
+  //       ?.name.toLowerCase()
+  //       .includes(searchTerm.toLowerCase())
+  //   )
+  // );
+
+  const handleFilterChange = (filterType: string, value: string) => {
+    // TODO: Implement filter logic
+    console.log(`Filter changed: ${filterType} = ${value}`);
+  };
+
+  // const handleCuisineSelect = (cuisineName: string) => {
+  //   setSearchTerm(cuisineName); // Set the search term to the selected cuisine
+  //   setShowDropdown(false); // Hide the dropdown after selection
+  // };
 
   return (
     <>
