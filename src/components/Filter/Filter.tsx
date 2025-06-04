@@ -24,6 +24,8 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>("");
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
+  const [badge, setBadge] = useState<string>("")
+  const [sortOption, setSortOption] = useState<string>("")
 
   const prices = [
     {
@@ -39,6 +41,41 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       value: "$$$",
     },
   ];
+
+  const badges = [
+    {
+      name: 'all',
+      value: 'All',
+    },
+    {
+      name: 'best-service',
+      value: 'Best Service',
+    },
+    {
+      name: 'insta-worthy',
+      value: 'Insta-Worthy',
+    },
+    {
+      name: 'must-revisit',
+      value: 'Must Revisit',
+    },
+    {
+      name: 'value-for-money',
+      value: 'Value for Money',
+    },
+  ]
+
+  const sortOptions = [
+    {
+      name: 'ascending',
+      value: 'Ascending(Lowest to Highest)'
+    },
+    {
+      name: 'descending',
+      value: 'Descending(Highest to Lowest)'
+    }
+  ]
+
   const handlePalateChange = (keys: Set<Key>) => {
     console.log(keys, "keys");
     setSelectedPalates(keys);
@@ -63,6 +100,9 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       case "price":
         setFilterType("Price");
         break;
+       case "badges":
+        setFilterType("Badges");
+        break;
       case "rating":
         setFilterType("Rating");
         break;
@@ -72,8 +112,17 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   };
 
   const selectFilter = (value: string, type?: string) => {
-    setCuisine(value);
-    setIsDropdownOpen(false);
+    switch (type) {
+      case 'badge':
+        setBadge(value)
+        break
+      case 'sortOption':
+        setSortOption(value)
+        break
+      default:
+        setCuisine(value)
+        break
+    }
   };
 
   const handleChangePrice = (e: any) => {
@@ -89,10 +138,14 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     switch (filterType) {
       case "Cuisine":
         setCuisine("");
-        setSelectedPalates(new Set())
+        setSelectedPalates(new Set());
         break;
       case "Price":
         setPrice([]);
+        break;
+      case "Badges":
+        setBadge("")
+        setSortOption("")
         break;
     }
   };
@@ -127,7 +180,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
           </div>
 
           <div className="filter__section">
-            <button className="filter__options">
+            <button className="filter__options" onClick={() => onClickFilter("badges")}>
               <span className="filter__label">Badges</span>
               <img
                 src="/images/arrow_warm_up.svg"
@@ -176,7 +229,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                       // </>
                     }
                     content={
-                      <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
                           onClick={() => selectFilter("All")}
                           className={`py-2 px-4 ${
@@ -282,21 +335,28 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                                 handlePalateChange?.(set);
                               }}
                             >
-                              <input
-                                type="checkbox"
-                                className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                checked={
-                                  selectedPalates?.has(item.key) ||
-                                  selectedPalates?.has("All")
-                                }
-                                readOnly
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                  checked={
+                                    selectedPalates?.has(item.key) ||
+                                    selectedPalates?.has("All")
+                                  }
+                                  readOnly
+                                />
+                                <label htmlFor="">{item.label}</label>
+                              </div>
+                              <PiCaretDown
+                                className={`fill-[#494D5D] size-5 ${
+                                  selectedPalates.has(item.key) ? "rotate-180" : ""
+                                }`}
                               />
-                              <label htmlFor="">{item.label}</label>
                             </div>
                             {item.children?.map((child) => (
                               <div
                                 key={child.key}
-                                className="flex items-center gap-2 py-2 px-4 md:py-3 md:px-6 cursor-pointer hover:bg-gray-50"
+                                className={`${selectedPalates.has(item.key) ? "flex" : "hidden"} items-center gap-2 py-2 px-4 md:py-3 md:px-6 cursor-pointer hover:bg-gray-50`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   const newSelection = new Set(
@@ -372,6 +432,90 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+              {filterType == "Badges" && (
+              <div className="flex flex-col gap-4">
+                <div className="w-full">
+                  <label
+                    htmlFor=""
+                    className="text-xs md:text-base font-semibold"
+                  >
+                    Badges
+                  </label>
+                  <CustomPopover
+                    isOpen={isDropdownOpen}
+                    // setIsOpen={setIsDropdownOpen}
+                    align="bottom-end"
+                    // onClose={isDropdownOpen}
+                    trigger={
+                      <button className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                        <span className="text-[#31343F] text-center font-semibold">
+                          {badge}
+                        </span>
+                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                      </button>
+                      // </>
+                    }
+                    content={
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                        {badges.map((item: any, index: number) => (
+                          <div
+                            onClick={() => selectFilter(item.name, 'badge')}
+                            className={`py-2 px-4 ${
+                              badge == item.name
+                                ? "bg-[#F1F1F1]"
+                                : "bg-transparent"
+                            } text-sm md:text-lg font-semibold`}
+                            key={index}
+                          >
+                            {item.value}
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  />
+                </div>
+                <div className="w-full">
+                  <label
+                    htmlFor=""
+                    className="text-xs md:text-base font-semibold"
+                  >
+                    Sort By
+                  </label>
+                  <CustomPopover
+                    isOpen={isDropdownOpen}
+                    // setIsOpen={setIsDropdownOpen}
+                    align="bottom-end"
+                    // onClose={isDropdownOpen}
+                    trigger={
+                      <button className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                        <span className="text-[#31343F] text-center font-semibold">
+                          {sortOption}
+                        </span>
+                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                      </button>
+                      // </>
+                    }
+                    content={
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                        {sortOptions.map((item: any, index: number) => (
+                          <div
+                            onClick={() => selectFilter(item.name, 'sortOption')}
+                            className={`py-2 px-4 ${
+                              sortOption == item.name
+                                ? "bg-[#F1F1F1]"
+                                : "bg-transparent"
+                            } text-sm md:text-lg font-semibold`}
+                            key={index}
+                          >
+                            {item.value}
+                          </div>
+                        ))}
+                      </div>
+                    }
+                  />
+                </div>
               </div>
             )}
             {filterType == "Rating" && (

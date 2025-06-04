@@ -109,7 +109,7 @@ const Restaurant = () => {
     : restaurants;
 
   return (
-    <div className="restaurants min-h-[70vh] font-inter">
+    <div className="restaurants min-h-[85vh] font-inter">
       <div className="restaurants__container">
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
           <Filter onFilterChange={() => { }} />
