@@ -40,7 +40,6 @@ export const GET_ALL_RECENT_REVIEWS = gql`
               databaseId
               title
               slug
-              fieldMultiCheck90
               featuredImage {
                 node {
                   databaseId
