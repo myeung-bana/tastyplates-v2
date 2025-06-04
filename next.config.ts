@@ -10,9 +10,9 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       "wordpress.test",
-      process.env.NEXT_PUBLIC_WP_API_URL || "",
       "localhost",
-      "secure.gravatar.com"
+      "secure.gravatar.com",
+       "www.tastyplates.co",
     ],
   },
   env: {

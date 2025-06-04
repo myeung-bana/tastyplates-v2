@@ -18,6 +18,7 @@ interface Restaurant {
   cuisineNames: string[];
   countries: string;
   priceRange: string;
+  databaseId: number;
 }
 
 const Restaurant = () => {
@@ -36,7 +37,8 @@ const Restaurant = () => {
       slug: item.slug,
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5, 
+      rating: 4.5,
+      databaseId: item.databaseId || 0, 
       cuisineNames: item.cuisines || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
