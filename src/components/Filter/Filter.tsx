@@ -89,6 +89,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     switch (filterType) {
       case "Cuisine":
         setCuisine("");
+        setSelectedPalates(new Set())
         break;
       case "Price":
         setPrice([]);
@@ -164,7 +165,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     isOpen={isDropdownOpen}
                     // setIsOpen={setIsDropdownOpen}
                     align="bottom-end"
-                    onClose={isDropdownOpen}
+                    // onClose={isDropdownOpen}
                     trigger={
                       <button className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
@@ -212,7 +213,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     isOpen={isDropdownOpen}
                     // setIsOpen={setIsDropdownOpen}
                     align="bottom-end"
-                    onClose={isDropdownOpen}
+                    // onClose={isDropdownOpen}
                     trigger={
                       <button
                         onClick={() => setIsDropdownOpen(false)}

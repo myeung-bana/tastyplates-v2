@@ -10,9 +10,12 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { Review } from "@/data/dummyReviews";
 import ReviewModal from "@/components/ReviewModal";
-import { FaPen, FaRegHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
+import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
+import { Dialog } from "@headlessui/react";
+import { useSession } from "next-auth/react";
 
 
 type tParams = { slug: string };
@@ -29,13 +32,81 @@ const filterReviewsByPalate = (reviews: Review[], targetPalates: string[]) => {
     const user = users.find((user) => user.id === review.authorId);
     if (!user) return false;
 
-    // Check if any of the user's palates match the target palates
     return user.palateIds.some((palateId) => {
       const palate = palates.find((p) => p.id === palateId);
       return palate && targetPalates.includes(palate.name);
     });
   });
 };
+
+function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
+  const { data: session, status } = useSession();
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!session || !restaurantSlug || initialized) return;
+    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
+      credentials: "include",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) setSaved(data.status === "saved");
+      })
+      .finally(() => {
+        if (isMounted) setInitialized(true);
+      });
+    return () => { isMounted = false; };
+  }, [restaurantSlug, session]);
+
+  const handleToggle = async () => {
+    if (!session) return;
+    setLoading(true);
+    setSaved(prev => !prev);
+    const action = saved ? "unsave" : "save";
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
+      credentials: "include",
+    });
+    const data = await res.json();
+    setSaved(data.status === "saved");
+    setLoading(false);
+  };
+
+  if (!initialized) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2" disabled>
+        <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
+        <span className="underline text-gray-400">Loading…</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className="restaurant-detail__review-button flex items-center gap-2"
+      onClick={handleToggle}
+      disabled={loading}
+      aria-pressed={saved}
+    >
+      {saved ? <FaHeart className="text-black" /> : <FaRegHeart />}
+      <span className="underline">{saved ? "Saved" : "Save"}</span>
+    </button>
+  );
+}
 
 export default function RestaurantDetail() {
   const [restaurant, setRestaurant] = useState<any | null>(null);
@@ -56,24 +127,25 @@ export default function RestaurantDetail() {
           name: data.title,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
           cuisines: data.cuisines?.nodes || [],
-          location: data.locations?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
+          countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
-          address: data.address || "Not provided",
           phone: data.phone || "Not provided",
           description: data.content || "",
           listingStreet: data.listingStreet || "",
-          fieldMultiCheck90: data.fieldMultiCheck90
-            ? data.fieldMultiCheck90.split("|").map((c: string) => c.trim()).filter(Boolean)
-            : [],
-
+          listingCategories: data.listingCategories?.nodes?.map((c: { name: string }) => c.name) || [],
           listingDetails: {
-            googleMapUrl: data.listingDetails?.googleMapUrl || "",
+            googleMapUrl: {
+              latitude: data.listingDetails?.googleMapUrl?.latitude || "",
+              longitude: data.listingDetails?.googleMapUrl?.longitude || "",
+              streetAddress: data.listingDetails?.googleMapUrl?.streetAddress || "",
+            },
             latitude: data.listingDetails?.latitude || "",
             longitude: data.listingDetails?.longitude || "",
             menuUrl: data.listingDetails?.menuUrl || "",
             openingHours: data.listingDetails?.openingHours || "",
             phone: data.listingDetails?.phone || "",
           },
+
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -85,6 +157,10 @@ export default function RestaurantDetail() {
   }, [slug]);
 
   console.log(restaurant);
+
+  const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
+  const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
+  const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
 
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
@@ -143,6 +219,7 @@ export default function RestaurantDetail() {
                         </div>
                       ))}
                     </div>
+                    <span>{restaurant.listingStreet}</span>
                     &#8226;
                     <div className="restaurant-detail__price">
                       <span>{restaurant.priceRange}</span>
@@ -153,18 +230,11 @@ export default function RestaurantDetail() {
                   <a
                     href="/add-review"
                     className="restaurant-detail__review-button"
-                    // onClick={() => setIsReviewModalOpen(true)}
                   >
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </a>
-                  <button
-                    className="restaurant-detail__review-button"
-                    onClick={() => setIsReviewModalOpen(true)}
-                  >
-                    <FaRegHeart className="size-4 md:size-5" />
-                    <span className="underline">Save</span>
-                  </button>
+                  <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
               <div className="flex flex-row gap-6">
@@ -179,46 +249,38 @@ export default function RestaurantDetail() {
                 </div>
                 <div className="items-center justify-center rounded-3xl text-center w-1/3 hidden md:flex">
                   <div className="restaurant-detail__details">
-                    <div className="restaurant-detail__detail-item">
-                      <FiMapPin />
-                      <span>{restaurant.listingStreet || restaurant.address}</span>
+                    <div className="rounded-xl overflow-hidden shadow-md border border-gray-200 max-w-md bg-white">
+                      {lat && lng ? (
+                        <div className="cursor-pointer">
+                          <RestaurantMap lat={lat} lng={lng} small />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500">
+                          <FiMapPin className="w-5 h-5 mr-2" />
+                          <span>Map location not available</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-2 p-4">
+                        <FiMapPin className="w-5 h-5 text-gray-600 mt-1" />
+                        <p className="text-sm text-gray-800 leading-snug">
+                          {address || 'Address not provided'}
+                        </p>
+                      </div>
                     </div>
+
                     <div className="restaurant-detail__detail-item">
                       <FiPhone />
                       <span>{restaurant.listingDetails?.phone || restaurant.phone}</span>
                     </div>
                     {restaurant.listingDetails?.openingHours && (
                       <div className="restaurant-detail__detail-item" key="opening-hours">
-                        <span>🕒 {restaurant.listingDetails.openingHours}</span>
+                        <span>🕒 {restaurant.listingDetails?.openingHours}</span>
                       </div>
                     )}
                     {restaurant.fieldMultiCheck90 && restaurant.fieldMultiCheck90.length > 0 && (
                       <div className="restaurant-detail__detail-item" key="field-multi-check">
                         <span>🏷️ {restaurant.fieldMultiCheck90.join(" | ")}</span>
-                      </div>
-                    )}
-                    {restaurant.listingDetails?.menuUrl && (
-                      <div className="restaurant-detail__detail-item" key="menu-url">
-                        <a
-                          href={restaurant.listingDetails.menuUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#E36B00] hover:underline"
-                        >
-                          📋 View Menu
-                        </a>
-                      </div>
-                    )}
-                    {restaurant.listingDetails?.googleMapUrl && (
-                      <div className="restaurant-detail__detail-item" key="map-url">
-                        <a
-                          href={restaurant.listingDetails.googleMapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#E36B00] hover:underline"
-                        >
-                          🗺️ View on Map
-                        </a>
                       </div>
                     )}
                   </div>

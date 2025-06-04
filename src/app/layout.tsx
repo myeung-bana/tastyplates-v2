@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "@/styles/global.scss";
-import ApolloProviderWrapper from "@/components/ApolloProviderWrapper";
-import { AuthProvider } from '@/contexts/AuthContext';
-
+import SessionWrapper from "@/components/SessionWrapper";
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
@@ -11,15 +8,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
-        </AuthProvider>
+        <SessionWrapper>{children}</SessionWrapper>
       </body>
     </html>
   );
