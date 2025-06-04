@@ -23,11 +23,9 @@ const Profile = () => {
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bio, setBio] = useState<string>("");
   const [palatesLoading, setPalatesLoading] = useState(true);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
-  const [bioLoading, setBioLoading] = useState(true);
 
   const reviews = getAllReviews();
   const user = session?.user;
@@ -56,29 +54,6 @@ const Profile = () => {
       console.error('Error fetching palates:', err);
     } finally {
       setPalatesLoading(false);
-    }
-  };
-
-  // Fetch user bio
-  const fetchBio = async () => {
-    setBioLoading(true);
-    try {
-      const res = await fetch(
-        `${WP_BASE}/wp-json/restaurant/v1/user-bio?user_id=${targetUserId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`
-          }
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setBio(data.bio || "");
-      }
-    } catch (err) {
-      console.error('Error fetching bio:', err);
-    } finally {
-      setBioLoading(false);
     }
   };
 
@@ -164,10 +139,9 @@ const Profile = () => {
     if (!WP_BASE) return;
 
     setLoading(true);
-    // Fetch palates, following, followers, and bio all in parallel
+    // Fetch palates, following, followers all in parallel (remove fetchBio)
     Promise.all([
       fetchPalates(),
-      fetchBio(),
       (async () => {
         setFollowingLoading(true);
         setFollowersLoading(true);
@@ -371,22 +345,8 @@ const Profile = () => {
                 {user?.name || "JulienChang"}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap">
-                {palatesLoading ? (
-                  <span className="inline-block w-16 h-5 bg-gray-200 rounded animate-pulse align-middle" />
-                ) : palates.length > 0 ? (
-                  palates.map((palate) => (
-                    <span
-                      key={palate}
-                      className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]"
-                    >
-                      {palate}
-                    </span>
-                  ))
-                ) : (
-                  <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">
-                    No palates
-                  </span>
-                )}
+                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Japanese</span>
+                <span className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]">Italian</span>
               </div>
             </div>
             <div className="ml-auto">
@@ -399,9 +359,7 @@ const Profile = () => {
             </div>
           </div>
           <p className="text-sm">
-            {bioLoading ? (
-              <span className="inline-block w-40 h-5 bg-gray-200 rounded animate-pulse align-middle" />
-            ) : (bio || "Porem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.")}
+            Food lover. Adventurous eater. Always looking for the next best bite!
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
             <span>
