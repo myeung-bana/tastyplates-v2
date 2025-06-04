@@ -36,13 +36,10 @@ const Profile = () => {
   const [showFollowing, setShowFollowing] = useState(false);
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [palatesLoading, setPalatesLoading] = useState(true);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
-
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
@@ -267,18 +264,18 @@ const Profile = () => {
     });
   }, [session?.accessToken, WP_BASE, targetUserId]);
 
-  const palateCuisineIds = useMemo(() => {
-    return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
-  }, [palates]);
+  // const palateCuisineIds = useMemo(() => {
+  //   return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
+  // }, [palates]);
 
-  const filteredRestaurants = useMemo(() => {
-    if (palateCuisineIds.length === 0) {
-      return restaurants;
-    }
-    return restaurants.filter((rest) =>
-      rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
-    );
-  }, [palateCuisineIds]);
+  // const filteredRestaurants = useMemo(() => {
+  //   if (palateCuisineIds.length === 0) {
+  //     return restaurants;
+  //   }
+  //   return restaurants.filter((rest) =>
+  //     rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
+  //   );
+  // }, [palateCuisineIds]);
 
   // Count user reviews (dummy data version)
   const userReviewCount = useMemo(() => {
@@ -336,14 +333,15 @@ const Profile = () => {
       id: "reviews",
       label: "Reviews",
       content: (
-        <Masonry
-          items={reviews}
-          render={ReviewCard}
-          columnGutter={32}
-          maxColumnWidth={304}
-          columnCount={4}
-          maxColumnCount={4}
-        />
+        <div><p>reviews</p></div>
+        // <Masonry
+        //   items={reviews}
+        //   render={ReviewCard}
+        //   columnGutter={32}
+        //   maxColumnWidth={304}
+        //   columnCount={4}
+        //   maxColumnCount={4}
+        // />
       ),
     },
     {
@@ -410,10 +408,10 @@ const Profile = () => {
     console.log(`Filter changed: ${filterType} = ${value}`);
   };
 
-  const handleCuisineSelect = (cuisineName: string) => {
-    setSearchTerm(cuisineName); // Set the search term to the selected cuisine
-    setShowDropdown(false); // Hide the dropdown after selection
-  };
+  // const handleCuisineSelect = (cuisineName: string) => {
+  //   setSearchTerm(cuisineName); // Set the search term to the selected cuisine
+  //   setShowDropdown(false); // Hide the dropdown after selection
+  // };
 
   return (
     <>
