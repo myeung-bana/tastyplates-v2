@@ -14,25 +14,21 @@ import { CategoryService } from "@/services/category/categoryService";
 
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState<any>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [step, setStep] = useState<number>(props.step ?? 1);
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const router = useRouter();
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-
+  // const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     CategoryService.fetchCategories()
       .then(setCategories)
       .catch((error) => console.error(error))
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   }, []);
-
-  if (loading) return <p>Loading categories...</p>;
 
   const tags = [
     {
@@ -165,7 +161,7 @@ const AddListingPage = (props: any) => {
   return (
     <>
       <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">
-        {!isLoading ? (
+        
           <div className="flex flex-col justify-center items-center">
             {step == 1 && (
               <>
@@ -200,7 +196,7 @@ const AddListingPage = (props: any) => {
                   <div className="listing__form-group">
                     <label className="listing__label">Category</label>
                     <div className="listing__input-group">
-                      <select className="listing__input">
+                      <select className="listing__input" disabled={isLoading}>
                         {categories.map((category: any, index) => (
                           <option value={category.id} key={index}>
                             {category.name}
@@ -216,8 +212,8 @@ const AddListingPage = (props: any) => {
                     <div className="listing__input-group">
                       <select className="listing__input">
                         {categories.map((category: any, index) => (
-                          <option value={category.key} key={index}>
-                            {category.label}
+                          <option value={category.id} key={index}>
+                            {category.name}
                           </option>
                         ))}
                       </select>
@@ -463,9 +459,6 @@ const AddListingPage = (props: any) => {
               </form>
             )}
           </div>
-        ) : (
-          <></>
-        )}
         <CustomModal
           header="Listing Submitted"
           content="Your listing has been successfully submitted! Approval typically takes 1–3 working days. Once approved, your reviews will be uploaded automatically."
