@@ -18,8 +18,44 @@ import { UserService } from '@/services/userService';
 
 const OnboardingOnePage = () => {
   const router = useRouter();
+  const [initialized, setInitialized] = useState(false);
+  // Initialize with empty/default values
+  const [birthdate, setBirthdate] = useState("");
+  const [gender, setGender] = useState("");
+  const [name, setName] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [customGender, setCustomGender] = useState("");
+  const [pronoun, setPronoun] = useState("");
+  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [birthdateError, setBirthdateError] = useState<string | null>(null);
+  const [palateError, setPalateError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Move initialization logic to a separate useEffect
   useEffect(() => {
+    if (initialized) return;
+
+    const storedData = localStorage.getItem('registrationData');
+    const parsedData = storedData ? JSON.parse(storedData) : {};
+    
+    setBirthdate(parsedData.birthdate || "");
+    setGender(parsedData.gender || "");
+    setName(parsedData.username || Cookies.get('username') || "");
+    setCustomGender(parsedData.customGender || "");
+    setPronoun(parsedData.pronoun || "");
+    
+    if (parsedData.palates) {
+      setSelectedPalates(new Set(parsedData.palates.split(",")));
+    }
+
+    setInitialized(true);
+  }, [initialized]);
+
+  // Navigation protection effects
+  useEffect(() => {
+    if (!initialized) return;
+
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
@@ -38,39 +74,17 @@ const OnboardingOnePage = () => {
 
     if (!storedData) {
       router.replace('/');
-      window.history.pushState(null, '', '/');
     }
-  }, [router]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      router.replace('/');
-      window.history.pushState({}, '', '/');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [router]);
-
-  // Get initial data from localStorage instead of URL params
-  const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
-
-  const [birthdate, setBirthdate] = useState(storedData.birthdate || "");
-  const [gender, setGender] = useState(storedData.gender || "");
-  const [name, setName] = useState(storedData.username || Cookies.get('username') || "");
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [customGender, setCustomGender] = useState("");
-  const [pronoun, setPronoun] = useState("");
-  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
-  const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [birthdateError, setBirthdateError] = useState<string | null>(null);
-  const [palateError, setPalateError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  }, [router, initialized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
+    // Get stored data first
+    const storedDataStr = localStorage.getItem('registrationData');
+    const storedData = storedDataStr ? JSON.parse(storedDataStr) : {};
+
     setUsernameError(null);
     setBirthdateError(null);
     setPalateError(null);
