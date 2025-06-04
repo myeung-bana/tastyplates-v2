@@ -129,6 +129,12 @@ export const authOptions: AuthOptions = {
                             if (userData.profile_image) {
                                 (token.user as any).image = userData.profile_image;
                             }
+                            if (userData.palates) {
+                                (token.user as any).palates = userData.palates;
+                            }
+                            if (userData.about_me) {
+                                (token.user as any).about_me = userData.about_me;
+                            }
                         }
                     } catch {
                         // ignore error, fallback to existing data

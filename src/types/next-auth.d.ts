@@ -10,6 +10,8 @@ declare module 'next-auth' {
             image?: string | null;
             birthdate?: string | null;
             provider?: string | null;
+            palates?: string | null;
+            about_me?: string | null;
         };
         accessToken?: string;
     }
