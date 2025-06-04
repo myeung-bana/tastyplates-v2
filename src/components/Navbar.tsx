@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSearchParams } from 'next/navigation';
+// import { useSearchParams } from 'next/navigation';
 import "@/styles/components/_navbar.scss";
 import "@/styles/components/_hero.scss";
 import SignupModal from "./SignupModal";
@@ -25,7 +25,7 @@ const navigationItems = [
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const { isLandingPage = false, hasSearchBar = false } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
@@ -54,7 +54,7 @@ export default function Navbar(props: any) {
       // Clear error params if authenticated
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [searchParams, status]);
+  }, [status]);
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
