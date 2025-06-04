@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/global.scss";
 import SessionWrapper from "@/components/SessionWrapper";
 
+import { FollowProvider } from "@/components/FollowContext";
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-         <SessionWrapper>{children}</SessionWrapper>
+        <FollowProvider>
+          <SessionWrapper>{children}</SessionWrapper>
+        </FollowProvider>
       </body>
     </html>
   );

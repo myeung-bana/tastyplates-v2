@@ -15,7 +15,12 @@ export default function CustomModal(props: any) {
     content,
     hasFooter = false,
     footer,
+    footerClass = "",
     onOpenChange,
+    baseClass = "",
+    headerClass = "",
+    contentClass = "",
+    closeButtonClass = "",
   } = props;
 
   return (
@@ -24,13 +29,14 @@ export default function CustomModal(props: any) {
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         classNames={{
-          body: "py-4 md:py-6 bg-transparent text-xs md:text-base",
+          body: cn("py-4 md:py-6 bg-transparent text-xs md:text-base", contentClass),
           backdrop: "bg-black/20 backdrop-opacity-10",
-          base: "border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl",
+          base: cn("border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl", baseClass),
           header: cn(
-            "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg"
+            "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg flex flex-col text-center gap-1 justify-center border-b border-[#CACACA] text-xl",
+            headerClass
           ),
-          footer: "!pt-0",
+          footer: cn("!pt-0", footerClass),
           closeButton: "hidden",
         }}
         placement="center"
@@ -38,17 +44,17 @@ export default function CustomModal(props: any) {
         // disableAnimation
       >
         <ModalContent>
-          <ModalHeader className="flex flex-col text-center gap-1 justify-center border-b border-[#CACACA] text-xl">
+          <ModalHeader>
             {header}
           </ModalHeader>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="absolute top-5 right-5"
+            className={cn("absolute top-5 right-5", closeButtonClass)}
           >
-            <MdClose className="size-4 md:size-6" />
+            <MdClose className="size-5 md:size-6" />
           </button>
           <ModalBody>
-            <p>{content}</p>
+            {content}
           </ModalBody>
           <ModalFooter>
             {!hasFooter ? (

@@ -46,6 +46,16 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  // If not logged in, just show the button (no loading, no check)
+  if (!session) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2">
+        <FaRegHeart />
+        <span className="underline">Save</span>
+      </button>
+    );
+  }
+
   useEffect(() => {
     let isMounted = true;
     if (!session || !restaurantSlug || initialized) return;
