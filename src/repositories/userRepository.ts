@@ -77,6 +77,9 @@ export class UserRepository {
             birthdate?: string;
             language?: string;
             password?: string;
+            palates?: string;
+            profile_image?: string;
+            about_me?: string;
         },
         token: string
     ): Promise<T> {

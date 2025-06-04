@@ -7,9 +7,9 @@ import CustomModal from "@/components/ui/Modal/Modal";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FaPen } from "react-icons/fa";
-import { users } from "@/data/dummyUsers";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
+import { UserService } from "@/services/userService";
 
 const Form = (props: any) => {
   const { data: session, status } = useSession();
@@ -21,6 +21,8 @@ const Form = (props: any) => {
   const [profilePreview, setProfilePreview] = useState<any>(session?.user?.image ?? "/profile-icon.svg");
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
+  const [palateError, setPalateError] = useState<string>("");
+  const [profileError, setProfileError] = useState<string>("");
   const router = useRouter();
   const categories = [
     { key: "no-category", label: "Select a Category" },
@@ -33,21 +35,112 @@ const Form = (props: any) => {
     label: option.label
   }));
 
-  const changeStep = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      if (step == 1) {
-        router.push("/listing/step-2");
-      } else {
-        setStep(step + 1);
-      }
-      setIsLoading(false);
-    }, 500);
+  const getAllSelectedPalates = () => {
+    return selectedPalates.map(palate => {
+      const region = palateOptions.find(option =>
+        option.children.some(child => 
+          child.label.toLowerCase() === palate.toLowerCase()
+        )
+      );
+
+      const capitalizedPalate = palate
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      return {
+        palate: capitalizedPalate,
+        region: region?.label || 'Unknown'
+      };
+    });
   };
 
-  const submitReview = (e: FormEvent) => {
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setProfileError("");
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      
+      // Check file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setProfileError("Profile image must be less than 5MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setProfilePreview(e.target.result as string);
+          setProfile(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const submitReview = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    setIsLoading(true); // Set loading state
+
+    // Validate image size if profile is updated
+    if (profile) {
+      const base64Length = profile.split(',')[1].length;
+      const sizeInBytes = (base64Length * 3) / 4;
+      if (sizeInBytes > 5 * 1024 * 1024) {
+        setProfileError("Profile image must be less than 5MB");
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Rest of validation
+    const allPalates = getAllSelectedPalates();
+    if (selectedPalates.length > 2) {
+      setPalateError('You can only select up to 2 palates');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      if (!session?.accessToken) {
+        throw new Error('No session token found');
+      }
+
+      // Format the palates for storage
+      const formattedPalates = selectedPalates
+        .map(p => p.trim())
+        .join('|');
+
+      // Prepare update data
+      const updateData = {
+        profile_image: profile, // blob data
+        about_me: aboutMe,
+        palates: formattedPalates
+      };
+
+      console.log('Update Data:', updateData);
+      await UserService.updateUserFields(
+        updateData,
+        session.accessToken
+      );
+
+      // Update local storage if needed
+      const localKey = `userData_${session.user?.email}`;
+      const cachedData = JSON.parse(localStorage.getItem(localKey) || '{}');
+      localStorage.setItem(localKey, JSON.stringify({
+        ...cachedData,
+        ...updateData,
+      }));
+
+      setPalateError("");
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -80,30 +173,14 @@ const Form = (props: any) => {
     }
   }, [session]); // Add session as dependency
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setProfilePreview(e.target.result as string);
-          setProfile(file);
-        }
-      };
-
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleRegionChange = (value: string) => {
     setSelectedRegion(value);
-    setSelectedPalates([]); // Reset palates when region changes
+    // Don't reset palates when region changes
+    setPalateError(""); // Clear any existing errors
   };
 
   const togglePalate = (palate: string) => {
+    setPalateError(""); // Clear error when selection changes
     setSelectedPalates(prev => {
       const normalizedPrev = prev.map(p => p.toLowerCase());
       const normalizedPalate = palate.toLowerCase();
@@ -111,11 +188,13 @@ const Form = (props: any) => {
       if (normalizedPrev.includes(normalizedPalate)) {
         return prev.filter(p => p.toLowerCase() !== normalizedPalate);
       }
-      if (prev.length >= 2) {
-        return prev;
-      }
-      return [...prev, palate];
+      return [...prev, palate]; // Remove the 2 palate limit check here
     });
+  };
+
+  // Update the aboutMe change handler
+  const handleAboutMeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAboutMe(e.target.value);
   };
 
   return (
@@ -130,7 +209,7 @@ const Form = (props: any) => {
             <div className="listing__form-group relative justify-center self-center">
               <label
                 htmlFor="image"
-                className="cursor-pointer flex justify-center"
+                className={`cursor-pointer flex justify-center ${isLoading ? 'opacity-50' : ''}`}
               >
                 <input
                   id="image"
@@ -140,6 +219,7 @@ const Form = (props: any) => {
                   placeholder="Image"
                   className="hidden"
                   accept="image/*"
+                  disabled={isLoading}
                 />
                 <div>
                   <div className="w-[120px] h-[120px] relative">
@@ -155,17 +235,23 @@ const Form = (props: any) => {
                   </div>
                 </div>
               </label>
+              {profileError && (
+                <p className="mt-2 text-sm text-red-600 text-center">
+                  {profileError}
+                </p>
+              )}
             </div>
             <div className="listing__form-group">
               <label className="listing__label">About Me</label>
               <div className="listing__input-group">
                 <textarea
                   name="name"
-                  className="listing__input"
+                  className={`listing__input ${isLoading ? 'opacity-50' : ''}`}
                   placeholder="About Me"
                   value={aboutMe}
-                  onChange={(e) => { }}
+                  onChange={handleAboutMeChange}
                   rows={5}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -173,11 +259,12 @@ const Form = (props: any) => {
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
-                  className="min-h-[48px] border border-gray-200 rounded-[10px]"
+                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? 'opacity-50' : ''}`}
                   placeholder="Select your region"
                   items={regionOptions}
                   onChange={handleRegionChange}
                   value={selectedRegion}
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -186,33 +273,68 @@ const Form = (props: any) => {
                 Ethnic Palate <span className="!font-medium">(Select up to 2 palates)</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {selectedRegion && palateOptions
-                  .find(option => option.key === selectedRegion)
-                  ?.children.map(child => (
-                    <button
-                      key={child.key}
-                      type="button"
-                      onClick={() => togglePalate(child.label)}
-                      className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] ${
-                        selectedPalates.some(p => 
-                          p.toLowerCase() === child.label.toLowerCase()
-                        )
-                          ? 'bg-[#F1F1F1] !font-bold'
-                          : 'bg-[##FCFCFC] text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {child.label}
-                    </button>
-                  ))}
+                {selectedRegion && (
+                  <>
+                    {palateOptions
+                      .find(option => option.key === selectedRegion)
+                      ?.children.map(child => (
+                        <button
+                          key={child.key}
+                          type="button"
+                          onClick={() => togglePalate(child.label)}
+                          className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] ${
+                            selectedPalates.some(p => 
+                              p.toLowerCase() === child.label.toLowerCase()
+                            )
+                              ? 'bg-[#F1F1F1] !font-bold'
+                              : 'bg-[##FCFCFC] text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {child.label}
+                        </button>
+                    ))}
+                    {selectedPalates.length > 0 && (
+                      <div className="w-full mt-2">
+                        <p className="text-sm text-gray-600">
+                          Selected palates: {
+                            getAllSelectedPalates().slice(0, 4).map(p => p.palate).join(", ") + 
+                            (getAllSelectedPalates().length > 4 ? "..." : "")
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
+              {palateError && (
+                <p className="mt-2 text-sm text-red-600">
+                  {palateError}
+                </p>
+              )}
             </div>
             <div className="flex gap-4 items-center m-auto">
-              <button className="listing__button" onClick={changeStep}>
-                Sava and Continue
+              <button 
+                className="listing__button flex items-center justify-center gap-2" 
+                type="submit" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  'Save and Continue'
+                )}
               </button>
               <button
-                className="underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center"
-                type="submit"
+                type="button"
+                className={`underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading ? 'opacity-50' : ''}`}
+                onClick={() => router.push('/profile')}
+                disabled={isLoading}
               >
                 Cancel
               </button>

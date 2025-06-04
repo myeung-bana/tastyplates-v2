@@ -46,44 +46,8 @@ const Profile = () => {
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
-  const transformNodes = (nodes: Listing[]): Restaurant[] => {
-    return nodes.map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      name: item.title,
-      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5,
-      databaseId: item.databaseId || 0, // Default to 0 if not present
-      cuisineNames: item.cuisines || [],
-      countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
-      priceRange: "$$"
-    }));
-  };
-
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
-    setLoading(true);
-    try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
-      const transformed = transformNodes(data.nodes);
-
-      setRestaurants(prev => {
-        if (!after) {
-          // New search: replace list
-          return transformed;
-        }
-        // Pagination: append unique restaurants only
-        const all = [...prev, ...transformed];
-        const uniqueMap = new Map(all.map(r => [r.id, r]));
-        return Array.from(uniqueMap.values());
-      });
-
-      setAfterCursor(data.pageInfo.endCursor);
-      setHasMore(data.pageInfo.hasNextPage);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    // 
   };
 
   useEffect(() => {
@@ -211,15 +175,14 @@ const Profile = () => {
       id: "reviews",
       label: "Reviews",
       content: (
-        <div><p>reviews</p></div>
-        // <Masonry
-        //   items={reviews}
-        //   render={ReviewCard}
-        //   columnGutter={32}
-        //   maxColumnWidth={304}
-        //   columnCount={4}
-        //   maxColumnCount={4}
-        // />
+        <Masonry
+          items={reviews as any}
+          render={ReviewCard}
+          columnGutter={32}
+          maxColumnWidth={304}
+          columnCount={4}
+          maxColumnCount={4}
+        />
       ),
     },
     {
@@ -389,8 +352,8 @@ const Profile = () => {
         open={showFollowers}
         onClose={() => setShowFollowers(false)}
         followers={followers}
-        onFollow={handleFollow}
-        onUnfollow={handleUnfollow}
+        onFollow={() => handleFollow}
+        onUnfollow={() => handleUnfollow}
       />
       <FollowingModal
         open={showFollowing}
@@ -400,8 +363,8 @@ const Profile = () => {
           setFollowing((prev) => prev.filter((u) => u.isFollowing));
         }}
         following={following}
-        onUnfollow={handleUnfollow}
-        onFollow={handleFollow}
+        onUnfollow={() => handleUnfollow}
+        onFollow={() => handleFollow}
       />
       <Tabs
         aria-label="Dynamic tabs"
