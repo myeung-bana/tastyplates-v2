@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import ModalPopup from "./ModalPopup";
 import ReviewDetailModal from "./ModalPopup2";
 import { stripTags } from "../lib/utils"
-import '@fortawesome/fontawesome-free/css/all.min.css';
+// import '@fortawesome/fontawesome-free/css/all.min.css';
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {

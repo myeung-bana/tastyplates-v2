@@ -44,6 +44,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         slug
         content
         cuisines
+        databaseId
         listingStreet
                 listingDetails {
                     phone
