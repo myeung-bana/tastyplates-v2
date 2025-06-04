@@ -18,8 +18,14 @@ import { UserService } from '@/services/userService';
 
 const OnboardingOnePage = () => {
   const router = useRouter();
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true); // Ensures code only runs after client-side mount
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted) return;
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
@@ -52,6 +58,8 @@ const OnboardingOnePage = () => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [router]);
+
+   if (!hasMounted) return null;
 
   // Get initial data from localStorage instead of URL params
   const storedData = JSON.parse(localStorage.getItem('registrationData') || '{}');
