@@ -16,6 +16,7 @@ import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { Dialog } from "@headlessui/react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 
 type tParams = { slug: string };
@@ -44,6 +45,16 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // If not logged in, just show the button (no loading, no check)
+  if (!session) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2">
+        <FaRegHeart />
+        <span className="underline">Save</span>
+      </button>
+    );
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -112,6 +123,7 @@ export default function RestaurantDetail() {
   const [restaurant, setRestaurant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const router = useRouter();
 
   const params = useParams();
   const slug = params?.slug as string;
@@ -125,6 +137,7 @@ export default function RestaurantDetail() {
           id: data.id,
           slug: data.slug,
           name: data.title,
+          databaseId: data.databaseId,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
           cuisines: data.cuisines?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
@@ -201,6 +214,10 @@ export default function RestaurantDetail() {
     console.log("New review:", review);
   };
 
+  const addReview = () => {
+    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+  }
+
   return (
     <div className="restaurant-detail mt-32 md:mt-10">
       <div className="restaurant-detail__container">
@@ -227,13 +244,15 @@ export default function RestaurantDetail() {
                   </div>
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
-                  <a
-                    href="/add-review"
+                  {/* <a
+                    href="/listing"
                     className="restaurant-detail__review-button"
-                  >
-                    <FaPen className="size-4 md:size-5" />
-                    <span className="underline">Write a Review</span>
-                  </a>
+                  > */}
+                    <button onClick={addReview} className="flex items-center gap-2 hover:underline">
+                      <FaPen className="size-4 md:size-5" />
+                      <span className="underline">Write a Review</span>
+                    </button>
+                  {/* </a> */}
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>

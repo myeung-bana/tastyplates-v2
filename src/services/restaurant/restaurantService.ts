@@ -12,6 +12,15 @@ export const RestaurantService = {
             console.error('Error fetching list:', error);
             throw new Error('Failed to fetch list');
         }
-    }
+    },
+
+    async fetchRestaurantById(id: string, idType: string = "DATABASE_ID", accessToken?: string) {
+        try {
+            return await RestaurantRepository.getRestaurantById(id, idType, accessToken);
+        } catch (error) {
+            console.error('Error fetching restaurant by ID:', error);
+            throw new Error('Failed to fetch restaurant by ID');
+        }
+    },
 
 };
