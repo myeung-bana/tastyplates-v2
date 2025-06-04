@@ -136,7 +136,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     return (
         <div className="relative" translate="no">
             <div
-                className={`bg-red w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${isOpen ? 'ring-2 ring-blue-500' : ''}`}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${isOpen ? 'ring-2 ring-blue-500' : ''} ${props.className || ''}`}
                 onClick={(e) => {
                     toggleDropdown();
                 }}
