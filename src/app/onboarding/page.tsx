@@ -18,7 +18,6 @@ const OnboardingPage = () => {
         <Footer isShowLinks={false} />
       </div>
     </div>
-
   );
 };
 
