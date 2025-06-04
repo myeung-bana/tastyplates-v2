@@ -23,9 +23,9 @@ const ListingDraftPage = () => {
                 <Link href="/listing/add" className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
             </div>
             <div className="restaurants__grid mt-8">
-                {restaurants.map((restaurant: Restaurant, index: number) => (
+                {/* {restaurants.map((restaurant: Restaurant, index: number) => (
                     <ListingCard key={index} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
-                ))}
+                ))} */}
             </div>
             <CustomModal
                 header="Delete this Draft?"

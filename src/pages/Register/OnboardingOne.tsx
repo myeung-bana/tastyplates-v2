@@ -31,20 +31,26 @@ const OnboardingOnePage = () => {
   const [birthdateError, setBirthdateError] = useState<string | null>(null);
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true); // Ensures code only runs after client-side mount
+  }, []);
 
   // Move initialization logic to a separate useEffect
   useEffect(() => {
     if (initialized) return;
+    if (!hasMounted) return;
 
     const storedData = localStorage.getItem('registrationData');
     const parsedData = storedData ? JSON.parse(storedData) : {};
-    
+
     setBirthdate(parsedData.birthdate || "");
     setGender(parsedData.gender || "");
     setName(parsedData.username || Cookies.get('username') || "");
     setCustomGender(parsedData.customGender || "");
     setPronoun(parsedData.pronoun || "");
-    
+
     if (parsedData.palates) {
       setSelectedPalates(new Set(parsedData.palates.split(",")));
     }
@@ -80,7 +86,7 @@ const OnboardingOnePage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // Get stored data first
     const storedDataStr = localStorage.getItem('registrationData');
     const storedData = storedDataStr ? JSON.parse(storedDataStr) : {};
@@ -88,7 +94,7 @@ const OnboardingOnePage = () => {
     setUsernameError(null);
     setBirthdateError(null);
     setPalateError(null);
-    
+
     let formattedBirthdate = "";
 
     // Username validation
@@ -148,7 +154,7 @@ const OnboardingOnePage = () => {
         return;
       }
     }
-
+    if (!hasMounted) return null;
     // Update localStorage with new data
     const updatedData = {
       ...storedData,
