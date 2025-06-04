@@ -1,14 +1,12 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import FilterSidebar from "@/components/FilterSidebar";
+import { useState, useEffect, useRef, useCallback } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
-import Footer from "@/components/Footer";
-import "@/styles/pages/_restaurants.scss";
-import Filter from "@/components/Filter/Filter";
 import SkeletonCard from "@/components/SkeletonCard";
+import Filter from "@/components/Filter/Filter";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
+import "@/styles/pages/_restaurants.scss";
 
 interface Restaurant {
   id: string;
@@ -19,27 +17,27 @@ interface Restaurant {
   cuisineNames: string[];
   countries: string;
   priceRange: string;
-  databaseId: number; 
+  databaseId: number;
 }
 
 const RestaurantPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [afterCursor, setAfterCursor] = useState<string | null>(null);
-  const loaderRef = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const observerRef = useRef<HTMLDivElement | null>(null);
+  const isFirstLoad = useRef(true);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
-      id: item.id,  
+      id: item.id,
       slug: item.slug,
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5, 
-      databaseId: item.databaseId || 0, // Default to 0 if not present
+      rating: 4.5,
+      databaseId: item.databaseId || 0,
       cuisineNames: item.cuisines || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
@@ -52,68 +50,47 @@ const RestaurantPage = () => {
       const data = await RestaurantService.fetchAllRestaurants(search, first, after);
       const transformed = transformNodes(data.nodes);
 
-      setRestaurants(prev => {
-        if (!after) {
-          // New search: replace list
-          return transformed;
-        }
-        // Pagination: append unique restaurants only
-        const all = [...prev, ...transformed];
-        const uniqueMap = new Map(all.map(r => [r.id, r]));
+      setRestaurants((prev) => {
+        if (!after) return transformed;
+        const uniqueMap = new Map([...prev, ...transformed].map((r) => [r.id, r]));
         return Array.from(uniqueMap.values());
       });
 
-      setAfterCursor(data.pageInfo.endCursor);
-      setHasMore(data.pageInfo.hasNextPage);
+      setEndCursor(data.pageInfo.endCursor);
+      setHasNextPage(data.pageInfo.hasNextPage);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to fetch restaurants:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  console.log(restaurants);
-
   useEffect(() => {
-    fetchRestaurants("", 8, null);
-  }, []);
-
-  useEffect(() => {
-    fetchRestaurants(debouncedSearchTerm, 8, null);
+    fetchRestaurants(debouncedSearchTerm, isFirstLoad.current ? 16 : 8, null);
+    isFirstLoad.current = false;
   }, [debouncedSearchTerm]);
 
-  const loadMore = useCallback(() => {
-    if (hasMore && !loading) {
-      fetchRestaurants(debouncedSearchTerm, 8, afterCursor);
-    }
-  }, [afterCursor, hasMore, loading]);
-
+  // Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
+        if (entries[0].isIntersecting && hasNextPage && !loading) {
+          fetchRestaurants(debouncedSearchTerm, 8, endCursor);
         }
       },
-      { threshold: 1 }
+      { threshold: 1.0 }
     );
-    if (loaderRef.current) {
-      observer.observe(loaderRef.current);
-    }
+
+    const current = observerRef.current;
+    if (current) observer.observe(current);
+
     return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current);
+      if (current) observer.unobserve(current);
     };
-  }, [loadMore]);
-
-  const filteredRestaurants = searchTerm
-    ? restaurants.filter((restaurant) =>
-      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    : restaurants;
-
+  }, [hasNextPage, loading, debouncedSearchTerm, endCursor]);
 
   return (
-    <div className="restaurants min-h-[70vh] font-inter">
+    <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
           <Filter onFilterChange={() => { }} />
@@ -122,7 +99,6 @@ const RestaurantPage = () => {
               type="text"
               placeholder="Search by Listing Name"
               value={searchTerm}
-              onFocus={() => setShowDropdown(true)}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar__input"
             />
@@ -134,58 +110,45 @@ const RestaurantPage = () => {
                 ✕
               </button>
             )}
-            {showDropdown && (
-              <div className="cuisine-dropdown absolute bg-white shadow-lg z-10 w-full max-h-60 overflow-auto">
-                {restaurants
-                  .filter((rest) =>
-                    rest.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((rest) => (
-                    <div
-                      key={rest.id}
-                      className="cuisine-dropdown__item p-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        setSearchTerm(rest.name);
-                        setShowDropdown(false);
-                      }}
-                    >
-                      {rest.name}
-                    </div>
-                  ))}
-              </div>
-            )}
-
           </div>
         </div>
 
-        <div className="restaurants__content">
-          <div className="restaurants__grid">
-            {filteredRestaurants.map((rest) => (
-              <RestaurantCard key={rest.id} restaurant={rest} />
-            ))}
-            {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-          <div ref={loaderRef} className="mt-4 w-full text-center">
-            {loading && hasMore ? (
-              <div className="restaurants__grid">
-                {[...Array(4)].map((_, i) => (
-                  <SkeletonCard key={`loader-${i}`} />
-                ))}
-              </div>
-            ) : hasMore ? (
-              <div className="restaurants__grid">
-                {[...Array(4)].map((_, i) => (
-                  <SkeletonCard key={`loader-${i}`} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400">No more results</p>
-            )}
-          </div>
+        <div className="restaurants__grid mt-4">
+          {restaurants.map((rest) => (
+            <RestaurantCard key={rest.id} restaurant={rest} />
+          ))}
+          {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
+        </div>
 
+        <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
+          {loading && (
+            <>
+              <svg
+                className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="currentColor"
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="35"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  strokeDasharray="164"
+                  strokeDashoffset="40"
+                />
+              </svg>
+              <span className="text-gray-500 text-sm">Loading more restaurants...</span>
+            </>
+          )}
+          {!hasNextPage && !loading && (
+            <p className="text-gray-400 text-sm">No more restaurants to load.</p>
+          )}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
