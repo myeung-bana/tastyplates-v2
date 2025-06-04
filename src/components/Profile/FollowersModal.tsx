@@ -53,7 +53,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
           ×
         </button>
         <h2 className="text-center text-xl font-semibold py-5">Followers</h2>
-        <div className="divide-y">
+        <div className="border-b border-[#E5E5E5] w-full" />
+        <div>
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               <Image

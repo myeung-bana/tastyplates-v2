@@ -55,7 +55,8 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
           ×
         </button>
         <h2 className="text-center text-xl font-semibold py-5">Following</h2>
-        <div className="divide-y">
+        <div className="border-b border-[#E5E5E5] w-full" />
+        <div>
           {localFollowing.map((user) => (
             <div key={user.id} className="flex items-center gap-3 px-6 py-3">
               <Image
