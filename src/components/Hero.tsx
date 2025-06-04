@@ -155,7 +155,7 @@ const Hero = () => {
                   <input
                     type="text"
                     placeholder="Search by Listing Name"
-                    className="hero__search-input"
+                    className="hero__search-input md:my-3.5"
                     value={listing}
                     onChange={(e) => setListing(e.target.value)}
                   />

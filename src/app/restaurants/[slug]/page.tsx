@@ -10,11 +10,13 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { Review } from "@/data/dummyReviews";
 import ReviewModal from "@/components/ReviewModal";
-import { FaPen, FaRegHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { Dialog } from "@headlessui/react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 
 type tParams = { slug: string };
@@ -38,10 +40,90 @@ const filterReviewsByPalate = (reviews: Review[], targetPalates: string[]) => {
   });
 };
 
+function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
+  const { data: session, status } = useSession();
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // If not logged in, just show the button (no loading, no check)
+  if (!session) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2">
+        <FaRegHeart />
+        <span className="underline">Save</span>
+      </button>
+    );
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!session || !restaurantSlug || initialized) return;
+    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
+      credentials: "include",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) setSaved(data.status === "saved");
+      })
+      .finally(() => {
+        if (isMounted) setInitialized(true);
+      });
+    return () => { isMounted = false; };
+  }, [restaurantSlug, session]);
+
+  const handleToggle = async () => {
+    if (!session) return;
+    setLoading(true);
+    setSaved(prev => !prev);
+    const action = saved ? "unsave" : "save";
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
+      credentials: "include",
+    });
+    const data = await res.json();
+    setSaved(data.status === "saved");
+    setLoading(false);
+  };
+
+  if (!initialized) {
+    return (
+      <button className="restaurant-detail__review-button flex items-center gap-2" disabled>
+        <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
+        <span className="underline text-gray-400">Loading…</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className="restaurant-detail__review-button flex items-center gap-2"
+      onClick={handleToggle}
+      disabled={loading}
+      aria-pressed={saved}
+    >
+      {saved ? <FaHeart className="text-black" /> : <FaRegHeart />}
+      <span className="underline">{saved ? "Saved" : "Save"}</span>
+    </button>
+  );
+}
+
 export default function RestaurantDetail() {
   const [restaurant, setRestaurant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const router = useRouter();
 
   const params = useParams();
   const slug = params?.slug as string;
@@ -55,6 +137,7 @@ export default function RestaurantDetail() {
           id: data.id,
           slug: data.slug,
           name: data.title,
+          databaseId: data.databaseId,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
           cuisines: data.cuisines?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
@@ -131,6 +214,10 @@ export default function RestaurantDetail() {
     console.log("New review:", review);
   };
 
+  const addReview = () => {
+    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+  }
+
   return (
     <div className="restaurant-detail mt-32 md:mt-10">
       <div className="restaurant-detail__container">
@@ -149,7 +236,7 @@ export default function RestaurantDetail() {
                         </div>
                       ))}
                     </div>
-                      <span>{restaurant.listingStreet}</span>
+                    <span>{restaurant.listingStreet}</span>
                     &#8226;
                     <div className="restaurant-detail__price">
                       <span>{restaurant.priceRange}</span>
@@ -157,21 +244,16 @@ export default function RestaurantDetail() {
                   </div>
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
-                  <a
-                    href="/add-review"
+                  {/* <a
+                    href="/listing"
                     className="restaurant-detail__review-button"
-                  // onClick={() => setIsReviewModalOpen(true)}
-                  >
-                    <FaPen className="size-4 md:size-5" />
-                    <span className="underline">Write a Review</span>
-                  </a>
-                  <button
-                    className="restaurant-detail__review-button"
-                    onClick={() => setIsReviewModalOpen(true)}
-                  >
-                    <FaRegHeart className="size-4 md:size-5" />
-                    <span className="underline">Save</span>
-                  </button>
+                  > */}
+                    <button onClick={addReview} className="flex items-center gap-2 hover:underline">
+                      <FaPen className="size-4 md:size-5" />
+                      <span className="underline">Write a Review</span>
+                    </button>
+                  {/* </a> */}
+                  <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
               <div className="flex flex-row gap-6">

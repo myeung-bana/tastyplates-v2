@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GiRoundStar } from 'react-icons/gi';
 
 const  Star = ({ selected = false, onSelect }: {selected: boolean, onSelect: () => void}) => {
@@ -15,6 +15,10 @@ export default function Rating({ totalStars = 5, defaultRating = 0, onRating } :
     totalStars: number, defaultRating: number, onRating?: any}
 ) {
   const [rating, setRating] = useState(defaultRating);
+
+   useEffect(() => {
+    setRating(defaultRating);
+  }, [defaultRating]); // reset rating state when defaultRating changes
 
   const handleSelect = (star: any) => {
     setRating(star);
