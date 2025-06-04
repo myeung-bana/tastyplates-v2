@@ -3,7 +3,6 @@ import React, { FormEvent, useEffect, useState } from "react";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import CustomSelect from "@/components/ui/Select/Select";
-import CustomModal from "@/components/ui/Modal/Modal";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FaPen } from "react-icons/fa";
@@ -12,7 +11,7 @@ import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
 
 const Form = (props: any) => {
-  const { data: session, status } = useSession();
+  const { data: session, update } = useSession();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [step, setStep] = useState<number>(props.step ?? 0);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
@@ -24,12 +23,6 @@ const Form = (props: any) => {
   const [palateError, setPalateError] = useState<string>("");
   const [profileError, setProfileError] = useState<string>("");
   const router = useRouter();
-  const categories = [
-    { key: "no-category", label: "Select a Category" },
-    { key: "category-1", label: "Category 1" },
-    { key: "category-2", label: "Category 2" },
-  ];
-
   const regionOptions = palateOptions.map(option => ({
     key: option.key,
     label: option.label
@@ -38,7 +31,7 @@ const Form = (props: any) => {
   const getAllSelectedPalates = () => {
     return selectedPalates.map(palate => {
       const region = palateOptions.find(option =>
-        option.children.some(child => 
+        option.children.some(child =>
           child.label.toLowerCase() === palate.toLowerCase()
         )
       );
@@ -61,7 +54,7 @@ const Form = (props: any) => {
     setProfileError("");
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      
+
       // Check file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         setProfileError("Profile image must be less than 5MB");
@@ -69,11 +62,9 @@ const Form = (props: any) => {
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setProfilePreview(e.target.result as string);
-          setProfile(e.target.result as string);
-        }
+      reader.onloadend = () => {
+        setProfilePreview(reader.result as string);
+        setProfile(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -81,7 +72,14 @@ const Form = (props: any) => {
 
   const submitReview = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true); // Set loading state
+    setIsLoading(true);
+
+    // Validate palates count
+    if (selectedPalates.length > 2) {
+      setPalateError('You can only select up to 2 palates');
+      setIsLoading(false);
+      return;
+    }
 
     // Validate image size if profile is updated
     if (profile) {
@@ -94,47 +92,55 @@ const Form = (props: any) => {
       }
     }
 
-    // Rest of validation
-    const allPalates = getAllSelectedPalates();
-    if (selectedPalates.length > 2) {
-      setPalateError('You can only select up to 2 palates');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      if (!session?.accessToken) {
+      if (!session?.accessToken || !session?.user?.email) {
         throw new Error('No session token found');
       }
 
-      // Format the palates for storage
-      const formattedPalates = selectedPalates
-        .map(p => p.trim())
-        .join('|');
+      const formattedPalates = selectedPalates.map(p => p.trim()).join('|');
+      const updateData: Record<string, any> = {};
+      
+      if (profile) {
+        updateData.profile_image = profile;
+      }
+      if (aboutMe?.trim()) {
+        updateData.about_me = aboutMe.trim();
+      }
+      if (formattedPalates) {
+        updateData.palates = formattedPalates;
+      }
 
-      // Prepare update data
-      const updateData = {
-        profile_image: profile, // blob data
-        about_me: aboutMe,
-        palates: formattedPalates
-      };
+      // Get response from API
+      const response = await UserService.updateUserFields(updateData, session.accessToken);
 
-      console.log('Update Data:', updateData);
-      await UserService.updateUserFields(
-        updateData,
-        session.accessToken
-      );
+      // Update local storage
+      // const localKey = `userData_${session.user.email}`;
+      // localStorage.setItem(localKey, JSON.stringify({
+      //   ...JSON.parse(localStorage.getItem(localKey) || '{}'),
+      //   image: response.profile_image,
+      //   about_me: aboutMe,
+      //   palates: formattedPalates,
+      // }));
 
-      // Update local storage if needed
-      const localKey = `userData_${session.user?.email}`;
-      const cachedData = JSON.parse(localStorage.getItem(localKey) || '{}');
-      localStorage.setItem(localKey, JSON.stringify({
-        ...cachedData,
-        ...updateData,
-      }));
+      // Update session with direct user field modification
+      await update({
+        ...session,
+        user: {
+          ...session.user,
+          image: response.profile_image,
+          about_me: aboutMe,
+          palates: formattedPalates,
+        }
+      });
 
       setPalateError("");
       setIsSubmitted(true);
+
+      // Redirect after successful update
+      setTimeout(() => {
+        router.push('/profile');
+      }, 2000);
+
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Failed to update profile. Please try again.');
@@ -154,24 +160,24 @@ const Form = (props: any) => {
           .split(/[|,]/)
           .map(p => p.trim())
           .filter(Boolean); // Remove empty strings
-        
+
         setSelectedPalates(palates);
-        
+
         // Find the region that contains any of these palates
         const region = palateOptions.find(option =>
-          option.children.some(child => 
-            palates.some(palate => 
+          option.children.some(child =>
+            palates.some(palate =>
               palate.toLowerCase() === child.label.toLowerCase()
             )
           )
         );
-        
+
         if (region) {
           setSelectedRegion(region.key);
         }
       }
     }
-  }, [session]); // Add session as dependency
+  }, [session]);
 
   const handleRegionChange = (value: string) => {
     setSelectedRegion(value);
@@ -184,7 +190,7 @@ const Form = (props: any) => {
     setSelectedPalates(prev => {
       const normalizedPrev = prev.map(p => p.toLowerCase());
       const normalizedPalate = palate.toLowerCase();
-      
+
       if (normalizedPrev.includes(normalizedPalate)) {
         return prev.filter(p => p.toLowerCase() !== normalizedPalate);
       }
@@ -200,6 +206,59 @@ const Form = (props: any) => {
   return (
     <>
       <div className="font-inter mt-20">
+        {/* Overlay when modal is open */}
+        {isSubmitted && (
+          <>
+            {/* Overlay */}
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-[1000]"></div>
+            {/* Modal */}
+            <div className="fixed inset-0 flex items-center justify-center z-[1010]">
+              <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
+                {/* Exit button */}
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-orange-600 transition-colors text-2xl"
+                  onClick={() => setIsSubmitted(false)}
+                  aria-label="Close"
+                  tabIndex={0}
+                >
+                  &times;
+                </button>
+                <div className="flex flex-col items-center">
+                  <div className="mb-4">
+                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                      <circle cx="28" cy="28" r="28" fill="#FFF3E6" />
+                      <path
+                        d="M18 29.5L25 36.5L38 23.5"
+                        stroke="#E36B00"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-orange-700 mb-2">
+                    Profile Updated!
+                  </h2>
+                  <p className="mb-6 text-center text-gray-700">
+                    Your profile have been successfully updated.
+                    <br />
+                    You can continue exploring the app.
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* Animation */}
+            <style jsx>{`
+              .animate-fade-in {
+                animation: fadeInScale 0.3s cubic-bezier(.4,2,.6,1) both;
+              }
+              @keyframes fadeInScale {
+                0% { opacity: 0; transform: scale(0.95);}
+                100% { opacity: 1; transform: scale(1);}
+              }
+            `}</style>
+          </>
+        )}
         <div className="flex flex-col justify-center items-center pt-10">
           <h1 className="text-[#31343F] text-2xl font-bold">Edit Profile</h1>
           <form
@@ -246,7 +305,7 @@ const Form = (props: any) => {
               <div className="listing__input-group">
                 <textarea
                   name="name"
-                  className={`listing__input ${isLoading ? 'opacity-50' : ''}`}
+                  className={`listing__input resize-none ${isLoading ? 'opacity-50' : ''}`}
                   placeholder="About Me"
                   value={aboutMe}
                   onChange={handleAboutMeChange}
@@ -259,7 +318,7 @@ const Form = (props: any) => {
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
-                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? 'opacity-50' : ''}`}
+                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   placeholder="Select your region"
                   items={regionOptions}
                   onChange={handleRegionChange}
@@ -282,22 +341,21 @@ const Form = (props: any) => {
                           key={child.key}
                           type="button"
                           onClick={() => togglePalate(child.label)}
-                          className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] ${
-                            selectedPalates.some(p => 
-                              p.toLowerCase() === child.label.toLowerCase()
-                            )
+                          disabled={isLoading}
+                          className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] 
+                            ${selectedPalates.some(p => p.toLowerCase() === child.label.toLowerCase())
                               ? 'bg-[#F1F1F1] !font-bold'
                               : 'bg-[##FCFCFC] text-gray-600 hover:bg-gray-200'
-                          }`}
+                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {child.label}
                         </button>
-                    ))}
+                      ))}
                     {selectedPalates.length > 0 && (
                       <div className="w-full mt-2">
                         <p className="text-sm text-gray-600">
                           Selected palates: {
-                            getAllSelectedPalates().slice(0, 4).map(p => p.palate).join(", ") + 
+                            getAllSelectedPalates().slice(0, 4).map(p => p.palate).join(", ") +
                             (getAllSelectedPalates().length > 4 ? "..." : "")
                           }
                         </p>
@@ -313,9 +371,9 @@ const Form = (props: any) => {
               )}
             </div>
             <div className="flex gap-4 items-center m-auto">
-              <button 
-                className="listing__button flex items-center justify-center gap-2" 
-                type="submit" 
+              <button
+                className="listing__button flex items-center justify-center gap-2"
+                type="submit"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -341,12 +399,6 @@ const Form = (props: any) => {
             </div>
           </form>
         </div>
-        <CustomModal
-          header="Listing Submitted"
-          content="Your listing has been successfully submitted! Approval typically takes 1–3 working days. Once approved, your reviews will be uploaded automatically."
-          isOpen={isSubmitted}
-          setIsOpen={() => setIsSubmitted(!isSubmitted)}
-        />
       </div>
     </>
   );

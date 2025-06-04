@@ -32,12 +32,13 @@ import { UserService } from '@/services/userService';
 
 const Profile = () => {
   const { data: session } = useSession();
-  const [palates, setPalates] = useState<string[]>([]);
+  const [nameLoading, setNameLoading] = useState(true);
+  const [aboutMeLoading, setAboutMeLoading] = useState(true);
+  const [palatesLoading, setPalatesLoading] = useState(true);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [followers, setFollowers] = useState<any[]>([]);
   const [following, setFollowing] = useState<any[]>([]);
-  const [palatesLoading, setPalatesLoading] = useState(true);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -45,6 +46,8 @@ const Profile = () => {
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const [userData, setUserData] = useState<any>(null);
+  const [palates, setPalates] = useState<string[]>([]);
 
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
     // 
@@ -57,22 +60,6 @@ const Profile = () => {
   const reviews = getAllReviews();
   const user = session?.user;
   const targetUserId = user?.id;
-  const WP_BASE = process.env.NEXT_PUBLIC_WP_API_URL || "";
-
-  // Fetch palates
-  const fetchPalates = async () => {
-    setPalatesLoading(true);
-    try {
-      const data = await UserService.getUserPalates(targetUserId!, session?.accessToken);
-      if (Array.isArray(data.palates)) {
-        setPalates(data.palates);
-      }
-    } catch (err) {
-      console.error('Error fetching palates:', err);
-    } finally {
-      setPalatesLoading(false);
-    }
-  };
 
   // Fetch following
   const fetchFollowing = async () => {
@@ -102,12 +89,26 @@ const Profile = () => {
     return followersList;
   };
 
+  // Separate effect for user data loading states
+  useEffect(() => {
+    if (!session?.user) {
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+      return;
+    }
+
+    setUserData(session.user);
+    setNameLoading(false);
+    setAboutMeLoading(false);
+    setPalatesLoading(false);
+  }, [session?.user]);
+
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
 
     setLoading(true);
     Promise.all([
-      fetchPalates(),
       (async () => {
         setFollowingLoading(true);
         setFollowersLoading(true);
@@ -234,25 +235,6 @@ const Profile = () => {
       ),
     },
   ];
-  // Filter restaurants based on the selected cuisine type
-  // const filteredRestaurants = restaurants.filter((restaurant) =>
-  //   restaurant.cuisineIds.some((cuisineId) =>
-  //     cuisines
-  //       .find((cuisine) => cuisine.id === cuisineId)
-  //       ?.name.toLowerCase()
-  //       .includes(searchTerm.toLowerCase())
-  //   )
-  // );
-
-  const handleFilterChange = (filterType: string, value: string) => {
-    // TODO: Implement filter logic
-    console.log(`Filter changed: ${filterType} = ${value}`);
-  };
-
-  // const handleCuisineSelect = (cuisineName: string) => {
-  //   setSearchTerm(cuisineName); // Set the search term to the selected cuisine
-  //   setShowDropdown(false); // Hide the dropdown after selection
-  // };
 
   return (
     <>
@@ -268,20 +250,20 @@ const Profile = () => {
           <div className="flex gap-4 items-start w-full">
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-medium truncate">
-                {loading ? (
+                {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  user?.name || ""
+                  userData?.display_name || ""
                 )}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap">
-                {loading ? (
+                {palatesLoading ? (
                   <>
                     <span className="inline-block w-16 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                     <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                   </>
                 ) : (
-                  user?.palates?.split(/[|,]\s*/).map((palate, index) => {
+                  userData?.palates?.split(/[|,]\s*/).map((palate: string, index: number) => {
                     const capitalizedPalate = palate
                       .trim()
                       .split(' ')
@@ -309,10 +291,10 @@ const Profile = () => {
             </div>
           </div>
           <p className="text-sm">
-            {loading ? (
+            {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              user?.about_me
+              userData?.about_me
             )}
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">

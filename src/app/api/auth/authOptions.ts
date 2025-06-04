@@ -110,7 +110,7 @@ export const authOptions: AuthOptions = {
             }
             return true;
         },
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger, session }) {            
             if (user) {
                 token.user = {
                     ...user,
@@ -141,12 +141,26 @@ export const authOptions: AuthOptions = {
                     }
                 }
             }
+
+            // Handle updates to user data
+            if (trigger === "update" && session?.user) {
+                token.user = {
+                    ...(typeof token.user === 'object' && token.user !== null ? token.user : {}),
+                    image: session.user.image,
+                    about_me: session.user.about_me,
+                    palates: session.user.palates,
+                    birthdate: session.user.birthdate,
+                    email: session.user.email,
+                    language: session.user.language,
+                }
+            }
+
             return token;
         },
-        async session({ session, token }: { session: any; token: any }) {
+        async session({ session, token }) {
             if (token) {
-                session.user = token.user;
-                session.accessToken = token.accessToken;
+                session.user = token.user as any;
+                session.accessToken = token.accessToken as string | undefined;
             }
             return session;
         },
