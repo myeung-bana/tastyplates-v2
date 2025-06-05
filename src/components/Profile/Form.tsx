@@ -241,8 +241,6 @@ const Form = (props: any) => {
                   </h2>
                   <p className="mb-6 text-center text-gray-700">
                     Your profile have been successfully updated.
-                    <br />
-                    You can continue exploring the app.
                   </p>
                 </div>
               </div>

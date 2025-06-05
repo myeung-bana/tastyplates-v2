@@ -306,8 +306,6 @@ const Settings = (props: any) => {
                   </h2>
                   <p className="mb-6 text-center text-gray-700">
                     Your settings have been successfully saved.
-                    <br />
-                    You can continue exploring the app.
                   </p>
                   <button
                     className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold shadow transition"
