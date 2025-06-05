@@ -1,21 +1,21 @@
 "use client";
-import React, {  useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
-import { restaurants } from "@/data/dummyRestaurants";
-import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
 import { Tab, Tabs } from "@heroui/tabs";
 import Image from "next/image";
 import Link from "next/link";
 import ReviewCard from "../ReviewCard";
 import { Masonry } from "masonic";
-import { getAllReviews } from "@/utils/reviewUtils";
 import { useSession } from "next-auth/react";
 import FollowersModal from "./FollowersModal";
 import FollowingModal from "./FollowingModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { UserService } from '@/services/userService';
+import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 
 interface Restaurant {
   id: string;
@@ -28,10 +28,10 @@ interface Restaurant {
   priceRange: string;
   databaseId: number;
 }
-import { UserService } from '@/services/userService';
 
 const Profile = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession(); // Add status from useSession
+  const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [nameLoading, setNameLoading] = useState(true);
   const [aboutMeLoading, setAboutMeLoading] = useState(true);
   const [palatesLoading, setPalatesLoading] = useState(true);
@@ -42,24 +42,72 @@ const Profile = () => {
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [palates, setPalates] = useState<string[]>([]);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const observerRef = useRef<HTMLDivElement | null>(null);
+  const isFirstLoad = useRef(true);
+  const user = session?.user;
+  const targetUserId = user?.id;
 
-  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
-    // 
+  const loadMore = async () => {
+    if (loading || !hasNextPage || !targetUserId || status === "loading") return;
+    setLoading(true);
+
+    try {
+      const first = isFirstLoad.current ? 16 : 8;
+      const { reviews: newReviews, pageInfo } = await ReviewService.fetchUserReviews(
+        targetUserId,
+        first,
+        endCursor
+      );
+
+      // Check for duplicates using Set and reviewId
+      const existingIds = new Set(reviews.map(review => review.id));
+      const uniqueNewReviews = newReviews.filter((review: ReviewedDataProps) => !existingIds.has(review.id));
+
+      setReviews(prev => [...prev, ...uniqueNewReviews]);
+      setEndCursor(pageInfo.endCursor);
+      setHasNextPage(pageInfo.hasNextPage);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    } finally {
+      setLoading(false);
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
+    }
   };
 
   useEffect(() => {
-    fetchRestaurants("", 8, null);
-  }, []);
+    if (status !== "loading" && targetUserId) {
+      loadMore(); // Only load when session is ready and we have the userId
+    }
+  }, [status, targetUserId]); // Add dependencies
 
-  const reviews = getAllReviews();
-  const user = session?.user;
-  const targetUserId = user?.id;
+  // Setup Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasNextPage && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const current = observerRef.current;
+    if (current) observer.observe(current);
+
+    return () => {
+      if (current) observer.unobserve(current);
+    };
+  }, [hasNextPage, loading]);
 
   // Fetch following
   const fetchFollowing = async () => {
@@ -97,7 +145,6 @@ const Profile = () => {
       setPalatesLoading(true);
       return;
     }
-
     setUserData(session.user);
     setNameLoading(false);
     setAboutMeLoading(false);
@@ -176,14 +223,40 @@ const Profile = () => {
       id: "reviews",
       label: "Reviews",
       content: (
-        <Masonry
-          items={reviews as any}
-          render={ReviewCard}
-          columnGutter={32}
-          maxColumnWidth={304}
-          columnCount={4}
-          maxColumnCount={4}
-        />
+        <>
+          <Masonry
+            items={reviews as any}
+            render={ReviewCard}
+            columnGutter={32}
+            maxColumnWidth={304}
+            columnCount={4}
+            maxColumnCount={4}
+          />
+          <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
+            {loading && (
+              <>
+                <svg
+                  className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="35"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeDasharray="164"
+                    strokeDashoffset="40"
+                  />
+                </svg>
+                <span className="text-gray-500 text-sm">Loading...</span>
+              </>
+            )}
+          </div>
+        </>
       ),
     },
     {
@@ -238,14 +311,15 @@ const Profile = () => {
 
   return (
     <>
-      <div className="flex self-center justify-center items-center gap-8 mt-10 mb-8 max-w-[624px]">
-        <Image
-          src={user?.image || "/profile-icon.svg"}
-          width={120}
-          height={120}
-          className="rounded-full"
-          alt="profile"
-        />
+      <div className="flex self-center justify-center items-start gap-8 mt-10 mb-8 max-w-[624px]">
+        <div className="w-[120px] h-[120px] relative">
+          <Image
+            src={user?.image || "/profile-icon.svg"}
+            fill
+            className="rounded-full object-cover"
+            alt="profile"
+          />
+        </div>
         <div className="flex flex-col gap-4 flex-1">
           <div className="flex gap-4 items-start w-full">
             <div className="flex-1 min-w-0">
@@ -253,7 +327,7 @@ const Profile = () => {
                 {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  userData?.display_name || ""
+                  userData?.display_name || userData?.name || ""
                 )}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap">

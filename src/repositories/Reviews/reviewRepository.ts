@@ -84,15 +84,10 @@ export class ReviewRepository {
     }
   }
 
-  static async getUserReviews(userId: number, token: string | null, first = 16, after: string | null = null) {
+  static async getUserReviews(userId: number, first = 16, after: string | null = null) {
     const { data } = await client.query({
       query: GET_USER_REVIEWS,
       variables: { userId, first, after },
-      // context: {
-      //   headers: {
-      //     Authorization: `Bearer ${token}`
-      //   }
-      // }
     });
 
     return {

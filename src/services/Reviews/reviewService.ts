@@ -55,9 +55,9 @@ export class ReviewService {
         }
     }
 
-    static async fetchUserReviews(userId: number, token: string | null, first = 16, after: string | null = null) {
+    static async fetchUserReviews(userId: number, first = 16, after: string | null = null) {
         try {
-            const response = await ReviewRepository.getUserReviews(userId, token, first, after);
+            const response = await ReviewRepository.getUserReviews(userId, first, after);
             return response;
         } catch (error) {
             console.error('Error fetching user reviews:', error);
