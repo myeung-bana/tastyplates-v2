@@ -16,7 +16,7 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  palatesNames: string[];
+  palatesNames?: string[];
   countries: string;
   priceRange: string;
 }

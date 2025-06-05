@@ -5,7 +5,7 @@ export const GET_ALL_CATEGORIES = gql`
     query GetAllCategories {
         listingCategories {
             nodes {
-                id
+                databaseId
                 name
             }
         }

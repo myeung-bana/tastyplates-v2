@@ -14,7 +14,11 @@ export const GET_LISTINGS = gql`
                 slug
                 content
                 listingStreet
-                palates
+                palates {
+                    nodes {
+                        name
+                    }
+                }
                 featuredImage {
                     node {
                         sourceUrl
@@ -43,7 +47,11 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         title
         slug
         content
-        palates
+        palates {
+            nodes {
+                name
+            }
+        }
         databaseId
         listingStreet
                 listingDetails {

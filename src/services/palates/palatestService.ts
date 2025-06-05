@@ -1,12 +1,12 @@
-import { CategoryRepository } from "@/repositories/category/categoryRepository";
+import { PalatesRepository } from "@/repositories/palates/palatesRepository";
 
-export const CategoryService = {
+export const PalatesService = {
     async fetchPalates() {
         try {
-            return await CategoryRepository.getCategories();
+            return await PalatesRepository.getPalates();
         } catch (error) {
-            console.error('Error fetching categories:', error);
-            throw new Error('Failed to fetch categories');
+            console.error('Error fetching Palates:', error);
+            throw new Error('Failed to fetch Palates');
         }
     }
 };
