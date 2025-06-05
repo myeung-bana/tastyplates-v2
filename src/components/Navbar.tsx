@@ -239,7 +239,7 @@ export default function Navbar(props: any) {
                         <Link href="/listing" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Write a Review
                         </Link>
-                        <Link href="/listing/add" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href="/listing/explanation" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Add a Listing
                         </Link>
                       </div>
