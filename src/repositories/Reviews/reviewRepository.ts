@@ -53,7 +53,7 @@ export class ReviewRepository {
 
   static async getReviewDrafts(accessToken?: string): Promise<any> {
     try {
-      const response = await this.request('/wp-json/wp/v2/api/comments?type=listing&status=hold', {
+      const response = await this.request('/wp-json/wp/v2/api/comments?type=listing_draft&status=hold', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

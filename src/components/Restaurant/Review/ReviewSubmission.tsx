@@ -15,6 +15,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
+import { useRouter } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -47,9 +48,11 @@ const ReviewSubmissionPage = () => {
   // console.log('session', session?.accessToken);
   // const { token, isSignedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
   // const [ratingError, setRatingError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
   const [uploadedImageError, setUploadedImageError] = useState('');
+  const router = useRouter();
   const [restaurant, setRestaurant] = useState<
     Omit<Restaurant, "id" | "reviews">
   >({
@@ -171,7 +174,7 @@ const ReviewSubmissionPage = () => {
     setReviewStars(rate);
   };
 
-  const submitReview = async (e: FormEvent) => {
+  const submitReview = async (e: FormEvent, mode: 'publish' | 'draft') => {
     e.preventDefault();
     let hasError = false;
 
@@ -191,7 +194,12 @@ const ReviewSubmissionPage = () => {
 
     if (hasError) return;
 
-    setIsLoading(true);
+    if (mode === 'publish') {
+      setIsLoading(true);
+    } else if (mode === 'draft') {
+      setIsSavingAsDraft(true);
+    }
+
 
     try {
       const reviewData = {
@@ -201,10 +209,15 @@ const ReviewSubmissionPage = () => {
         content,
         review_images_idz: selectedFiles,
         recognitions: restaurant.recognition || [],
+        mode,
       };
 
       await ReviewService.postReview(reviewData, session?.accessToken ?? "");
-      setIsSubmitted(true);
+      if (mode === 'publish') {
+        setIsSubmitted(true);
+      } else if (mode === 'draft') {
+        router.push('/listing');
+      }
 
       // Reset form fields here:
       setReviewStars(0);
@@ -246,7 +259,7 @@ const ReviewSubmissionPage = () => {
             <h1 className="submitRestaurants__title">
               {restaurantName}
             </h1>
-            <form className="submitRestaurants__form" onSubmit={submitReview}>
+            <form className="submitRestaurants__form">
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">Rating</label>
                 <div className="submitRestaurants__input-group">
@@ -374,7 +387,11 @@ const ReviewSubmissionPage = () => {
                 </Link>
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
-                <button className="submitRestaurants__button flex items-center gap-2" type="submit">
+                <button
+                  className="submitRestaurants__button flex items-center gap-2"
+                  type="submit"
+                  onClick={(e) => submitReview(e, 'publish')}
+                >
                   {isLoading && (
                     <svg
                       className="animate-spin w-5 h-5 text-white"
@@ -393,12 +410,31 @@ const ReviewSubmissionPage = () => {
                       />
                     </svg>
                   )}
-                  Submit Listing
+                  Post Review
                 </button>
                 <button
-                  className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
-                  type="button"
+                  className="flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                  type="submit"
+                  onClick={(e) => submitReview(e, 'draft')}
                 >
+                  {isSavingAsDraft && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-[#494D5D]"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                   Save and exit
                 </button>
               </div>
