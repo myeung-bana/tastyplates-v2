@@ -1,15 +1,12 @@
 import Image from "next/image";
-import Link from "next/link";
-import { FiStar } from "react-icons/fi";
-import { users } from "@/data/dummyUsers";
-import { palates } from "@/data/dummyPalate";
-import { restaurants } from "@/data/dummyRestaurants";
-import { useState, useEffect } from "react";
-import ModalPopup from "./ModalPopup";
-import ReviewDetailModal from "./ModalPopup2";
+import ReviewDetailModal from "./ReviewDetailModal";
 import { stripTags } from "../lib/utils"
 // import '@fortawesome/fontawesome-free/css/all.min.css';
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
+import { useEffect, useState } from "react";
+import { BsFillStarFill } from "react-icons/bs";
+import { GiRoundStar } from "react-icons/gi";
+import Photo from "../../public/images/default-image.png";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -32,17 +29,17 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
             ? data.reviewImages[0].sourceUrl
-            : "http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+            : Photo
           }
           alt="Review"
           width={400}
           height={600}
-          className="review-card__image rounded-2xl max-h-[226px] sm:max-h-[405px] hover:cursor-pointer"
+          className="review-card__image rounded-2xl min-h-[233px] max-h-[236px] md:min-h-[228px] md:max-h-[405px] hover:cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />
       </div>
 
-      <div className="review-card__content">
+      <div className="review-card__content mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           <Image
             src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
@@ -67,8 +64,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           <div className="rate-container ml-auto">
               <div className="review-detail-meta">
                 <span className="ratings">
-                  <i className="fa fa-star">
-                  </i>
+                  <Image src="/star-filled.svg" width={16} height={16} className="size-3 md:size-4" alt="star icon" />
                   <i className="rating-counter">
                     {data.reviewStars}
                   </i>
@@ -77,8 +73,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           </div>
         </div>
         <br></br>
-        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
-        <p className="review-card__text w-[304] text-[10px] sm:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
+        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
+        <p className="review-card__text w-[304] text-[10px] md:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>

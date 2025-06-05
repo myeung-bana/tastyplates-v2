@@ -5,6 +5,7 @@ export interface Listing {
     content: string;
     listingStreet: string;
     palates: string[];
+    databaseId?: number;
     listingDetails: {
         googleMapUrl: {
             latitude: string

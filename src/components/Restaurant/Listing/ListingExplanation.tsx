@@ -21,7 +21,7 @@ const ListingExplanation = () =>
                   Acknowledge and Continue
                 </Link>
               </div>
-              <Image src="/images/Iisting-backdrop-sp.png" width={757} height={546} className="w-full h-[546px]" alt="backdrop image" />
+              <Image src="/images/Iisting-backdrop-sp.png" width={757} height={546} className="w-full h-[546px] md:hidden" alt="backdrop image" />
         </div>
 </div>
 
