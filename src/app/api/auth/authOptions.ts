@@ -26,19 +26,12 @@ export const authOptions: AuthOptions = {
                 if (!credentials) return null;
                 const cookieStore = await cookies();
                 try {
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
-                    const res = await fetch(`${API_BASE_URL}/wp-json/jwt-auth/v1/token`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            username: credentials.email,
-                            password: credentials.password,
-                        }),
+                    const data = await UserService.login({
+                        email: credentials.email,
+                        password: credentials.password
                     });
 
-                    const data = await res.json();
-
-                    if (res.ok && data.token) {
+                    if (data.token) {
                         return {
                             id: data.id ?? "",
                             userId: data.id ?? 0,
