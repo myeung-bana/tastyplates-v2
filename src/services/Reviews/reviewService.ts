@@ -30,6 +30,7 @@ export class ReviewService {
             review_stars: reviewData.review_stars || 0,
             review_images_idz: reviewData.review_images_idz || [],
             recognitions: reviewData.recognitions || [],
+            mode: reviewData.mode,
         };
         await ReviewRepository.createReview(formattedData, accessToken);
 

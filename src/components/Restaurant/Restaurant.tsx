@@ -15,10 +15,10 @@ interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisineNames: string[];
   countries: string;
   priceRange: string;
   databaseId: number;
+  palatesNames?: string[];
 }
 
 const Restaurant = () => {
@@ -39,7 +39,7 @@ const Restaurant = () => {
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
       rating: 4.5,
       databaseId: item.databaseId || 0, 
-      cuisineNames: item.cuisines || [],
+      palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
     }));
