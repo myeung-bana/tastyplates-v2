@@ -62,6 +62,7 @@ const OnboardingOnePage = () => {
   useEffect(() => {
     if (!initialized) return;
 
+    if (!hasMounted) return;
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
