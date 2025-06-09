@@ -35,6 +35,7 @@ export class ReviewRepository {
     const { data } = await client.query({
       query: GET_COMMENT_REPLIES,
       variables: { id },
+      fetchPolicy: "no-cache",
     });
 
     return data?.comment?.replies?.nodes || [];
@@ -94,5 +95,21 @@ export class ReviewRepository {
       reviews: data.comments.nodes ?? [],
       pageInfo: data.comments.pageInfo ?? { endCursor: null, hasNextPage: false }
     };
+  }
+
+  static async toggleCommentLike(commentId: number, like: boolean, accessToken: string): Promise<void> {
+    const body = JSON.stringify({
+      comment_id: commentId,
+      like: like,
+    });
+
+    await this.request('/wp-json/wp/v2/api/comments/comment-like', {
+      method: 'POST',
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
   }
 }
