@@ -26,19 +26,12 @@ export const authOptions: AuthOptions = {
                 if (!credentials) return null;
                 const cookieStore = await cookies();
                 try {
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
-                    const res = await fetch(`${API_BASE_URL}/wp-json/jwt-auth/v1/token`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            username: credentials.email,
-                            password: credentials.password,
-                        }),
+                    const data = await UserService.login({
+                        email: credentials.email,
+                        password: credentials.password
                     });
 
-                    const data = await res.json();
-
-                    if (res.ok && data.token) {
+                    if (data.token) {
                         return {
                             id: data.id ?? "",
                             userId: data.id ?? 0,
@@ -87,10 +80,11 @@ export const authOptions: AuthOptions = {
                     return '/onboarding';
                 }
                 try {
-                    const response = await UserRepository.checkGoogleUser(user.email!) as { 
+                    const response = await UserRepository.checkGoogleUser(user.email!) as {
                         status: number; 
                         message?: string;
                         token?: string;
+                        id?: number;
                     };
                     if (response.status !== 200) {
                         const cookieStore = await cookies();
@@ -99,6 +93,7 @@ export const authOptions: AuthOptions = {
                         return '/';
                     }
                     user.token = response.token;
+                    user.userId = response.id;
                     user.birthdate = '';
                     user.provider = 'google';
                     return true;
@@ -108,11 +103,12 @@ export const authOptions: AuthOptions = {
             }
             return true;
         },
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger, session }) {            
             if (user) {
                 token.user = {
                     ...user,
-                    provider: account?.provider || 'credentials'
+                    provider: account?.provider || 'credentials',
+                    userId: user.userId || user.id // Handle both Google and credentials cases
                 };
                 token.accessToken = user.token;
 
@@ -120,22 +116,44 @@ export const authOptions: AuthOptions = {
                 if (user.email && token.accessToken) {
                     try {
                         const userData = await UserService.getCurrentUser(token.accessToken as string);
-                        if (userData?.profile_image) {
-                            (token.user as User).id = userData.ID;
-                            (token.user as User).userId = userData.ID;
-                            (token.user as User).image = userData.profile_image;
+                        if (userData) {
+                            (token.user as any).userId = userData.ID || userData.id;
+                            (token.user as any).id = userData.ID || userData.id;
+                            if (userData.profile_image) {
+                                (token.user as any).image = userData.profile_image;
+                            }
+                            if (userData.palates) {
+                                (token.user as any).palates = userData.palates;
+                            }
+                            if (userData.about_me) {
+                                (token.user as any).about_me = userData.about_me;
+                            }
                         }
                     } catch {
-                        // ignore error, fallback to existing image
+                        // ignore error, fallback to existing data
                     }
                 }
             }
+
+            // Handle updates to user data
+            if (trigger === "update" && session?.user) {
+                token.user = {
+                    ...(typeof token.user === 'object' && token.user !== null ? token.user : {}),
+                    image: session.user.image,
+                    about_me: session.user.about_me,
+                    palates: session.user.palates,
+                    birthdate: session.user.birthdate,
+                    email: session.user.email,
+                    language: session.user.language,
+                }
+            }
+
             return token;
         },
-        async session({ session, token }: { session: any; token: any }) {
+        async session({ session, token }) {
             if (token) {
-                session.user = token.user;
-                session.accessToken = token.accessToken;
+                session.user = token.user as any;
+                session.accessToken = token.accessToken as string | undefined;
             }
             return session;
         },
