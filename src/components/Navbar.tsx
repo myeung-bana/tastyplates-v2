@@ -7,7 +7,6 @@ import "@/styles/components/_navbar.scss";
 import "@/styles/components/_hero.scss";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
-import ContinueRegistrationModal from './ContinueRegistrationModal';
 import { FiSearch } from "react-icons/fi";
 import Image from "next/image";
 import CustomPopover from "./ui/Popover/Popover";
