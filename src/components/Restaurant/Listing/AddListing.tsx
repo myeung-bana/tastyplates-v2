@@ -24,7 +24,7 @@ const AddListingPage = (props: any) => {
     longitude: 0,
     category: "",
     name: "",
-    priceRange: "",
+    priceRange: "", 
     palates: [], // This state is not directly used for palates in submitListing, consider removing or re-evaluating its purpose
     image: "", // This state is not directly used for images in submitListing, consider removing or re-evaluating its purpose
     recognition: [], // This state is not directly used for recognition, consider removing or re-evaluating its purpose
