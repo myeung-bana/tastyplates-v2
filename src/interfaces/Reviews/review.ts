@@ -2,6 +2,7 @@ export interface ReviewedDataProps {
   databasedId: number;
   id: number;
   reviewMainTitle: string;
+  commentLikes: string;
   content: string;
   uri: string;
   reviewStars: string;
