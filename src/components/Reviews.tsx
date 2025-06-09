@@ -25,6 +25,7 @@ const Reviews = () => {
 
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
+  const isLoadingOnce = useRef(false);
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -63,7 +64,10 @@ const Reviews = () => {
   };
 
   useEffect(() => {
-    loadMore(); // Initial load
+    if (!isLoadingOnce.current) {
+      isLoadingOnce.current = true;
+      loadMore();
+    }
   }, []);
 
   // Setup Intersection Observer
