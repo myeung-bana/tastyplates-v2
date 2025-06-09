@@ -17,7 +17,8 @@ import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { Dialog } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-
+import SignupModal from "@/components/SignupModal";
+import SigninModal from "@/components/SigninModal";
 
 type tParams = { slug: string };
 
@@ -46,6 +47,8 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showSignin, setShowSignin] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,10 +107,31 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 
   if (!session) {
     return (
-      <button className="restaurant-detail__review-button flex items-center gap-2">
-        <FaRegHeart />
-        <span className="underline">Save</span>
-      </button>
+      <>
+        <button
+          className="restaurant-detail__review-button flex items-center gap-2"
+          onClick={() => setShowSignup(true)}
+        >
+          <FaRegHeart />
+          <span className="underline">Save</span>
+        </button>
+        <SignupModal
+          isOpen={showSignup}
+          onClose={() => setShowSignup(false)}
+          onOpenSignin={() => {
+            setShowSignup(false);
+            setShowSignin(true);
+          }}
+        />
+        <SigninModal
+          isOpen={showSignin}
+          onClose={() => setShowSignin(false)}
+          onOpenSignup={() => {
+            setShowSignin(false);
+            setShowSignup(true);
+          }}
+        />
+      </>
     );
   }
 
