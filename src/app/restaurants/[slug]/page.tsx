@@ -178,7 +178,7 @@ export default function RestaurantDetail() {
           name: data.title,
           databaseId: data.databaseId,
           image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-          cuisines: data.cuisines?.nodes || [],
+          palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
           phone: data.phone || "Not provided",
@@ -268,14 +268,13 @@ export default function RestaurantDetail() {
                   <h1 className="restaurant-detail__name">{restaurant.name}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
-                      {restaurant.cuisines.map((cuisine: { id: string; name: string }, index: number) => (
-                        <div className="flex items-center gap-2" key={`cuisine-${cuisine.id}-${index}`}>
+                      {restaurant.palates.map((palate: { name: string }, index: number) => (
+                        <div className="flex items-center gap-2" key={`palate-${index}`}>
                           {index > 0 && <span>&#8226;</span>}
-                          <span className="cuisine-tag">{cuisine.name}</span>
+                          <span className="cuisine-tag">{palate.name}</span>
                         </div>
                       ))}
                     </div>
-                    <span>{restaurant.listingStreet}</span>
                     &#8226;
                     <div className="restaurant-detail__price">
                       <span>{restaurant.priceRange}</span>
@@ -287,10 +286,10 @@ export default function RestaurantDetail() {
                     href="/listing"
                     className="restaurant-detail__review-button"
                   > */}
-                    <button onClick={addReview} className="flex items-center gap-2 hover:underline">
-                      <FaPen className="size-4 md:size-5" />
-                      <span className="underline">Write a Review</span>
-                    </button>
+                  <button onClick={addReview} className="flex items-center gap-2 hover:underline">
+                    <FaPen className="size-4 md:size-5" />
+                    <span className="underline">Write a Review</span>
+                  </button>
                   {/* </a> */}
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>

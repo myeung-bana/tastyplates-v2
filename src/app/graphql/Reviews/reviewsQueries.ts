@@ -85,3 +85,70 @@ query GetCommentWithReplies($id: ID!) {
   }
 }
 `;
+
+export const GET_USER_REVIEWS = gql`
+  query GetUserReviews($userId: ID!, $first: Int = 16, $after: String) {
+    comments(
+      where: { 
+        commentType: "listing",
+        userId: $userId,
+        orderby: COMMENT_DATE,
+        order: DESC 
+      }
+      first: $first
+      after: $after
+    ) {
+      nodes {
+        databaseId
+        id
+        uri
+        reviewMainTitle
+        reviewStars
+        date
+        content(format: RENDERED)
+        reviewImages {
+          databaseId
+          id
+          sourceUrl
+        }
+        author {
+          name
+            node {
+              ... on User {
+              id
+              databaseId
+              name
+              palates
+              avatar {
+                url
+              }  
+            }
+          }
+        }
+        commentedOn {
+          node {
+            ... on Listing {
+              databaseId
+              title
+              slug
+              fieldMultiCheck90
+              featuredImage {
+                node {
+                  databaseId
+                  altText
+                  mediaItemUrl
+                  mimeType
+                  mediaType
+                }
+              }
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;

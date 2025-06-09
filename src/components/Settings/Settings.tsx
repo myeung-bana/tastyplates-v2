@@ -27,7 +27,7 @@ const formatDateForDisplay = (dateString: string) => {
 };
 
 const Settings = (props: any) => {
-  const { data: session } = useSession();
+  const { data: session, status, update } = useSession(); // Add status from useSession
   const [userData, setUserData] = useState<any>(null);
   const [isPersonalInfoLoading, setIsPersonalInfoLoading] = useState(true);
   const [setting, setSetting] = useState<any>([]);
@@ -50,41 +50,6 @@ const Settings = (props: any) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isGoogleAuth = session?.user?.provider === 'google';
-
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement | any>
-  ) => {
-    if (event.target.files && event.target.files?.length > 0) {
-      const selectedFile = event.target.files;
-      // setSelectedFiles([])
-      console.log(selectedFile.length, "length");
-      let imageList: string[] = [];
-      for (let i = 0; i < selectedFile.length; i++) {
-        let reader = new FileReader();
-        const file = selectedFile[i];
-        const length = selectedFile.length;
-        reader.onload = function (e) {
-          console.log(length, "length");
-          // console.log(reader.result as string, 'hello')
-          imageList.push(reader.result as string);
-          console.log(
-            imageList,
-            "image list 0",
-            i,
-            selectedFile.length,
-            selectedFile.length - 1
-          );
-          if (length - 1 == i) {
-            //   setSelectedFiles(imageList)
-            //   setIsDoneSelecting(true)
-          }
-        }; // Would see a path?
-        reader.readAsDataURL(file);
-        // console.log(selectedFile.length, 'length', url)
-      }
-      console.log(imageList, "image list");
-    }
-  };
 
   const validateBirthdate = (birthdate: string) => {
     if (!birthdate) return "Birthdate is required.";
@@ -225,6 +190,16 @@ const Settings = (props: any) => {
         ...updateData,
       }));
 
+      await update({
+        ...session,
+        user: {
+          ...session.user,
+          ...(!isGoogleAuth && updateData.email && { email: updateData.email }),
+          language: updateData.language,
+          birthdate: updateData.birthdate,
+        }
+      });
+
       setIsSubmitted(true);
       setEditable("");
       setPasswordFields({ current: "", new: "", confirm: "" });
@@ -240,10 +215,14 @@ const Settings = (props: any) => {
   };
 
   const fetchUserData = async () => {
+    // Don't fetch if session is still loading
+    if (status === "loading") return;
+
     if (session?.user?.email && session?.accessToken) {
       setIsPersonalInfoLoading(true);
       const localKey = `userData_${session.user.email}`;
       const cached = typeof window !== "undefined" ? localStorage.getItem(localKey) : null;
+      
       if (cached) {
         const parsedData = JSON.parse(cached);
         setUserData(parsedData);
@@ -283,7 +262,7 @@ const Settings = (props: any) => {
 
   useEffect(() => {
     fetchUserData();
-  }, [session?.user?.email, session?.accessToken]);
+  }, [session?.user?.email, session?.accessToken, status]); // Add status dependency
 
   const toggleCurrentPassword = () => setShowCurrentPassword(!showCurrentPassword);
   const toggleNewPassword = () => setShowNewPassword(!showNewPassword);
@@ -327,8 +306,6 @@ const Settings = (props: any) => {
                   </h2>
                   <p className="mb-6 text-center text-gray-700">
                     Your settings have been successfully saved.
-                    <br />
-                    You can continue exploring the app.
                   </p>
                   <button
                     className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold shadow transition"

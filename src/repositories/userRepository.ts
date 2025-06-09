@@ -77,6 +77,9 @@ export class UserRepository {
             birthdate?: string;
             language?: string;
             password?: string;
+            palates?: string;
+            profile_image?: string;
+            about_me?: string;
         },
         token: string
     ): Promise<T> {
@@ -102,6 +105,70 @@ export class UserRepository {
                     Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ password })
+            },
+            true
+        );
+    }
+
+    static async getUserPalates<T>(userId: number, token?: string): Promise<T> {
+        return this.request(
+            `/wp-json/restaurant/v1/user-palates?user_id=${userId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+            },
+            true
+        );
+    }
+
+    static async getFollowingList<T>(userId: number, token?: string): Promise<T> {
+        return this.request(
+            `/wp-json/v1/following-list?user_id=${userId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+            },
+            true
+        );
+    }
+
+    static async getFollowersList<T>(userId: number, token?: string): Promise<T> {
+        return this.request(
+            `/wp-json/v1/followers-list?user_id=${userId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+            },
+            true
+        );
+    }
+
+    static async followUser<T>(userId: number, token?: string): Promise<T> {
+        return this.request(
+            `/wp-json/v1/follow`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ user_id: userId }),
+            },
+            true
+        );
+    }
+
+    static async unfollowUser<T>(userId: number, token?: string): Promise<T> {
+        return this.request(
+            `/wp-json/v1/unfollow`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ user_id: userId }),
             },
             true
         );
