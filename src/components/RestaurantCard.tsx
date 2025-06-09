@@ -2,12 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiStar, FiClock, FiMapPin, FiMessageCircle } from "react-icons/fi";
 import { MdOutlineMessage } from "react-icons/md";
-import { FaRegHeart, FaStar } from "react-icons/fa"
+import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 interface Restaurant {
   id: string;
@@ -28,6 +30,53 @@ interface RestaurantCardProps {
 const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
   const router = useRouter()
+  const { data: session } = useSession();
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!session || !restaurant.slug || initialized) return;
+    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
+      credentials: "include",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) setSaved(data.status === "saved");
+      })
+      .finally(() => {
+        if (isMounted) setInitialized(true);
+      });
+    return () => { isMounted = false; };
+  }, [restaurant.slug, session]);
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!session) return;
+    setLoading(true);
+    setSaved(prev => !prev);
+    const action = saved ? "unsave" : "save";
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
+      credentials: "include",
+    });
+    const data = await res.json();
+    setSaved(data.status === "saved");
+    setLoading(false);
+  }
+
   const getCuisineNames = (cuisineIds: string[]) => {
     return cuisineIds
       .map((id) => {
@@ -56,8 +105,8 @@ const RestaurantCard = ({ restaurant }: RestaurantCardProps) => {
         />
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
         <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
-          <button className="rounded-full p-2 bg-white" onClick={(e) => e.stopPropagation()}>
-            <FaRegHeart className="size-3 md:size-4" />
+          <button className="rounded-full p-2 bg-white" onClick={handleToggle} disabled={loading || !session} aria-pressed={saved}>
+            {saved ? <FaHeart className="size-3 md:size-4 text-red-500" /> : <FaRegHeart className="size-3 md:size-4" />}
           </button>
           <button className="rounded-full p-2 bg-white">
             <MdOutlineMessage className="size-3 md:size-4" />
