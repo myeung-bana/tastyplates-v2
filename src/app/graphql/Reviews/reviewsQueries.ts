@@ -12,6 +12,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
         id
         uri
         reviewMainTitle
+        commentLikes
         reviewStars
         date
         content(format: RENDERED)

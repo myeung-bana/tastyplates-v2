@@ -24,6 +24,7 @@ export class ReviewService {
     static async postReview(reviewData: any, accessToken: string): Promise<any> {
         const formattedData = {
             post: reviewData.restaurantId,
+            parent: reviewData.parent || 0,
             author: reviewData.authorId,
             content: reviewData.content || '',
             review_main_title: reviewData.review_main_title || '',
@@ -37,7 +38,7 @@ export class ReviewService {
         return formattedData;
     }
 
-    static async fetchReviewDrafts( accessToken?: string): Promise<any[]> { 
+    static async fetchReviewDrafts(accessToken?: string): Promise<any[]> {
         try {
             const drafts = await ReviewRepository.getReviewDrafts(accessToken);
             return drafts;
@@ -53,6 +54,15 @@ export class ReviewService {
         } catch (error) {
             console.error("Failed to delete review draft", error);
             throw new Error('Failed to delete review draft');
+        }
+    }
+
+    static async toggleCommentLike(commentId: number, like: boolean, accessToken: string): Promise<void> {
+        try {
+            await ReviewRepository.toggleCommentLike(commentId, like, accessToken);
+        } catch (error) {
+            console.error("Failed to toggle comment like", error);
+            throw new Error("Failed to toggle comment like");
         }
     }
 }
