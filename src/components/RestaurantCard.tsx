@@ -3,7 +3,6 @@ import Link from "next/link";
 import { FiStar, FiClock, FiMapPin, FiMessageCircle } from "react-icons/fi";
 import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
-import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
