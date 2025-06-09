@@ -147,7 +147,6 @@ const AddListingPage = (props: any) => {
       const newListingId = response.id;
       setResId(newListingId);
 
-      alert(`Listing submitted successfully! New listing ID: ${newListingId}`);
       router.push(`/listing/step-2?resId=${newListingId}`);// Programmatically move to step 2
     } catch (err: any) {
       console.error("Error submitting listing:", err);
