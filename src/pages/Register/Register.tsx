@@ -28,8 +28,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
+  const [showContinueModal, setShowContinueModal] = useState(false);
 
   useEffect(() => {
+    const registrationData = localStorage.getItem('registrationData');
+    if (registrationData && JSON.parse(registrationData).isPartialRegistration) {
+      setShowContinueModal(true);
+    }
+
     const googleError = Cookies.get('googleError');
     if (googleError) {
       setError(decodeURIComponent(googleError));
@@ -135,127 +141,175 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   return (
     <div className="auth flex flex-col justify-center items-start">
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <Spinner size={48} className="text-[#E36B00]" />
+      {showContinueModal ? (
+        <div className="auth__container !max-w-[488px] w-full">
+          <div className="auth__card !py-8 !rounded-3xl">
+            <h1 className="auth__title !text-xl !font-semibold text-center mb-4">
+              Continue Registration
+            </h1>
+            <div className="text-center px-4">
+              <p className="text-gray-700 mb-8">
+                You have an unfinished changes. Would you like to continue where you left off?
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button
+                  onClick={() => router.push('/onboarding')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium"
+                >
+                  Continue Registration
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('registrationData');
+                    setShowContinueModal(false);
+                  }}
+                  className="text-gray-700 hover:text-gray-900 underline font-medium"
+                >
+                  Start New Registration
+                </button>
+              </div>
+              <div className="mt-6">
+                <button
+                  onClick={e => {
+                    e.preventDefault();
+                    onOpenSignin && onOpenSignin();
+                  }}
+                  className="text-sm text-[#494D5D] hover:text-[#31343F] underline font-medium"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-
-      <div className="auth__container !max-w-[488px]">
-        <div className="auth__card !py-4 !rounded-3xl">
-          <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
-          <form className="auth__form border-y border-[#CACACA] !gap-4 !pb-6" onSubmit={handleSubmit}>
-            <div className="auth__form-group mt-6">
-              <label htmlFor="email" className="auth__label">
-                Email
-              </label>
-              <div className="auth__input-group">
-                <input
-                  type="email"
-                  id="email"
-                  className="auth__input"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                // required
-                />
-              </div>
+      ) : (
+        <>
+          {isLoading && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+              <Spinner size={48} className="text-[#E36B00]" />
             </div>
-
-            <div className="auth__form-group">
-              <label htmlFor="password" className="auth__label">
-                Password
-              </label>
-              <div className="auth__input-group">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  className="auth__input"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                {showPassword ? (
-                  <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
-                ) : (
-                  <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
-                )}
-              </div>
-              {passwordError && (
-                <div className="text-red-600 text-xs mt-1">{passwordError}</div>
-              )}
-            </div>
-
-            <div className="auth__form-group">
-              <label htmlFor="confirmPassword" className="auth__label">
-                Confirm Password
-              </label>
-              <div className="auth__input-group">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  className="auth__input"
-                  placeholder="Confirm Password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                {showConfirmPassword ? (
-                  <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
-                ) : (
-                  <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
-                )}
-              </div>
-              {confirmPasswordError && (
-                <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
-              )}
-            </div>
-            <div className="text-sm font-normal">
-              By continuing, you agree to TastyPlates'&nbsp;
-              <span className="font-semibold underline text=[#494D5D]">Terms of Service</span>&nbsp;
-              and&nbsp;
-              <span className="font-semibold underline text=[#494D5D]">Privacy Policy</span>
-            </div>
-
-            <button disabled={isLoading} type="submit" className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl">
-              Continue
-            </button>
-            <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
-              <hr className="w-full border-t border-[#494D5D]" />
-              or
-              <hr className="w-full border-t border-[#494D5D]" />
-            </div>
-
-            <button
-              disabled={isLoading}
-              type="button"
-              onClick={signUpWithGoogle}
-              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center"
-            >
-              <FcGoogle className="h-5 w-5 object-contain mr-2" />
-              <span>Continue with Google</span>
-            </button>
-          </form>
-          {error && (
-            <div
-              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium bg-red-100 
-                text-red-700 border border-red-300"}`}
-              dangerouslySetInnerHTML={{ __html: error }}
-            />
           )}
-          <p className="auth__footer !mt-3.5">
-            Already have an account?{" "}
-            <a
-              className="auth__link !text-[#494D5D] cursor-pointer"
-              onClick={e => {
-                e.preventDefault();
-                onOpenSignin && onOpenSignin();
-              }}
-            >
-              Log in
-            </a>
-          </p>
-        </div>
-      </div>
+          <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
+            <div className="auth__card !py-4 !rounded-3xl">
+              <h1 className="auth__title !text-xl !font-semibold bg-white">Sign up</h1>
+              <form className="auth__form border-y border-[#CACACA] !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
+                <div className="auth__form-group mt-6">
+                  <label htmlFor="email" className="auth__label">
+                    Email
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type="email"
+                      id="email"
+                      className="auth__input"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    // required
+                    />
+                  </div>
+                </div>
+
+                <div className="auth__form-group">
+                  <label htmlFor="password" className="auth__label">
+                    Password
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      className="auth__input"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    {showPassword ? (
+                      <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
+                    ) : (
+                      <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
+                    )}
+                  </div>
+                  {passwordError && (
+                    <div className="text-red-600 text-xs mt-1">{passwordError}</div>
+                  )}
+                </div>
+
+                <div className="auth__form-group">
+                  <label htmlFor="confirmPassword" className="auth__label">
+                    Confirm Password
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      id="confirmPassword"
+                      className="auth__input"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    {showConfirmPassword ? (
+                      <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                    ) : (
+                      <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                    )}
+                  </div>
+                  {confirmPasswordError && (
+                    <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
+                  )}
+                </div>
+                <div className="text-sm font-normal">
+                  By continuing, you agree to TastyPlates'&nbsp;
+                  <span className="font-semibold underline text=[#494D5D]">Terms of Service</span>&nbsp;
+                  and&nbsp;
+                  <span className="font-semibold underline text=[#494D5D]">Privacy Policy</span>
+                </div>
+
+                <button
+                  disabled={isLoading}
+                  type="submit"
+                  className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+                >
+                  Continue
+                </button>
+                <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
+                  <hr className="w-full border-t border-[#494D5D]" />
+                  or
+                  <hr className="w-full border-t border-[#494D5D]" />
+                </div>
+
+                <button
+                  disabled={isLoading}
+                  type="button"
+                  onClick={signUpWithGoogle}
+                  className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:!bg-gray-50 hover:!shadow-md hover:!border-gray-400 active:!bg-gray-100"
+                >
+                  <FcGoogle className="h-5 w-5 object-contain mr-2" />
+                  <span>Continue with Google</span>
+                </button>
+              </form>
+              {error && (
+                <div
+                  className={`mt-4 text-center px-4 py-2 rounded-xl font-medium bg-red-100 
+                text-red-700 border border-red-300"}`}
+                  dangerouslySetInnerHTML={{ __html: error }}
+                />
+              )}
+              <p className="auth__footer !mt-3.5 bg-white">
+                Already have an account?{" "}
+                <a
+                  className="auth__link !text-[#494D5D] cursor-pointer"
+                  onClick={e => {
+                    e.preventDefault();
+                    onOpenSignin && onOpenSignin();
+                  }}
+                >
+                  Log in
+                </a>
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

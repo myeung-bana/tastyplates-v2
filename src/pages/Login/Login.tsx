@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Spinner from "@/components/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -21,6 +22,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const googleError = Cookies.get('googleError');
@@ -75,6 +77,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
     }
 };
 
+  const toggleShowPassword = () => setShowPassword(!showPassword);
+
   return (
     <div className="auth">
       {isLoading && (
@@ -109,10 +113,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
               <label htmlFor="password" className="auth__label">
                 Password
               </label>
-              <div className="auth__input-group">
-                {/* <FiLock className="auth__input-icon" /> */}
+              <div className="auth__input-group relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   className="auth__input"
                   placeholder="Enter your password"
@@ -120,13 +123,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                {showPassword ? (
+                  <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
+                ) : (
+                  <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
+                )}
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl"
+            <button 
+              type="submit" 
               disabled={isLoading}
+              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
             >
               Continue
             </button>
@@ -140,7 +148,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
               disabled={isLoading}
               type="button"
               onClick={loginWithGoogle}
-              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center"
+              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:border-gray-400 active:bg-gray-100"
             >
               <FcGoogle className="h-5 w-5 object-contain mr-2" />
               <span>Continue with Google</span>

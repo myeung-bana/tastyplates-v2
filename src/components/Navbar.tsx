@@ -7,14 +7,16 @@ import "@/styles/components/_navbar.scss";
 import "@/styles/components/_hero.scss";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
+import ContinueRegistrationModal from './ContinueRegistrationModal';
 import { FiSearch } from "react-icons/fi";
 import Image from "next/image";
 import CustomPopover from "./ui/Popover/Popover";
 import { PiCaretDown } from "react-icons/pi";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
+import toast from 'react-hot-toast';
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -25,7 +27,7 @@ const navigationItems = [
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  // const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { isLandingPage = false, hasSearchBar = false } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
@@ -43,6 +45,14 @@ export default function Navbar(props: any) {
   };
 
   useEffect(() => {
+    const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
+    if (loginMessage) {
+      toast.success(loginMessage, {
+        duration: 3000, // 3 seconds
+      });
+      localStorage.removeItem('loginBackMessage');
+    }
+
     window.addEventListener("scroll", changeNavBg);
     return () => {
       window.removeEventListener("scroll", changeNavBg);
@@ -59,7 +69,6 @@ export default function Navbar(props: any) {
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
-
     if (googleErrorType == 'signup') {
       setIsOpenSignup(true);
     } else if (googleErrorType == 'login') {
@@ -68,6 +77,9 @@ export default function Navbar(props: any) {
 
   }, [router]);
 
+  // Check for onboarding pages
+  const isOnboardingPage = pathname?.includes('onboarding');
+  
   return (
     <>
       <SignupModal
@@ -87,16 +99,14 @@ export default function Navbar(props: any) {
         }}
       />
       <nav
-        className={`navbar ${
-          isLandingPage
-            ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
-            : "bg-white border-b border-[#CACACA]"
-        }`}
+        className={`navbar ${isLandingPage
+          ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
+          : "bg-white border-b border-[#CACACA]"
+          }`}
       >
         <div
-          className={`navbar__container py-0 flex flex-col justify-center ${
-            !isLandingPage ? "sm:py-2" : "sm:py-3"
-          }`}
+          className={`navbar__container py-0 flex flex-col justify-center ${!isLandingPage ? "sm:py-2" : "sm:py-3"
+            }`}
         >
           <div className="navbar__content">
             <div className="flex gap-2 sm:gap-4">
@@ -132,9 +142,8 @@ export default function Navbar(props: any) {
               <div className="navbar__brand">
                 <Link href="/" className="flex-shrink-0 flex items-center">
                   <h1
-                    className={`${
-                      isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
-                    }`}
+                    className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
+                      }`}
                   >
                     TastyPlates
                   </h1>
@@ -145,9 +154,8 @@ export default function Navbar(props: any) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`${
-                      isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
-                    }`}
+                    className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
+                      }`}
                   >
                     {item.name}
                   </Link>
@@ -199,7 +207,15 @@ export default function Navbar(props: any) {
               </div>
             )}
             <div className="navbar__auth">
-              {status !== "authenticated" ? (
+              {(status !== "authenticated" && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
+                <Image
+                  src={"/profile-icon.svg"}
+                  alt={"Profile"}
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div> : (status !== "authenticated") ? (
                 <>
                   <button
                     onClick={() => setIsOpenSignin(true)}
@@ -221,16 +237,14 @@ export default function Navbar(props: any) {
                     trigger={
                       <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white">
                         <span
-                          className={`${
-                            isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
-                          } text-center font-semibold`}
+                          className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
+                            } text-center font-semibold`}
                         >
                           Review
                         </span>
                         <PiCaretDown
-                          className={`${
-                            isLandingPage && !navBg ? "fill-white" : "fill-[#494D5D]"
-                          } size-5`}
+                          className={`${isLandingPage && !navBg ? "fill-white" : "fill-[#494D5D]"
+                            } size-5`}
                         />
                       </button>
                     }
@@ -282,12 +296,11 @@ export default function Navbar(props: any) {
           </div>
         </div>
 
-           {/* Mobile menu */}
+        {/* Mobile menu */}
         <aside
           id="separator-sidebar"
-          className={`fixed top-0 left-0 z-40 w-[189px] h-screen transition-transform ${
-            isOpen ? "" : "-translate-x-full"
-          } sm:translate-x-0 sm:hidden`}
+          className={`fixed top-0 left-0 z-40 w-[189px] h-screen transition-transform ${isOpen ? "" : "-translate-x-full"
+            } sm:translate-x-0 sm:hidden`}
           aria-label="Sidebar"
         >
           <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800">

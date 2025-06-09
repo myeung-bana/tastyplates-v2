@@ -58,52 +58,54 @@ export const authOptions: AuthOptions = {
             let type: string | null = null;
 
             try {
-                const cookieStore = await cookies();
+                let cookieStore = await cookies();
                 type = cookieStore.get('auth_type')?.value || null;
-            } catch {}
 
-            if (account?.provider === "google") {
-                if (type === "signup") {
-                    // set the cookie to be use in the onboarding page
-                    const cookieStore = await cookies();
-                    cookieStore.set('googleAuth', 'true', { path: '/', sameSite: 'lax' });
-                    cookieStore.set('email', user.email || '', { path: '/', sameSite: 'lax' });
-                    cookieStore.set('username', user.name || '', { path: '/', sameSite: 'lax' });
+                if (account?.provider === "google") {
+                    if (type === "signup") {
+                        // set the cookie to be use in the onboarding page
+                        cookieStore.set('googleAuth', 'true', { path: '/', sameSite: 'lax' });
+                        cookieStore.set('email', user.email || '', { path: '/', sameSite: 'lax' });
+                        cookieStore.set('username', user.name || '', { path: '/', sameSite: 'lax' });
 
-                    const checkEmail = await UserService.checkEmailExists(user.email);
-                    if (checkEmail.status == 400 || checkEmail.exists) {
-                        cookieStore.set('googleErrorType', 'signup', { path: '/', sameSite: 'lax' });
-                        cookieStore.set('googleError', encodeURIComponent(checkEmail.message), { path: '/', sameSite: 'lax' });
-                        return '/';
+                        const checkEmail = await UserService.checkEmailExists(user.email);
+                        if (checkEmail.status == 400 || checkEmail.exists) {
+                            cookieStore.set('googleErrorType', 'signup', { path: '/', sameSite: 'lax' });
+                            cookieStore.set('googleError', encodeURIComponent(checkEmail.message), { path: '/', sameSite: 'lax' });
+                            return '/';
+                        }
+
+                        return '/onboarding';
                     }
 
-                    return '/onboarding';
-                }
-                try {
                     const response = await UserRepository.checkGoogleUser(user.email!) as {
-                        status: number; 
+                        status: number;
                         message?: string;
                         token?: string;
                         id?: number;
                     };
+                    
                     if (response.status !== 200) {
                         const cookieStore = await cookies();
                         cookieStore.set('googleErrorType', 'login', { path: '/', sameSite: 'lax' });
                         cookieStore.set('googleError', encodeURIComponent(response.message || "Google authentication failed"), { path: '/', sameSite: 'lax' });
                         return '/';
                     }
+
                     user.token = response.token;
                     user.userId = response.id;
                     user.birthdate = '';
                     user.provider = 'google';
                     return true;
-                } catch (error) {
-                    return `/?error=Authentication failed`;
+
                 }
+            } catch (error) {
+                return `/?error=Authentication failed`;
             }
+
             return true;
         },
-        async jwt({ token, user, account, trigger, session }) {            
+        async jwt({ token, user, account, trigger, session }) {
             if (user) {
                 token.user = {
                     ...user,

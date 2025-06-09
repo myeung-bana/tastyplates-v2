@@ -13,8 +13,19 @@ const OnboardingTwoPage = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDoItLaterLoading, setIsDoItLaterLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
+
+  // Add effect to load saved data
+  useEffect(() => {
+    const storedData = localStorage.getItem('registrationData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
+      if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+    }
+  }, []);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError(null);
@@ -65,6 +76,7 @@ const OnboardingTwoPage = () => {
 
     localStorage.removeItem('registrationData');
     setMessage("Registration successful!");
+    localStorage.setItem('loginBackMessage', "Please login again");
     setMessageType("success");
 
     setTimeout(() => {
@@ -72,6 +84,26 @@ const OnboardingTwoPage = () => {
       router.push("/");
     }, 1500);
   }
+
+  const handleDoItLater = () => {
+    setIsDoItLaterLoading(true);
+    const storedData = localStorage.getItem('registrationData');
+    const currentData = storedData ? JSON.parse(storedData) : {};
+
+    const partialData = {
+      ...currentData,
+      profileImage: profileImage || null,
+      aboutMe: aboutMe || '',
+      isPartialRegistration: true,
+      lastStep: 'onboarding2'
+    };
+
+    localStorage.setItem('loginBackMessage', "Saved unfinished registration");
+    localStorage.setItem('registrationData', JSON.stringify(partialData));
+    setTimeout(() => {
+      router.push("/");
+    }, 1000);
+  };
 
   // Redirect if registrationData is missing
   useEffect(() => {
@@ -152,8 +184,8 @@ const OnboardingTwoPage = () => {
             </div>
           </div>
           {profileError && (
-                <div className="text-red-600 text-xs mt-2 text-center">{profileError}</div>
-              )}
+            <div className="text-red-600 text-xs mt-2 text-center">{profileError}</div>
+          )}
 
           {/* About Me Textarea */}
           <form onSubmit={handleSubmit}>
@@ -193,15 +225,17 @@ const OnboardingTwoPage = () => {
                 Done
               </button>
               <button
-                disabled={isLoading}
+                disabled={isLoading || isDoItLaterLoading}
                 type="button"
-                className="text-sm text-black-700 underline font-bold self-center w-full sm:w-auto"
-                onClick={() => {
-                  localStorage.removeItem('registrationData');
-                  router.push("/");
-                }}
+                className="text-sm text-black-700 underline font-bold self-center w-full sm:w-auto flex items-center justify-center"
+                onClick={handleDoItLater}
               >
-                I’ll Do It Later
+                {isDoItLaterLoading && (
+                  <span className="mr-2">
+                    <Spinner size={16} className="text-[#31343F]" />
+                  </span>
+                )}
+                I'll Do It Later
               </button>
             </div>
             {/* Success/Error Message */}
