@@ -17,7 +17,8 @@ import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { Dialog } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-
+import SignupModal from "@/components/SignupModal";
+import SigninModal from "@/components/SigninModal";
 
 type tParams = { slug: string };
 
@@ -45,19 +46,13 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
-
-  // If not logged in, just show the button (no loading, no check)
-  if (!session) {
-    return (
-      <button className="restaurant-detail__review-button flex items-center gap-2">
-        <FaRegHeart />
-        <span className="underline">Save</span>
-      </button>
-    );
-  }
+  const [error, setError] = useState<string | null>(null);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showSignin, setShowSignin] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    setError(null);
     if (!session || !restaurantSlug || initialized) return;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
@@ -68,9 +63,15 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
       credentials: "include",
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch favorite status");
+        return res.json();
+      })
       .then(data => {
         if (isMounted) setSaved(data.status === "saved");
+      })
+      .catch((err) => {
+        if (isMounted) setError("Could not check favorite status");
       })
       .finally(() => {
         if (isMounted) setInitialized(true);
@@ -81,21 +82,58 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const handleToggle = async () => {
     if (!session) return;
     setLoading(true);
+    setError(null);
     setSaved(prev => !prev);
     const action = saved ? "unsave" : "save";
-    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
-      credentials: "include",
-    });
-    const data = await res.json();
-    setSaved(data.status === "saved");
-    setLoading(false);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        },
+        body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update favorite status");
+      const data = await res.json();
+      setSaved(data.status === "saved");
+    } catch (err) {
+      setError("Could not update favorite status");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (!session) {
+    return (
+      <>
+        <button
+          className="restaurant-detail__review-button flex items-center gap-2"
+          onClick={() => setShowSignup(true)}
+        >
+          <FaRegHeart />
+          <span className="underline">Save</span>
+        </button>
+        <SignupModal
+          isOpen={showSignup}
+          onClose={() => setShowSignup(false)}
+          onOpenSignin={() => {
+            setShowSignup(false);
+            setShowSignin(true);
+          }}
+        />
+        <SigninModal
+          isOpen={showSignin}
+          onClose={() => setShowSignin(false)}
+          onOpenSignup={() => {
+            setShowSignin(false);
+            setShowSignup(true);
+          }}
+        />
+      </>
+    );
+  }
 
   if (!initialized) {
     return (
@@ -115,6 +153,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     >
       {saved ? <FaHeart className="text-black" /> : <FaRegHeart />}
       <span className="underline">{saved ? "Saved" : "Save"}</span>
+      {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
     </button>
   );
 }

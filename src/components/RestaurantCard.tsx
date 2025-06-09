@@ -9,7 +9,8 @@ import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 export interface Restaurant {
   id: string;
@@ -32,6 +33,53 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
   const router = useRouter()
+  const { data: session } = useSession();
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!session || !restaurant.slug || initialized) return;
+    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
+      credentials: "include",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) setSaved(data.status === "saved");
+      })
+      .finally(() => {
+        if (isMounted) setInitialized(true);
+      });
+    return () => { isMounted = false; };
+  }, [restaurant.slug, session]);
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!session) return;
+    setLoading(true);
+    setSaved(prev => !prev);
+    const action = saved ? "unsave" : "save";
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+      },
+      body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
+      credentials: "include",
+    });
+    const data = await res.json();
+    setSaved(data.status === "saved");
+    setLoading(false);
+  }
+
   const getCuisineNames = (cuisineIds: string[]) => {
     return cuisineIds
       .map((id) => {

@@ -508,34 +508,69 @@ const Profile = () => {
             )}
           </p>
           <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-center sm:justify-start">
-            <span>
-              <span className="font-bold">
+            <span className="cursor-default">
+              <span className="font-bold cursor-default">
                 {loading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
-                ) : userReviewCount}
-              </span> Reviews
+                ) : (
+                  userReviewCount
+                )}
+              </span>{" "}
+              <span className="cursor-default">Reviews</span>
             </span>
             <button
               type="button"
               className="text-primary focus:outline-none"
-              onClick={() => setShowFollowers(true)}
+              onClick={() => {
+                if (followers.length > 0) {
+                  setShowFollowers(true);
+                }
+              }}
+              disabled={followersLoading || followers.length === 0}
             >
-              <span className="font-bold">
+              <span className="font-bold cursor-default">
                 {followersLoading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
-                ) : followers.length}
-              </span> Followers
+                ) : (
+                  followers.length
+                )}
+              </span>{" "}
+              <span
+                className={
+                  followersLoading || followers.length === 0
+                    ? "cursor-default"
+                    : "cursor-pointer"
+                }
+              >
+                Followers
+              </span>
             </button>
             <button
               type="button"
               className="text-primary focus:outline-none"
-              onClick={() => setShowFollowing(true)}
+              onClick={() => {
+                if (following.length > 0) {
+                  setShowFollowing(true);
+                }
+              }}
+              disabled={followingLoading || following.length === 0}
             >
-              <span className="font-bold">
+              <span className="font-bold cursor-default">
                 {followingLoading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
-                ) : following.length}
-              </span> Following
+                ) : (
+                  following.length
+                )}
+              </span>{" "}
+              <span
+                className={
+                  followingLoading || following.length === 0
+                    ? "cursor-default"
+                    : "cursor-pointer"
+                }
+              >
+                Following
+              </span>
             </button>
           </div>
         </div>
