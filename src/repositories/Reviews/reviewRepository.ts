@@ -1,5 +1,5 @@
 import client from "@/app/graphql/client";
-import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES } from "@/app/graphql/Reviews/reviewsQueries";
+import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 export class ReviewRepository {
@@ -83,6 +83,18 @@ export class ReviewRepository {
       console.error("Failed to delete review draft", error);
       throw new Error('Failed to delete review draft');
     }
+  }
+
+  static async getUserReviews(userId: number, first = 16, after: string | null = null) {
+    const { data } = await client.query({
+      query: GET_USER_REVIEWS,
+      variables: { userId, first, after },
+    });
+
+    return {
+      reviews: data.comments.nodes ?? [],
+      pageInfo: data.comments.pageInfo ?? { endCursor: null, hasNextPage: false }
+    };
   }
 
   static async toggleCommentLike(commentId: number, like: boolean, accessToken: string): Promise<void> {

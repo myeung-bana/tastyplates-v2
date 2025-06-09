@@ -1,12 +1,12 @@
-export interface CuisineNode {
+export interface PalatesNode {
     id: string;
     name: string;
 }
 
-export interface Cuisines {
-    nodes: CuisineNode[];
+export interface Palates {
+    nodes: PalatesNode[];
 }
 
-export interface AllCuisines {
-    cuisines: Cuisines;
+export interface AllPalates {
+    palates: Palates;
 }
