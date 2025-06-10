@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { FaPen } from "react-icons/fa";
 import { List } from "@/data/dummyList";
 import { users } from "@/data/dummyUsers";
+import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 
 const Form = (props: any) => {
   const [listing, setListing] = useState<any>([]);
@@ -87,11 +88,11 @@ const Form = (props: any) => {
 
   return (
     <>
-      <div className="font-inter mt-20">
-        <div className="flex flex-col justify-center items-center pt-10">
-          <h1 className="text-[#31343F] text-2xl font-medium">Edit Profile</h1>
+      <div className="font-inter mt-16 md:mt-20">
+        <div className="flex flex-col justify-center items-center pt-10 px-3 md:px-0">
+          <h1 className="text-[#31343F] text-lg md:text-2xl font-medium">Edit Profile</h1>
           <form
-            className="listing__form max-w-[672px] w-full my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+            className="listing__form max-w-[672px] w-full my-4 md:my-10 mx-3 py-6 px-4 md:py-8 md:px-6 lg:mx-0 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
             onSubmit={submitReview}
           >
             <div className="listing__form-group relative justify-center self-center">
@@ -113,11 +114,11 @@ const Form = (props: any) => {
                     src="/profile-icon.svg"
                     width={120}
                     height={120}
-                    className="rounded-full"
+                    className="rounded-full size-20 md:size-[120px] object-contain"
                     alt="profile"
                   />
-                  <div className="absolute right-0 bottom-0 h-11 w-11 p-3 rounded-[50px] border-1.5 bg-white text-center">
-                    <FaPen />
+                  <div className="absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] border-1.5 bg-white text-center">
+                    <FaPen className="size-4 md:size-5" />
                   </div>
                 </div>
               </label>
@@ -135,17 +136,25 @@ const Form = (props: any) => {
                 />
               </div>
             </div>
-            <div className="listing__form-group">
+            <div className="listing__form-group !hidden md:!flex">
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
                   className=""
-                  placeholder="Select a category"
+                  placeholder="Select a region"
                   items={categories}
                 />
               </div>
             </div>
-            <div className="listing__form-group">
+            <div className="listing__form-group md:!hidden">
+              <label className="listing__label">
+                Ethnic Palate (Select up to 2 palates)
+              </label>
+              <div className="listing__input-group">
+                <CustomMultipleSelect items={categories} />
+              </div>
+            </div>
+            <div className="listing__form-group !hidden md:!flex">
               <label className="listing__label">
                 Ethnic Palate (Select up to 2 palates)
               </label>
@@ -160,13 +169,13 @@ const Form = (props: any) => {
             </div>
             <div className="flex gap-4 items-center">
               <button className="listing__button" onClick={changeStep}>
-                Continue
+                Save and Continue
               </button>
               <button
                 className="underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center"
                 type="submit"
               >
-                Save and exit
+                Cancel
               </button>
             </div>
           </form>

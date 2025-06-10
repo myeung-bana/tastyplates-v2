@@ -3,8 +3,6 @@ import React, {  useRef, useState, useEffect, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
-import { restaurants } from "@/data/dummyRestaurants";
-import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
 import { Tab, Tabs } from "@heroui/tabs";
 import Image from "next/image";
 import Link from "next/link";
@@ -44,6 +42,28 @@ const Profile = () => {
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(
+      typeof window !== "undefined" ? window.innerWidth : 0
+    );
+    useEffect(() => {
+      window.addEventListener("load", () => {
+        if (typeof window !== "undefined") {
+          handleResize();
+        }
+      });
+      window.addEventListener("resize", () => {
+        handleResize();
+      });
+  
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        window.removeEventListener("load", handleResize);
+      };
+    }, []);
+
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+    };
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -447,34 +467,37 @@ const Profile = () => {
             Food lover. Adventurous eater. Always looking for the next best bite!
           </p>
           <div className="flex gap-6 mt-4 text-lg items-center">
-            <span>
-              <span className="font-bold">
+            <div className="flex items-center gap-2">
+              <h5 className="font-semibold">
                 {loading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
                 ) : userReviewCount}
-              </span> Reviews
-            </span>
+              </h5>
+              <h6 className="text-sm">Reviews</h6>
+            </div>
             <button
               type="button"
               className="text-primary focus:outline-none"
               onClick={() => setShowFollowers(true)}
             >
-              <span className="font-bold">
+              <div className="flex items-center font-semibold gap-2">
                 {followersLoading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
                 ) : followers.length}
-              </span> Followers
+                <h6 className="text-sm font-normal">Followers</h6>
+              </div>
             </button>
             <button
               type="button"
               className="text-primary focus:outline-none"
               onClick={() => setShowFollowing(true)}
             >
-              <span className="font-bold">
+               <div className="flex items-center font-semibold gap-2">
                 {followingLoading ? (
                   <span className="inline-block w-8 h-5 bg-gray-200 rounded animate-pulse align-middle" />
                 ) : following.length}
-              </span> Following
+                <h6 className="text-sm font-normal">Following</h6>
+              </div>
             </button>
           </div>
         </div>
@@ -503,7 +526,7 @@ const Profile = () => {
         classNames={{
           tabWrapper: "w-full",
           base: "w-full border-b justify-center",
-          panel: "py-4 px-0 justify-start px-10 w-full max-w-[80rem] mx-auto",
+          panel: "py-4 px-0 justify-start px-10 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList: "gap-4 w-fit relative rounded-none p-0 overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",
           tab: "px-6 py-3 h-[44px] font-semibold font-inter",
