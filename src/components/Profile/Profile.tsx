@@ -347,27 +347,47 @@ const Profile = () => {
     return reviews.filter((r: any) => r.authorId === user.id).length;
   }, [reviews, user?.id]);
 
-  const handleFollow = async (id: number) => {
+  const handleFollow = async (id: string) => {
     if (!session?.accessToken) return;
-    const success = await UserService.followUser(id, session.accessToken);
+    const userIdNum = Number(id);
+    if (isNaN(userIdNum)) return;
+    const success = await UserService.followUser(userIdNum, session.accessToken);
     if (success) {
       // Clear caches to force refresh
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      const newFollowing = await fetchFollowing();
-      await fetchFollowers(newFollowing);
+      // Fetch both lists fresh
+      const [newFollowing, newFollowers] = await Promise.all([
+        fetchFollowing(),
+        fetchFollowers()
+      ]);
+      // Update isFollowing for followers list
+      setFollowers(prev => prev.map(user => ({
+        ...user,
+        isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
+      })));
     }
   };
 
-  const handleUnfollow = async (id: number) => {
+  const handleUnfollow = async (id: string) => {
     if (!session?.accessToken) return;
-    const success = await UserService.unfollowUser(id, session.accessToken);
+    const userIdNum = Number(id);
+    if (isNaN(userIdNum)) return;
+    const success = await UserService.unfollowUser(userIdNum, session.accessToken);
     if (success) {
       // Clear caches to force refresh
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      const newFollowing = await fetchFollowing();
-      await fetchFollowers(newFollowing);
+      // Fetch both lists fresh
+      const [newFollowing, newFollowers] = await Promise.all([
+        fetchFollowing(),
+        fetchFollowers()
+      ]);
+      // Update isFollowing for followers list
+      setFollowers(prev => prev.map(user => ({
+        ...user,
+        isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
+      })));
     }
   };
 
@@ -579,19 +599,15 @@ const Profile = () => {
         open={showFollowers}
         onClose={() => setShowFollowers(false)}
         followers={followers}
-        onFollow={() => handleFollow}
-        onUnfollow={() => handleUnfollow}
+        onFollow={handleFollow}
+        onUnfollow={handleUnfollow}
       />
       <FollowingModal
         open={showFollowing}
-        onClose={() => {
-          setShowFollowing(false);
-          // Remove unfollowed users after modal closes
-          setFollowing((prev) => prev.filter((u) => u.isFollowing));
-        }}
+        onClose={() => setShowFollowing(false)}
         following={following}
-        onUnfollow={() => handleUnfollow}
-        onFollow={() => handleFollow}
+        onUnfollow={handleUnfollow}
+        onFollow={handleFollow}
       />
       <Tabs
         aria-label="Dynamic tabs"
