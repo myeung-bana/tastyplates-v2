@@ -10,7 +10,7 @@ import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 
@@ -29,22 +29,38 @@ export interface Restaurant {
 export interface RestaurantCardProps {
   restaurant: Restaurant;
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
+  initialSavedStatus?: boolean | null; // Add this line
 }
 
-const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: RestaurantCardProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
-  const router = useRouter()
+  const router = useRouter();
   const { data: session } = useSession();
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
+      setSaved(initialSavedStatus);
+      hasFetched.current = true;
+    }
+  }, [initialSavedStatus]);
+
+  useEffect(() => {
+    if (initialSavedStatus !== undefined && initialSavedStatus !== null) return;
+    if (hasFetched.current) return;
+    hasFetched.current = true;
     let isMounted = true;
-    if (!session || !restaurant.slug || initialized) return;
+    if (!session) {
+      setSaved(false);
+      return;
+    }
+    setSaved(null);
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
       headers: {
@@ -58,11 +74,11 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
       .then(data => {
         if (isMounted) setSaved(data.status === "saved");
       })
-      .finally(() => {
-        if (isMounted) setInitialized(true);
+      .catch(() => {
+        if (isMounted) setSaved(false);
       });
     return () => { isMounted = false; };
-  }, [restaurant.slug, session]);
+  }, [restaurant.slug, session, initialSavedStatus]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,20 +87,33 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
       return;
     }
     setLoading(true);
-    setSaved(prev => !prev);
-    const action = saved ? "unsave" : "save";
-    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
-      credentials: "include",
-    });
-    const data = await res.json();
-    setSaved(data.status === "saved");
-    setLoading(false);
+    setError(null);
+    const prevSaved = saved;
+    setSaved(!saved);
+    window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
+    const action = prevSaved ? "unsave" : "save";
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        },
+        body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      setSaved(data.status === "saved");
+      // Broadcast the confirmed status
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+    } catch (err) {
+      setSaved(prevSaved); // Revert on error
+      // Broadcast the reverted status
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+      setError("Could not update favorite status");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getCuisineNames = (cuisineIds: string[]) => {
@@ -163,21 +192,20 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
               <button
                 className="rounded-full p-2 bg-white"
                 onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
-                disabled={loading || !initialized}
+                disabled={loading || saved === null}
                 aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
-                {!initialized ? (
-                  <svg className="animate-spin w-4 h-4 text-[#E36B00]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="164" strokeDashoffset="40" />
-                  </svg>
-                ) : profileTablist === 'wishlists' ? (
-                  <FaHeart className="size-3 md:size-4 text-[#31343F]" />
+                {saved === null ? (
+                  <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
                   <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
                 ) : (
                   <FaRegHeart className="size-3 md:size-4" />
                 )}
               </button>
+              {error && (
+                <span className="text-xs text-red-500 ml-2">{error}</span>
+              )}
               <button className="rounded-full p-2 bg-white">
                 <MdOutlineMessage className="size-3 md:size-4" />
               </button>
