@@ -102,7 +102,6 @@ const OnboardingTwoPage = () => {
 
     const storedData = localStorage.getItem('registrationData');
     const currentData = storedData ? JSON.parse(storedData) : {};
-
     const partialData = {
       ...currentData,
       profileImage: profileImage || null,
