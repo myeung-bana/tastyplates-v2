@@ -1,9 +1,12 @@
 import AddListingPage from "@/components/Restaurant/Listing/AddListing";
+import { Suspense } from "react";
 
 const AddReviewPage = () => {
   return (
     <section>
-      <AddListingPage step={2} />
+      <Suspense fallback={<div></div>}>
+        <AddListingPage step={2} />
+      </Suspense>
     </section>
   );
 };

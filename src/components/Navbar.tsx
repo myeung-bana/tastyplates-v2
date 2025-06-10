@@ -259,13 +259,14 @@ export default function Navbar(props: any) {
                       </div>
                     }
                     content={
-                      <div className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
+                      <div className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-gray-200">
                         <Link href="/profile" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           My Profile
                         </Link>
                         <Link href="/settings" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Settings
                         </Link>
+                        <div className="border-t border-gray-200 w-full" />
                         <button
                           onClick={handleLogout}
                           className='text-left pl-3.5 pr-12 py-3.5 font-semibold'

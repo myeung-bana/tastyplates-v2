@@ -17,18 +17,25 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
+import { useSession } from "next-auth/react";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
   isOpen,
   onClose,
 }) => {
+  const { data: session } = useSession();
   const [replies, setReplies] = useState<any[]>([]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [commentReply, setCommentReply] = useState("")
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [userLiked, setUserLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
+  const [loading, setLoading] = useState(false)
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
@@ -57,6 +64,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const handleResize = () => {
     setWidth(window.innerWidth);
   };
+
   const NextArrow = (props: any) => {
     const { className, style, onClick, length } = props;
     const display = activeSlide === length - 1 ? "none" : "block";
@@ -150,6 +158,55 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     onClose();
   };
 
+  const handleCommentReplySubmit = async () => {
+    if (!commentReply.trim()) return;
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        content: commentReply,
+        restaurantId: data.commentedOn?.node?.databaseId,
+        parent: data.databaseId,
+        author: session?.user?.userId,
+      };
+      console.log('payload', payload)
+
+      await ReviewService.postReview(payload, session?.accessToken ?? "");
+      setCommentReply("");
+
+      const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
+      setReplies(updatedReplies);
+    } catch (err) {
+      console.error("Failed to post reply", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleLike = async () => {
+    if (loading) return;
+
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await ReviewService.toggleCommentLike(data.databaseId, !userLiked, session.accessToken ?? "");
+
+      setUserLiked(!userLiked);
+      setLikesCount((prev: any) => userLiked ? prev - 1 : prev + 1);
+
+    } catch (error) {
+      console.error(error);
+      alert('Error updating like');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   if (!isOpen) return null;
 
   return (
@@ -211,7 +268,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   lazyLoad="progressive"
                 >
                   {Array.isArray(data?.reviewImages) &&
-                  data.reviewImages.length > 0 ? (
+                    data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
                       <Image
                         key={index}
@@ -289,7 +346,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           const half = !full && i + 0.5 <= data.reviewStars;
                           return full ? (
                             <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
-                          ): (
+                          ) : (
                             <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
                           );
                         })}
@@ -299,7 +356,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         </span>
                       </div>
                       {replies.length > 0 && (
-                        <div className="overflow-y-auto grow pt-4 pr-1 pb-3 h-24">
+                        <div className="overflow-y-auto grow pt-4 pr-1 pb-3 h-[350px]">
                           {replies.map((reply, index) => {
                             const UserPalateNames = reply.author?.node?.palates
                               ?.split("|")
@@ -396,26 +453,53 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 </Link>
               </div>
               </div> */}
-                <div className="w-full shrink-0 border-t border-[#CACACA] p-4 md:p-6 absolute inset-x-0 !bottom-0">
+                <div className="w-full shrink-0 border-t border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-6">
                   <div className="flex flex-row justify-start items-center gap-4">
-                    <textarea
-                      rows={1}
-                      cols={30}
-                      placeholder="Add a comment"
-                      className="py-3 px-4 w-full border border-[#CACACA] resize-none rounded-[10px]"
-                    ></textarea>
+                    {isLoading ? (
+                      <div className="py-3 px-4 w-full border border-[#CACACA] rounded-[10px] text-gray-500 italic">
+                        Sending...
+                      </div>
+                    ) : (
+                      <textarea
+                        rows={1}
+                        cols={30}
+                        placeholder="Add a comment"
+                        value={commentReply}
+                        onChange={(e) => setCommentReply(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleCommentReplySubmit();
+                          }
+                        }}
+                        className="py-3 px-4 w-full border border-[#CACACA] resize-none rounded-[10px]"
+                      />
+                    )}
                     <div className="flex gap-2 flex-row items-center">
                       <div className="flex items-center relative text-center">
-                        <button>
-                          <MdOutlineThumbUp className="shrink-0 size-6 stroke-[#494D5D]" />
+                        <button
+                          onClick={toggleLike}
+                          disabled={loading}
+                          aria-pressed={userLiked}
+                          aria-label={userLiked ? "Unlike comment" : "Like comment"}
+                          className="focus:outline-none cursor-pointer"
+                        >
+                          {loading ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+                          ) : (
+                            <MdOutlineThumbUp
+                              className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${userLiked ? 'text-blue-600' : ''
+                                }`}
+                            />
+                          )}
                         </button>
-                        <span className="ml-2">13</span>
+                        <span className="ml-2">{likesCount}</span>
                       </div>
                       <div className="flex items-center relative text-center">
                         <button>
                           <MdOutlineComment className="shrink-0 size-6 stroke-[#494D5D]" />
                         </button>
-                        <span className="ml-2">10</span>
+                        <span className="ml-2">{replies ? replies.length : 0}</span>
                       </div>
                     </div>
                   </div>

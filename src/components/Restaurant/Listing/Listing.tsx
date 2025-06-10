@@ -14,16 +14,15 @@ import { useSession } from "next-auth/react";
 import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
 interface Restaurant {
   id: string;
-  databaseId: number;
   slug: string;
   name: string;
   image: string;
   rating: number;
-  cuisineNames: string[];
   countries: string;
   priceRange: string;
+  databaseId: number;
+  palatesNames?: string[];
 }
-
 
 const ListingPage = () => {
   const { data: session } = useSession();
@@ -48,7 +47,7 @@ const ListingPage = () => {
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
       rating: 4.5,
-      cuisineNames: item.cuisines || [],
+      cuisineNames: item.palates || [],
       countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
     }));
