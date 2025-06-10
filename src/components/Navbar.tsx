@@ -98,7 +98,7 @@ export default function Navbar(props: any) {
         }}
       />
       <nav
-        className={`navbar ${isLandingPage
+        className={`navbar !z-[1000] ${isLandingPage
           ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
           : "bg-white border-b border-[#CACACA]"
           }`}

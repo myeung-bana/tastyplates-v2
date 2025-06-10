@@ -4,6 +4,8 @@ import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/LoadingSpinner";
 import { UserService } from "@/services/userService";
+import { pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved } from "@/constants/messages";
+import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -31,8 +33,8 @@ const OnboardingTwoPage = () => {
     setProfileError(null);
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB
-        setProfileError("Profile image must be less than 5MB.");
+      if (file.size > imageSizeLimit) { // 5MB
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
       const reader = new FileReader();
@@ -51,11 +53,12 @@ const OnboardingTwoPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setProfileError(null);
     setAboutMeError(null);
 
     // About Me validation
-    if (aboutMe.length > 500) {
-      setAboutMeError("The text must be 500 characters or less.");
+    if (aboutMe.length > aboutMeMaxLimit) {
+      setAboutMeError(textLimit(aboutMeMaxLimit));
       setIsLoading(false);
       return;
     }
@@ -75,8 +78,8 @@ const OnboardingTwoPage = () => {
     await UserService.registerUser(completeRegistration);
 
     localStorage.removeItem('registrationData');
-    setMessage("Registration successful!");
-    localStorage.setItem('loginBackMessage', "Please login again");
+    setMessage(registrationSuccess);
+    localStorage.setItem('loginBackMessage', pleaseLoginAgain);
     setMessageType("success");
 
     setTimeout(() => {
@@ -87,6 +90,16 @@ const OnboardingTwoPage = () => {
 
   const handleDoItLater = () => {
     setIsDoItLaterLoading(true);
+    setProfileError(null);
+    setAboutMeError(null);
+
+    // About Me validation
+    if (aboutMe.length > aboutMeMaxLimit) {
+      setAboutMeError(textLimit(aboutMeMaxLimit));
+      setIsDoItLaterLoading(false);
+      return;
+    }
+
     const storedData = localStorage.getItem('registrationData');
     const currentData = storedData ? JSON.parse(storedData) : {};
 
@@ -98,7 +111,7 @@ const OnboardingTwoPage = () => {
       lastStep: 'onboarding2'
     };
 
-    localStorage.setItem('loginBackMessage', "Saved unfinished registration");
+    localStorage.setItem('loginBackMessage', unfinishedSaved);
     localStorage.setItem('registrationData', JSON.stringify(partialData));
     setTimeout(() => {
       router.push("/");

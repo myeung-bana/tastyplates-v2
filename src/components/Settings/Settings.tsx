@@ -6,6 +6,8 @@ import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
 import { UserService } from "@/services/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch } from "@/constants/messages";
+import { ageLimit, minimumPassword } from "@/constants/validation";
 
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return '';
@@ -52,7 +54,7 @@ const Settings = (props: any) => {
   const isGoogleAuth = session?.user?.provider === 'google';
 
   const validateBirthdate = (birthdate: string) => {
-    if (!birthdate) return "Birthdate is required.";
+    if (!birthdate) return birthdateRequired;
     const birth = new Date(birthdate);
     const today = new Date();
     let age = today.getFullYear() - birth.getFullYear();
@@ -60,17 +62,17 @@ const Settings = (props: any) => {
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    if (isNaN(birth.getTime()) || age < 18) {
-      return "You must be at least 18 years old.";
+    if (isNaN(birth.getTime()) || age < ageLimit) {
+      return birthdateLimit(ageLimit);
     }
     return "";
   };
 
   const validateEmail = (email: string) => {
-    if (!email) return "Email is required.";
+    if (!email) return emailRequired;
     // Simple email regex
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!re.test(email)) return "Invalid email format.";
+    if (!re.test(email)) return invalidEmailFormat;
     return "";
   };
 
@@ -79,18 +81,18 @@ const Settings = (props: any) => {
     if (editable === "password") {
       // Current password: no frontend validation, backend only
       // New password: must be at least 5 characters
-      if (!passwordFields.new || passwordFields.new.length < 5) {
-        errors.new = "New password must be at least 5 characters.";
+      if (!passwordFields.new || passwordFields.new.length < minimumPassword) {
+        errors.new = passwordLimit(minimumPassword, "New password");
       }
       if (!passwordFields.confirm) {
-        errors.confirm = "Confirm password is required.";
+        errors.confirm = confirmPasswordRequired;
       }
       if (
         passwordFields.new &&
         passwordFields.confirm &&
         passwordFields.new !== passwordFields.confirm
       ) {
-        errors.confirm = "Passwords do not match.";
+        errors.confirm = passwordsNotMatch;
       }
     }
     setPasswordErrors(errors);
@@ -142,7 +144,7 @@ const Settings = (props: any) => {
         if (!isValidPassword) {
           setPasswordErrors(prev => ({
             ...prev,
-            current: "Current password is incorrect"
+            current: currentPasswordError
           }));
           hasError = true;
         }

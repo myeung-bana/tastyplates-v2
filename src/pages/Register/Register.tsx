@@ -4,14 +4,14 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
-import { signInWithPopup } from "firebase/auth";
-import { auth, provider } from "@/lib/firebase";
 import { FirebaseError } from 'firebase/app';
 import { UserService } from '@/services/userService';
 import Spinner from "@/components/LoadingSpinner";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
+import { minimumPassword } from "@/constants/validation";
+import { emailOccurredError, passwordLimit, passwordsNotMatch } from "@/constants/messages";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -63,12 +63,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     setPasswordError("");
     setConfirmPasswordError("");
 
-    if (password.length < 5) {
-      setPasswordError("Password must be at least 5 characters");
+    if (password.length < minimumPassword) {
+      setPasswordError(passwordLimit(minimumPassword));
       isValid = false;
     }
     if (password !== confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+      setConfirmPasswordError(passwordsNotMatch);
       isValid = false;
     }
     return isValid;
@@ -101,8 +101,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
       router.push('/onboarding');
     } catch (error) {
-      console.error("Error checking email:", error);
-      setError("An error occurred while checking the email.");
+      setError(emailOccurredError);
       return;
     } finally {
       setIsLoading(false);

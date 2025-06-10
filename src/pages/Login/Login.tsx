@@ -9,6 +9,7 @@ import Spinner from "@/components/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { googleLoginFailed, loginFailed, unexpectedError } from "@/constants/messages";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -47,13 +48,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
       });
 
       if (result?.error) {
-        setMessage('Login failed. Please try again.');
+        setMessage(loginFailed);
         setMessageType("error");
       } else if (result?.ok) {
         router.push('/');
       }
     } catch (error: any) {
-      setMessage(error.message || "An unexpected error occurred");
+      setMessage(error.message || unexpectedError);
       setMessageType("error");
     } finally {
       setIsLoading(false);
@@ -70,7 +71,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
             callbackUrl: '/'
         });
     } catch (error: any) {
-        setMessage("Google login failed");
+        setMessage(googleLoginFailed);
         setMessageType("error");
     } finally {
         setIsLoading(false);

@@ -15,10 +15,19 @@ import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
 import { UserService } from '@/services/userService';
+import {
+  birthdateRequired,
+  birthdateLimit,
+  genderRequired,
+  palateMaxLimit,
+  usernameCheckError,
+  usernameValidationLimit,
+  palateRequired,
+} from "@/constants/messages";
+import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
-  // Initialize with empty/default values
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -28,6 +37,7 @@ const OnboardingOnePage = () => {
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [birthdateError, setBirthdateError] = useState<string | null>(null);
+  const [genderError, setGenderError] = useState<string | null>(null);
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -59,8 +69,6 @@ const OnboardingOnePage = () => {
   // Navigation protection effects
   useEffect(() => {
     if (!hasMounted) return;
-
-    if (!hasMounted) return;
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
@@ -77,7 +85,6 @@ const OnboardingOnePage = () => {
       storedData = JSON.stringify(registrationData);
     }
 
-    console.log("Stored Data:", storedData);
     if (!storedData) {
       router.replace('/');
     }
@@ -96,74 +103,85 @@ const OnboardingOnePage = () => {
       try {
         existingData = storedDataStr ? JSON.parse(storedDataStr) : {};
       } catch (err) {
-        console.warn('Error parsing stored data, starting fresh');
         existingData = {};
       }
 
+      // Reset errors
       setUsernameError(null);
       setBirthdateError(null);
       setPalateError(null);
+      setGenderError(null);
 
       let formattedBirthdate = "";
 
       // Username validation
-      if (!name || name.length > 20) {
-        setUsernameError("Username must be 1-20 characters.");
+      if (!name || name.length > userNameMaxLimit) {
+        setUsernameError(usernameValidationLimit(userNameMinLimit, userNameMaxLimit));
         setIsLoading(false);
         return;
-      } else {
-        // Birthdate validation (must be 18+)
-        if (!birthdate) {
-          setBirthdateError("Birthdate is required.");
-          setIsLoading(true);
-          return;
-        } else {
-          const birth = new Date(birthdate);
-          const today = new Date();
-          const age = today.getFullYear() - birth.getFullYear();
-          const m = today.getMonth() - birth.getMonth();
-          const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
-          const actualAge = isBirthdayPassed ? age : age - 1;
-          if (isNaN(birth.getTime()) || actualAge < 18) {
-            setBirthdateError("You must be at least 18 years old.");
-            setIsLoading(false);
-            return;
-          }
-        }
+      }
 
-        if (birthdate) {
-          const dateObj = new Date(birthdate);
-          if (!isNaN(dateObj.getTime())) {
-            formattedBirthdate = dateObj.toISOString().split("T")[0];
-          }
-        }
+      // Birthdate validation
+      if (!birthdate) {
+        setBirthdateError(birthdateRequired);
+        setIsLoading(false);
+        return;
+      }
 
-        // Palate validation - only during submit
-        if (selectedPalates.size === 0) {
-          setPalateError("Please select at least one palate");
-          setIsLoading(false);
-          return;
-        }
-        if (selectedPalates.size > 2) {
-          setPalateError("You can only select up to 2 palates");
-          setIsLoading(false);
-          return;
-        }
+      // Age validation
+      const birth = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
+      const actualAge = isBirthdayPassed ? age : age - 1;
+      
+      if (isNaN(birth.getTime()) || actualAge < ageLimit) {
+        setBirthdateError(birthdateLimit(ageLimit));
+        setIsLoading(false);
+        return;
+      }
 
-        try {
-          const response = await UserService.checkUsernameExists(name);
-          if (response.exists) {
-            setUsernameError(response.message);
-            setIsLoading(false);
-            return;
-          }
-        } catch (error) {
-          setUsernameError("Error checking username availability");
-          setIsLoading(false);
-          return;
+      if (birthdate) {
+        const dateObj = new Date(birthdate);
+        if (!isNaN(dateObj.getTime())) {
+          formattedBirthdate = dateObj.toISOString().split("T")[0];
         }
       }
+
+      // Gender validation
+      if (!gender) {
+        setGenderError(genderRequired);
+        setIsLoading(false);
+        return;
+      }
+
+      // Palate validation
+      if (selectedPalates.size === 0) {
+        setPalateError(palateRequired);
+        setIsLoading(false);
+        return;
+      }
+      if (selectedPalates.size > palateLimit) {
+        setPalateError(palateMaxLimit(palateLimit));
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await UserService.checkUsernameExists(name);
+        if (response.exists) {
+          setUsernameError(response.message);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        setUsernameError(usernameCheckError);
+        setIsLoading(false);
+        return;
+      }
       if (!hasMounted) return null;
+
       // Update localStorage with new data while preserving onboarding2 data
       const updatedData = {
         ...existingData,
@@ -192,7 +210,6 @@ const OnboardingOnePage = () => {
   };
 
   const handleGenderChange = (value: string) => {
-    console.log("Gender changed to:", value);
     setGender(value);
     // Reset custom gender fields when switching genders
     if (value !== "custom") {
@@ -316,7 +333,6 @@ const OnboardingOnePage = () => {
                             }`}
                           value={field.value}
                           onChange={field.onChange}
-                          required
                           disabled={field.disabled}
                         />
                         {!field.value && (
@@ -337,7 +353,6 @@ const OnboardingOnePage = () => {
                         placeholder={field.placeholder}
                         value={field.value}
                         onChange={field.onChange}
-                        required
                         disabled={field.disabled}
                       />
                     )}
@@ -351,6 +366,9 @@ const OnboardingOnePage = () => {
                   )}
                   {field.label === "Palate (Select up to 2 palates)" && palateError && (
                     <div className="text-red-600 text-xs mt-1">{palateError}</div>
+                  )}
+                  {field.label === "Gender" && genderError && (
+                    <div className="text-red-600 text-xs mt-1">{genderError}</div>
                   )}
                 </div>
               );

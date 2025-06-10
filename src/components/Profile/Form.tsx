@@ -9,6 +9,8 @@ import { FaPen } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
+import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
+import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
 
 const Form = (props: any) => {
   const { data: session, update } = useSession();
@@ -56,8 +58,8 @@ const Form = (props: any) => {
       const file = event.target.files[0];
 
       // Check file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (file.size > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
 
@@ -75,8 +77,8 @@ const Form = (props: any) => {
     setIsLoading(true);
 
     // Validate palates count
-    if (selectedPalates.length > 2) {
-      setPalateError('You can only select up to 2 palates');
+    if (selectedPalates.length > palateLimit) {
+      setPalateError(palateMaxLimit(palateLimit));
       setIsLoading(false);
       return;
     }
@@ -85,8 +87,8 @@ const Form = (props: any) => {
     if (profile) {
       const base64Length = profile.split(',')[1].length;
       const sizeInBytes = (base64Length * 3) / 4;
-      if (sizeInBytes > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (sizeInBytes > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         setIsLoading(false);
         return;
       }
@@ -259,8 +261,7 @@ const Form = (props: any) => {
         )}
         <div className="flex flex-col justify-center items-center pt-10">
           <h1 className="text-[#31343F] text-2xl font-bold">Edit Profile</h1>
-          <form
-            className="listing__form max-w-[672px] w-full my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+          <form className="listing__form max-w-[672px] w-full my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
             onSubmit={submitReview}
           >
             <div className="listing__form-group relative justify-center self-center">
@@ -278,7 +279,7 @@ const Form = (props: any) => {
                   accept="image/*"
                   disabled={isLoading}
                 />
-                <div>
+                <div className="relative">
                   <div className="w-[120px] h-[120px] relative">
                     <Image
                       src={profilePreview}
@@ -286,9 +287,9 @@ const Form = (props: any) => {
                       className="rounded-full object-cover"
                       alt="profile"
                     />
-                  </div>
-                  <div className="absolute right-0 bottom-0 h-11 w-11 p-3 rounded-[50px] border-1.5 bg-white text-center">
-                    <FaPen />
+                    <div className="absolute -right-2 -bottom-2 h-11 w-11 p-3 rounded-[50px] border-1.5 bg-white text-center shadow-md">
+                      <FaPen />
+                    </div>
                   </div>
                 </div>
               </label>
