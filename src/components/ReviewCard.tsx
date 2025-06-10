@@ -12,7 +12,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
 
- const UserPalateNames = data.author?.node?.palates
+ const UserPalateNames = data?.palates
   ?.split("|")
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
