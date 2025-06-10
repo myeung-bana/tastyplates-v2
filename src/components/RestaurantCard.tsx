@@ -149,14 +149,15 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <Image
-            src={restaurant.image}
-            alt={restaurant.name}
-            width={304}
-            height={228}
-            className="restaurant-card__img cursor-pointer"
-            onClick={addReview}
-          />
+          <Link href={`/restaurants/${restaurant.slug}`}>
+            <Image
+              src={restaurant.image}
+              alt={restaurant.name}
+              width={304}
+              height={228}
+              className="restaurant-card__img cursor-pointer"
+            />
+          </Link>
           {profileTablist !== 'listings' && (
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
