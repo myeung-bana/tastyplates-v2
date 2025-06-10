@@ -52,7 +52,6 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 
   useEffect(() => {
     let isMounted = true;
-    setError(null);
     if (!session || !restaurantSlug || initialized) return;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
@@ -70,9 +69,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       .then(data => {
         if (isMounted) setSaved(data.status === "saved");
       })
-      .catch((err) => {
-        if (isMounted) setError("Could not check favorite status");
-      })
+      // No error state for initial check, just let it update when ready
       .finally(() => {
         if (isMounted) setInitialized(true);
       });

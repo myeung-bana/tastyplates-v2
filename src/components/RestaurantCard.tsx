@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import SignupModal from "@/components/SignupModal";
+import SigninModal from "@/components/SigninModal";
 
 export interface Restaurant {
   id: string;
@@ -31,6 +33,8 @@ export interface RestaurantCardProps {
 
 const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const [showSignin, setShowSignin] = useState(false);
   const reviewsCount = getRestaurantReviewsCount(restaurant.id);
   const router = useRouter()
   const { data: session } = useSession();
@@ -62,7 +66,10 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!session) return;
+    if (!session) {
+      setShowSignup(true);
+      return;
+    }
     setLoading(true);
     setSaved(prev => !prev);
     const action = saved ? "unsave" : "save";
@@ -129,6 +136,15 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
     </div>
   );
 
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!session) {
+      setShowSignup(true);
+      return;
+    }
+    handleToggle(e);
+  };
+
   return (
     <>
       <div className="restaurant-card">
@@ -145,12 +161,20 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
                 className="rounded-full p-2 bg-white"
-                onClick={handleDeleteWishlist}
+                onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
+                disabled={loading || !initialized}
+                aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
-                {profileTablist !== 'wishlists' ? (
-                  <FaRegHeart className="size-3 md:size-4" />
-                ) : (
+                {!initialized ? (
+                  <svg className="animate-spin w-4 h-4 text-[#E36B00]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="164" strokeDashoffset="40" />
+                  </svg>
+                ) : profileTablist === 'wishlists' ? (
                   <FaHeart className="size-3 md:size-4 text-[#31343F]" />
+                ) : saved ? (
+                  <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
+                ) : (
+                  <FaRegHeart className="size-3 md:size-4" />
                 )}
               </button>
               <button className="rounded-full p-2 bg-white">
@@ -201,6 +225,23 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
         hasFooter
         headerClass="!text-[#31343F]"
         contentClass="!pb-[2px]"
+      />
+      {/* Signup/Signin Modals for not-logged-in users */}
+      <SignupModal
+        isOpen={showSignup}
+        onClose={() => setShowSignup(false)}
+        onOpenSignin={() => {
+          setShowSignup(false);
+          setShowSignin(true);
+        }}
+      />
+      <SigninModal
+        isOpen={showSignin}
+        onClose={() => setShowSignin(false)}
+        onOpenSignup={() => {
+          setShowSignin(false);
+          setShowSignup(true);
+        }}
       />
     </>
   );
