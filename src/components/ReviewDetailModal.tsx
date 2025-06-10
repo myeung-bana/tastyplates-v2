@@ -128,6 +128,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       } else {
         setIsFollowing(true);
         setFollowState(authorUserId, true);
+        // Invalidate cache and trigger sync for current user
+        const currentUserId = session?.user?.id;
+        if (currentUserId) {
+          localStorage.removeItem(`following_${currentUserId}`);
+          localStorage.removeItem(`followers_${currentUserId}`);
+        }
+        localStorage.setItem('follow_sync', Date.now().toString());
       }
     } catch (err) {
       console.error("Follow error", err);
@@ -166,6 +173,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       } else {
         setIsFollowing(false);
         setFollowState(authorUserId, false);
+        // Invalidate cache and trigger sync for current user
+        const currentUserId = session?.user?.id;
+        if (currentUserId) {
+          localStorage.removeItem(`following_${currentUserId}`);
+          localStorage.removeItem(`followers_${currentUserId}`);
+        }
+        localStorage.setItem('follow_sync', Date.now().toString());
       }
     } catch (err) {
       console.error("Unfollow error", err);

@@ -175,76 +175,68 @@ const Profile = () => {
     }
   };
 
-  // Fetch following with cache
-  const fetchFollowing = async () => {
+  // Fetch following with cache (5 min TTL)
+  const fetchFollowing = async (forceRefresh = false) => {
     setFollowingLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowingLoading(false);
       return [];
     }
-
-    // Try to get from cache first
     const cacheKey = `following_${targetUserId}`;
-    const cachedData = localStorage.getItem(cacheKey);
-
-    if (cachedData) {
-      const { data, timestamp } = JSON.parse(cachedData);
-      // Check if cache is less than 5 minutes old
-      if (Date.now() - timestamp < 5 * 60 * 1000) {
-        setFollowing(data);
-        setFollowingLoading(false);
-        return data;
+    let followingList = [];
+    if (!forceRefresh) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            setFollowing(data);
+            setFollowingLoading(false);
+            return data;
+          }
+        } catch {}
       }
     }
-
     try {
-      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
-      // Cache the new data
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data: followingList,
-        timestamp: Date.now()
-      }));
+      followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
+      localStorage.setItem(cacheKey, JSON.stringify({ data: followingList, timestamp: Date.now() }));
       return followingList;
     } finally {
       setFollowingLoading(false);
     }
   };
 
-  // Fetch followers with cache
-  const fetchFollowers = async (followingList?: any[]) => {
+  // Fetch followers with cache (5 min TTL)
+  const fetchFollowers = async (forceRefresh = false, followingList?: any[]) => {
     setFollowersLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowersLoading(false);
       return [];
     }
-
-    // Try to get from cache first
     const cacheKey = `followers_${targetUserId}`;
-    const cachedData = localStorage.getItem(cacheKey);
-
-    if (cachedData) {
-      const { data, timestamp } = JSON.parse(cachedData);
-      // Check if cache is less than 1 minutes old
-      if (Date.now() - timestamp < 1 * 60 * 1000) {
-        setFollowers(data);
-        setFollowersLoading(false);
-        return data;
+    let followersList = [];
+    if (!forceRefresh) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            setFollowers(data);
+            setFollowersLoading(false);
+            return data;
+          }
+        } catch {}
       }
     }
-
     try {
-      const followersList = await UserService.getFollowersList(
+      followersList = await UserService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
       );
-      // Cache the new data
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data: followersList,
-        timestamp: Date.now()
-      }));
       setFollowers(followersList);
+      localStorage.setItem(cacheKey, JSON.stringify({ data: followersList, timestamp: Date.now() }));
       return followersList;
     } finally {
       setFollowersLoading(false);
@@ -265,87 +257,41 @@ const Profile = () => {
     setPalatesLoading(false);
   }, [session?.user]);
 
+  // On mount or user change, load from cache or fetch
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
-
     const loadFollowData = async () => {
       setLoading(true);
       setFollowingLoading(true);
       setFollowersLoading(true);
-
       try {
-        // Try to get following from cache first
-        const followingCacheKey = `following_${targetUserId}`;
-        const followersCacheKey = `followers_${targetUserId}`;
-        let followingList = [];
-        let followersList = [];
-
-        const cachedFollowing = localStorage.getItem(followingCacheKey);
-        const cachedFollowers = localStorage.getItem(followersCacheKey);
-
-        if (cachedFollowing && cachedFollowers) {
-          const { data: followingData, timestamp: followingTimestamp } = JSON.parse(cachedFollowing);
-          const { data: followersData, timestamp: followersTimestamp } = JSON.parse(cachedFollowers);
-
-          // Check if cache is less than 5 minutes old
-          if (Date.now() - followingTimestamp < 5 * 60 * 1000 &&
-            Date.now() - followersTimestamp < 5 * 60 * 1000) {
-            setFollowing(followingData);
-            setFollowers(followersData);
-            return;
-          }
-        }
-
-        // If cache miss or expired, fetch fresh data
-        [followingList, followersList] = await Promise.all([
-          UserService.getFollowingList(targetUserId, session.accessToken),
-          UserService.getFollowersList(targetUserId, [], session.accessToken)
-        ]);
-
-        // Update state and cache
-        setFollowing(followingList);
-        setFollowers(followersList.map(user => ({
-          ...user,
-          isFollowing: followingList.some(f => f.id === user.id)
-        })));
-
-        // Cache the new data
-        localStorage.setItem(followingCacheKey, JSON.stringify({
-          data: followingList,
-          timestamp: Date.now()
-        }));
-        localStorage.setItem(followersCacheKey, JSON.stringify({
-          data: followersList,
-          timestamp: Date.now()
-        }));
+        const followingList = await fetchFollowing();
+        await fetchFollowers(false, followingList);
       } finally {
         setFollowingLoading(false);
         setFollowersLoading(false);
         setLoading(false);
       }
     };
-
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
 
-  // const palateCuisineIds = useMemo(() => {
-  //   return cuisines.filter((c) => palates.includes(c.name)).map((c) => c.id);
-  // }, [palates]);
-
-  // const filteredRestaurants = useMemo(() => {
-  //   if (palateCuisineIds.length === 0) {
-  //     return restaurants;
-  //   }
-  //   return restaurants.filter((rest) =>
-  //     rest.cuisineIds.some((cId) => palateCuisineIds.includes(cId))
-  //   );
-  // }, [palateCuisineIds]);
-
-  // Count user reviews (dummy data version)
-  const userReviewCount = useMemo(() => {
-    if (!user?.id) return 0;
-    return reviews.filter((r: any) => r.authorId === user.id).length;
-  }, [reviews, user?.id]);
+  // Listen for follow/unfollow in other tabs and sync instantly
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'follow_sync') {
+        if (targetUserId) {
+          localStorage.removeItem(`following_${targetUserId}`);
+          localStorage.removeItem(`followers_${targetUserId}`);
+        }
+        // Always re-fetch from backend and update cache
+        fetchFollowing(true);
+        fetchFollowers(true);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [targetUserId]);
 
   const handleFollow = async (id: string) => {
     if (!session?.accessToken) return;
@@ -353,19 +299,20 @@ const Profile = () => {
     if (isNaN(userIdNum)) return;
     const success = await UserService.followUser(userIdNum, session.accessToken);
     if (success) {
-      // Clear caches to force refresh
+      // Invalidate caches
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh
+      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
-        fetchFollowing(),
-        fetchFollowers()
+        fetchFollowing(true),
+        fetchFollowers(true)
       ]);
-      // Update isFollowing for followers list
       setFollowers(prev => prev.map(user => ({
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
+      // Notify other tabs (and ReviewDetailModal) to update
+      localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
 
@@ -375,21 +322,28 @@ const Profile = () => {
     if (isNaN(userIdNum)) return;
     const success = await UserService.unfollowUser(userIdNum, session.accessToken);
     if (success) {
-      // Clear caches to force refresh
+      // Invalidate caches
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh
+      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
-        fetchFollowing(),
-        fetchFollowers()
+        fetchFollowing(true),
+        fetchFollowers(true)
       ]);
-      // Update isFollowing for followers list
       setFollowers(prev => prev.map(user => ({
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
+      // Notify other tabs (and ReviewDetailModal) to update
+      localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
+
+  // Count user reviews (robust version: count reviews for the profile being viewed, not just current user)
+  const userReviewCount = useMemo(() => {
+    if (!targetUserId) return 0;
+    return reviews.filter((r: any) => r.authorId === targetUserId).length;
+  }, [reviews, targetUserId]);
 
   // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [
