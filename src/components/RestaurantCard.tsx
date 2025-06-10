@@ -5,7 +5,6 @@ import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
-import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
@@ -13,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import RestaurantReviewsModal from "./RestaurantReviewsModal";
 
 export interface Restaurant {
   id: string;
@@ -36,7 +36,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
-  const reviewsCount = getRestaurantReviewsCount(restaurant.id);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
@@ -174,6 +174,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     handleToggle(e);
   };
 
+  const handleCommentButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsReviewModalOpen(true);
+  };
+
   return (
     <>
       <div className="restaurant-card">
@@ -206,7 +211,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
               {error && (
                 <span className="text-xs text-red-500 ml-2">{error}</span>
               )}
-              <button className="rounded-full p-2 bg-white">
+              <button className="rounded-full p-2 bg-white" onClick={handleCommentButtonClick}>
                 <MdOutlineMessage className="size-3 md:size-4" />
               </button>
             </div>
@@ -272,6 +277,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
           setShowSignup(true);
         }}
       />
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <RestaurantReviewsModal
+          isOpen={isReviewModalOpen}
+          setIsOpen={setIsReviewModalOpen}
+          restaurant={restaurant}
+        />
+      )}
     </>
   );
 };
