@@ -95,4 +95,66 @@ export class UserService {
             throw new Error('Failed to validate password');
         }
     }
+
+    static async getUserPalates(userId: number, token?: string): Promise<any> {
+        try {
+            const response = await UserRepository.getUserPalates<any>(userId, token);
+            return response;
+        } catch (error) {
+            console.error('Get user palates error:', error);
+            throw new Error('Failed to fetch user palates');
+        }
+    }
+
+    static async getFollowingList(userId: number, token?: string): Promise<any[]> {
+        try {
+            const response = await UserRepository.getFollowingList<any>(userId, token);
+            return Array.isArray(response) ? response.map(user => ({
+                id: user.id,
+                name: user.name,
+                cuisines: user.palates || [],
+                image: user.image || "/profile-icon.svg",
+                isFollowing: true,
+            })) : [];
+        } catch (error) {
+            console.error('Get following list error:', error);
+            return [];
+        }
+    }
+
+    static async getFollowersList(userId: number, followingList: any[], token?: string): Promise<any[]> {
+        try {
+            const response = await UserRepository.getFollowersList<any>(userId, token);
+            return Array.isArray(response) ? response.map(user => ({
+                id: user.id,
+                name: user.name,
+                cuisines: user.palates || [],
+                image: user.image || "/profile-icon.svg",
+                isFollowing: followingList.some(f => f.id === user.id),
+            })) : [];
+        } catch (error) {
+            console.error('Get followers list error:', error);
+            return [];
+        }
+    }
+
+    static async followUser(userId: number, token?: string): Promise<boolean> {
+        try {
+            await UserRepository.followUser<any>(userId, token);
+            return true;
+        } catch (error) {
+            console.error('Follow user error:', error);
+            return false;
+        }
+    }
+
+    static async unfollowUser(userId: number, token?: string): Promise<boolean> {
+        try {
+            await UserRepository.unfollowUser<any>(userId, token);
+            return true;
+        } catch (error) {
+            console.error('Unfollow user error:', error);
+            return false;
+        }
+    }
 }

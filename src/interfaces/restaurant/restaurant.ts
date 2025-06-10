@@ -4,7 +4,11 @@ export interface Listing {
     slug: string;
     content: string;
     listingStreet: string;
-    cuisines: string[];
+    palates: {
+        nodes: {
+            name: string;
+        }[];
+    };
     databaseId?: number;
     listingDetails: {
         googleMapUrl: {
@@ -25,7 +29,7 @@ export interface Listing {
     };
     listingCategories: {
         nodes: {
-            id: string
+            databaseId: number
             name: string
         }[];
     };

@@ -23,4 +23,13 @@ export const RestaurantService = {
         }
     },
 
+    async createRestaurantListing(formData: FormData, token: string): Promise<any> {
+        try {
+            return await RestaurantRepository.createListing(formData, token);
+        } catch (error) {
+            console.error('Error creating restaurant listing:', error);
+            throw new Error('Failed to create restaurant listing');
+        }
+    }
+
 };
