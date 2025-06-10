@@ -72,7 +72,6 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               </div>
           </div>
         </div>
-        <br></br>
         <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
         <p className="review-card__text w-[304] text-[10px] md:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
