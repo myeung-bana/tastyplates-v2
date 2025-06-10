@@ -1,43 +1,64 @@
 import { gql } from '@apollo/client';
 
 export const GET_LISTINGS = gql`
-    query GetAllRestaurants($searchTerm: String!, $first: Int, $after: String) {
-        listings(where: { search: $searchTerm }, first: $first, after: $after) {
-            pageInfo {
-                endCursor
-                hasNextPage
+  query GetAllRestaurants(
+    $searchTerm: String!
+    $priceRange: String
+    $first: Int
+    $after: String
+    $taxQuery: TaxQuery # Define taxQuery as a variable of type TaxQuery
+    #$sortOption: String # Define sortOption as a variable of type String
+  ) {
+    listings(
+        where: {
+            search: $searchTerm
+            priceRange: $priceRange
+            taxQuery: $taxQuery
+            # If you want to sort by $sortOption, you'd typically add an orderBy argument here
+            # e.g., orderBy: { field: DATE, order: ASC }
+            # and potentially map $sortOption to field/order on the backend via a filter.
+        }
+        first: $first
+        after: $after
+    ) {
+        pageInfo {
+            endCursor
+            hasNextPage
+        }
+        nodes {
+            id
+            databaseId
+            title
+            slug
+            content
+            priceRange # This is the field returning the problematic data
+            listingStreet
+            palates {
+                nodes {
+                    name
+                    slug 
+                }
             }
-            nodes {
-                id
-                databaseId
-                title
-                slug
-                content
-                listingStreet
-                palates {
-                    nodes {
-                        name
-                    }
+            featuredImage {
+                node {
+                    sourceUrl
                 }
-                featuredImage {
-                    node {
-                        sourceUrl
-                    }
+            }
+            listingCategories {
+                nodes {
+                    id
+                    name
+                    slug
                 }
-                listingCategories {
-                    nodes {
-                        id
-                        name
-                    }
-                }
-                countries {
-                    nodes {
-                        name
-                    }
+            }
+            countries {
+                nodes {
+                    name
                 }
             }
         }
     }
+}
 `;
 
 export const GET_RESTAURANT_BY_SLUG = gql`
@@ -47,6 +68,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         title
         slug
         content
+        priceRange
         palates {
             nodes {
                 name

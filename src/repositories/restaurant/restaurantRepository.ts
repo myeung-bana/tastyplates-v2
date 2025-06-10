@@ -1,3 +1,4 @@
+// repositories/restaurant/restaurantRepository.ts
 import { gql } from "@apollo/client";
 import client from "@/app/graphql/client";
 import {
@@ -28,14 +29,28 @@ export class RestaurantRepository {
             query: GET_RESTAURANT_BY_SLUG,
             variables: { slug },
         });
-
+        console.log("Restaurant data:", data);
         return data.listing;
     }
 
-    static async getAllRestaurants(searchTerm: string, first = 8, after: string | null = null) {
+    static async getAllRestaurants(
+        searchTerm: string,
+        first = 8,
+        after: string | null = null,
+        taxQuery: any = {},
+        priceRange?: string | null,
+        sortOption?: string | null, // Added sortOption parameter
+    ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
-            variables: { searchTerm, first, after },
+            variables: {
+                searchTerm,
+                first,
+                after,
+                taxQuery,
+                priceRange,
+                // sortOption, // Pass sortOption as a variable
+            },
         });
 
         return {

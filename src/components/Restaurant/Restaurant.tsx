@@ -1,11 +1,12 @@
+// pages/RestaurantPage.tsx
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import FilterSidebar from "@/components/FilterSidebar";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter from "@/components/Filter/Filter";
 import SkeletonCard from "@/components/SkeletonCard";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 
@@ -19,6 +20,7 @@ interface Restaurant {
   priceRange: string;
   databaseId: number;
   palatesNames?: string[];
+  listingCategories?: { id: number; name: string; slug: string }[];
 }
 
 const RestaurantPage = () => {
@@ -31,6 +33,14 @@ const RestaurantPage = () => {
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
 
+  // Filter states
+  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+  const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
+  const [selectedPrice, setSelectedPrice] = useState<string | null>(null);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [selectedBadges, setSelectedBadges] = useState<string | null>(null);
+  const [selectedSortOption, setSelectedSortOption] = useState<string | null>(null);
+
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
       id: item.id,
@@ -40,20 +50,45 @@ const RestaurantPage = () => {
       rating: 4.5,
       databaseId: item.databaseId || 0,
       palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
+      listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
-      priceRange: "$$"
+      priceRange: item.priceRange
     }));
   };
 
-  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+  const fetchRestaurants = async (
+    search: string,
+    first = 8,
+    after: string | null = null,
+    cuisineSlug: string | null,
+    palateSlugs: string[],
+    priceRange?: string | null,
+    sortOption?: string | null, // Added sortOption parameter
+  ) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const data = await RestaurantService.fetchAllRestaurants(
+        search,
+        first,
+        after,
+        cuisineSlug,
+        palateSlugs,
+        priceRange,
+        // sortOption, // Pass sortOption
+      );
       const transformed = transformNodes(data.nodes);
 
       setRestaurants((prev) => {
         if (!after) return transformed;
-        const uniqueMap = new Map([...prev, ...transformed].map((r) => [r.id, r]));
+
+        const uniqueMap = new Map<string, Restaurant>();
+
+        // Add existing restaurants to the map
+        prev.forEach(r => uniqueMap.set(r.id, r));
+
+        // Add new restaurants, overwriting if ID already exists (for freshness or updates)
+        transformed.forEach(r => uniqueMap.set(r.id, r));
+
         return Array.from(uniqueMap.values());
       });
 
@@ -66,17 +101,31 @@ const RestaurantPage = () => {
     }
   };
 
+  // Effect for initial load and search term/filter changes
   useEffect(() => {
-    fetchRestaurants(debouncedSearchTerm, isFirstLoad.current ? 16 : 8, null);
-    isFirstLoad.current = false;
-  }, [debouncedSearchTerm]);
+    // Reset data when search term or filters change
+    setRestaurants([]);
+    setEndCursor(null);
+    setHasNextPage(true);
+    isFirstLoad.current = true; // Reset first load flag
 
-  // Intersection Observer
+    fetchRestaurants(
+      debouncedSearchTerm,
+      isFirstLoad.current ? 16 : 8,
+      null,
+      selectedCuisine,
+      selectedPalates,
+      selectedPrice, // Pass selectedPrice
+      selectedSortOption, // Pass selectedSortOption
+    );
+    isFirstLoad.current = false;
+  }, [debouncedSearchTerm, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption]); // Added selectedPrice and selectedSortOption to dependencies
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !loading) {
-          fetchRestaurants(debouncedSearchTerm, 8, endCursor);
+          fetchRestaurants(debouncedSearchTerm, 8, endCursor, selectedCuisine, selectedPalates, selectedPrice, selectedSortOption); // Pass selectedPrice and selectedSortOption
         }
       },
       { threshold: 1.0 }
@@ -88,13 +137,29 @@ const RestaurantPage = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, endCursor]);
+  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption]); // Added selectedPrice and selectedSortOption to dependencies
+
+  const handleFilterChange = useCallback((filters: {
+    cuisine?: string | null;
+    price?: string | null;
+    rating?: number | null;
+    badges?: string | null;
+    sortOption?: string | null;
+    palates?: string[] | null;
+  }) => {
+    setSelectedCuisine(filters.cuisine || null);
+    setSelectedPalates(filters.palates || []);
+    setSelectedPrice(filters.price || null);
+    setSelectedRating(filters.rating || null);
+    setSelectedBadges(filters.badges || null);
+    setSelectedSortOption(filters.sortOption || null);
+  }, []);
 
   return (
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
-          <Filter onFilterChange={() => { }} />
+          <Filter onFilterChange={handleFilterChange} />
           <div className="search-bar hidden sm:block relative">
             <input
               type="text"
