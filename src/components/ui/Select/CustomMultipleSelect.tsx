@@ -32,18 +32,42 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     const [search, setSearch] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('bottom');
     const containerRef = useRef<HTMLDivElement>(null);
+    const selectRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
                 setShowDropdown(false);
+                setSearch("");
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen && selectRef.current) {
+            const selectRect = selectRef.current.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            const dropdownHeight = 320; // Approximate max height of dropdown
+
+            // If there's not enough space below, position above
+            if (selectRect.bottom + dropdownHeight > windowHeight) {
+                setDropdownPosition('top');
+            } else {
+                setDropdownPosition('bottom');
+            }
+        }
+    }, [isOpen]);
 
     const filteredItems = props.items
         .map((section) => ({
@@ -131,15 +155,26 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
+        setShowDropdown(!showDropdown);  // Add this line
+    };
+
+    const getDropdownStyles = () => {
+        const baseStyles = "absolute left-0 w-full bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto !rounded-[24px]";
+        return dropdownPosition === 'top'
+            ? `${baseStyles} bottom-full mb-1`
+            : `${baseStyles} top-full mt-1`;
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        toggleDropdown();
     };
 
     return (
-        <div className="relative" translate="no">
+        <div className="relative" ref={selectRef} translate="no">
             <div
-                className={`w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${isOpen ? 'ring-2 ring-blue-500' : ''} ${props.className || ''}`}
-                onClick={(e) => {
-                    toggleDropdown();
-                }}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${props.className || ''}`}
+                onClick={handleClick}
             >
                 <div className="flex-1">{renderTags()}</div>
                 <div onClick={(e) => {
@@ -148,42 +183,53 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                     <FiChevronDown className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </div>
             </div>
-            <Dropdown
-                isOpen={isOpen}
-                onClose={() => setIsOpen(false)}
-                searchValue={search}
-                onSearchChange={setSearch}
-            >
-                {filteredItems.map((item) => (
-                    <div key={item.key} className="py-2 px-4">
-                        <div className="font-semibold mb-2">{item.label}</div>
-                        {item.children?.map((child) => (
-                            <div
-                                key={child.key}
-                                className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-50"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newSelection = new Set(props.value || new Set<Key>());
-                                    if (newSelection.has(child.key)) {
-                                        newSelection.delete(child.key);
-                                    } else {
-                                        newSelection.add(child.key);
-                                    }
-                                    props.onChange?.(newSelection);
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                    checked={props.value?.has(child.key)}
-                                    readOnly
-                                />
-                                <span className="font-medium">{child.label}</span>
+            {isOpen && (
+                <div 
+                    className={`${getDropdownStyles()} ${!isOpen ? 'hidden' : ''}`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="sticky top-0 bg-white p-4 z-10">
+                        <input
+                            type="text"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            placeholder="Search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="overflow-y-auto">
+                        {filteredItems.map((item) => (
+                            <div key={item.key} className="py-2 px-4">
+                                <div className="font-semibold mb-2">{item.label}</div>
+                                {item.children?.map((child) => (
+                                    <div
+                                        key={child.key}
+                                        className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-50"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newSelection = new Set(props.value || new Set<Key>());
+                                            if (newSelection.has(child.key)) {
+                                                newSelection.delete(child.key);
+                                            } else {
+                                                newSelection.add(child.key);
+                                            }
+                                            props.onChange?.(newSelection);
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                            checked={props.value?.has(child.key)}
+                                            readOnly
+                                        />
+                                        <span className="font-medium">{child.label}</span>
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>
-                ))}
-            </Dropdown>
+                </div>
+            )}
         </div>
     );
 };

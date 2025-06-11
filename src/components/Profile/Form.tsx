@@ -7,11 +7,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FaPen, FaPenAlt } from "react-icons/fa";
 import { List } from "@/data/dummyList";
-import { users } from "@/data/dummyUsers";  
+import { users } from "@/data/dummyUsers";
 import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
+import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
+import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
 import { MdEdit, MdOutlineEdit } from "react-icons/md";
 
 const Form = (props: any) => {
@@ -62,8 +64,8 @@ const Form = (props: any) => {
       const file = event.target.files[0];
 
       // Check file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (file.size > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
 
@@ -81,8 +83,8 @@ const Form = (props: any) => {
     setIsLoading(true);
 
     // Validate palates count
-    if (selectedPalates.length > 2) {
-      setPalateError("You can only select up to 2 palates");
+    if (selectedPalates.length > palateLimit) {
+      setPalateError(palateMaxLimit(palateLimit));
       setIsLoading(false);
       return;
     }
@@ -91,8 +93,8 @@ const Form = (props: any) => {
     if (profile) {
       const base64Length = profile.split(",")[1].length;
       const sizeInBytes = (base64Length * 3) / 4;
-      if (sizeInBytes > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (sizeInBytes > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         setIsLoading(false);
         return;
       }
@@ -282,9 +284,8 @@ const Form = (props: any) => {
             <div className="listing__form-group relative justify-center self-center">
               <label
                 htmlFor="image"
-                className={`cursor-pointer flex justify-center ${
-                  isLoading ? "opacity-50" : ""
-                }`}
+                className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""
+                  }`}
               >
                 <input
                   id="image"
@@ -320,9 +321,8 @@ const Form = (props: any) => {
               <div className="listing__input-group">
                 <textarea
                   name="name"
-                  className={`listing__input resize-none ${
-                    isLoading ? "opacity-50" : ""
-                  }`}
+                  className={`listing__input resize-none ${isLoading ? "opacity-50" : ""
+                    }`}
                   placeholder="About Me"
                   value={aboutMe}
                   onChange={handleAboutMeChange}
@@ -335,9 +335,8 @@ const Form = (props: any) => {
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
-                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${
-                    isLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   placeholder="Select your region"
                   items={regionOptions}
                   onChange={handleRegionChange}
@@ -363,16 +362,14 @@ const Form = (props: any) => {
                           onClick={() => togglePalate(child.label)}
                           disabled={isLoading}
                           className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] 
-                            ${
-                              selectedPalates.some(
-                                (p) =>
-                                  p.toLowerCase() === child.label.toLowerCase()
-                              )
-                                ? "bg-[#F1F1F1] !font-bold"
-                                : "bg-[##FCFCFC] text-gray-600 hover:bg-gray-200"
-                            } ${
-                            isLoading ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
+                            ${selectedPalates.some(
+                            (p) =>
+                              p.toLowerCase() === child.label.toLowerCase()
+                          )
+                              ? "bg-[#F1F1F1] !font-bold"
+                              : "bg-[##FCFCFC] text-gray-600 hover:bg-gray-200"
+                            } ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                         >
                           {child.label}
                         </button>
@@ -432,9 +429,8 @@ const Form = (props: any) => {
               </button>
               <button
                 type="button"
-                className={`underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center ${
-                  isLoading ? "opacity-50" : ""
-                }`}
+                className={`underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading ? "opacity-50" : ""
+                  }`}
                 onClick={() => router.push("/profile")}
                 disabled={isLoading}
               >
