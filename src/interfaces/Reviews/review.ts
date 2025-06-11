@@ -13,13 +13,13 @@ export interface ReviewedDataProps {
     id: string;
     sourceUrl: string;
   }
+  palates: string;
   author: {
     name: string
     node: {
       id: string;
       databaseId: number
       name: string;
-      palates: string;
       avatar: {
         url: string;
       }

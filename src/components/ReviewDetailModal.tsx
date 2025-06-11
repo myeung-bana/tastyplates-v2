@@ -153,7 +153,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     ],
   };
 
-  const UserPalateNames = data.author?.node?.palates
+  const UserPalateNames = data?.palates
     ?.split("|")
     .map((s: any) => s.trim())
     .filter((s: any) => s.length > 0);
@@ -264,7 +264,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                         >
                           {tag}{" "}
                         </span>
@@ -340,7 +340,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                         >
                           {tag}{" "}
                         </span>
@@ -389,7 +389,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {replies.length > 0 && (
                         <div className="overflow-y-auto grow pt-4 pr-1 pb-3 h-[350px]">
                           {replies.map((reply, index) => {
-                            const UserPalateNames = reply.author?.node?.palates
+                            const UserPalateNames = reply?.palates
                               ?.split("|")
                               .map((s: string) => s.trim())
                               .filter((s: string) => s.length > 0);
@@ -419,7 +419,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       (tag: string, tagIndex: number) => (
                                         <span
                                           key={tagIndex}
-                                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                                         >
                                           {tag}
                                         </span>
