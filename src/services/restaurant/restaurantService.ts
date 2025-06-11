@@ -5,9 +5,9 @@ export const RestaurantService = {
         return await RestaurantRepository.getRestaurantBySlug(slug);
     },
 
-    async fetchAllRestaurants(searchTerm: string, first = 8, after: string | null = null) {
+    async fetchAllRestaurants(searchTerm: string, first = 8, after: string | null = null, status: string | null = null) {
         try {
-            return await RestaurantRepository.getAllRestaurants(searchTerm, first, after);
+            return await RestaurantRepository.getAllRestaurants(searchTerm, first, after, status);
         } catch (error) {
             console.error('Error fetching list:', error);
             throw new Error('Failed to fetch list');
@@ -29,6 +29,15 @@ export const RestaurantService = {
         } catch (error) {
             console.error('Error creating restaurant listing:', error);
             throw new Error('Failed to create restaurant listing');
+        }
+    },
+
+    async fetchPendingRestaurants(token: string): Promise<any> {
+        try {
+            return await RestaurantRepository.getlistingDrafts(token);
+        } catch (error) {
+            console.error('Error fetching pending restaurants:', error);
+            throw new Error('Failed to fetch pending restaurants');
         }
     }
 
