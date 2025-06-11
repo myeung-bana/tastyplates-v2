@@ -86,9 +86,11 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       {/* Right-side modal */}
       <div className="relative w-full max-w-xl h-full bg-white shadow-xl flex flex-col overflow-y-auto animate-slide-in-right">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-[#31343F]">
-            Reviews · {reviews.length}
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="text-lg font-bold text-[#31343F]">Reviews</h2>
+            <span className="text-lg font-normal text-[#494D5D]">·</span>
+            <span className="text-lg font-normal text-[#494D5D]">{reviews.length}</span>
+          </div>
           <button
             className="text-2xl text-gray-400 hover:text-gray-700"
             onClick={() => setIsOpen(false)}
