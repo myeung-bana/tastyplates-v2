@@ -154,7 +154,7 @@ export default function Navbar(props: any) {
                 ))}
               </div>
             </div>
-            {hasSearchBar || navBg && (
+            {(navBg && isLandingPage) || hasSearchBar && (
               <div className="hidden md:block">
                 <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                   <div className="hero__search-restaurant !bg-transparent">
@@ -280,6 +280,26 @@ export default function Navbar(props: any) {
               )}
             </div>
           </div>
+          {hasSearchBar && (
+            <div className="mb-4 md:hidden">
+              <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
+                <div className="hero__search-restaurant !bg-transparent">
+                  <input
+                    type="text"
+                    placeholder="Start Your Search"
+                    className="hero__search-input text-center"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="hero__search-button !rounded-full h-8 w-8 text-center"
+                  // disabled={!location || !cuisine}
+                >
+                  <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
            {/* Mobile menu */}
