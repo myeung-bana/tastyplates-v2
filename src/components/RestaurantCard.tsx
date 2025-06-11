@@ -147,75 +147,75 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
 
   return (
     <>
-      <div className="restaurant-card">
-        <div className="restaurant-card__image relative">
-          <Image
-            src={restaurant.image}
-            alt={restaurant.name}
-            width={304}
-            height={228}
-            className="restaurant-card__img cursor-pointer"
-            onClick={addReview}
-          />
-          {profileTablist !== 'listings' && (
-            <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
-              <button
-                className="rounded-full p-2 bg-white"
-                onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
-                disabled={loading || !initialized}
-                aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
-              >
-                {!initialized ? (
-                  <svg className="animate-spin w-4 h-4 text-[#E36B00]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="164" strokeDashoffset="40" />
-                  </svg>
-                ) : profileTablist === 'wishlists' ? (
-                  <FaHeart className="size-3 md:size-4 text-[#31343F]" />
-                ) : saved ? (
-                  <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
-                ) : (
-                  <FaRegHeart className="size-3 md:size-4" />
-                )}
-              </button>
-              <button className="rounded-full p-2 bg-white">
-                <MdOutlineMessage className="size-3 md:size-4" />
-              </button>
-            </div>
-          )}
-        </div>
-        <Link href={`/restaurants/${restaurant.slug}`}>
-          <div className="restaurant-card__content">
-            <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
-              <div className="restaurant-card__rating">
-                <FaStar className="restaurant-card__icon -mt-1" />
-                <span>{restaurant.rating}</span>
-                {/* <span>({restaurant.reviews})</span> */}
+        <div className="restaurant-card">
+          <div className="restaurant-card__image relative">
+            <Image
+              src={restaurant.image}
+              alt={restaurant.name}
+              width={304}
+              height={228}
+              className="restaurant-card__img cursor-pointer"
+              onClick={addReview}
+            />
+            {profileTablist !== 'listings' && (
+              <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
+                <button
+                  className="rounded-full p-2 bg-white"
+                  onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
+                  disabled={loading || !initialized}
+                  aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
+                >
+                  {!initialized ? (
+                    <svg className="animate-spin w-4 h-4 text-[#E36B00]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                      <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="164" strokeDashoffset="40" />
+                    </svg>
+                  ) : profileTablist === 'wishlists' ? (
+                    <FaHeart className="size-3 md:size-4 text-[#31343F]" />
+                  ) : saved ? (
+                    <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
+                  ) : (
+                    <FaRegHeart className="size-3 md:size-4" />
+                  )}
+                </button>
+                <button className="rounded-full p-2 bg-white">
+                  <MdOutlineMessage className="size-3 md:size-4" />
+                </button>
               </div>
-            </div>
-
-            <div className="restaurant-card__info">
-              <div className="restaurant-card__location">
-                {/* <FiMapPin className="restaurant-card__icon" /> */}
-                <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
-              </div>
-              {/* <div className="restaurant-card__location">
-                <FiMessageCircle className="restaurant-card__icon" />
-                <span>{reviewsCount}</span>
-              </div> */}
-            </div>
-
-            <div className="restaurant-card__tags">
-              {cuisineNames.map((cuisineName, index) => (
-                <span key={index} className="restaurant-card__tag">
-                  &#8226; {cuisineName}
-                </span>
-              ))}
-            </div>
-
+            )}
           </div>
-        </Link>
-      </div>
+          <Link href={`/restaurants/${restaurant.slug}`}>
+            <div className="restaurant-card__content">
+              <div className="restaurant-card__header">
+                <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
+                <div className="restaurant-card__rating">
+                  <FaStar className="restaurant-card__icon -mt-1" />
+                  <span>{restaurant.rating}</span>
+                  {/* <span>({restaurant.reviews})</span> */}
+                </div>
+              </div>
+
+              <div className="restaurant-card__info">
+                <div className="restaurant-card__location">
+                  {/* <FiMapPin className="restaurant-card__icon" /> */}
+                  <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+                </div>
+                {/* <div className="restaurant-card__location">
+                  <FiMessageCircle className="restaurant-card__icon" />
+                  <span>{reviewsCount}</span>
+                </div> */}
+              </div>
+
+              <div className="restaurant-card__tags">
+                {cuisineNames.map((cuisineName, index) => (
+                  <span key={index} className="restaurant-card__tag">
+                    &#8226; {cuisineName}
+                  </span>
+                ))}
+              </div>
+
+            </div>
+          </Link>
+        </div>
 
       <CustomModal
         isOpen={isDeleteModalOpen}
