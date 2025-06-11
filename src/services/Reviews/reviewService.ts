@@ -22,7 +22,7 @@ export class ReviewService {
     }
 
     static async postReview(reviewData: any, accessToken: string): Promise<any> {
-        
+
         const formattedData = {
             post: reviewData.restaurantId,
             parent: reviewData.parent || 0,
@@ -88,9 +88,11 @@ export class ReviewService {
         }
     }
 
-    static async fetchRestaurantReviewsById(restaurantId: string | number) {
+    static async fetchRestaurantReview(slug: string, accessToken?: string) {
         try {
-            return await ReviewRepository.getRestaurantReviewsById(restaurantId);
+            // Call the repository to fetch reviews/comments for a specific restaurant
+            const response = await ReviewRepository.fetchRestaurantReview(slug, accessToken);
+            return response;
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
             throw new Error('Failed to fetch restaurant reviews');

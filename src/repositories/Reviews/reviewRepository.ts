@@ -1,6 +1,5 @@
 import client from "@/app/graphql/client";
 import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
-import { GET_REVIEWS_BY_RESTAURANT_ID } from "@/app/graphql/Reviews/reviewsQueries";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 export class ReviewRepository {
@@ -132,21 +131,23 @@ export class ReviewRepository {
     }, true);
   }
 
-  static async getRestaurantReviewsById(restaurantId: string | number) {
-    if (!restaurantId) throw new Error('Missing restaurantId');
+  static async fetchRestaurantReview(slug: string, accessToken?: string) {
     try {
-      const { data } = await client.query({
-        query: GET_REVIEWS_BY_RESTAURANT_ID,
-        variables: { restaurantId },
-        fetchPolicy: "no-cache",
-      });
-      if (data?.reviews?.nodes?.length) {
-        return { reviews: data.reviews.nodes };
-      }
-    } catch (e) {
+      const response = await this.request(
+        `/wp-json/wp/v2/api/comments?type=listing&slug=${slug}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          },
+        },
+        true // parse as JSON
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch restaurant reviews', error);
+      throw new Error('Failed to fetch restaurant reviews');
     }
-    const response = await fetch(`${API_BASE_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
-    if (!response.ok) throw new Error('Failed to fetch from WordPress');
-    return response.json();
   }
 }
