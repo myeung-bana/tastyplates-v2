@@ -6,6 +6,9 @@ import Image from "next/image";
 import { stripTags, formatDate } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
+import SigninModal from "./SigninModal";
+import { useSession } from "next-auth/react";
+import { useFollowContext } from "./FollowContext";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
@@ -17,7 +20,6 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { useSession } from "next-auth/react";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -25,20 +27,26 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   onClose,
 }) => {
   const { data: session } = useSession();
+  const { getFollowState, setFollowState } = useFollowContext();
+  const [isShowSignup, setIsShowSignup] = useState(false);
+  const [isShowSignin, setIsShowSignin] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
+  const [cooldown, setCooldown] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [isShowSignup, setIsShowSignup] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [commentReply, setCommentReply] = useState("")
+  const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [userLiked, setUserLiked] = useState(false);
+  const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
+
   useEffect(() => {
     window.addEventListener("load", () => {
       if (typeof window !== "undefined") {
@@ -60,6 +68,156 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       ReviewService.fetchCommentReplies(data.id).then(setReplies);
     }
   }, [isOpen, data?.id]);
+
+  useEffect(() => {
+    let timer: any;
+    if (cooldown > 0) {
+      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (isOpen && data) {
+      console.log("userLiked on open:", data.userLiked);
+      setUserLiked(data.userLiked ?? false);
+      setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
+    }
+  }, [isOpen, data]);
+
+  useEffect(() => {
+    // Fetch initial follow state when modal opens and author is available
+    if (!isOpen) return;
+    if (!session?.accessToken) return;
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      setIsFollowing(false);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({ user_id: authorUserId }),
+          }
+        );
+        const result = await res.json();
+        setIsFollowing(!!result.is_following);
+        setFollowState(authorUserId, !!result.is_following);
+      } catch (err) {
+        console.error('Error fetching follow state:', err);
+        setIsFollowing(false);
+      }
+    })();
+  }, [isOpen, session?.accessToken, data.author]);
+
+  const handleFollowAuthor = async () => {
+    if (!session?.accessToken) {
+      setIsShowSignup(true);
+      return;
+    }
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      alert("Author user ID is missing.");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ user_id: authorUserId }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.result !== "followed") {
+        console.error("Follow failed", result);
+        alert(result?.message || "Failed to follow user. Please try again.");
+        setIsFollowing(false);
+      } else {
+        setIsFollowing(true);
+        setFollowState(authorUserId, true);
+        // Invalidate cache and trigger sync for current user
+        const currentUserId = session?.user?.id;
+        if (currentUserId) {
+          localStorage.removeItem(`following_${currentUserId}`);
+          localStorage.removeItem(`followers_${currentUserId}`);
+        }
+        localStorage.setItem('follow_sync', Date.now().toString());
+      }
+    } catch (err) {
+      console.error("Follow error", err);
+      alert("Failed to follow user. Please try again.");
+      setIsFollowing(false);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleUnfollowAuthor = async () => {
+    if (!session?.accessToken) {
+      setIsShowSignup(true);
+      return;
+    }
+    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    if (!authorUserId) {
+      alert("Author user ID is missing.");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ user_id: authorUserId }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.result !== "unfollowed") {
+        console.error("Unfollow failed", result);
+        alert(result?.message || "Failed to unfollow user. Please try again.");
+        setIsFollowing(true);
+      } else {
+        setIsFollowing(false);
+        setFollowState(authorUserId, false);
+        // Invalidate cache and trigger sync for current user
+        const currentUserId = session?.user?.id;
+        if (currentUserId) {
+          localStorage.removeItem(`following_${currentUserId}`);
+          localStorage.removeItem(`followers_${currentUserId}`);
+        }
+        localStorage.setItem('follow_sync', Date.now().toString());
+      }
+    } catch (err) {
+      console.error("Unfollow error", err);
+      alert("Failed to unfollow user. Please try again.");
+      setIsFollowing(true);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleFollowClick = () => {
+    if (!session?.accessToken) {
+      setIsShowSignup(true);
+      return;
+    }
+    if (isFollowing) {
+      handleUnfollowAuthor();
+    } else {
+      handleFollowAuthor();
+    }
+  };
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -136,7 +294,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     ],
   };
 
-  const UserPalateNames = data.author?.node?.palates
+  const UserPalateNames = data?.palates
     ?.split("|")
     .map((s: any) => s.trim())
     .filter((s: any) => s.length > 0);
@@ -159,9 +317,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleCommentReplySubmit = async () => {
-    if (!commentReply.trim()) return;
+    if (!commentReply.trim() || isLoading || cooldown > 0) return;
 
     setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     try {
       const payload = {
         content: commentReply,
@@ -169,13 +329,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         parent: data.databaseId,
         author: session?.user?.userId,
       };
-      console.log('payload', payload)
 
       await ReviewService.postReview(payload, session?.accessToken ?? "");
       setCommentReply("");
 
       const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
       setReplies(updatedReplies);
+      setCooldown(5);
     } catch (err) {
       console.error("Failed to post reply", err);
     } finally {
@@ -193,11 +353,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     setLoading(true);
     try {
-      await ReviewService.toggleCommentLike(data.databaseId, !userLiked, session.accessToken ?? "");
+      let response;
+      if (userLiked) {
+        // Already liked, so unlike
+        response = await ReviewService.unlikeComment(
+          data.databaseId,
+          session.accessToken ?? ""
+        );
+      } else {
+        // Not liked yet, so like
+        response = await ReviewService.likeComment(
+          data.databaseId,
+          session.accessToken ?? ""
+        );
+      }
 
-      setUserLiked(!userLiked);
-      setLikesCount((prev: any) => userLiked ? prev - 1 : prev + 1);
-
+      setUserLiked(response.userLiked);
+      setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
       alert('Error updating like');
@@ -205,7 +377,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setLoading(false);
     }
   };
-
 
   if (!isOpen) return null;
 
@@ -233,23 +404,41 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                         >
-                          {tag}{" "}
+                          {tag} {" "}
                         </span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsShowSignup(true)}
-                  className="px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit"
-                >
-                  Follow
-                </button>
+                {/* Hide follow button if user is the reviewer */}
+                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                  <button
+                    onClick={handleFollowClick}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
+                    disabled={followLoading}
+                  >
+                    {followLoading ? (
+                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
+                    ) : isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 <SignupModal
                   isOpen={isShowSignup}
                   onClose={() => setIsShowSignup(false)}
+                  onOpenSignin={() => {
+                    setIsShowSignup(false);
+                    setIsShowSignin(true);
+                  }}
+                />
+                <SigninModal
+                  isOpen={isShowSignin}
+                  onClose={() => setIsShowSignin(false)}
+                  onOpenSignup={() => {
+                    setIsShowSignin(false);
+                    setIsShowSignup(true);
+                  }}
                 />
               </div>
               <div className="review-card__image-container">
@@ -309,23 +498,41 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                         >
-                          {tag}{" "}
+                          {tag} {" "}
                         </span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsShowSignup(true)}
-                  className="px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit"
-                >
-                  Follow
-                </button>
+                {/* Hide follow button if user is the reviewer */}
+                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                  <button
+                    onClick={handleFollowClick}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
+                    disabled={followLoading}
+                  >
+                    {followLoading ? (
+                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
+                    ) : isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 <SignupModal
                   isOpen={isShowSignup}
                   onClose={() => setIsShowSignup(false)}
+                  onOpenSignin={() => {
+                    setIsShowSignup(false);
+                    setIsShowSignin(true);
+                  }}
+                />
+                <SigninModal
+                  isOpen={isShowSignin}
+                  onClose={() => setIsShowSignin(false)}
+                  onOpenSignup={() => {
+                    setIsShowSignin(false);
+                    setIsShowSignup(true);
+                  }}
                 />
               </div>
               <div className="flex flex-col overflow-hidden md:mt-4">
@@ -358,7 +565,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {replies.length > 0 && (
                         <div className="overflow-y-auto grow pt-4 pr-1 pb-3 h-[350px]">
                           {replies.map((reply, index) => {
-                            const UserPalateNames = reply.author?.node?.palates
+                            const UserPalateNames = reply?.palates
                               ?.split("|")
                               .map((s: string) => s.trim())
                               .filter((s: string) => s.length > 0);
@@ -388,7 +595,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       (tag: string, tagIndex: number) => (
                                         <span
                                           key={tagIndex}
-                                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
+                                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                                         >
                                           {tag}
                                         </span>
@@ -463,7 +670,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       <textarea
                         rows={1}
                         cols={30}
-                        placeholder="Add a comment"
+                        placeholder={
+                          cooldown > 0
+                            ? `Please wait ${cooldown}s before commenting again...`
+                            : "Add a comment"
+                        }
                         value={commentReply}
                         onChange={(e) => setCommentReply(e.target.value)}
                         onKeyDown={(e) => {
@@ -472,6 +683,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             handleCommentReplySubmit();
                           }
                         }}
+                        disabled={cooldown > 0}
                         className="py-3 px-4 w-full border border-[#CACACA] resize-none rounded-[10px]"
                       />
                     )}

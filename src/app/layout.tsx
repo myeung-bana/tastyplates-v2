@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/global.scss";
 import SessionWrapper from "@/components/SessionWrapper";
-
+import { Toaster } from 'react-hot-toast';
 import { FollowProvider } from "@/components/FollowContext";
 export const metadata: Metadata = {
   title: "TastyPlates",
@@ -16,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <Toaster position="top-center" reverseOrder={false} />
         <FollowProvider>
           <SessionWrapper>{children}</SessionWrapper>
         </FollowProvider>
