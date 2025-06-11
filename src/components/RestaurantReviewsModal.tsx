@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { MdOutlineThumbUp } from "react-icons/md";
+import { useSession } from "next-auth/react";
 
 interface Restaurant {
   id: string;
@@ -27,6 +28,8 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState<{ [key: string]: boolean }>({});
   const [userLikes, setUserLikes] = useState<{ [key: string]: boolean }>({});
+  const { data: session } = useSession();
+  const [likesCount, setLikesCount] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -35,18 +38,37 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     ReviewService.fetchRestaurantReviewsById(restaurant.databaseId)
       .then((data) => {
         setReviews(data.reviews || []);
+        // Initialize likes count and userLikes
+        const likes: { [key: string]: number } = {};
+        const userLiked: { [key: string]: boolean } = {};
+        (data.reviews || []).forEach((review: any) => {
+          likes[review.id] = review.likes || review.commentLikes || 0;
+          // If backend provides info if user liked, set here. Otherwise, default to false.
+          userLiked[review.id] = !!review.userHasLiked;
+        });
+        setLikesCount(likes);
+        setUserLikes(userLiked);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [isOpen, restaurant.databaseId]);
 
   const handleLike = async (review: any) => {
+    if (!session?.accessToken) {
+      alert("You must be signed in to like a review.");
+      return;
+    }
     setLikeLoading((prev) => ({ ...prev, [review.id]: true }));
+    const alreadyLiked = !!userLikes[review.id];
     try {
-      // TODO: Implement like/unlike API call here
-      // Simulate like toggle for now
-      setUserLikes((prev) => ({ ...prev, [review.id]: !prev[review.id] }));
-      // Optionally update review.likes count in state
+      await ReviewService.toggleCommentLike(review.id, !alreadyLiked, session.accessToken);
+      setUserLikes((prev) => ({ ...prev, [review.id]: !alreadyLiked }));
+      setLikesCount((prev) => ({
+        ...prev,
+        [review.id]: prev[review.id] + (!alreadyLiked ? 1 : -1),
+      }));
+    } catch (e) {
+      alert("Failed to update like. Please try again.");
     } finally {
       setLikeLoading((prev) => ({ ...prev, [review.id]: false }));
     }
@@ -141,7 +163,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                       />
                     )}
                   </button>
-                  <span>{review.likes || review.commentLikes || 0}</span>
+                  <span>{likesCount[review.id] ?? review.likes ?? review.commentLikes ?? 0}</span>
                 </div>
               </div>
             );
