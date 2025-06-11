@@ -390,7 +390,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden">
                 <div className="review-card__user">
                   <Image
-                    src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+                    src={data.userAvatar || "/profile-icon.svg"}
                     alt={data.author?.node?.name || "User"}
                     width={32}
                     height={32}
@@ -484,7 +484,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="justify-between pr-10 items-center hidden md:flex">
                 <div className="review-card__user">
                   <Image
-                    src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+                    src={data.userAvatar || "/profile-icon.svg"}
                     alt={data.author?.node?.name || "User"}
                     width={32}
                     height={32}
@@ -577,13 +577,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               >
                                 <Image
                                   src={
-                                    reply.author?.node?.avatar?.url ||
+                                    reply.userAvatar ||
                                     "/profile-icon.svg"
                                   }
                                   alt={reply.author?.node?.name || "User"}
                                   width={28}
                                   height={28}
-                                  className="rounded-full"
+                                  className="review-card__user-image"
                                 />
                                 <div className="review-card__user-info">
                                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
