@@ -64,11 +64,12 @@ const Form = (props: any) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
-    // Check image type
-    if (!checkImageType(file.name)) {
-      setProfileError("Profile image must be a valid image type")
-      return;
-    }
+      // Check image type
+      if (!checkImageType(file.name)) {
+        setProfileError("Profile image must be a valid image type")
+        return;
+      }
+
       // Check file size (5MB)
       if (file.size > imageSizeLimit) {
         setProfileError(profileImageSizeLimit(imageMBLimit));
