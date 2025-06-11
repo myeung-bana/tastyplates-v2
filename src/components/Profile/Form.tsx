@@ -9,6 +9,7 @@ import { FaPen } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
+import { checkImageType } from "@/constants/utils";
 
 const Form = (props: any) => {
   const { data: session, update } = useSession();
@@ -55,6 +56,11 @@ const Form = (props: any) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
+    // Check image type
+    if (!checkImageType(file.name)) {
+      setProfileError("Profile image must be a valid image type")
+      return;
+    }
       // Check file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         setProfileError("Profile image must be less than 5MB");
@@ -292,12 +298,12 @@ const Form = (props: any) => {
                   </div>
                 </div>
               </label>
-              {profileError && (
-                <p className="mt-2 text-sm text-red-600 text-center">
+            </div>
+            {profileError && (
+                <p className="text-sm text-red-600 text-center">
                   {profileError}
                 </p>
               )}
-            </div>
             <div className="listing__form-group">
               <label className="listing__label">About Me</label>
               <div className="listing__input-group">
