@@ -77,7 +77,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-[1000] flex justify-end">
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-200"
