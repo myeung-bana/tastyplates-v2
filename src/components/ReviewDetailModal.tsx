@@ -412,15 +412,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleFollowClick}
-                  className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
-                  disabled={followLoading}
-                >
-                  {followLoading ? (
-                    <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
-                  ) : isFollowing ? "Following" : "Follow"}
-                </button>
+                {/* Hide follow button if user is the reviewer */}
+                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                  <button
+                    onClick={handleFollowClick}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
+                    disabled={followLoading}
+                  >
+                    {followLoading ? (
+                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
+                    ) : isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 <SignupModal
                   isOpen={isShowSignup}
                   onClose={() => setIsShowSignup(false)}
@@ -503,15 +506,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleFollowClick}
-                  className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
-                  disabled={followLoading}
-                >
-                  {followLoading ? (
-                    <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
-                  ) : isFollowing ? "Following" : "Follow"}
-                </button>
+                {/* Hide follow button if user is the reviewer */}
+                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                  <button
+                    onClick={handleFollowClick}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
+                    disabled={followLoading}
+                  >
+                    {followLoading ? (
+                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
+                    ) : isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 <SignupModal
                   isOpen={isShowSignup}
                   onClose={() => setIsShowSignup(false)}
