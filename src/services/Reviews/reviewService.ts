@@ -1,9 +1,9 @@
 import { ReviewRepository } from "@/repositories/Reviews/reviewRepository";
 
 export class ReviewService {
-    static async fetchAllReviews(first = 16, after: string | null = null) {
+    static async fetchAllReviews(first = 16, after: string | null = null, accessToken?: string) {
         try {
-            const response = await ReviewRepository.getAllReviews(first, after);
+            const response = await ReviewRepository.getAllReviews(first, after, accessToken);
             return response;
         } catch (error) {
             console.error('Error fetching reviews:', error);
@@ -68,12 +68,23 @@ export class ReviewService {
         }
     }
 
-    static async toggleCommentLike(commentId: number, like: boolean, accessToken: string): Promise<void> {
+    static async likeComment(commentId: number, accessToken: string) {
         try {
-            await ReviewRepository.toggleCommentLike(commentId, like, accessToken);
+            // Return the backend response so the component receives it!
+            return await ReviewRepository.likeComment(commentId, accessToken);
         } catch (error) {
-            console.error("Failed to toggle comment like", error);
-            throw new Error("Failed to toggle comment like");
+            console.error("Failed to like comment", error);
+            throw new Error("Failed to like comment");
+        }
+    }
+
+    static async unlikeComment(commentId: number, accessToken: string) {
+        try {
+            // Return the backend response so the component receives it!
+            return await ReviewRepository.unlikeComment(commentId, accessToken);
+        } catch (error) {
+            console.error("Failed to unlike comment", error);
+            throw new Error("Failed to unlike comment");
         }
     }
 

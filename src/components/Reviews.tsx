@@ -6,6 +6,7 @@ import "@/styles/pages/_reviews.scss";
 import { Masonry, useInfiniteLoader } from "masonic";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReviewDetailModal from "./ModalPopup2";
+import { useSession } from "next-auth/react";
 
 const MasonryCard = ({ index, data, width }: { index: number, data: any, width: number }) => (
   <div>
@@ -16,6 +17,7 @@ const MasonryCard = ({ index, data, width }: { index: number, data: any, width: 
 );
 const Reviews = () => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
+  const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [data, setData] = useState<any>({})
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -25,7 +27,8 @@ const Reviews = () => {
 
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const isLoadingOnce = useRef(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  // const isLoadingOnce = useRef(false);
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -48,11 +51,10 @@ const Reviews = () => {
 
   const loadMore = async () => {
     if (loading || !hasNextPage) return;
+    
     setLoading(true);
-
     const first = isFirstLoad.current ? 16 : 8;
-
-    const { reviews: newReviews, pageInfo } = await ReviewService.fetchAllReviews(first, endCursor);
+    const { reviews: newReviews, pageInfo } = await ReviewService.fetchAllReviews(first, endCursor, session?.accessToken);
     setReviews(prev => [...prev, ...newReviews]);
     setEndCursor(pageInfo.endCursor);
     setHasNextPage(pageInfo.hasNextPage);
@@ -64,11 +66,11 @@ const Reviews = () => {
   };
 
   useEffect(() => {
-    if (!isLoadingOnce.current) {
-      isLoadingOnce.current = true;
+    if (!initialLoaded && status !== "loading") {
+      setInitialLoaded(true);
       loadMore();
     }
-  }, []);
+  }, [session, status]);
 
   // Setup Intersection Observer
   useEffect(() => {
@@ -88,6 +90,10 @@ const Reviews = () => {
       if (current) observer.unobserve(current);
     };
   }, [hasNextPage, loading]);
+
+  if (!initialLoaded) {
+    return <div>Loading session...</div>;
+  }
 
   return (
     <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
