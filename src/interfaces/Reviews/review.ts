@@ -3,6 +3,7 @@ export interface ReviewedDataProps {
   id: number;
   reviewMainTitle: string;
   commentLikes: string;
+  userLiked: boolean;
   content: string;
   uri: string;
   reviewStars: string;
@@ -12,13 +13,13 @@ export interface ReviewedDataProps {
     id: string;
     sourceUrl: string;
   }
+  palates: string;
   author: {
     name: string
     node: {
       id: string;
       databaseId: number
       name: string;
-      palates: string;
       avatar: {
         url: string;
       }
