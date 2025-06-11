@@ -284,7 +284,7 @@ const ReviewSubmissionPage = () => {
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
-                    className="listing__input resize-vertical"
+                    className="submitRestaurants__input resize-vertical"
                     placeholder="Title of your review"
                     value={review_main_title}
                     onChange={(e) => setReviewMainTitle(e.target.value)}
