@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import client,{ currentUserId}  from "@/app/graphql/client";
+import client  from "@/app/graphql/client";
 import {
     GET_LISTINGS,
     GET_RESTAURANT_BY_SLUG,
