@@ -153,3 +153,32 @@ export const GET_USER_REVIEWS = gql`
     }
   }
 `;
+
+export const GET_REVIEWS_BY_RESTAURANT_ID = gql`
+  query GetReviewsByRestaurantId($restaurantId: ID!) {
+    reviews(where: { restaurant: $restaurantId }) {
+      nodes {
+        id
+        rating
+        date
+        title
+        comment
+        likes
+        reviewMainTitle
+        reviewStars
+        author {
+          node {
+            id
+            name
+            image
+            palates {
+              nodes {
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;

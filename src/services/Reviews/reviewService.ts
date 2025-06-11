@@ -76,4 +76,13 @@ export class ReviewService {
             throw new Error("Failed to toggle comment like");
         }
     }
+
+    static async fetchRestaurantReviewsById(restaurantId: string | number) {
+        try {
+            return await ReviewRepository.getRestaurantReviewsById(restaurantId);
+        } catch (error) {
+            console.error('Error fetching restaurant reviews:', error);
+            throw new Error('Failed to fetch restaurant reviews');
+        }
+    }
 }
