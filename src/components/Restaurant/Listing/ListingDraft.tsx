@@ -31,27 +31,28 @@ const ListingDraftPage = () => {
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)
     const { data: session, status } = useSession();
-    const userId = session?.user?.id || null; // Assuming session contains user ID
-    console.log("Session data:", userId, session)
+    const userId = session?.user?.id || null;
 
+useEffect(() => {
+  const getPendingListings = async () => {
+    if (status !== 'authenticated' || !userId) return; // Wait until session is ready
 
-    useEffect(() => {
-        const getPendingListings = async () => {
-            try {
-                setLoading(true)
-                const data = await RestaurantService.fetchAllRestaurants("", 10, null, "PENDING", userId)
-                console.log("Fetched pending listings:", data)
-                setPendingListings(data.nodes)
-            } catch (err) {
-                console.error("Failed to fetch pending listings:", err)
-                setError("Failed to load pending listings. Please ensure you are logged in.")
-            } finally {
-                setLoading(false)
-            }
-        }
+    try {
+      setLoading(true);
+      const data = await RestaurantService.fetchAllRestaurants("", 10, null, "PENDING", userId);
+      console.log("Fetched pending listings:", data);
+      setPendingListings(data.nodes);
+    } catch (err) {
+      console.error("Failed to fetch pending listings:", err);
+      setError("Failed to load pending listings. Please ensure you are logged in.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        getPendingListings()
-    }, [])
+  getPendingListings();
+}, [status, userId]); // 👈 include dependencies
+
 
     const removeListing = (item: FetchedRestaurant, index: number) => {
         setIsShowDelete(true)

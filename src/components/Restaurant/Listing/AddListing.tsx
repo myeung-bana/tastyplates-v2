@@ -360,8 +360,8 @@ const AddListingPage = (props: any) => {
         formData.append("longitude", String(listing.longitude));
 
         selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-
         formData.append("status", listingStatus);
+        console.log("Status:", listingStatus);
 
         console.log("Creating listing before review:", Object.fromEntries(formData.entries()));
         const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
@@ -379,6 +379,7 @@ const AddListingPage = (props: any) => {
         listingUpdateFormData.append("longitude", String(listing.longitude));
         selectedPalates.forEach((p) => listingUpdateFormData.append("palates[]", p.label));
         listingUpdateFormData.append("status", listingStatus); // Update status (e.g., from 'draft' to 'pending')
+        console.log("Status for update:", listingStatus);
 
         console.log("Updating listing before review:", Object.fromEntries(listingUpdateFormData.entries()));
         // Make sure your updateRestaurantListing takes string ID, convert if necessary

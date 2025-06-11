@@ -12,7 +12,7 @@ const authLink = setContext(async (_, { headers }) => { // Make this an async fu
   // One common pattern is to store the token (or a way to retrieve it)
   // in a global accessible place after login, or get it from a utility function.
 
-  let token = null;
+  let token = null;  
   // If you are using next-auth and want to fetch the session token
   // for client-side requests, you often need to get it like this:
   try {
