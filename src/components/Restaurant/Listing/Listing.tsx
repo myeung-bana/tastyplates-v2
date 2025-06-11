@@ -12,6 +12,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from "next-auth/react";
 import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
+import SkeletonListingCard from "@/components/SkeletonListingCard";
 interface Restaurant {
   id: string;
   slug: string;
@@ -30,6 +31,7 @@ const ListingPage = () => {
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loading, setLoading] = useState(true);
+  const [loadingDrafts, setLoadingDrafts] = useState(true);
   // const [hasMore, setHasMore] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
@@ -110,18 +112,16 @@ const ListingPage = () => {
   }, []);
 
   const fetchReviewDrafts = async () => {
-    setLoading(true);
+    setLoadingDrafts(true);
     try {
       if (!session?.accessToken) return;
-
       const data = await ReviewService.fetchReviewDrafts(session.accessToken);
       const transformedDrafts = transformReviewDrafts(data);
-
       setReviewDrafts(transformedDrafts.slice(0, 4));
     } catch (error) {
       console.error("Error fetching review drafts:", error);
     } finally {
-      setLoading(false);
+      setLoadingDrafts(false);
     }
   };
 
@@ -200,6 +200,11 @@ const ListingPage = () => {
           <div className="restaurants__container mt-6 md:mt-10 w-full">
             <div className="restaurants__content">
               <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
+              {reviewDrafts.length === 0 && !loadingDrafts && (
+                <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+                  You don't have any review drafts.
+                </p>
+              )}
               <div className="restaurants__grid mt-6 md:mt-8">
                 {reviewDrafts.map((revDraft) => (
                   <ListingCard
@@ -208,7 +213,7 @@ const ListingPage = () => {
                     onDelete={() => removeListing(revDraft)}
                   />
                 ))}
-                {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                {loadingDrafts && [...Array(4)].map((_, i) => <SkeletonListingCard key={i} />)}
               </div>
             </div>
           </div>

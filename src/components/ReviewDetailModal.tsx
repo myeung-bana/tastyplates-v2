@@ -26,6 +26,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 }) => {
   const { data: session } = useSession();
   const [replies, setReplies] = useState<any[]>([]);
+  const [cooldown, setCooldown] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -33,7 +34,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [activeSlide, setActiveSlide] = useState(0);
   const [commentReply, setCommentReply] = useState("")
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [userLiked, setUserLiked] = useState(false);
+  const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false)
   const [width, setWidth] = useState(
@@ -60,6 +61,22 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       ReviewService.fetchCommentReplies(data.id).then(setReplies);
     }
   }, [isOpen, data?.id]);
+
+  useEffect(() => {
+    let timer: any;
+    if (cooldown > 0) {
+      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (isOpen && data) {
+      console.log("userLiked on open:", data.userLiked);
+      setUserLiked(data.userLiked ?? false);
+      setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
+    }
+  }, [isOpen, data]);
 
   const handleResize = () => {
     setWidth(window.innerWidth);
@@ -159,9 +176,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleCommentReplySubmit = async () => {
-    if (!commentReply.trim()) return;
+    if (!commentReply.trim() || isLoading || cooldown > 0) return;
 
     setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     try {
       const payload = {
         content: commentReply,
@@ -169,13 +188,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         parent: data.databaseId,
         author: session?.user?.userId,
       };
-      console.log('payload', payload)
 
       await ReviewService.postReview(payload, session?.accessToken ?? "");
       setCommentReply("");
 
       const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
       setReplies(updatedReplies);
+      setCooldown(5);
     } catch (err) {
       console.error("Failed to post reply", err);
     } finally {
@@ -193,11 +212,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     setLoading(true);
     try {
-      await ReviewService.toggleCommentLike(data.databaseId, !userLiked, session.accessToken ?? "");
+      let response;
+      if (userLiked) {
+        // Already liked, so unlike
+        response = await ReviewService.unlikeComment(
+          data.databaseId,
+          session.accessToken ?? ""
+        );
+      } else {
+        // Not liked yet, so like
+        response = await ReviewService.likeComment(
+          data.databaseId,
+          session.accessToken ?? ""
+        );
+      }
 
-      setUserLiked(!userLiked);
-      setLikesCount((prev: any) => userLiked ? prev - 1 : prev + 1);
-
+      setUserLiked(response.userLiked);
+      setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
       alert('Error updating like');
@@ -463,7 +494,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       <textarea
                         rows={1}
                         cols={30}
-                        placeholder="Add a comment"
+                        placeholder={
+                          cooldown > 0
+                            ? `Please wait ${cooldown}s before commenting again...`
+                            : "Add a comment"
+                        }
                         value={commentReply}
                         onChange={(e) => setCommentReply(e.target.value)}
                         onKeyDown={(e) => {
@@ -472,6 +507,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             handleCommentReplySubmit();
                           }
                         }}
+                        disabled={cooldown > 0}
                         className="py-3 px-4 w-full border border-[#CACACA] resize-none rounded-[10px]"
                       />
                     )}

@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const GET_LISTINGS = gql`
-    query GetAllRestaurants($searchTerm: String!, $first: Int, $after: String) {
-        listings(where: { search: $searchTerm }, first: $first, after: $after) {
+    query GetAllRestaurants($searchTerm: String!, $first: Int, $after: String, $status: PostStatusEnum) {
+        listings(where: { search: $searchTerm, status: $status }, first: $first, after: $after) {
             pageInfo {
                 endCursor
                 hasNextPage

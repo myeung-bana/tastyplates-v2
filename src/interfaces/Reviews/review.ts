@@ -3,6 +3,7 @@ export interface ReviewedDataProps {
   id: number;
   reviewMainTitle: string;
   commentLikes: string;
+  userLiked: boolean;
   content: string;
   uri: string;
   reviewStars: string;
