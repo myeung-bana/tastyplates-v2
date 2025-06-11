@@ -61,7 +61,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     setLikeLoading((prev) => ({ ...prev, [review.id]: true }));
     const alreadyLiked = !!userLikes[review.id];
     try {
-      await ReviewService.toggleCommentLike(review.id, !alreadyLiked, session.accessToken);
+      // await ReviewService.toggleCommentLike(review.id, !alreadyLiked, session.accessToken);
       setUserLikes((prev) => ({ ...prev, [review.id]: !alreadyLiked }));
       setLikesCount((prev) => ({
         ...prev,
@@ -111,7 +111,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
                   <Image
-                    src={review.author?.image || review.author?.node?.avatar?.url || "/profile-icon.svg"}
+                    src={review.author.image}
                     alt={review.author?.name || review.author?.node?.name || "User"}
                     width={40}
                     height={40}
