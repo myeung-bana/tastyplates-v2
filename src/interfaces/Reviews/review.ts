@@ -14,6 +14,7 @@ export interface ReviewedDataProps {
     sourceUrl: string;
   }
   palates: string;
+  userAvatar?: string;
   author: {
     name: string
     node: {
