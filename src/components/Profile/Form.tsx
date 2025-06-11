@@ -5,11 +5,17 @@ import "@/styles/pages/_add-listing.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FaPen } from "react-icons/fa";
+import { FaPen, FaPenAlt } from "react-icons/fa";
+import { List } from "@/data/dummyList";
+import { users } from "@/data/dummyUsers";
+import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
 import { checkImageType } from "@/constants/utils";
+import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
+import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
+import { MdEdit, MdOutlineEdit } from "react-icons/md";
 
 const Form = (props: any) => {
   const { data: session, update } = useSession();
@@ -18,40 +24,42 @@ const Form = (props: any) => {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [profile, setProfile] = useState<any>(null);
   const [aboutMe, setAboutMe] = useState<string>(session?.user?.name ?? "");
-  const [profilePreview, setProfilePreview] = useState<any>(session?.user?.image ?? "/profile-icon.svg");
+  const [profilePreview, setProfilePreview] = useState<any>(
+    session?.user?.image ?? "/profile-icon.svg"
+  );
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
   const [palateError, setPalateError] = useState<string>("");
   const [profileError, setProfileError] = useState<string>("");
   const router = useRouter();
-  const regionOptions = palateOptions.map(option => ({
+  const regionOptions = palateOptions.map((option) => ({
     key: option.key,
-    label: option.label
+    label: option.label,
   }));
 
   const getAllSelectedPalates = () => {
-    return selectedPalates.map(palate => {
-      const region = palateOptions.find(option =>
-        option.children.some(child =>
-          child.label.toLowerCase() === palate.toLowerCase()
+    return selectedPalates.map((palate) => {
+      const region = palateOptions.find((option) =>
+        option.children.some(
+          (child) => child.label.toLowerCase() === palate.toLowerCase()
         )
       );
 
       const capitalizedPalate = palate
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
+        .split(" ")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        )
+        .join(" ");
 
       return {
         palate: capitalizedPalate,
-        region: region?.label || 'Unknown'
+        region: region?.label || "Unknown",
       };
     });
   };
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError("");
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
@@ -62,8 +70,8 @@ const Form = (props: any) => {
       return;
     }
       // Check file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (file.size > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
 
@@ -81,18 +89,18 @@ const Form = (props: any) => {
     setIsLoading(true);
 
     // Validate palates count
-    if (selectedPalates.length > 2) {
-      setPalateError('You can only select up to 2 palates');
+    if (selectedPalates.length > palateLimit) {
+      setPalateError(palateMaxLimit(palateLimit));
       setIsLoading(false);
       return;
     }
 
     // Validate image size if profile is updated
     if (profile) {
-      const base64Length = profile.split(',')[1].length;
+      const base64Length = profile.split(",")[1].length;
       const sizeInBytes = (base64Length * 3) / 4;
-      if (sizeInBytes > 5 * 1024 * 1024) {
-        setProfileError("Profile image must be less than 5MB");
+      if (sizeInBytes > imageSizeLimit) {
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         setIsLoading(false);
         return;
       }
@@ -100,12 +108,12 @@ const Form = (props: any) => {
 
     try {
       if (!session?.accessToken || !session?.user?.email) {
-        throw new Error('No session token found');
+        throw new Error("No session token found");
       }
 
-      const formattedPalates = selectedPalates.map(p => p.trim()).join('|');
+      const formattedPalates = selectedPalates.map((p) => p.trim()).join("|");
       const updateData: Record<string, any> = {};
-      
+
       if (profile) {
         updateData.profile_image = profile;
       }
@@ -117,7 +125,10 @@ const Form = (props: any) => {
       }
 
       // Get response from API
-      const response = await UserService.updateUserFields(updateData, session.accessToken);
+      const response = await UserService.updateUserFields(
+        updateData,
+        session.accessToken
+      );
 
       // Update local storage
       // const localKey = `userData_${session.user.email}`;
@@ -136,7 +147,7 @@ const Form = (props: any) => {
           image: response.profile_image,
           about_me: aboutMe,
           palates: formattedPalates,
-        }
+        },
       });
 
       setPalateError("");
@@ -144,12 +155,11 @@ const Form = (props: any) => {
 
       // Redirect after successful update
       setTimeout(() => {
-        router.push('/profile');
+        router.push("/profile");
       }, 2000);
-
     } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -164,16 +174,16 @@ const Form = (props: any) => {
         // Split and trim each palate name
         const palates = session.user.palates
           .split(/[|,]/)
-          .map(p => p.trim())
+          .map((p) => p.trim())
           .filter(Boolean); // Remove empty strings
 
         setSelectedPalates(palates);
 
         // Find the region that contains any of these palates
-        const region = palateOptions.find(option =>
-          option.children.some(child =>
-            palates.some(palate =>
-              palate.toLowerCase() === child.label.toLowerCase()
+        const region = palateOptions.find((option) =>
+          option.children.some((child) =>
+            palates.some(
+              (palate) => palate.toLowerCase() === child.label.toLowerCase()
             )
           )
         );
@@ -193,12 +203,12 @@ const Form = (props: any) => {
 
   const togglePalate = (palate: string) => {
     setPalateError(""); // Clear error when selection changes
-    setSelectedPalates(prev => {
-      const normalizedPrev = prev.map(p => p.toLowerCase());
+    setSelectedPalates((prev) => {
+      const normalizedPrev = prev.map((p) => p.toLowerCase());
       const normalizedPalate = palate.toLowerCase();
 
       if (normalizedPrev.includes(normalizedPalate)) {
-        return prev.filter(p => p.toLowerCase() !== normalizedPalate);
+        return prev.filter((p) => p.toLowerCase() !== normalizedPalate);
       }
       return [...prev, palate]; // Remove the 2 palate limit check here
     });
@@ -211,7 +221,7 @@ const Form = (props: any) => {
 
   return (
     <>
-      <div className="font-inter mt-20">
+      <div className="font-inter mt-16 md:mt-20">
         {/* Overlay when modal is open */}
         {isSubmitted && (
           <>
@@ -254,25 +264,34 @@ const Form = (props: any) => {
             {/* Animation */}
             <style jsx>{`
               .animate-fade-in {
-                animation: fadeInScale 0.3s cubic-bezier(.4,2,.6,1) both;
+                animation: fadeInScale 0.3s cubic-bezier(0.4, 2, 0.6, 1) both;
               }
               @keyframes fadeInScale {
-                0% { opacity: 0; transform: scale(0.95);}
-                100% { opacity: 1; transform: scale(1);}
+                0% {
+                  opacity: 0;
+                  transform: scale(0.95);
+                }
+                100% {
+                  opacity: 1;
+                  transform: scale(1);
+                }
               }
             `}</style>
           </>
         )}
-        <div className="flex flex-col justify-center items-center pt-10">
-          <h1 className="text-[#31343F] text-2xl font-bold">Edit Profile</h1>
+        <div className="flex flex-col justify-center items-center pt-10 px-3 md:px-0">
+          <h1 className="text-[#31343F] text-lg md:text-2xl font-medium">
+            Edit Profile
+          </h1>
           <form
-            className="listing__form max-w-[672px] w-full my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+            className="listing__form max-w-[672px] w-full my-4 md:my-10 mx-3 py-6 px-4 md:py-8 md:px-6 lg:mx-0 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
             onSubmit={submitReview}
           >
             <div className="listing__form-group relative justify-center self-center">
               <label
                 htmlFor="image"
-                className={`cursor-pointer flex justify-center ${isLoading ? 'opacity-50' : ''}`}
+                className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""
+                  }`}
               >
                 <input
                   id="image"
@@ -285,16 +304,15 @@ const Form = (props: any) => {
                   disabled={isLoading}
                 />
                 <div>
-                  <div className="w-[120px] h-[120px] relative">
-                    <Image
-                      src={profilePreview}
-                      fill
-                      className="rounded-full object-cover"
-                      alt="profile"
-                    />
-                  </div>
-                  <div className="absolute right-0 bottom-0 h-11 w-11 p-3 rounded-[50px] border-1.5 bg-white text-center">
-                    <FaPen />
+                  <Image
+                    src={profilePreview}
+                    width={120}
+                    height={120}
+                    className="rounded-full size-20 md:size-[120px] object-contain"
+                    alt="profile"
+                  />
+                  <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] border-1.5 bg-white text-center">
+                    <MdOutlineEdit className="size-4 md:size-5" />
                   </div>
                 </div>
               </label>
@@ -309,7 +327,8 @@ const Form = (props: any) => {
               <div className="listing__input-group">
                 <textarea
                   name="name"
-                  className={`listing__input resize-none ${isLoading ? 'opacity-50' : ''}`}
+                  className={`listing__input resize-none ${isLoading ? "opacity-50" : ""
+                    }`}
                   placeholder="About Me"
                   value={aboutMe}
                   onChange={handleAboutMeChange}
@@ -322,7 +341,8 @@ const Form = (props: any) => {
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
-                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`min-h-[48px] border border-gray-200 rounded-[10px] ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   placeholder="Select your region"
                   items={regionOptions}
                   onChange={handleRegionChange}
@@ -333,24 +353,29 @@ const Form = (props: any) => {
             </div>
             <div className="listing__form-group">
               <label className="listing__label">
-                Ethnic Palate <span className="!font-medium">(Select up to 2 palates)</span>
+                Ethnic Palate{" "}
+                <span className="!font-medium">(Select up to 2 palates)</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {selectedRegion && (
                   <>
                     {palateOptions
-                      .find(option => option.key === selectedRegion)
-                      ?.children.map(child => (
+                      .find((option) => option.key === selectedRegion)
+                      ?.children.map((child) => (
                         <button
                           key={child.key}
                           type="button"
                           onClick={() => togglePalate(child.label)}
                           disabled={isLoading}
                           className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] 
-                            ${selectedPalates.some(p => p.toLowerCase() === child.label.toLowerCase())
-                              ? 'bg-[#F1F1F1] !font-bold'
-                              : 'bg-[##FCFCFC] text-gray-600 hover:bg-gray-200'
-                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            ${selectedPalates.some(
+                            (p) =>
+                              p.toLowerCase() === child.label.toLowerCase()
+                          )
+                              ? "bg-[#F1F1F1] !font-bold"
+                              : "bg-[##FCFCFC] text-gray-600 hover:bg-gray-200"
+                            } ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
                         >
                           {child.label}
                         </button>
@@ -358,10 +383,12 @@ const Form = (props: any) => {
                     {selectedPalates.length > 0 && (
                       <div className="w-full mt-2">
                         <p className="text-sm text-gray-600">
-                          Selected palates: {
-                            getAllSelectedPalates().slice(0, 4).map(p => p.palate).join(", ") +
-                            (getAllSelectedPalates().length > 4 ? "..." : "")
-                          }
+                          Selected palates:{" "}
+                          {getAllSelectedPalates()
+                            .slice(0, 4)
+                            .map((p) => p.palate)
+                            .join(", ") +
+                            (getAllSelectedPalates().length > 4 ? "..." : "")}
                         </p>
                       </div>
                     )}
@@ -369,9 +396,7 @@ const Form = (props: any) => {
                 )}
               </div>
               {palateError && (
-                <p className="mt-2 text-sm text-red-600">
-                  {palateError}
-                </p>
+                <p className="mt-2 text-sm text-red-600">{palateError}</p>
               )}
             </div>
             <div className="flex gap-4 items-center m-auto">
@@ -382,20 +407,37 @@ const Form = (props: any) => {
               >
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Saving...
                   </>
                 ) : (
-                  'Save and Continue'
+                  "Save and Continue"
                 )}
               </button>
               <button
                 type="button"
-                className={`underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading ? 'opacity-50' : ''}`}
-                onClick={() => router.push('/profile')}
+                className={`underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading ? "opacity-50" : ""
+                  }`}
+                onClick={() => router.push("/profile")}
                 disabled={isLoading}
               >
                 Cancel

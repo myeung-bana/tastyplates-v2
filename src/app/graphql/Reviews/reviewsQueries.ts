@@ -13,6 +13,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
         uri
         reviewMainTitle
         commentLikes
+        userLiked
         reviewStars
         date
         content(format: RENDERED)
@@ -21,6 +22,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
           id
           sourceUrl
         }
+        palates
         author {
           name
             node {
@@ -28,7 +30,6 @@ export const GET_ALL_RECENT_REVIEWS = gql`
               id
               databaseId
         		  name
-              palates
               avatar {
             	  url
           	  }  
@@ -68,6 +69,7 @@ query GetCommentWithReplies($id: ID!) {
     replies {
       nodes {
         content(format: RENDERED)
+        palates
         author {
           node {
             id
@@ -75,9 +77,6 @@ query GetCommentWithReplies($id: ID!) {
             name
             avatar {
               url
-            }
-            ... on User {
-              palates
             }
           }
         }
@@ -153,3 +152,24 @@ export const GET_USER_REVIEWS = gql`
     }
   }
 `;
+
+// export const GET_USER_LIKED_TRUE_OR_FALSE = gql`
+//   query GetReviews($first: Int = 16, $after: String) {
+//     comments(
+//       where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
+//       first: $first
+//       after: $after
+//     ) {
+//       nodes {
+//         id
+//         content
+//         commentLikes
+//         userLiked
+//       }
+//       pageInfo {
+//         hasNextPage
+//         endCursor
+//       }
+//     }
+//   }
+// `;

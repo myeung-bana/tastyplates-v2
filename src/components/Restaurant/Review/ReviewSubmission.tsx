@@ -115,18 +115,19 @@ const ReviewSubmissionPage = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const files = Array.from(event.target.files);
+      const totalImages = selectedFiles.length + files.length;
 
-      if (files.length > 6) {
+      if (totalImages > 6) {
         setUploadedImageError('You can Upload a maximum of 6 images.');
         return;
       } else {
         setUploadedImageError('');
       }
 
-      const imageList: string[] = [];
+      const imageList: string[] = [...selectedFiles];
       let loadedImages = 0;
 
-      files.forEach((file, index) => {
+      files.forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           if (reader.result) {
@@ -229,6 +230,8 @@ const ReviewSubmissionPage = () => {
         ...restaurant,
         recognition: [],
       });
+      setDescriptionError('');
+      setUploadedImageError('');
     } catch (error) {
       console.error('Failed to submit review:', error);
     }
@@ -281,7 +284,7 @@ const ReviewSubmissionPage = () => {
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
-                    className="listing__input resize-vertical"
+                    className="submitRestaurants__input resize-vertical"
                     placeholder="Title of your review"
                     value={review_main_title}
                     onChange={(e) => setReviewMainTitle(e.target.value)}

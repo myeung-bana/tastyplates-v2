@@ -19,10 +19,16 @@ export class ReviewRepository {
     return response;
   }
 
-  static async getAllReviews(first = 16, after: string | null = null) {
+  static async getAllReviews(first = 16, after: string | null = null, accessToken?: string) {
     const { data } = await client.query({
       query: GET_ALL_RECENT_REVIEWS,
       variables: { first, after },
+      context: {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+        },
+      },
+      fetchPolicy: "no-cache",
     });
 
     return {
@@ -97,19 +103,31 @@ export class ReviewRepository {
     };
   }
 
-  static async toggleCommentLike(commentId: number, like: boolean, accessToken: string): Promise<void> {
+  static async likeComment(commentId: number, accessToken: string): Promise<any> {
     const body = JSON.stringify({
       comment_id: commentId,
-      like: like,
     });
-
-    await this.request('/wp-json/wp/v2/api/comments/comment-like', {
+    return this.request('/wp-json/wp/v2/api/comments/comment-like', {
       method: 'POST',
       body,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
+    }, true);
+  }
+
+  static async unlikeComment(commentId: number, accessToken: string): Promise<any> {
+    const body = JSON.stringify({
+      comment_id: commentId,
     });
+    return this.request('/wp-json/wp/v2/api/comments/comment-unlike', {
+      method: 'POST',
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    }, true);
   }
 }
