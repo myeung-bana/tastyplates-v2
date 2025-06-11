@@ -80,7 +80,9 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     if (!session) return;
     setLoading(true);
     setError(null);
+    const prevSaved = saved;
     setSaved(prev => !prev);
+    window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: !saved } }));
     const action = saved ? "unsave" : "save";
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
@@ -95,7 +97,10 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       if (!res.ok) throw new Error("Failed to update favorite status");
       const data = await res.json();
       setSaved(data.status === "saved");
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
     } catch (err) {
+      setSaved(prevSaved);
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
       setError("Could not update favorite status");
     } finally {
       setLoading(false);

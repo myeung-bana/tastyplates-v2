@@ -1,7 +1,7 @@
 // pages/RestaurantPage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import FilterSidebar from "@/components/FilterSidebar";
+import FilterSidebar from "@/components/FilterSidebar"; // This component is imported but not used in the provided JSX.
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter from "@/components/Filter/Filter";
@@ -9,6 +9,7 @@ import SkeletonCard from "@/components/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
+import { useSession } from "next-auth/react";
 
 interface Restaurant {
   id: string;
@@ -21,9 +22,11 @@ interface Restaurant {
   databaseId: number;
   palatesNames?: string[];
   listingCategories?: { id: number; name: string; slug: string }[];
+  initialSavedStatus?: boolean | null;
 }
 
 const RestaurantPage = () => {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -32,13 +35,14 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
+  const [hasFetchedInitialStatuses, setHasFetchedInitialStatuses] = useState(false);
 
   // Filter states
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<string | null>(null);
-  const [selectedRating, setSelectedRating] = useState<number | null>(null);
-  const [selectedBadges, setSelectedBadges] = useState<string | null>(null);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null); // This state is not currently used in fetchRestaurants.
+  const [selectedBadges, setSelectedBadges] = useState<string | null>(null); // This state is not currently used in fetchRestaurants.
   const [selectedSortOption, setSelectedSortOption] = useState<string | null>(null);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
@@ -47,13 +51,49 @@ const RestaurantPage = () => {
       slug: item.slug,
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5,
+      rating: 4.5, // Hardcoded rating, consider fetching dynamic rating if available.
       databaseId: item.databaseId || 0,
       palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
       listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
-      priceRange: item.priceRange
+      priceRange: item.priceRange,
+      initialSavedStatus: null, // Default to null, will be updated by fetchSavedStatuses
     }));
+  };
+
+  const fetchSavedStatuses = async (restaurantsToProcess: Restaurant[]) => {
+    if (!session?.accessToken) return {};
+    const statuses: Record<string, boolean | null> = {};
+    // Only fetch statuses for the first 8 visible restaurants for efficiency if needed,
+    // otherwise fetch for all in the current batch.
+    const visibleRestaurants = restaurantsToProcess.slice(0, 8); // Assuming you want to fetch for initially visible ones
+    await Promise.all(
+      visibleRestaurants.map(async (rest) => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({ restaurant_slug: rest.slug, action: "check" }),
+            credentials: "include",
+          });
+          const data = await res.json();
+          statuses[rest.id] = data.status === "saved";
+        } catch (error) {
+          console.error(`Failed to fetch saved status for ${rest.name}:`, error);
+          statuses[rest.id] = false;
+        }
+      })
+    );
+    // For restaurants not in the first 8 or not processed, set their status to null
+    restaurantsToProcess.slice(8).forEach(rest => {
+      if (!(rest.id in statuses)) {
+        statuses[rest.id] = null;
+      }
+    });
+    return statuses;
   };
 
   const fetchRestaurants = async (
@@ -63,7 +103,7 @@ const RestaurantPage = () => {
     cuisineSlug: string | null,
     palateSlugs: string[],
     priceRange?: string | null,
-    sortOption?: string | null, // Added sortOption parameter
+    sortOption?: string | null, 
   ) => {
     setLoading(true);
     try {
@@ -74,9 +114,17 @@ const RestaurantPage = () => {
         cuisineSlug,
         palateSlugs,
         priceRange,
-        // sortOption, // Pass sortOption
+        // sortOption,
       );
-      const transformed = transformNodes(data.nodes);
+      let transformed = transformNodes(data.nodes);
+      let savedStatuses: Record<string, boolean | null> = {};
+
+      if (session?.accessToken) {
+        savedStatuses = await fetchSavedStatuses(transformed);
+        transformed = transformed.map(r => ({ ...r, initialSavedStatus: savedStatuses[r.id] }));
+      } else {
+        transformed = transformed.map(r => ({ ...r, initialSavedStatus: false })); // Default to false if not logged in
+      }
 
       setRestaurants((prev) => {
         if (!after) return transformed;
@@ -101,7 +149,7 @@ const RestaurantPage = () => {
     }
   };
 
-  // Effect for initial load and search term/filter changes
+  // Effect for initial load and when search term or filters change
   useEffect(() => {
     // Reset data when search term or filters change
     setRestaurants([]);
@@ -109,35 +157,37 @@ const RestaurantPage = () => {
     setHasNextPage(true);
     isFirstLoad.current = true; // Reset first load flag
 
+    // Fetch initial batch of restaurants
     fetchRestaurants(
       debouncedSearchTerm,
-      isFirstLoad.current ? 16 : 8,
+      isFirstLoad.current ? 16 : 8, // Fetch more on first load
       null,
       selectedCuisine,
       selectedPalates,
-      selectedPrice, // Pass selectedPrice
-      selectedSortOption, // Pass selectedSortOption
+      selectedPrice,
+      selectedSortOption,
     );
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption]); // Added selectedPrice and selectedSortOption to dependencies
+  }, [debouncedSearchTerm, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption, session?.accessToken]); // Added session.accessToken to dependencies to re-fetch on login/logout
 
+  // Effect for infinite scrolling
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !loading) {
-          fetchRestaurants(debouncedSearchTerm, 8, endCursor, selectedCuisine, selectedPalates, selectedPrice, selectedSortOption); // Pass selectedPrice and selectedSortOption
+          fetchRestaurants(debouncedSearchTerm, 8, endCursor, selectedCuisine, selectedPalates, selectedPrice, selectedSortOption);
         }
       },
       { threshold: 1.0 }
     );
 
-    const current = observerRef.current;
-    if (current) observer.observe(current);
+    const currentObserverRef = observerRef.current;
+    if (currentObserverRef) observer.observe(currentObserverRef);
 
     return () => {
-      if (current) observer.unobserve(current);
+      if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption]); // Added selectedPrice and selectedSortOption to dependencies
+  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption, session?.accessToken]);
 
   const handleFilterChange = useCallback((filters: {
     cuisine?: string | null;
@@ -181,7 +231,7 @@ const RestaurantPage = () => {
 
         <div className="restaurants__grid mt-4">
           {restaurants.map((rest) => (
-            <RestaurantCard key={rest.id} restaurant={rest} />
+            <RestaurantCard key={rest.id} restaurant={rest} initialSavedStatus={rest.initialSavedStatus} />
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
         </div>
@@ -209,8 +259,11 @@ const RestaurantPage = () => {
               <span className="text-gray-500 text-sm">Loading more Content</span>
             </>
           )}
-          {!hasNextPage && !loading && (
+          {!hasNextPage && !loading && restaurants.length > 0 && ( // Only show if there are restaurants
             <p className="text-gray-400 text-sm">No more content to load.</p>
+          )}
+           {!loading && !hasNextPage && restaurants.length === 0 && (
+            <p className="text-gray-400 text-sm">No restaurants found matching your criteria.</p>
           )}
         </div>
       </div>
