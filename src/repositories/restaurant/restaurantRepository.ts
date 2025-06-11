@@ -10,7 +10,7 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
 export class RestaurantRepository {
-    private static async request(endpoint: string, options: RequestInit): Promise<any> {
+    private static async request(endpoint: string, options: RequestInit, jsonResponse = false): Promise<any> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
             headers: {
@@ -19,9 +19,11 @@ export class RestaurantRepository {
             },
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Error occurred');
-        return data;
+        if (jsonResponse) {
+            return response.json();
+        }
+
+        return response;
     }
 
     static async getRestaurantBySlug(slug: string) {
@@ -39,6 +41,7 @@ export class RestaurantRepository {
         after: string | null = null,
         taxQuery: any = {},
         priceRange?: string | null,
+        status: string | null = null,
         sortOption?: string | null, // Added sortOption parameter
     ) {
         const { data } = await client.query({
@@ -49,10 +52,11 @@ export class RestaurantRepository {
                 after,
                 taxQuery,
                 priceRange,
+                status,
                 // sortOption, // Pass sortOption as a variable
             },
         });
-
+        console.log("Fetched restaurants:", data);
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
@@ -93,5 +97,22 @@ export class RestaurantRepository {
         }
 
         return res.json();
+    }
+
+    static async getlistingDrafts(token: string): Promise<any> {
+        try {
+            const response = await this.request('/wp-json/wp/v2/listings?status=pending', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+            }, true);
+            console.log("Fetched listing pending:", response);
+            return response;
+        } catch (error) {
+            console.error("Failed to fetch listing pending", error);
+            throw new Error('Failed to fetch listing pending');
+        }
     }
 }

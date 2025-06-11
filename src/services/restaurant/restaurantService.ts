@@ -13,6 +13,7 @@ export const RestaurantService = {
         cuisineSlug: string | null = null,
         palateSlugs: string[] = [],
         priceRange?: string | null, // priceRange is now a single string
+        status: string | null = null
         // sortOption?: string | null, // Added sortOption
     ) {
         try {
@@ -47,6 +48,7 @@ export const RestaurantService = {
                 after,
                 taxQuery,
                 priceRange, // Pass priceRange directly
+                status
                 // sortOption, // Pass sortOption directly
             );
         } catch (error) {
@@ -72,4 +74,5 @@ export const RestaurantService = {
             throw new Error('Failed to create restaurant listing');
         }
     }
+
 };

@@ -7,17 +7,16 @@ export const GET_LISTINGS = gql`
     $first: Int
     $after: String
     $taxQuery: TaxQuery # Define taxQuery as a variable of type TaxQuery
+    $status: PostStatusEnum
     #$sortOption: String # Define sortOption as a variable of type String
   ) {
     listings(
         where: {
-            search: $searchTerm
+            search: $searchTerm 
             priceRange: $priceRange
             taxQuery: $taxQuery
-            # If you want to sort by $sortOption, you'd typically add an orderBy argument here
-            # e.g., orderBy: { field: DATE, order: ASC }
-            # and potentially map $sortOption to field/order on the backend via a filter.
-        }
+            status: $status
+            }, 
         first: $first
         after: $after
     ) {

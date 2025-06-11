@@ -4,6 +4,8 @@ import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/LoadingSpinner";
 import { UserService } from "@/services/userService";
+import { pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved } from "@/constants/messages";
+import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -13,15 +15,26 @@ const OnboardingTwoPage = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDoItLaterLoading, setIsDoItLaterLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
+
+  // Add effect to load saved data
+  useEffect(() => {
+    const storedData = localStorage.getItem('registrationData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
+      if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+    }
+  }, []);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError(null);
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB
-        setProfileError("Profile image must be less than 5MB.");
+      if (file.size > imageSizeLimit) { // 5MB
+        setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
       const reader = new FileReader();
@@ -40,11 +53,12 @@ const OnboardingTwoPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setProfileError(null);
     setAboutMeError(null);
 
     // About Me validation
-    if (aboutMe.length > 500) {
-      setAboutMeError("The text must be 500 characters or less.");
+    if (aboutMe.length > aboutMeMaxLimit) {
+      setAboutMeError(textLimit(aboutMeMaxLimit));
       setIsLoading(false);
       return;
     }
@@ -64,7 +78,8 @@ const OnboardingTwoPage = () => {
     await UserService.registerUser(completeRegistration);
 
     localStorage.removeItem('registrationData');
-    setMessage("Registration successful!");
+    setMessage(registrationSuccess);
+    localStorage.setItem('loginBackMessage', pleaseLoginAgain);
     setMessageType("success");
 
     setTimeout(() => {
@@ -72,6 +87,35 @@ const OnboardingTwoPage = () => {
       router.push("/");
     }, 1500);
   }
+
+  const handleDoItLater = () => {
+    setIsDoItLaterLoading(true);
+    setProfileError(null);
+    setAboutMeError(null);
+
+    // About Me validation
+    if (aboutMe.length > aboutMeMaxLimit) {
+      setAboutMeError(textLimit(aboutMeMaxLimit));
+      setIsDoItLaterLoading(false);
+      return;
+    }
+
+    const storedData = localStorage.getItem('registrationData');
+    const currentData = storedData ? JSON.parse(storedData) : {};
+    const partialData = {
+      ...currentData,
+      profileImage: profileImage || null,
+      aboutMe: aboutMe || '',
+      isPartialRegistration: true,
+      lastStep: 'onboarding2'
+    };
+
+    localStorage.setItem('loginBackMessage', unfinishedSaved);
+    localStorage.setItem('registrationData', JSON.stringify(partialData));
+    setTimeout(() => {
+      router.push("/");
+    }, 1000);
+  };
 
   // Redirect if registrationData is missing
   useEffect(() => {
@@ -152,8 +196,8 @@ const OnboardingTwoPage = () => {
             </div>
           </div>
           {profileError && (
-                <div className="text-red-600 text-xs mt-2 text-center">{profileError}</div>
-              )}
+            <div className="text-red-600 text-xs mt-2 text-center">{profileError}</div>
+          )}
 
           {/* About Me Textarea */}
           <form onSubmit={handleSubmit}>
@@ -193,15 +237,17 @@ const OnboardingTwoPage = () => {
                 Done
               </button>
               <button
-                disabled={isLoading}
+                disabled={isLoading || isDoItLaterLoading}
                 type="button"
-                className="text-sm text-black-700 underline font-bold self-center w-full sm:w-auto"
-                onClick={() => {
-                  localStorage.removeItem('registrationData');
-                  router.push("/");
-                }}
+                className="text-sm text-black-700 underline font-bold self-center w-full sm:w-auto flex items-center justify-center"
+                onClick={handleDoItLater}
               >
-                I’ll Do It Later
+                {isDoItLaterLoading && (
+                  <span className="mr-2">
+                    <Spinner size={16} className="text-[#31343F]" />
+                  </span>
+                )}
+                I'll Do It Later
               </button>
             </div>
             {/* Success/Error Message */}

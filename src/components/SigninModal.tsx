@@ -28,7 +28,7 @@ const SigninModal: React.FC<SigninModalProps> = ({
 
   return (
     <div className="review-modal-overlay">
-      <div className="!max-w-[488px] w-full h-[543px] !p-0 !rounded-3xl font-inter relative">
+      <div className="!max-w-[488px] w-full max-h-[700px] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
         <button className="review-modal__close !top-6" onClick={onClose}>
           <FiX />
         </button>

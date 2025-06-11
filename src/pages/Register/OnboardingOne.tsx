@@ -15,11 +15,19 @@ import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
 import { UserService } from '@/services/userService';
+import {
+  birthdateRequired,
+  birthdateLimit,
+  genderRequired,
+  palateMaxLimit,
+  usernameCheckError,
+  usernameValidationLimit,
+  palateRequired,
+} from "@/constants/messages";
+import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
-  const [initialized, setInitialized] = useState(false);
-  // Initialize with empty/default values
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -29,6 +37,7 @@ const OnboardingOnePage = () => {
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [birthdateError, setBirthdateError] = useState<string | null>(null);
+  const [genderError, setGenderError] = useState<string | null>(null);
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -39,7 +48,6 @@ const OnboardingOnePage = () => {
 
   // Move initialization logic to a separate useEffect
   useEffect(() => {
-    if (initialized) return;
     if (!hasMounted) return;
 
     const storedData = localStorage.getItem('registrationData');
@@ -55,13 +63,11 @@ const OnboardingOnePage = () => {
       setSelectedPalates(new Set(parsedData.palates.split(",")));
     }
 
-    setInitialized(true);
-  }, [initialized]);
+    setHasMounted(true);
+  }, [hasMounted]);
 
   // Navigation protection effects
   useEffect(() => {
-    if (!initialized) return;
-
     if (!hasMounted) return;
     let storedData = localStorage.getItem('registrationData');
     const googleAuth = Cookies.get('googleAuth');
@@ -82,45 +88,58 @@ const OnboardingOnePage = () => {
     if (!storedData) {
       router.replace('/');
     }
-  }, [router, initialized]);
+  }, [router, hasMounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Get stored data first
-    const storedDataStr = localStorage.getItem('registrationData');
-    const storedData = storedDataStr ? JSON.parse(storedDataStr) : {};
+    try {
+      // Get stored data first
+      const storedDataStr = localStorage.getItem('registrationData');
+      let existingData = {};
+      
+      // Safely parse the stored data
+      try {
+        existingData = storedDataStr ? JSON.parse(storedDataStr) : {};
+      } catch (err) {
+        existingData = {};
+      }
 
-    setUsernameError(null);
-    setBirthdateError(null);
-    setPalateError(null);
+      // Reset errors
+      setUsernameError(null);
+      setBirthdateError(null);
+      setPalateError(null);
+      setGenderError(null);
 
-    let formattedBirthdate = "";
+      let formattedBirthdate = "";
 
-    // Username validation
-    if (!name || name.length > 20) {
-      setUsernameError("Username must be 1-20 characters.");
-      setIsLoading(false);
-      return;
-    } else {
-      // Birthdate validation (must be 18+)
-      if (!birthdate) {
-        setBirthdateError("Birthdate is required.");
-        setIsLoading(true);
+      // Username validation
+      if (!name || name.length > userNameMaxLimit) {
+        setUsernameError(usernameValidationLimit(userNameMinLimit, userNameMaxLimit));
+        setIsLoading(false);
         return;
-      } else {
-        const birth = new Date(birthdate);
-        const today = new Date();
-        const age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
-        const actualAge = isBirthdayPassed ? age : age - 1;
-        if (isNaN(birth.getTime()) || actualAge < 18) {
-          setBirthdateError("You must be at least 18 years old.");
-          setIsLoading(false);
-          return;
-        }
+      }
+
+      // Birthdate validation
+      if (!birthdate) {
+        setBirthdateError(birthdateRequired);
+        setIsLoading(false);
+        return;
+      }
+
+      // Age validation
+      const birth = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
+      const actualAge = isBirthdayPassed ? age : age - 1;
+      
+      if (isNaN(birth.getTime()) || actualAge < ageLimit) {
+        setBirthdateError(birthdateLimit(ageLimit));
+        setIsLoading(false);
+        return;
       }
 
       if (birthdate) {
@@ -130,14 +149,21 @@ const OnboardingOnePage = () => {
         }
       }
 
-      // Palate validation - only during submit
-      if (selectedPalates.size === 0) {
-        setPalateError("Please select at least one palate");
+      // Gender validation
+      if (!gender) {
+        setGenderError(genderRequired);
         setIsLoading(false);
         return;
       }
-      if (selectedPalates.size > 2) {
-        setPalateError("You can only select up to 2 palates");
+
+      // Palate validation
+      if (selectedPalates.size === 0) {
+        setPalateError(palateRequired);
+        setIsLoading(false);
+        return;
+      }
+      if (selectedPalates.size > palateLimit) {
+        setPalateError(palateMaxLimit(palateLimit));
         setIsLoading(false);
         return;
       }
@@ -150,30 +176,40 @@ const OnboardingOnePage = () => {
           return;
         }
       } catch (error) {
-        setUsernameError("Error checking username availability");
+        setUsernameError(usernameCheckError);
         setIsLoading(false);
         return;
       }
-    }
-    if (!hasMounted) return null;
-    // Update localStorage with new data
-    const updatedData = {
-      ...storedData,
-      username: name,
-      birthdate: formattedBirthdate,
-      gender,
-      customGender: gender === "custom" ? customGender : undefined,
-      pronoun: gender === "custom" ? pronoun : undefined,
-      palates: Array.from(selectedPalates).join(","),
-    };
+      if (!hasMounted) return null;
 
-    localStorage.setItem('registrationData', JSON.stringify(updatedData));
-    setIsLoading(false);
-    router.push("/onboarding2");
+      // Update localStorage with new data while preserving onboarding2 data
+      const updatedData = {
+        ...existingData,
+        username: name,
+        birthdate: formattedBirthdate,
+        gender,
+        customGender: gender === "custom" ? customGender : undefined,
+        pronoun: gender === "custom" ? pronoun : undefined,
+        palates: Array.from(selectedPalates).join(","),
+      };
+
+      // Clean undefined values before storing
+      Object.keys(updatedData).forEach(key => {
+        if (updatedData[key as keyof typeof updatedData] === undefined) {
+          delete updatedData[key as keyof typeof updatedData];
+        }
+      });
+
+      localStorage.setItem('registrationData', JSON.stringify(updatedData));
+      setIsLoading(false);
+      router.push("/onboarding2");
+    } catch (error) {
+      console.error('Error in form submission:', error);
+      setIsLoading(false);
+    }
   };
 
   const handleGenderChange = (value: string) => {
-    console.log("Gender changed to:", value);
     setGender(value);
     // Reset custom gender fields when switching genders
     if (value !== "custom") {
@@ -297,7 +333,6 @@ const OnboardingOnePage = () => {
                             }`}
                           value={field.value}
                           onChange={field.onChange}
-                          required
                           disabled={field.disabled}
                         />
                         {!field.value && (
@@ -318,7 +353,6 @@ const OnboardingOnePage = () => {
                         placeholder={field.placeholder}
                         value={field.value}
                         onChange={field.onChange}
-                        required
                         disabled={field.disabled}
                       />
                     )}
@@ -332,6 +366,9 @@ const OnboardingOnePage = () => {
                   )}
                   {field.label === "Palate (Select up to 2 palates)" && palateError && (
                     <div className="text-red-600 text-xs mt-1">{palateError}</div>
+                  )}
+                  {field.label === "Gender" && genderError && (
+                    <div className="text-red-600 text-xs mt-1">{genderError}</div>
                   )}
                 </div>
               );

@@ -3,7 +3,7 @@ import { GiRoundStar } from "react-icons/gi";
 import "@/styles/components/filter.scss";
 import { MdStar, MdStarOutline } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
-import { useState, useEffect } from "react";
+import { Key, useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";
@@ -32,7 +32,7 @@ interface Palate {
 
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [cuisine, setCuisine] = useState<string>("All");
-  const [price, setPrice] = useState<string>(""); // Initialize price as an empty string
+  const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
   const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
@@ -209,8 +209,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
           </div>
 
           <div className="filter__section">
-            <button className="filter__options" onClick={() => onClickFilter("badges")}>
-              <span className="filter__label">Badges</span>
+            <button
+              className="filter__options"
+              onClick={() => onClickFilter("badges")}
+            >
+              <span className="filter__label">{badge !== "" ? badge : "Badges"}</span>
               <img
                 src="/images/arrow_warm_up.svg"
                 className="size-4 sm:size-5"
@@ -225,7 +228,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               className="filter__options"
             >
               <img src="/star.svg" className="size-4 sm:size-5" alt="star" />
-              <span className="filter__label">Rating</span>
+              <span className="filter__label">{rating > 0 ? 'Over ' + rating : "Rating"}</span>
             </button>
           </div>
         </div>
@@ -254,11 +257,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         <span className="text-[#31343F] text-center font-semibold">
                           {cuisine}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                        <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
                           onClick={() => selectFilter("All")}
                           className={`py-2 px-4 ${cuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent"
@@ -314,7 +317,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
                           onClick={(e: any) => {
                             e.stopPropagation();
@@ -337,7 +340,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                               checked={selectedPalates.has("all")}
                               readOnly
                             />
-                            <span className="font-medium">All</span>
+                            <span className="text-sm md:text-base font-semibold w-full">All</span>
                           </div>
                           <PiCaretDown
                             className={`fill-[#494D5D] size-5 ${selectedPalates.has("all") ? "rotate-180" : ""
@@ -473,7 +476,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         <span className="text-[#31343F] text-center font-semibold">
                           {badge === "all" ? "All" : badges.find(b => b.name === badge)?.value || "All"}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                        <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
                     }
                     content={
@@ -512,7 +515,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         <span className="text-[#31343F] text-center font-semibold">
                           {sortOption === "none" ? "None" : sortOptions.find(s => s.name === sortOption)?.value || "None"}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5" />
+                        <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
                     }
                     content={
@@ -541,7 +544,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   htmlFor="rating"
                   className="text-xs md:text-base font-semibold"
                 >
-                  Max {rating}
+                  Over {rating}
                 </label>
                 <input
                   type="range"
@@ -573,6 +576,8 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             </button>
           </div>
         }
+        contentClass="md:!p-6"
+        baseClass="!max-w-[488px]"
         isOpen={isModalOpen}
         setIsOpen={() => setIsModalOpen(!isModalOpen)}
       />
