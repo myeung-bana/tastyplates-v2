@@ -38,47 +38,60 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const [showSignin, setShowSignin] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    // 1) If we got an initialSavedStatus from props (SSR), use it and skip the fetch
     if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
       setSaved(initialSavedStatus);
-      hasFetched.current = true;
+      return;
     }
-  }, [initialSavedStatus]);
 
-  useEffect(() => {
-    if (initialSavedStatus !== undefined && initialSavedStatus !== null) return;
-    if (hasFetched.current) return;
-    hasFetched.current = true;
-    let isMounted = true;
+    // 2) Don’t do anything until NextAuth finishes loading
+    if (status === "loading") {
+      return;
+    }
+
+    // 3) Show the “loading” skeleton
+    setSaved(null);
+
+    // 4) If the user isn’t signed in, mark as “not saved” and bail
     if (!session) {
       setSaved(false);
       return;
     }
-    setSaved(null);
+
+    // 5) Otherwise (signed in) fetch the real status
+    let isMounted = true;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
-      credentials: "include",
     })
       .then(res => res.json())
       .then(data => {
-        if (isMounted) setSaved(data.status === "saved");
+        if (isMounted) {
+          setSaved(data.status === "saved");
+        }
       })
       .catch(() => {
-        if (isMounted) setSaved(false);
+        if (isMounted) {
+          setSaved(false);
+        }
       });
-    return () => { isMounted = false; };
-  }, [restaurant.slug, session, initialSavedStatus]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [restaurant.slug, session, status, initialSavedStatus]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
