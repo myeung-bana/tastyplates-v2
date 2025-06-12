@@ -7,6 +7,8 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 import { MdClose } from "react-icons/md";
+import { useRouter } from "next/navigation";
+
 export default function CustomModal(props: any) {
   const {
     isOpen,
@@ -23,6 +25,8 @@ export default function CustomModal(props: any) {
     contentClass = "",
     closeButtonClass = "",
   } = props;
+
+  const router = useRouter();
 
   return (
     <>
@@ -60,7 +64,7 @@ export default function CustomModal(props: any) {
           <ModalFooter>
             {!hasFooter ? (
               <button
-                onClick={setIsOpen}
+                onClick={() => router.push("/")}
                 className={cn(
                   "bg-[#E36B00] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6"
                 )}
