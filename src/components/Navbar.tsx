@@ -27,7 +27,7 @@ export default function Navbar(props: any) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { isLandingPage = false, hasSearchBar = false } = props;
+  const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props;
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
@@ -293,7 +293,7 @@ export default function Navbar(props: any) {
               )}
             </div>
           </div>
-          {hasSearchBar && (
+          {hasSearchBarMobile && (
             <div className="mb-4 md:hidden">
               <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                 <div className="hero__search-restaurant !bg-transparent">
