@@ -30,9 +30,9 @@ export const GET_LISTINGS = gql`
                         name
                     }
                 }
-                countries {
-                    nodes {
-                        name
+                listingDetails {
+                    googleMapUrl {
+                        streetAddress
                     }
                 }
             }

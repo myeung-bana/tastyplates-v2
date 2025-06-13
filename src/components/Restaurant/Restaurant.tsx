@@ -44,6 +44,7 @@ const RestaurantPage = () => {
       rating: 4.5,
       databaseId: item.databaseId || 0,
       palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
+      streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || '',
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
     }));

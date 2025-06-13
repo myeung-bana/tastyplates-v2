@@ -22,6 +22,7 @@ export interface Restaurant {
   image: string;
   rating: number;
   palatesNames?: string[];
+  streetAddress?: string;
   countries: string;
   priceRange: string;
 }
@@ -254,6 +255,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     setIsReviewModalOpen(true);
   };
 
+  const address = restaurant.streetAddress?.trim() || 'Default Location';
+
   return (
     <>
       <div className="restaurant-card">
@@ -305,15 +308,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
               </div>
             </div>
 
-              <div className="restaurant-card__info">
+              <div className="restaurant-card__info w-full">
                 <div className="restaurant-card__location">
-                  {/* <FiMapPin className="restaurant-card__icon" /> */}
-                  <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+                  <span className="block w-full text-[10px] md:text-base mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
                 </div>
-                {/* <div className="restaurant-card__location">
-                  <FiMessageCircle className="restaurant-card__icon" />
-                  <span>{reviewsCount}</span>
-                </div> */}
               </div>
 
               <div className="restaurant-card__tags">
@@ -358,12 +356,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
           setShowSignup(true);
         }}
       />
-      {/* Review Modal */}
       {isReviewModalOpen && (
         <RestaurantReviewsModal
           isOpen={isReviewModalOpen}
           setIsOpen={setIsReviewModalOpen}
-          restaurant={restaurant}
+          restaurant={{
+            ...restaurant,
+            countries: restaurant.countries ?? '',
+          }}
         />
       )}
     </>
