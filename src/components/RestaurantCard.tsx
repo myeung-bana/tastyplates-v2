@@ -21,7 +21,7 @@ export interface Restaurant {
   name: string;
   image: string;
   rating: number;
-  cuisines?: string[];
+  palatesNames?: string[];
   countries: string;
   priceRange: string;
 }
@@ -170,7 +170,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
       .filter((name) => name); // Filter out any null values
   };
   // const cuisineNames = getCuisineNames(restaurant.cuisineIds);
-  const cuisineNames = restaurant.cuisines ?? [];
+  const cuisineNames = restaurant.palatesNames ?? [];
 
   const addReview = () => {
     router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
@@ -315,13 +315,15 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
               </div>
 
               <div className="restaurant-card__tags">
-                {(cuisineNames.length > 0 || restaurant.priceRange) && (
-                  <span className="restaurant-card__tag">
-                    {cuisineNames.length > 0 ? cuisineNames.join(' • ') : ''}
-                    {cuisineNames.length > 0 && restaurant.priceRange ? ' • ' : ''}
-                    {restaurant.priceRange ? restaurant.priceRange : ''}
-                  </span>
-                )}
+                {(() => {
+                  const tags = [...cuisineNames];
+                  if (restaurant.priceRange) tags.push(restaurant.priceRange);
+                  return (
+                    <span className="restaurant-card__tag">
+                      {tags.filter(Boolean).join(' · ')}
+                    </span>
+                  );
+                })()}
               </div>
 
             </div>

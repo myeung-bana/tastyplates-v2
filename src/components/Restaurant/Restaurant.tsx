@@ -19,7 +19,7 @@ interface Restaurant {
   countries: string;
   priceRange: string;
   databaseId: number;
-  cuisines?: string[];
+  palatesNames?: string[];
   initialSavedStatus?: boolean | null;
 }
 
@@ -43,7 +43,7 @@ const RestaurantPage = () => {
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
       rating: 4.5,
       databaseId: item.databaseId || 0,
-      cuisines: item.cuisines ?? [],
+      palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: "$$"
     }));

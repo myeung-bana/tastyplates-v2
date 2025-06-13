@@ -19,7 +19,6 @@ interface FetchedRestaurant {
     featuredImage: { node: { sourceUrl: string } };
     listingCategories: { nodes: { id: string; name: string }[] };
     countries: { nodes: { name: string }[] };
-    cuisines?: string[];
 }
 
 interface ListingCardProps {
@@ -29,7 +28,7 @@ interface ListingCardProps {
 
 const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDelete }) => {
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
-    const cuisineNames = restaurant.cuisines ?? [];
+    const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
     const countryNames = restaurant.countries?.nodes?.map(country => country.name).join(', ') || restaurant.listingStreet || 'Unknown Location';
 
     const addReview = () => {
@@ -70,7 +69,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDelete }) 
                     </div>
 
                     <div className="restaurant-card__tags flex flex-wrap gap-1 text-xs text-gray-500">
-                        {cuisineNames.map((cuisineName: string, index: number) => (
+                        {cuisineNames.map((cuisineName, index) => (
                             <span key={index} className="restaurant-card__tag bg-gray-100 px-2 py-1 rounded-full">
                                 &#8226; {cuisineName}
                             </span>
