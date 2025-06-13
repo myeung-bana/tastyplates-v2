@@ -1,3 +1,4 @@
+// repositories/restaurant/restaurantRepository.ts
 import { gql } from "@apollo/client";
 import client  from "@/app/graphql/client";
 import {
@@ -31,16 +32,36 @@ export class RestaurantRepository {
             query: GET_RESTAURANT_BY_SLUG,
             variables: { slug },
         });
-
         return data.listing;
     }
 
-    static async getAllRestaurants(searchTerm: string, first = 8, after: string | null = null, status: string | null = null, userId?: number | null) {
+    static async getAllRestaurants(
+        searchTerm: string,
+        first = 8,
+        after: string | null = null,
+        taxQuery: any = {},
+        priceRange?: string | null,
+        status: string | null = null,
+        userId?: number | null,
+        recognition: string | null = null,
+        sortOption?: string | null,
+        rating: number | null = null
+    ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
-            variables: { searchTerm, first, after, status, userId },
+            variables: {
+                searchTerm,
+                first,
+                after,
+                taxQuery,
+                priceRange,
+                status,
+                userId,
+                recognition,
+                recognitionSort: sortOption,
+                minAverageRating: rating,
+            },
         });
-        console.log("Fetched restaurants:", data);
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
@@ -122,7 +143,6 @@ export class RestaurantRepository {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
             }, true);
-            console.log("Fetched listing pending:", response);
             return response;
         } catch (error) {
             console.error("Failed to fetch listing pending", error);
