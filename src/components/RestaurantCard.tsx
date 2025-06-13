@@ -48,27 +48,20 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    // 1) If we got an initialSavedStatus from props (SSR), use it and skip the fetch
     if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
       setSaved(initialSavedStatus);
       return;
     }
 
-    // 2) Don’t do anything until NextAuth finishes loading
     if (status === "loading") {
       return;
     }
 
-    // 3) Show the “loading” skeleton
-    setSaved(null);
-
-    // 4) If the user isn’t signed in, mark as “not saved” and bail
     if (!session) {
       setSaved(false);
       return;
     }
 
-    // 5) Otherwise (signed in) fetch the real status
     let isMounted = true;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
@@ -278,7 +271,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
                 disabled={loading || saved === null}
                 aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
-                {saved === null ? (
+                {saved === null && loading ? (
                   <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
                   <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
@@ -314,7 +307,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
                 </div>
               </div>
 
-              <div className="restaurant-card__tags">
+              <div className="restaurant-card__tags mt-1">
                 {(() => {
                   const tags = [...cuisineNames];
                   if (restaurant.priceRange) tags.push(restaurant.priceRange);
