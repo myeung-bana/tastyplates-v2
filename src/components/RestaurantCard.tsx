@@ -95,36 +95,24 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     };
   }, [restaurant.slug, session, status, initialSavedStatus]);
 
-  // for average rating and rating count
-  // useEffect(() => {
-  //   const fetchRatingsData = async () => {
-  //     try {
-  //       const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurant.databaseId}`);
-  //       const data = await res.json();
-  //       if (data && Array.isArray(data.reviews)) {
-  //         const ratings = data.reviews
-  //           .map((r: any) => typeof r.rating === 'number' ? r.rating : 0);
-  //         setRatingsCount(ratings.length);
-  //         if (ratings.length > 0) {
-  //           const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
-  //           const avgFormatted = Number.isInteger(avg) ? avg : Number(avg.toFixed(1));
-  //           setAverageRating(avgFormatted);
-  //         } else {
-  //           setAverageRating(0);
-  //         }
-  //       } else {
-  //         setRatingsCount(0);
-  //         setAverageRating(0);
-  //       }
-  //     } catch {
-  //       setRatingsCount(0);
-  //       setAverageRating(0);
-  //     }
-  //   };
-  //   if (restaurant.databaseId) {
-  //     fetchRatingsData();
-  //   }
-  // }, [restaurant.databaseId]);
+  useEffect(() => {
+    const fetchRatingsData = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurant.databaseId}`);
+        const data = await res.json();
+        if (data && Array.isArray(data.reviews)) {
+          setRatingsCount(data.reviews.length);
+        } else {
+          setRatingsCount(0);
+        }
+      } catch {
+        setRatingsCount(0);
+      }
+    };
+    if (restaurant.databaseId) {
+      fetchRatingsData();
+    }
+  }, [restaurant.databaseId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -187,7 +175,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     setLoading(true);
     setError(null);
     const prevSaved = saved;
-    setSaved(false); // Optimistically update UI
+    setSaved(false);
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
     try {
@@ -293,18 +281,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
-
-                <>
-                  {restaurant.rating > 0 ? (
-                    <>
-                      <FaStar className="restaurant-card__icon -mt-1" />
-                      {restaurant.rating}
-                    </>
-                  ) : ""}
-                </>
-
+                {restaurant.rating > 0 ? (
+                  <>
+                    <FaStar className="restaurant-card__icon -mt-1" />
+                    {restaurant.rating}
+                    <span className="restaurant-card__rating-count">({ratingsCount})</span>
+                  </>
+                ) : null}
                 {/* <span>{averageRating}</span> */}
-                <span className="restaurant-card__rating-count">({ratingsCount})</span>
                 {/* <span>({restaurant.reviews})</span> */}
               </div>
             </div>
