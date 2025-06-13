@@ -210,6 +210,7 @@ export default function RestaurantDetail() {
       });
   }, [slug]);
 
+
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
   const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
@@ -249,8 +250,6 @@ export default function RestaurantDetail() {
     comment: string;
     date: string;
   }) => {
-    // Here you would typically send the review to your backend
-    console.log("New review:", review);
   };
 
   const addReview = () => {

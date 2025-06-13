@@ -1,3 +1,4 @@
+// services/restaurant/restaurantService.ts
 import { RestaurantRepository } from "@/repositories/restaurant/restaurantRepository";
 
 export const RestaurantService = {
@@ -5,9 +6,57 @@ export const RestaurantService = {
         return await RestaurantRepository.getRestaurantBySlug(slug);
     },
 
-    async fetchAllRestaurants(searchTerm: string, first = 8, after: string | null = null, status: string | null = null, userId?: number | null, accessToken?: string) {
+    async fetchAllRestaurants(
+        searchTerm: string,
+        first = 8,
+        after: string | null = null,
+        cuisineSlug: string | null = null,
+        palateSlugs: string[] = [],
+        priceRange?: string | null, 
+        status: string | null = null,
+        userId?: number | null,
+        recognition: string | null = null,
+        sortOption?: string | null, 
+        rating: number | null = null
+    ) {
         try {
-            return await RestaurantRepository.getAllRestaurants(searchTerm, first, after, status, userId);
+            const taxArray = [];
+
+            if (cuisineSlug && cuisineSlug !== 'all') {
+                taxArray.push({
+                    taxonomy: 'LISTINGCATEGORY',
+                    field: 'SLUG',
+                    terms: [cuisineSlug],
+                    operator: 'IN',
+                });
+            }
+
+            if (palateSlugs && palateSlugs.length > 0 && palateSlugs[0] !== 'all') {
+                taxArray.push({
+                    taxonomy: 'PALATE',
+                    field: 'SLUG',
+                    terms: palateSlugs,
+                    operator: 'IN',
+                });
+            }
+
+            const taxQuery = taxArray.length > 0 ? {
+                relation: 'AND',
+                taxArray: taxArray,
+            } : {};
+
+            return await RestaurantRepository.getAllRestaurants(
+                searchTerm,
+                first,
+                after,
+                taxQuery,
+                priceRange,
+                status,
+                userId,
+                recognition,
+                sortOption,
+                rating
+            );
         } catch (error) {
             console.error('Error fetching list:', error);
             throw new Error('Failed to fetch list');
