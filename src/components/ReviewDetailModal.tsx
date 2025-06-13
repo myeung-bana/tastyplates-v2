@@ -79,7 +79,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data) {
-      console.log("userLiked on open:", data.userLiked);
       setUserLiked(data.userLiked ?? false);
       setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
     }

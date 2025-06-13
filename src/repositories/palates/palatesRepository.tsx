@@ -7,7 +7,7 @@ export const PalatesRepository = {
         const { data } = await client.query({
             query: GET_ALL_PALATES
         });
-        console.log("Palates data:", data);
+
         return data.palates.nodes;
     }
 };

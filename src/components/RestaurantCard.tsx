@@ -48,14 +48,20 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const hasFetched = useRef(false);
 
   useEffect(() => {
+
     if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
       setSaved(initialSavedStatus);
       return;
     }
 
+
     if (status === "loading") {
       return;
     }
+
+
+    setSaved(null);
+
 
     if (!session) {
       setSaved(false);
@@ -144,11 +150,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
       });
       const data = await res.json();
       setSaved(data.status === "saved");
-      // Broadcast the confirmed status
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
     } catch (err) {
-      setSaved(prevSaved); // Revert on error
-      // Broadcast the reverted status
+      setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
       setError("Could not update favorite status");
     } finally {
@@ -162,14 +166,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         const cuisine = cuisines.find((c) => c.id === id);
         return cuisine ? cuisine.name : null;
       })
-      .filter((name) => name); // Filter out any null values
+      .filter((name) => name);
   };
-  // const cuisineNames = getCuisineNames(restaurant.cuisineIds);
   const cuisineNames = restaurant.palatesNames ?? [];
 
-  const addReview = () => {
-    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
-  }
 
   const handleDeleteWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -293,8 +293,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
-                <FaStar className="restaurant-card__icon -mt-1" />
-                <span>{restaurant.rating}</span>
+
+                <>
+                  {restaurant.rating > 0 ? (
+                    <>
+                      <FaStar className="restaurant-card__icon -mt-1" />
+                      {restaurant.rating}
+                    </>
+                  ) : ""}
+                </>
+
                 {/* <span>{averageRating}</span> */}
                 <span className="restaurant-card__rating-count">({ratingsCount})</span>
                 {/* <span>({restaurant.reviews})</span> */}
@@ -332,7 +340,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         headerClass="!text-[#31343F]"
         contentClass="!pb-[2px]"
       />
-      {/* Signup/Signin Modals for not-logged-in users */}
       <SignupModal
         isOpen={showSignup}
         onClose={() => setShowSignup(false)}

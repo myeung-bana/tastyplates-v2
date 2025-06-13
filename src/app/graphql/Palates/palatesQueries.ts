@@ -5,10 +5,12 @@ export const GET_ALL_PALATES = gql`
     query GetAllPalates {
         palates(first: 100) {
             nodes {
+            slug
             name
             databaseId
-                children {
+                children(first: 15) {
                     nodes {
+                        slug
                         databaseId
                         name
                     }
