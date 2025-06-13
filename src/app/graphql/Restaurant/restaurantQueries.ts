@@ -6,9 +6,11 @@ export const GET_LISTINGS = gql`
     $priceRange: String
     $first: Int
     $after: String
-    $taxQuery: TaxQuery # Define taxQuery as a variable of type TaxQuery
+    $taxQuery: TaxQuery
     $status: PostStatusEnum
-    #$sortOption: String # Define sortOption as a variable of type String
+    $recognition: String
+    $recognitionSort: String 
+    $minAverageRating: Float
   ) {
     listings(
         where: {
@@ -16,6 +18,9 @@ export const GET_LISTINGS = gql`
             priceRange: $priceRange
             taxQuery: $taxQuery
             status: $status
+            recognition: $recognition
+            recognitionSort: $recognitionSort
+            minAverageRating: $minAverageRating
             }, 
         first: $first
         after: $after
@@ -30,7 +35,8 @@ export const GET_LISTINGS = gql`
             title
             slug
             content
-            priceRange # This is the field returning the problematic data
+            priceRange
+            averageRating
             listingStreet
             palates {
                 nodes {

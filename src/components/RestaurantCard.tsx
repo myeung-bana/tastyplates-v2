@@ -45,27 +45,26 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    // 1) If we got an initialSavedStatus from props (SSR), use it and skip the fetch
+
     if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
       setSaved(initialSavedStatus);
       return;
     }
 
-    // 2) Don’t do anything until NextAuth finishes loading
+
     if (status === "loading") {
       return;
     }
 
-    // 3) Show the “loading” skeleton
+
     setSaved(null);
 
-    // 4) If the user isn’t signed in, mark as “not saved” and bail
+
     if (!session) {
       setSaved(false);
       return;
     }
 
-    // 5) Otherwise (signed in) fetch the real status
     let isMounted = true;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
@@ -117,11 +116,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
       });
       const data = await res.json();
       setSaved(data.status === "saved");
-      // Broadcast the confirmed status
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
     } catch (err) {
-      setSaved(prevSaved); // Revert on error
-      // Broadcast the reverted status
+      setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
       setError("Could not update favorite status");
     } finally {
@@ -135,14 +132,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         const cuisine = cuisines.find((c) => c.id === id);
         return cuisine ? cuisine.name : null;
       })
-      .filter((name) => name); // Filter out any null values
+      .filter((name) => name);
   };
-  // const cuisineNames = getCuisineNames(restaurant.cuisineIds);
   const cuisineNames = restaurant.palatesNames ?? [];
 
-  const addReview = () => {
-    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
-  }
 
   const handleDeleteWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,7 +145,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   };
 
   const handleConfirmDelete = () => {
-    // Add your delete logic here
     setIsDeleteModalOpen(false);
   };
 
@@ -235,8 +227,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
-                <FaStar className="restaurant-card__icon -mt-1" />
-                <span>{restaurant.rating}</span>
+
+                <>
+                  {restaurant.rating > 0 ? (
+                    <>
+                      <FaStar className="restaurant-card__icon -mt-1" />
+                      {restaurant.rating}
+                    </>
+                  ) : ""}
+                </>
+
                 {/* <span>({restaurant.reviews})</span> */}
               </div>
             </div>
@@ -273,7 +273,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         headerClass="!text-[#31343F]"
         contentClass="!pb-[2px]"
       />
-      {/* Signup/Signin Modals for not-logged-in users */}
       <SignupModal
         isOpen={showSignup}
         onClose={() => setShowSignup(false)}
@@ -290,7 +289,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
           setShowSignup(true);
         }}
       />
-      {/* Review Modal */}
       {isReviewModalOpen && (
         <RestaurantReviewsModal
           isOpen={isReviewModalOpen}

@@ -61,8 +61,6 @@ const ProfilePage = () => {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement password change logic here
-    console.log("Password change requested");
   };
 
   const handlePalateToggle = (palateId: string) => {

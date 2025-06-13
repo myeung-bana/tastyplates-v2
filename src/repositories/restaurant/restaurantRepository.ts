@@ -31,7 +31,6 @@ export class RestaurantRepository {
             query: GET_RESTAURANT_BY_SLUG,
             variables: { slug },
         });
-        console.log("Restaurant data:", data);
         return data.listing;
     }
 
@@ -42,7 +41,9 @@ export class RestaurantRepository {
         taxQuery: any = {},
         priceRange?: string | null,
         status: string | null = null,
-        sortOption?: string | null, // Added sortOption parameter
+        recognition: string | null = null,
+        sortOption?: string | null,
+        rating: number | null = null
     ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -53,10 +54,11 @@ export class RestaurantRepository {
                 taxQuery,
                 priceRange,
                 status,
-                // sortOption, // Pass sortOption as a variable
+                recognition,
+                recognitionSort: sortOption,
+                minAverageRating: rating,
             },
         });
-        console.log("Fetched restaurants:", data);
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
@@ -108,7 +110,6 @@ export class RestaurantRepository {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
             }, true);
-            console.log("Fetched listing pending:", response);
             return response;
         } catch (error) {
             console.error("Failed to fetch listing pending", error);

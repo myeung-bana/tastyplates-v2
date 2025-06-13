@@ -12,9 +12,11 @@ export const RestaurantService = {
         after: string | null = null,
         cuisineSlug: string | null = null,
         palateSlugs: string[] = [],
-        priceRange?: string | null, // priceRange is now a single string
-        status: string | null = null
-        // sortOption?: string | null, // Added sortOption
+        priceRange?: string | null, 
+        status: string | null = null,
+        recognition: string | null = null,
+        sortOption?: string | null, 
+        rating: number | null = null
     ) {
         try {
             const taxArray = [];
@@ -47,9 +49,11 @@ export const RestaurantService = {
                 first,
                 after,
                 taxQuery,
-                priceRange, // Pass priceRange directly
-                status
-                // sortOption, // Pass sortOption directly
+                priceRange,
+                status,
+                recognition,
+                sortOption,
+                rating
             );
         } catch (error) {
             console.error('Error fetching list:', error);

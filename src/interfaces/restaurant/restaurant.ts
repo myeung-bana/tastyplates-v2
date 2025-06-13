@@ -5,6 +5,7 @@ export interface Listing {
     content: string;
     listingStreet: string;
     priceRange: string;
+    averageRating: number;
     palates: {
         nodes: {
             name: string;

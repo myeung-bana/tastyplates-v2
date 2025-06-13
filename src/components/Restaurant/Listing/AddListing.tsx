@@ -131,24 +131,17 @@ const AddListingPage = (props: any) => {
       formData.append("categories", listing.category);
       formData.append("latitude", String(listing.latitude));
       formData.append("longitude", String(listing.longitude));
-
       selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-
-      // Append the status for the listing creation
-      formData.append("status", "pending"); // Set status to 'pending' for Save and Exit
-
-      console.log("Form Data to be sent (Save Draft):", Object.fromEntries(formData.entries()));
+      formData.append("status", "pending");
 
       const response = await RestaurantService.createRestaurantListing(
         formData,
         sess
       );
       const newListingId = response.id;
-      setResId(newListingId); // Store the ID for future steps
-
-      setIsSubmitted(true); // Show the success modal for saving draft
-      // Optionally, redirect to a dashboard or home after saving as draft
-      router.push("/listing"); // Or a confirmation page like /dashboard
+      setResId(newListingId);
+      setIsSubmitted(true); 
+      router.push("/listing");
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
       alert(err.message || "An error occurred during listing submission as draft.");
@@ -302,9 +295,7 @@ const AddListingPage = (props: any) => {
 
         selectedPalates.forEach((p) => formData.append("palates[]", p.label));
 
-        formData.append("status", listingStatus); // Set the listing status here (pending/draft)
-
-        console.log("Creating listing before review:", Object.fromEntries(formData.entries()));
+        formData.append("status", listingStatus);
         const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
         currentRestaurantId = listingResponse.id;
         setResId(currentRestaurantId);
@@ -327,7 +318,6 @@ const AddListingPage = (props: any) => {
         recognitions: selectedrecognition || [],
         mode: reviewMode, // 'publish' or 'draft' for the review itself
       };
-      console.log("Review Data to be sent:", reviewData);
       await ReviewService.postReview(reviewData, sess);
 
       setIsSubmitted(true); // Show success modal

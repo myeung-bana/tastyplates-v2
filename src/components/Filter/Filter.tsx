@@ -12,7 +12,7 @@ import { PalatesService } from "@/services/palates/palatestService";
 interface FilterProps {
   onFilterChange: (filters: {
     cuisine?: string | null;
-    price?: string | null; // price is now a single string
+    price?: string | null;
     rating?: number | null;
     badges?: string | null;
     sortOption?: string | null;
@@ -38,6 +38,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
   const [isRatingOpen, setIsRatingOpen] = useState<boolean>(false);
+  // const [badges, setBadges] = useState<string | null>(null); // State for badges filter
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
   const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
 
@@ -57,9 +58,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   useEffect(() => {
     CategoryService.fetchCategories()
       .then((data) => {
-        console.log("Fetched Categories Data:", data);
         setDbCuisines(data || []);
-        console.log("dbCuisines after set:", data || []);
       })
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoadingCategories(false));
@@ -68,8 +67,6 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   useEffect(() => {
     PalatesService.fetchPalates()
       .then((data) => {
-        console.log("Fetched Palates Data:", data);
-
         const allChildSlugs = new Set<string>();
         data?.forEach((p: any) => {
           p.children?.nodes?.forEach((c: any) => {
@@ -91,7 +88,6 @@ const Filter = ({ onFilterChange }: FilterProps) => {
         })) || [];
 
         setDbPalates(transformedPalates);
-        console.log("dbPalates after set:", transformedPalates);
       })
       .catch((error) => console.error("Error fetching palates:", error))
       .finally(() => setIsLoadingPalates(false));
@@ -104,17 +100,17 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   ];
 
   const badges = [
-    { name: 'all', value: 'All' },
-    { name: 'best-service', value: 'Best Service' },
-    { name: 'insta-worthy', value: 'Insta-Worthy' },
-    { name: 'must-revisit', value: 'Must Revisit' },
-    { name: 'value-for-money', value: 'Value for Money' },
+    { name: 'All', value: 'All' },
+    { name: 'Best Service', value: 'Best Service' },
+    { name: 'Insta Worthy', value: 'Insta-Worthy' },
+    { name: 'Must Revisit', value: 'Must Revisit' },
+    { name: 'Value For Money', value: 'Value for Money' },
   ];
 
   const sortOptions = [
     { name: 'none', value: 'None' },
-    { name: 'ascending', value: 'Ascending (Lowest to Highest)' },
-    { name: 'descending', value: 'Descending (Highest to Lowest)' },
+    { name: 'ASC', value: 'Ascending (Lowest to Highest)' },
+    { name: 'DESC', value: 'Descending (Highest to Lowest)' },
   ];
 
   const handlePalateChange = (keys: Set<string>) => {
@@ -177,7 +173,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
 
     onFilterChange({
       cuisine: cuisine === "All" ? null : cuisine,
-      price: price || null, // price is already a single string or empty
+      price: price || null,
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
       sortOption: sortOption === "None" ? null : sortOption,
@@ -474,14 +470,14 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         onClick={() => setIsBadgeOpen(!isBadgeOpen)}
                         className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
-                          {badge === "all" ? "All" : badges.find(b => b.name === badge)?.value || "All"}
+                          {badge === "all" ? "All" : badges?.find(b => b.name === badge)?.value || "All"}
                         </span>
                         <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
                     }
                     content={
                       <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
-                        {badges.map((item: any, index: number) => (
+                        {badges?.map((item: any, index: number) => (
                           <div
                             onClick={() => selectFilter(item.name, 'badge')}
                             className={`py-2 px-4 ${badge == item.name
