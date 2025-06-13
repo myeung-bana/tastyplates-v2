@@ -210,8 +210,6 @@ export default function RestaurantDetail() {
       });
   }, [slug]);
 
-  console.log(restaurant);
-
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
   const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
@@ -506,7 +504,7 @@ export default function RestaurantDetail() {
             ))}
           </div> */}
             <div className="restaurant-detail__reviews">
-              <RestaurantReviews reviewlist={[restaurantReviews]} />
+              <RestaurantReviews restaurantId={restaurant.databaseId} />
             </div>
           </div>
         </div>

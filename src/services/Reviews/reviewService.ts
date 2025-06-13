@@ -88,10 +88,10 @@ export class ReviewService {
         }
     }
 
-    static async fetchRestaurantReview(slug: string, accessToken?: string) {
+    static async fetchRestaurantReview(restaurantId: number, accessToken?: string) {
         try {
             // Call the repository to fetch reviews/comments for a specific restaurant
-            const response = await ReviewRepository.fetchRestaurantReview(slug, accessToken);
+            const response = await ReviewRepository.fetchRestaurantReview(restaurantId, accessToken);
             return response;
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);

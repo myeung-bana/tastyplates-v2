@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { FiHeart, FiMessageCircle, FiStar, FiThumbsUp } from "react-icons/fi";
 import { BiLike } from "react-icons/bi";
@@ -10,11 +10,13 @@ import PhotoSlider from "./Restaurant/Details/PhotoSlider";
 import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
+import { useSession } from "next-auth/react";
 import { formatDate, formatDateT, stripTags } from "@/lib/utils";
+import { ReviewService } from "@/services/Reviews/reviewService";
 
 interface ReviewBlockProps {
   review: {
-    id: string;
+    id: number;
     authorId: string;
     restaurantId: string;
     user: string;
@@ -39,6 +41,60 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   //     return palate ? palate.name : null; // Return the name or null if not found
   //   })
   //   .filter((name) => name); // Filter out any null values
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [isShowSignup, setIsShowSignup] = useState(false);
+  const [userLiked, setUserLiked] = useState(review.userLiked ?? false);
+  const [likesCount, setLikesCount] = useState(review.commentLikes ?? 0);
+
+  const tags = [
+    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
+    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
+    { id: 3, name: "Value for Money", icon: "/cash.svg" },
+    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+  ];
+
+  useEffect(() => {
+    if (review) {
+      setUserLiked(review.userLiked ?? false);
+      setLikesCount(review.commentLikes ?? 0);
+    }
+  }, [review.userLiked, review.commentLikes]);
+
+  const toggleLike = async () => {
+    if (loading) return;
+
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let response;
+      if (userLiked) {
+        // Already liked, so unlike
+        response = await ReviewService.unlikeComment(
+          review.id,
+          session.accessToken ?? ""
+        );
+      } else {
+        // Not liked yet, so like
+        response = await ReviewService.likeComment(
+          review.id,
+          session.accessToken ?? ""
+        );
+      }
+
+      setUserLiked(response.userLiked);
+      setLikesCount(response.likesCount);
+    } catch (error) {
+      console.error(error);
+      alert('Error updating like');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="review-block px-4 py-4">
@@ -77,7 +133,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           {/* {[...Array(review.rating)].map((i, index) =>
             <FiStar key={index} className="review-block__star fill-[#31343F] stroke-none size-3 md:size-3.5" />
           )} */}
-          <span className="text-[#494D5D] text-[10px] md:text-sm p-2">&#8226;</span>
+          <span className="text-[#9ca3af] text-[10px] md:text-sm p-2">&#8226;</span>
           <span className="review-card__timestamp">
             {formatDateT(review.date)}
           </span>
@@ -87,11 +143,15 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             <div className="review-block__recognitions flex gap-2">
               {review.recognitions
                 .filter(tag => tag && tag.trim() !== '')
-                .map((tag, index) => (
-                  <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D]">
-                    {tag}
-                  </span>
-                ))}
+                .map((tag, index) => {
+                  const tagObj = tags.find(t => t.name === tag);
+                  return (
+                    <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
+                      {tagObj && <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />}
+                      {tag}
+                    </span>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -113,10 +173,21 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         ))} */}
         <PhotoSlider reviewPhotos={review.images} />
       </div>
-      <div className="review-block__actions">
-        <button className="review-block__action-btn">
-          <BiLike className="size-6 fill-[#494D5D]" />
-          <span className="ml-2 text-center leading-6">2</span>
+      <div className="review-block__actions flex items-center relative text-center">
+        <button
+          onClick={toggleLike}
+          disabled={loading}
+          aria-pressed={userLiked}
+          aria-label={userLiked ? "Unlike comment" : "Like comment"}
+          className="review-block__action-btn cursor-pointer"
+        >
+          {loading ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+          ) : (
+            <BiLike className={`shrink-0 size-6 transition-colors duration-200 ${userLiked ? 'text-blue-600 fill-blue-600' : 'fill-[#494D5D]'
+              }`} />
+          )}
+          <span className="ml-2 text-center leading-6">{likesCount}</span>
         </button>
         {/* <button className="review-block__action-btn">
             <FiMessageCircle />

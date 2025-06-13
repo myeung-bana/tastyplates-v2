@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Masonry } from "masonic";
 import Photos from "./Restaurant/Details/Photos";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { ReviewService } from "@/services/Reviews/reviewService";
 
 // interface Review {
@@ -26,18 +27,18 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 //   reviews: Array<Review>;
 // }
 
-export default function RestaurantReviews() {
-  const params = useParams() as { slug: string };
-  const slug = params.slug;
+export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
+  // const params = useParams() as { slug: string };
+  // const slug = params.slug;
+  const { data: session } = useSession();
   const [reviews, setReviews] = useState<any[]>([]);
-  console.log('reviews', reviews)
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchReviews() {
       setLoading(true);
       try {
-        const data = await ReviewService.fetchRestaurantReview(slug);
+        const data = await ReviewService.fetchRestaurantReview(restaurantId, session?.accessToken);
         setReviews(Array.isArray(data) ? data : []);
       } catch (error) {
         setReviews([]);
@@ -45,8 +46,8 @@ export default function RestaurantReviews() {
         setLoading(false);
       }
     }
-    fetchReviews();
-  }, [slug]);
+    if (session) fetchReviews();
+  }, [restaurantId, session]);
 
   const tabs = [
     {
@@ -55,7 +56,22 @@ export default function RestaurantReviews() {
       content:
         <div className="reviews-container">
           {loading ? (
-            <div>Loading...</div>
+            <div className="restaurant-detail__content mt-10">
+              <div className="h-6 w-24 bg-gray-300 rounded mx-auto mb-6"></div>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="border border-[#CACACA] rounded-lg p-4 space-y-2"
+                  >
+                    <div className="h-5 w-32 bg-gray-300 rounded"></div>
+                    <div className="h-4 w-full bg-gray-300 rounded"></div>
+                    <div className="h-4 w-full bg-gray-300 rounded"></div>
+                    <div className="h-4 w-3/4 bg-gray-300 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : reviews.length ? (
             reviews.map((review) => (
               <ReviewBlock
@@ -75,8 +91,8 @@ export default function RestaurantReviews() {
                   palateNames: Array.isArray(review.palates) && review.palates[0]
                     ? review.palates[0].split("|").map((p: string) => p.trim()).filter(Boolean)
                     : [],
-                  commentLikes: review.meta?._comment_likes || 0,
-                  userLiked: false // Set this if you have like info
+                  commentLikes: review._comment_likes || 0,
+                  userLiked: review.userLiked
                 }}
               />
             ))

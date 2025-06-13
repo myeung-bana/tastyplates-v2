@@ -131,10 +131,10 @@ export class ReviewRepository {
     }, true);
   }
 
-  static async fetchRestaurantReview(slug: string, accessToken?: string) {
+  static async fetchRestaurantReview(restaurantId: number, accessToken?: string) {
     try {
       const response = await this.request(
-        `/wp-json/wp/v2/api/comments?type=listing&slug=${slug}`,
+        `/wp-json/wp/v2/api/comments?type=listing&post=${restaurantId}`,
         {
           method: 'GET',
           headers: {
