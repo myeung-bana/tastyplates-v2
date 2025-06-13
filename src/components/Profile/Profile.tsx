@@ -453,9 +453,14 @@ const Profile = () => {
                 initialSavedStatus={true}
               />
             ))}
+            {wishlist.length === 0 && !wishlistLoading && (
+              <div className="col-span-full text-center text-gray-400 py-12">
+                No wishlisted restaurants yet.
+              </div>
+            )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
-            {wishlistLoading && !wishlist.length && (
+            {wishlistLoading && wishlist.length === 0 && (
               <>
                 <svg
                   className="w-5 h-5 text-gray-500 animate-spin mr-2"
@@ -521,6 +526,24 @@ const Profile = () => {
     if (session && restaurants.length > 0) fetchWishlist();
     else setWishlist([]);
   }, [session, restaurants]);
+
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { slug, status } = e.detail || {};
+      if (typeof slug !== 'string') return;
+      setWishlist((prev) => {
+        if (status === false) {
+          return prev.filter((r) => r.slug !== slug);
+        } else if (status === true && !prev.some((r) => r.slug === slug)) {
+          const found = restaurants.find((r) => r.slug === slug);
+          return found ? [...prev, found] : prev;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('restaurant-favorite-changed', handler as EventListener);
+    return () => window.removeEventListener('restaurant-favorite-changed', handler as EventListener);
+  }, [restaurants]);
 
   return (
     <>

@@ -151,9 +151,38 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     }
   };
 
-  const handleConfirmDelete = () => {
-    // Add your delete logic here
+  const handleConfirmDelete = async () => {
+    if (!session) {
+      setShowSignup(true);
+      setIsDeleteModalOpen(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const prevSaved = saved;
+    setSaved(false); // Optimistically update UI
     setIsDeleteModalOpen(false);
+    window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        },
+        body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      setSaved(data.status === "saved");
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+    } catch (err) {
+      setSaved(prevSaved); // Revert on error
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+      setError("Could not update favorite status");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deleteModalContent = (
