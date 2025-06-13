@@ -12,6 +12,7 @@ import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
+import { checkImageType } from "@/constants/utils";
 import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
 import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
 import { MdEdit, MdOutlineEdit } from "react-icons/md";
@@ -62,6 +63,12 @@ const Form = (props: any) => {
     setProfileError("");
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
+
+      // Check image type
+      if (!checkImageType(file.name)) {
+        setProfileError("Profile image must be a valid image type")
+        return;
+      }
 
       // Check file size (5MB)
       if (file.size > imageSizeLimit) {
@@ -310,12 +317,12 @@ const Form = (props: any) => {
                   </div>
                 </div>
               </label>
-              {profileError && (
-                <p className="mt-2 text-sm text-red-600 text-center">
+            </div>
+            {profileError && (
+                <p className="text-sm text-red-600 text-center">
                   {profileError}
                 </p>
               )}
-            </div>
             <div className="listing__form-group">
               <label className="listing__label">About Me</label>
               <div className="listing__input-group">

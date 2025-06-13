@@ -23,6 +23,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
           sourceUrl
         }
         palates
+        userAvatar
         author {
           name
             node {
@@ -70,6 +71,7 @@ query GetCommentWithReplies($id: ID!) {
       nodes {
         content(format: RENDERED)
         palates
+        userAvatar
         author {
           node {
             id
