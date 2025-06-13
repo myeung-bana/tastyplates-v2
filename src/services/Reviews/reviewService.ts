@@ -4,17 +4,19 @@ export class ReviewService {
     static async fetchAllReviews(first = 16, after: string | null = null, accessToken?: string) {
         try {
             const response = await ReviewRepository.getAllReviews(first, after, accessToken);
-            const filteredReviews = response?.reviews.filter((review: any) => {
-                return (
-                    review.author?.node?.databaseId ||
-                    review.author?.databaseId
-                );
-            });
+            console.log('response', response)
+            return response;
+            // const filteredReviews = response?.reviews.filter((review: any) => {
+            //     return (
+            //         review.author?.node?.databaseId ||
+            //         review.author?.databaseId
+            //     );
+            // });
 
-            return {
-                reviews: filteredReviews,
-                pageInfo: response.pageInfo,
-            };
+            // return {
+            //     reviews: filteredReviews,
+            //     pageInfo: response.pageInfo,
+            // };
         } catch (error) {
             console.error('Error fetching reviews:', error);
             throw new Error('Failed to fetch reviews');

@@ -24,6 +24,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
         }
         palates
         userAvatar
+        userId
         author {
           name
             node {

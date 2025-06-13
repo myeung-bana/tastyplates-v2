@@ -89,7 +89,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Fetch initial follow state when modal opens and author is available
     if (!isOpen) return;
     if (!session?.accessToken) return;
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = data.author?.node?.databaseId || data.userId;
     if (!authorUserId) {
       setIsFollowing(false);
       return;
@@ -122,7 +122,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = data.author?.node?.databaseId || data.userId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -167,7 +167,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = data.author?.node?.databaseId || data.userId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
