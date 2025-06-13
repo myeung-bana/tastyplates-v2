@@ -137,19 +137,15 @@ const AddListingPage = (props: any) => {
       formData.append("categories", listing.category);
       formData.append("latitude", String(listing.latitude));
       formData.append("longitude", String(listing.longitude));
-
       selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-
       formData.append("status", "pending");
-
-      console.log("Form Data to be sent (Save Draft):", Object.fromEntries(formData.entries()));
 
       const response = await RestaurantService.createRestaurantListing(
         formData,
         sess
       );
       const newListingId = response.id;
-      setCurrentRestaurantDbId(newListingId); // Store the ID for future steps
+      setCurrentRestaurantDbId(newListingId);
 
       setIsSubmitted(true);
       router.push("/listing");
@@ -360,10 +356,8 @@ const AddListingPage = (props: any) => {
         formData.append("longitude", String(listing.longitude));
 
         selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-        formData.append("status", listingStatus);
-        console.log("Status:", listingStatus);
 
-        console.log("Creating listing before review:", Object.fromEntries(formData.entries()));
+        formData.append("status", listingStatus);
         const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
         finalRestaurantId = listingResponse.id;
         setCurrentRestaurantDbId(finalRestaurantId); // Update state with newly created ID
@@ -396,7 +390,6 @@ const AddListingPage = (props: any) => {
         recognitions: selectedrecognition || [],
         mode: reviewMode,
       };
-      console.log("Review Data to be sent:", reviewData);
       await ReviewService.postReview(reviewData, sess);
 
       setIsSubmitted(true);
