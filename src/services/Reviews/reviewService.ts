@@ -4,7 +4,6 @@ export class ReviewService {
     static async fetchAllReviews(first = 16, after: string | null = null, accessToken?: string) {
         try {
             const response = await ReviewRepository.getAllReviews(first, after, accessToken);
-            console.log('response', response)
             return response;
             // const filteredReviews = response?.reviews.filter((review: any) => {
             //     return (
