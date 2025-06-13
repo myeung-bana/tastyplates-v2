@@ -294,7 +294,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         <Link href={`/restaurants/${restaurant.slug}`}>
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
+              <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
                 <FaStar className="restaurant-card__icon -mt-1" />
                 <span>{averageRating}</span>
