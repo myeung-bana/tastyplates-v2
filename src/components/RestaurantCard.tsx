@@ -43,7 +43,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ratingsCount, setRatingsCount] = useState<number>(0);
-  const [averageRating, setAverageRating] = useState<number>(0);
+  // const [averageRating, setAverageRating] = useState<number>(0);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -95,35 +95,36 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     };
   }, [restaurant.slug, session, status, initialSavedStatus]);
 
-  useEffect(() => {
-    const fetchRatingsData = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurant.databaseId}`);
-        const data = await res.json();
-        if (data && Array.isArray(data.reviews)) {
-          const ratings = data.reviews
-            .map((r: any) => typeof r.rating === 'number' ? r.rating : 0);
-          setRatingsCount(ratings.length);
-          if (ratings.length > 0) {
-            const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
-            const avgFormatted = Number.isInteger(avg) ? avg : Number(avg.toFixed(1));
-            setAverageRating(avgFormatted);
-          } else {
-            setAverageRating(0);
-          }
-        } else {
-          setRatingsCount(0);
-          setAverageRating(0);
-        }
-      } catch {
-        setRatingsCount(0);
-        setAverageRating(0);
-      }
-    };
-    if (restaurant.databaseId) {
-      fetchRatingsData();
-    }
-  }, [restaurant.databaseId]);
+  // for average rating and rating count
+  // useEffect(() => {
+  //   const fetchRatingsData = async () => {
+  //     try {
+  //       const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurant.databaseId}`);
+  //       const data = await res.json();
+  //       if (data && Array.isArray(data.reviews)) {
+  //         const ratings = data.reviews
+  //           .map((r: any) => typeof r.rating === 'number' ? r.rating : 0);
+  //         setRatingsCount(ratings.length);
+  //         if (ratings.length > 0) {
+  //           const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
+  //           const avgFormatted = Number.isInteger(avg) ? avg : Number(avg.toFixed(1));
+  //           setAverageRating(avgFormatted);
+  //         } else {
+  //           setAverageRating(0);
+  //         }
+  //       } else {
+  //         setRatingsCount(0);
+  //         setAverageRating(0);
+  //       }
+  //     } catch {
+  //       setRatingsCount(0);
+  //       setAverageRating(0);
+  //     }
+  //   };
+  //   if (restaurant.databaseId) {
+  //     fetchRatingsData();
+  //   }
+  // }, [restaurant.databaseId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -297,7 +298,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
                 <FaStar className="restaurant-card__icon -mt-1" />
-                <span>{averageRating}</span>
+                <span>{restaurant.rating}</span>
+                {/* <span>{averageRating}</span> */}
                 <span className="restaurant-card__rating-count">({ratingsCount})</span>
                 {/* <span>({restaurant.reviews})</span> */}
               </div>
