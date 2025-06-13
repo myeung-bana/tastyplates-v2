@@ -5,14 +5,14 @@ import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
-import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
 import Photo from "../../public/images/Photos-Review-12.png";
 import { useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import RestaurantReviewsModal from "./RestaurantReviewsModal";
 
 export interface Restaurant {
   id: string;
@@ -29,40 +29,69 @@ export interface Restaurant {
 export interface RestaurantCardProps {
   restaurant: Restaurant;
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
+  initialSavedStatus?: boolean | null; // Add this line
 }
 
-const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: RestaurantCardProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
-  const reviewsCount = getRestaurantReviewsCount(restaurant.id);
-  const router = useRouter()
-  const { data: session } = useSession();
-  const [saved, setSaved] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    // 1) If we got an initialSavedStatus from props (SSR), use it and skip the fetch
+    if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
+      setSaved(initialSavedStatus);
+      return;
+    }
+
+    // 2) Don’t do anything until NextAuth finishes loading
+    if (status === "loading") {
+      return;
+    }
+
+    // 3) Show the “loading” skeleton
+    setSaved(null);
+
+    // 4) If the user isn’t signed in, mark as “not saved” and bail
+    if (!session) {
+      setSaved(false);
+      return;
+    }
+
+    // 5) Otherwise (signed in) fetch the real status
     let isMounted = true;
-    if (!session || !restaurant.slug || initialized) return;
     fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
-      credentials: "include",
     })
       .then(res => res.json())
       .then(data => {
-        if (isMounted) setSaved(data.status === "saved");
+        if (isMounted) {
+          setSaved(data.status === "saved");
+        }
       })
-      .finally(() => {
-        if (isMounted) setInitialized(true);
+      .catch(() => {
+        if (isMounted) {
+          setSaved(false);
+        }
       });
-    return () => { isMounted = false; };
-  }, [restaurant.slug, session]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [restaurant.slug, session, status, initialSavedStatus]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,20 +100,33 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
       return;
     }
     setLoading(true);
-    setSaved(prev => !prev);
-    const action = saved ? "unsave" : "save";
-    const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
-      credentials: "include",
-    });
-    const data = await res.json();
-    setSaved(data.status === "saved");
-    setLoading(false);
+    setError(null);
+    const prevSaved = saved;
+    setSaved(!saved);
+    window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
+    const action = prevSaved ? "unsave" : "save";
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        },
+        body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      setSaved(data.status === "saved");
+      // Broadcast the confirmed status
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+    } catch (err) {
+      setSaved(prevSaved); // Revert on error
+      // Broadcast the reverted status
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+      setError("Could not update favorite status");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getCuisineNames = (cuisineIds: string[]) => {
@@ -145,39 +187,44 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
     handleToggle(e);
   };
 
+  const handleCommentButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsReviewModalOpen(true);
+  };
+
   return (
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <Image
-            src={restaurant.image}
-            alt={restaurant.name}
-            width={304}
-            height={228}
-            className="restaurant-card__img cursor-pointer"
-            onClick={addReview}
-          />
+          <Link href={`/restaurants/${restaurant.slug}`}>
+            <Image
+              src={restaurant.image}
+              alt={restaurant.name}
+              width={304}
+              height={228}
+              className="restaurant-card__img cursor-pointer"
+            />
+          </Link>
           {profileTablist !== 'listings' && (
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
                 className="rounded-full p-2 bg-white"
                 onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
-                disabled={loading || !initialized}
+                disabled={loading || saved === null}
                 aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
-                {!initialized ? (
-                  <svg className="animate-spin w-4 h-4 text-[#E36B00]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10" strokeDasharray="164" strokeDashoffset="40" />
-                  </svg>
-                ) : profileTablist === 'wishlists' ? (
-                  <FaHeart className="size-3 md:size-4 text-[#31343F]" />
+                {saved === null ? (
+                  <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
                   <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
                 ) : (
                   <FaRegHeart className="size-3 md:size-4" />
                 )}
               </button>
-              <button className="rounded-full p-2 bg-white">
+              {error && (
+                <span className="text-xs text-red-500 ml-2">{error}</span>
+              )}
+              <button className="rounded-full p-2 bg-white" onClick={handleCommentButtonClick}>
                 <MdOutlineMessage className="size-3 md:size-4" />
               </button>
             </div>
@@ -194,28 +241,28 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
               </div>
             </div>
 
-            <div className="restaurant-card__info">
-              <div className="restaurant-card__location">
-                {/* <FiMapPin className="restaurant-card__icon" /> */}
-                <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+              <div className="restaurant-card__info">
+                <div className="restaurant-card__location">
+                  {/* <FiMapPin className="restaurant-card__icon" /> */}
+                  <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+                </div>
+                {/* <div className="restaurant-card__location">
+                  <FiMessageCircle className="restaurant-card__icon" />
+                  <span>{reviewsCount}</span>
+                </div> */}
               </div>
-              {/* <div className="restaurant-card__location">
-                <FiMessageCircle className="restaurant-card__icon" />
-                <span>{reviewsCount}</span>
-              </div> */}
-            </div>
 
-            <div className="restaurant-card__tags">
-              {cuisineNames.map((cuisineName, index) => (
-                <span key={index} className="restaurant-card__tag">
-                  &#8226; {cuisineName}
-                </span>
-              ))}
-            </div>
+              <div className="restaurant-card__tags">
+                {cuisineNames.map((cuisineName, index) => (
+                  <span key={index} className="restaurant-card__tag">
+                    &#8226; {cuisineName}
+                  </span>
+                ))}
+              </div>
 
-          </div>
-        </Link>
-      </div>
+            </div>
+          </Link>
+        </div>
 
       <CustomModal
         isOpen={isDeleteModalOpen}
@@ -243,6 +290,14 @@ const RestaurantCard = ({ restaurant, profileTablist }: RestaurantCardProps) => 
           setShowSignup(true);
         }}
       />
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <RestaurantReviewsModal
+          isOpen={isReviewModalOpen}
+          setIsOpen={setIsReviewModalOpen}
+          restaurant={restaurant}
+        />
+      )}
     </>
   );
 };
