@@ -115,6 +115,7 @@ const RestaurantPage = () => {
         palateSlugs,
         priceRange,
         status,
+        null,
         badges,
         sortOption,
         rating

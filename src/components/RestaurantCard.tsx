@@ -241,28 +241,28 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
               </div>
             </div>
 
-            <div className="restaurant-card__info">
-              <div className="restaurant-card__location">
-                {/* <FiMapPin className="restaurant-card__icon" /> */}
-                <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+              <div className="restaurant-card__info">
+                <div className="restaurant-card__location">
+                  {/* <FiMapPin className="restaurant-card__icon" /> */}
+                  <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+                </div>
+                {/* <div className="restaurant-card__location">
+                  <FiMessageCircle className="restaurant-card__icon" />
+                  <span>{reviewsCount}</span>
+                </div> */}
               </div>
-              {/* <div className="restaurant-card__location">
-                <FiMessageCircle className="restaurant-card__icon" />
-                <span>{reviewsCount}</span>
-              </div> */}
-            </div>
 
-            <div className="restaurant-card__tags">
-              {cuisineNames.map((cuisineName, index) => (
-                <span key={index} className="restaurant-card__tag">
-                  &#8226; {cuisineName}
-                </span>
-              ))}
-            </div>
+              <div className="restaurant-card__tags">
+                {cuisineNames.map((cuisineName, index) => (
+                  <span key={index} className="restaurant-card__tag">
+                    &#8226; {cuisineName}
+                  </span>
+                ))}
+              </div>
 
-          </div>
-        </Link>
-      </div>
+            </div>
+          </Link>
+        </div>
 
       <CustomModal
         isOpen={isDeleteModalOpen}

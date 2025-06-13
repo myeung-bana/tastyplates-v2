@@ -1,16 +1,19 @@
 'use client'
 import { Restaurant } from "@/data/dummyRestaurants" // You'll likely replace this with actual fetched data types
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import CustomModal from "@/components/ui/Modal/Modal"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
+import ListingCardDraft from "./ListingCardDraft"
+import { useSession } from "next-auth/react"
+import { user } from "@heroui/theme"
 // import RestaurantService from "@/services/RestaurantService" // Ensure this path is correct
 
 // You might want to define an interface for your fetched restaurant data
 interface FetchedRestaurant {
     id: string;
-    databaseId: string;
+    databaseId: number;
     title: string;
     slug: string;
     content: string;
@@ -27,25 +30,31 @@ const ListingDraftPage = () => {
     const [pendingListings, setPendingListings] = useState<FetchedRestaurant[]>([])
     const [loading, setLoading] = useState<boolean>(true)
     const [error, setError] = useState<string | null>(null)
+    const { data: session, status } = useSession();
+    const userId = session?.user?.id || null;
 
-    useEffect(() => {
-        const getPendingListings = async () => {
-            try {
-                setLoading(true)
-                const data = await RestaurantService.fetchAllRestaurants("", 10, null, "", [], "", "PENDING")
-                setPendingListings(data.nodes)
-            } catch (err) {
-                console.error("Failed to fetch pending listings:", err)
-                setError("Failed to load pending listings. Please ensure you are logged in.")
-            } finally {
-                setLoading(false)
-            }
-        }
+useEffect(() => {
+  const getPendingListings = async () => {
+    if (status !== 'authenticated' || !userId) return; // Wait until session is ready
 
-        getPendingListings()
-    }, [])
+    try {
+      setLoading(true);
+      const data = await RestaurantService.fetchAllRestaurants("", 10, null, "", [], "", "PENDING", userId)
+      console.log("Fetched pending listings:", data);
+      setPendingListings(data.nodes);
+    } catch (err) {
+      console.error("Failed to fetch pending listings:", err);
+      setError("Failed to load pending listings. Please ensure you are logged in.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const removeListing = (item: Restaurant, index: number) => {
+  getPendingListings();
+}, [status, userId]);
+
+
+    const removeListing = (item: FetchedRestaurant, index: number) => {
         setIsShowDelete(true)
         console.log(item, 'item to remove')
         // For actual deletion, you would call an API here that also sends the token.
@@ -66,19 +75,7 @@ const ListingDraftPage = () => {
                     // Assuming you have a ListingCard component that accepts `restaurant` prop
                     // and handles deletion. Replace the placeholder div with your ListingCard.
                     pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
-                        // <ListingCard key={restaurant.id} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
-                        // Placeholder for your ListingCard component
-                        <div key={restaurant.id} className="border p-4 rounded-lg shadow-sm">
-                            <h3 className="text-lg font-semibold">{restaurant.title}</h3>
-                            <p className="text-sm text-gray-600">Status: Pending</p>
-                            {/* Add more details from FetchedRestaurant as needed */}
-                            <button
-                                onClick={() => removeListing(restaurant as any, index)} // Cast to any if Restaurant and FetchedRestaurant don't exactly match
-                                className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
-                            >
-                                Delete Draft
-                            </button>
-                        </div>
+                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
                     ))
                 )}
             </div>

@@ -1,3 +1,5 @@
+// app/components/AddListing.tsx
+
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
 import "@/styles/pages/_restaurants.scss";
@@ -24,6 +26,13 @@ const AddListingPage = (props: any) => {
     category: "",
     name: "",
     priceRange: "",
+    title: "",
+    content: "",
+    phone: "",
+    openingHours: "",
+    palates: [],
+    listingCategories: [],
+    countries: [],
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -44,9 +53,10 @@ const AddListingPage = (props: any) => {
   const [content, setContent] = useState("");
   const [reviewStars, setReviewStars] = useState(0);
   const searchParams = useSearchParams();
-  const [restaurantId, setResId] = useState(0);
 
-  // Validation states
+  const [currentRestaurantDbId, setCurrentRestaurantDbId] = useState(0);
+
+
   const [descriptionError, setDescriptionError] = useState("");
   const [uploadedImageError, setUploadedImageError] = useState("");
   const [ratingError, setRatingError] = useState("");
@@ -112,15 +122,11 @@ const AddListingPage = (props: any) => {
       return;
     }
 
-    // If 'continue', just proceed to step 2 without submitting the listing yet
     if (action === "continue") {
-      setStep(2); // Move to step 2
-      // No router.push here to keep the current URL, which is needed if resId isn't set yet.
-      // If you need the URL to reflect step 2, you'd navigate here, but ensure resId is handled.
+      setStep(2);
       return;
     }
 
-    // If 'saveDraft' (for Save and Exit in Step 1), submit with pending status
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -139,8 +145,9 @@ const AddListingPage = (props: any) => {
         sess
       );
       const newListingId = response.id;
-      setResId(newListingId);
-      setIsSubmitted(true); 
+      setCurrentRestaurantDbId(newListingId);
+
+      setIsSubmitted(true);
       router.push("/listing");
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
@@ -240,15 +247,69 @@ const AddListingPage = (props: any) => {
     setRatingError("");
   };
 
+  // Get resId from URL query parameters. This is fine to be outside useEffect
+  // as useSearchParams is a hook and will re-run on URL changes.
+  
+  // ⭐ Refined useEffect for fetching and setting currentRestaurantDbId ⭐
   useEffect(() => {
-    if (step === 2) {
-      const idFromUrl = searchParams?.get('resId');
-      if (idFromUrl) {
-        setResId(Number(idFromUrl));
-      }
-    }
-  }, [step, searchParams]);
+    const resIdFromUrl = searchParams?.get("resId");
+    const fetchDraftDetails = async () => {
+      const currentResId = Number(resIdFromUrl); // Convert to number if needed
 
+      if (currentResId > 0) { // Check if it's a valid ID (greater than 0)
+        console.log("Fetching draft details for ID:", currentResId); // Log the numeric ID
+
+        setIsLoading(true);
+        try {
+          const restaurantData = await RestaurantService.fetchRestaurantById(
+            currentResId.toString(), // Ensure you pass a string if your API expects string ID
+            "DATABASE_ID"
+          );
+
+          console.log("Fetched draft restaurant data:", restaurantData);
+
+          if (restaurantData) {
+            // Update the main listing state with fetched data
+            setListing((prevListing) => ({
+              ...prevListing,
+              name: restaurantData.title || "",
+              title: restaurantData.title || "",
+              content: restaurantData.content || "",
+              address: restaurantData.listingStreet || "",
+              latitude: restaurantData.listingDetails?.latitude || 0,
+              longitude: restaurantData.listingDetails?.longitude || 0,
+              phone: restaurantData.listingDetails?.phone || "",
+              openingHours: restaurantData.listingDetails?.openingHours || "",
+              priceRange: restaurantData.priceRange || "",
+              // Map nested arrays like palates, categories, countries if applicable
+              // Ensure your 'listing' state can hold these structures if needed for form display
+              palates: restaurantData.palates?.nodes || [],
+              listingCategories: restaurantData.listingCategories?.nodes || [],
+              countries: restaurantData.countries?.nodes || [],
+            }));
+            // Set the database ID for the current draft in state
+            setCurrentRestaurantDbId(restaurantData.databaseId || 0);
+            // If you want to jump to a specific step after populating
+            setStep(1);
+          } else {
+            console.warn("No data returned for resId:", currentResId);
+          }
+        } catch (error) {
+          console.error("Failed to fetch draft details:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // If no valid resId in URL, it's a new listing, ensure loading is false
+        setIsLoading(false);
+      }
+    };
+
+    fetchDraftDetails();
+  }, [currentRestaurantDbId]); // Re-run this effect when the URL's resId changes
+
+  // This will now reflect the *state* of the restaurant ID
+  console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
   const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft") => {
     e.preventDefault();
@@ -274,12 +335,13 @@ const AddListingPage = (props: any) => {
     setIsLoading(true);
 
     try {
-      let currentRestaurantId = restaurantId;
+      // ⭐ Use the 'currentRestaurantDbId' state here ⭐
+      let finalRestaurantId = currentRestaurantDbId;
+      console.log("Restaurant ID for submission:", finalRestaurantId);
 
-      // If restaurantId is not yet set (meaning user came via "Continue" from step 1
-      // and the listing hasn't been created on the backend yet), create it now.
-      if (currentRestaurantId === 0) {
-        if (!validateStep1()) { // Re-validate step 1 data if not already done
+      if (finalRestaurantId === 0) {
+        // This block is for creating a brand new listing
+        if (!validateStep1()) {
           setIsLoading(false);
           return;
         }
@@ -297,40 +359,47 @@ const AddListingPage = (props: any) => {
 
         formData.append("status", listingStatus);
         const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
-        currentRestaurantId = listingResponse.id;
-        setResId(currentRestaurantId);
+        finalRestaurantId = listingResponse.id;
+        setCurrentRestaurantDbId(finalRestaurantId); // Update state with newly created ID
       } else {
-        // If restaurantId *is* already set, and the listingStatus needs to be updated (e.g., from pending to draft)
-        // you would typically call an update endpoint here.
-        // For simplicity, we'll assume the status is set on initial creation for now,
-        // or that your backend's create function can also handle updates if an ID is passed.
-        // If your backend needs an explicit update call for status, you'd add it here.
-        // Example: await RestaurantService.updateRestaurantStatus(currentRestaurantId, listingStatus, sess);
+        // This block is for updating an existing listing (draft or pending)
+        const listingUpdateFormData = new FormData();
+        listingUpdateFormData.append("name", listing.name);
+        listingUpdateFormData.append("listingStreet", listing.address || "");
+        listingUpdateFormData.append("priceRange", listing.priceRange);
+        listingUpdateFormData.append("streetAddress", listing.address);
+        listingUpdateFormData.append("categories", listing.category);
+        listingUpdateFormData.append("latitude", String(listing.latitude));
+        listingUpdateFormData.append("longitude", String(listing.longitude));
+        selectedPalates.forEach((p) => listingUpdateFormData.append("palates[]", p.label));
+        listingUpdateFormData.append("status", listingStatus); // Update status (e.g., from 'draft' to 'pending')
+        console.log("Status for update:", listingStatus);
+
+        console.log("Updating listing before review:", Object.fromEntries(listingUpdateFormData.entries()));
+        // Make sure your updateRestaurantListing takes string ID, convert if necessary
+        await RestaurantService.updateRestaurantListing(finalRestaurantId.toString(), listingUpdateFormData, sess);
       }
 
-      // Proceed with review submission
+      // Proceed with review submission after listing is created/updated
       const reviewData = {
-        restaurantId: currentRestaurantId,
+        restaurantId: finalRestaurantId, // Use the current/final restaurant ID
         review_stars: reviewStars,
         review_main_title: reviewMainTitle,
         content,
         review_images_idz: selectedFiles,
         recognitions: selectedrecognition || [],
-        mode: reviewMode, // 'publish' or 'draft' for the review itself
+        mode: reviewMode,
       };
       await ReviewService.postReview(reviewData, sess);
 
-      setIsSubmitted(true); // Show success modal
-      // Redirect based on action
-      if (reviewMode === "draft") { // This would be for "Save and Exit" in step 2
-        router.push("/listing"); // Go to dashboard or listing overview
-      } else { // This would be for "Submit Listing" in step 2 (final submission)
-        // The modal handles the success message, no immediate redirect needed
-        // but if you want to redirect after the user closes the modal, you can add it here.
+      setIsSubmitted(true);
+      if (reviewMode === "draft") {
+        router.push("/listing"); // Redirect to drafts page after saving draft
+      } else {
+        router.push("/listing"); // Redirect to listings page after submitting for approval
       }
 
-
-      // Reset form fields
+      // Reset form states
       setReviewStars(0);
       setReviewMainTitle("");
       setContent("");
@@ -384,7 +453,6 @@ const AddListingPage = (props: any) => {
       setIsDoneSelecting(false);
     }
   };
-
   return (
     <>
       <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">

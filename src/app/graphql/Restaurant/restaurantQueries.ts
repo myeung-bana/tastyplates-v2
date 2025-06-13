@@ -8,6 +8,7 @@ export const GET_LISTINGS = gql`
     $after: String
     $taxQuery: TaxQuery
     $status: PostStatusEnum
+    $userId: Int
     $recognition: String
     $recognitionSort: String 
     $minAverageRating: Float
@@ -21,7 +22,8 @@ export const GET_LISTINGS = gql`
             recognition: $recognition
             recognitionSort: $recognitionSort
             minAverageRating: $minAverageRating
-            }, 
+            author: $userId
+        }, 
         first: $first
         after: $after
     ) {
@@ -115,9 +117,43 @@ export const GET_RESTAURANT_BY_SLUG = gql`
 export const GET_RESTAURANT_BY_ID = gql`
   query GetRestaurantByDatabaseId($id: ID!, $idType: ListingIdType!) {
   listing(id: $id, idType: $idType) {
-    id
-    databaseId
-    title
-  }
+        id
+        title
+        content
+        palates {
+            nodes {
+                name
+                databaseId
+            }
+        }
+        databaseId
+        listingStreet
+                listingDetails {
+                    phone
+                    openingHours
+                    longitude
+                    latitude
+                    googleMapUrl {
+                        latitude
+                        longitude
+                        streetAddress
+                    }
+                }
+            featuredImage {
+                node {
+                    sourceUrl
+                }
+            }
+        listingCategories {
+            nodes {
+                name
+            }
+        }
+        countries {
+                nodes {
+                    name
+                }
+            }
+        }
 }
 `;
