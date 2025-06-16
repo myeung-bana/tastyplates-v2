@@ -104,13 +104,17 @@ export const RestaurantService = {
         }
     },
 
-        async deleteRestaurantListing(id: number, accessToken?: string): Promise<any> {
+    async deleteRestaurantListing(id: number, accessToken?: string): Promise<any> {
         try {
             return await RestaurantRepository.deleteListing(id, accessToken);
         } catch (error) {
             console.error('Error deleting restaurant listing in service:', error);
             throw new Error('Failed to delete restaurant listing');
         }
+    },
+
+    async fetchRestaurantRatingsCount(restaurantId: number): Promise<number> {
+        return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
     },
 
 };
