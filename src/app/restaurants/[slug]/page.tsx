@@ -503,7 +503,7 @@ export default function RestaurantDetail() {
             ))}
           </div> */}
             <div className="restaurant-detail__reviews">
-              <RestaurantReviews reviewlist={[restaurantReviews]} />
+              <RestaurantReviews restaurantId={restaurant.databaseId} />
             </div>
           </div>
         </div>
