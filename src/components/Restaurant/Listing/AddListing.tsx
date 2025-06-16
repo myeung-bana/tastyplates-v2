@@ -247,29 +247,24 @@ const AddListingPage = (props: any) => {
     setRatingError("");
   };
 
-  // Get resId from URL query parameters. This is fine to be outside useEffect
-  // as useSearchParams is a hook and will re-run on URL changes.
-  
-  // ⭐ Refined useEffect for fetching and setting currentRestaurantDbId ⭐
   useEffect(() => {
     const resIdFromUrl = searchParams?.get("resId");
     const fetchDraftDetails = async () => {
-      const currentResId = Number(resIdFromUrl); // Convert to number if needed
+      const currentResId = Number(resIdFromUrl);
 
-      if (currentResId > 0) { // Check if it's a valid ID (greater than 0)
-        console.log("Fetching draft details for ID:", currentResId); // Log the numeric ID
+      if (currentResId > 0) {
+        console.log("Fetching draft details for ID:", currentResId);
 
         setIsLoading(true);
         try {
           const restaurantData = await RestaurantService.fetchRestaurantById(
-            currentResId.toString(), // Ensure you pass a string if your API expects string ID
+            currentResId.toString(),
             "DATABASE_ID"
           );
-
+          localStorage.setItem('restID', currentResId.toString());
           console.log("Fetched draft restaurant data:", restaurantData);
 
           if (restaurantData) {
-            // Update the main listing state with fetched data
             setListing((prevListing) => ({
               ...prevListing,
               name: restaurantData.title || "",
@@ -281,15 +276,11 @@ const AddListingPage = (props: any) => {
               phone: restaurantData.listingDetails?.phone || "",
               openingHours: restaurantData.listingDetails?.openingHours || "",
               priceRange: restaurantData.priceRange || "",
-              // Map nested arrays like palates, categories, countries if applicable
-              // Ensure your 'listing' state can hold these structures if needed for form display
               palates: restaurantData.palates?.nodes || [],
               listingCategories: restaurantData.listingCategories?.nodes || [],
               countries: restaurantData.countries?.nodes || [],
             }));
-            // Set the database ID for the current draft in state
             setCurrentRestaurantDbId(restaurantData.databaseId || 0);
-            // If you want to jump to a specific step after populating
             setStep(1);
           } else {
             console.warn("No data returned for resId:", currentResId);
@@ -300,15 +291,13 @@ const AddListingPage = (props: any) => {
           setIsLoading(false);
         }
       } else {
-        // If no valid resId in URL, it's a new listing, ensure loading is false
         setIsLoading(false);
       }
     };
 
     fetchDraftDetails();
-  }, [currentRestaurantDbId]); // Re-run this effect when the URL's resId changes
+  }, [searchParams]);
 
-  // This will now reflect the *state* of the restaurant ID
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
   const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft") => {
@@ -335,12 +324,10 @@ const AddListingPage = (props: any) => {
     setIsLoading(true);
 
     try {
-      // ⭐ Use the 'currentRestaurantDbId' state here ⭐
       let finalRestaurantId = currentRestaurantDbId;
       console.log("Restaurant ID for submission:", finalRestaurantId);
 
       if (finalRestaurantId === 0) {
-        // This block is for creating a brand new listing
         if (!validateStep1()) {
           setIsLoading(false);
           return;
@@ -360,29 +347,29 @@ const AddListingPage = (props: any) => {
         formData.append("status", listingStatus);
         const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
         finalRestaurantId = listingResponse.id;
-        setCurrentRestaurantDbId(finalRestaurantId); // Update state with newly created ID
+        setCurrentRestaurantDbId(finalRestaurantId);
       } else {
-        // This block is for updating an existing listing (draft or pending)
-        const listingUpdateFormData = new FormData();
-        listingUpdateFormData.append("name", listing.name);
-        listingUpdateFormData.append("listingStreet", listing.address || "");
-        listingUpdateFormData.append("priceRange", listing.priceRange);
-        listingUpdateFormData.append("streetAddress", listing.address);
-        listingUpdateFormData.append("categories", listing.category);
-        listingUpdateFormData.append("latitude", String(listing.latitude));
-        listingUpdateFormData.append("longitude", String(listing.longitude));
-        selectedPalates.forEach((p) => listingUpdateFormData.append("palates[]", p.label));
-        listingUpdateFormData.append("status", listingStatus); // Update status (e.g., from 'draft' to 'pending')
-        console.log("Status for update:", listingStatus);
+        const listingUpdateData = {
+            name: listing.name,
+            listingStreet: listing.address || "",
+            priceRange: listing.priceRange,
+            streetAddress: listing.address,
+            categories: listing.category,
+            latitude: String(listing.latitude),
+            longitude: String(listing.longitude),
+            palates: selectedPalates.map(p => p.label),
+            status: listingStatus,
+        };
 
-        console.log("Updating listing before review:", Object.fromEntries(listingUpdateFormData.entries()));
-        // Make sure your updateRestaurantListing takes string ID, convert if necessary
-        await RestaurantService.updateRestaurantListing(finalRestaurantId.toString(), listingUpdateFormData, sess);
+        console.log("Updating listing before review:", listingUpdateData);
+        console.log("Final restaurant ID for update:", finalRestaurantId);
+        console.log("Session token for update:", sess);
+
+        await RestaurantService.updateRestaurantListing(finalRestaurantId, listingUpdateData, sess);
       }
 
-      // Proceed with review submission after listing is created/updated
       const reviewData = {
-        restaurantId: finalRestaurantId, // Use the current/final restaurant ID
+        restaurantId: finalRestaurantId,
         review_stars: reviewStars,
         review_main_title: reviewMainTitle,
         content,
@@ -394,12 +381,11 @@ const AddListingPage = (props: any) => {
 
       setIsSubmitted(true);
       if (reviewMode === "draft") {
-        router.push("/listing"); // Redirect to drafts page after saving draft
+        // router.push("/listing/draft");
       } else {
-        router.push("/listing"); // Redirect to listings page after submitting for approval
+        router.push("/listing");
       }
 
-      // Reset form states
       setReviewStars(0);
       setReviewMainTitle("");
       setContent("");
@@ -464,8 +450,7 @@ const AddListingPage = (props: any) => {
               </h1>
               <form
                 className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
-                // onSubmit is now handled by individual buttons to specify action
-                onSubmit={(e) => e.preventDefault()} // Prevent default form submission to control via buttons
+                onSubmit={(e) => e.preventDefault()}
               >
                 <div className="text-center">
                   <p className="text-[#494D5D] text-[10px] md:text-sm font-medium">
@@ -635,16 +620,16 @@ const AddListingPage = (props: any) => {
                 </p>
                 <div className="flex gap-3 md:gap-4 items-center">
                   <button
-                    type="button" // Changed to type="button"
+                    type="button"
                     className="listing__button"
-                    onClick={(e) => submitListing(e, "continue")} // Call with 'continue' action
+                    onClick={(e) => submitListing(e, "continue")}
                   >
                     Continue
                   </button>
                   <button
                     className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                     type="button"
-                    onClick={(e) => submitListing(e, "saveDraft")} // Call with 'saveDraft' action
+                    onClick={(e) => submitListing(e, "saveDraft")}
                   >
                     Save and Exit
                   </button>
@@ -655,7 +640,6 @@ const AddListingPage = (props: any) => {
           {step === 2 && (
             <form
               className="listing__form max-w-[672px] w-full my-10 px-4 py-6 md:py-8 md:px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
-              // Form's onSubmit will now be handled by individual buttons to specify action
               onSubmit={(e) => e.preventDefault()}
             >
               <div className="text-center">
@@ -807,15 +791,15 @@ const AddListingPage = (props: any) => {
               </p>
               <div className="flex justify-center gap-3 md:gap-4 items-center">
                 <button
-                  type="button" // Changed to type="button"
+                  type="button"
                   className="listing__button"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "draft")} // "Submit Listing" -> review as publish, listing as draft
+                  onClick={(e) => submitReviewAndListing(e, "draft", "draft")}
                 >
                   Submit Listing
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "pending")} // "Save and Exit" -> review as draft, listing as pending
+                  onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
                   className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
                   Save and exit
