@@ -99,6 +99,7 @@ export class ReviewRepository {
     });
 
     return {
+      userCommentCount: data.userCommentCount ?? 0,
       reviews: data.comments.nodes ?? [],
       pageInfo: data.comments.pageInfo ?? { endCursor: null, hasNextPage: false }
     };

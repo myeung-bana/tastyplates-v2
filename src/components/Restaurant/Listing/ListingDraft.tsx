@@ -75,7 +75,7 @@ useEffect(() => {
                     // Assuming you have a ListingCard component that accepts `restaurant` prop
                     // and handles deletion. Replace the placeholder div with your ListingCard.
                     pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
-                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
+                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
                     ))
                 )}
             </div>
