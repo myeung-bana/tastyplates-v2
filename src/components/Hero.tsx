@@ -1,17 +1,40 @@
 "use client";
 import { FiSearch, FiMapPin, FiNavigation } from "react-icons/fi";
 import { MdStore } from "react-icons/md";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "@/styles/components/_hero.scss";
 import Image from "next/image";
-import heroBg from "/images/hero-bg.png";
+import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
+import CustomSelect from "@/components/ui/Select/Select";
+import { palateOptions } from "@/constants/formOptions";
+import { Key } from "@react-types/shared";
+import SelectOptions from "@/components/ui/Options/SelectOptions";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { useRouter } from "next/navigation";
 
 const Hero = () => {
+  const router = useRouter();
   const [location, setLocation] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(true);
   const [isSearchListing, setIsSearchListing] = useState(false);
   const [listing, setListing] = useState("");
+  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationOptions, setLocationOptions] = useState<{
+    key: string;
+    label: string;
+    children?: any[];
+  }[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchAddressByPalate(new Set<Key>());
+    };
+    fetchData();
+  }, []);
 
   const getCurrentLocation = () => {
     setIsLoading(true);
@@ -67,18 +90,112 @@ const Hero = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement search functionality
-    console.log("Searching for:", { cuisine, location });
+
+    const palateLabels = Array.from(selectedPalates).join(",");
+    const queryParams = new URLSearchParams();
+
+    if (isSearchListing && listing) {
+      queryParams.set("listing", listing);
+    } else {
+      if (palateLabels) queryParams.set("palates", palateLabels);
+      if (location) queryParams.set("address", location);
+    }
+
+    console.log(queryParams.toString())
+    router.push(`/restaurants?${queryParams.toString()}`);
   };
 
   const searchByListingName = () => {
     setIsSearchListing(!isSearchListing);
   };
 
+  const handlePalateInputClick = () => {
+    setShowSearchModal(true);
+  };
+
+  const handleLocationInputClick = async () => {
+    setShowLocationModal(true)
+  };
+
+  const fetchAddressByPalate = async (values: Set<Key>) => {
+    try {
+      setAddressLoading(true);
+      const slugs = Array.from(values).map((val) => val.toString());
+
+      const result = await RestaurantService.fetchAddressByPalate("", slugs);
+      const uniqueLocations = Array.from(
+        new Set(result.nodes.map((r: any) => r.listingDetails?.googleMapUrl?.streetAddress?.toLowerCase().trim()))
+      ).filter(Boolean);
+
+      const locationOptionsFormatted = uniqueLocations.map((loc) => ({
+        key: loc as string,
+        label: loc as string,
+      }));
+
+      setLocationOptions(locationOptionsFormatted);
+      setAddressLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch restaurant locations by palate:", error);
+      setAddressLoading(false);
+    }
+  }
+
+  const handlePalateChange = async (values: Set<Key>) => {
+    setLocation('')
+    setListing('')
+    setSelectedPalates(values);
+    const selectedLabels = Array.from(values)
+      .map((value) => {
+        for (const category of palateOptions) {
+          const found = category.children?.find(
+            (child) => child.key === value
+          );
+          if (found) return found.label;
+        }
+        return value;
+      })
+      .join(", ");
+
+    setCuisine(selectedLabels);
+
+    await fetchAddressByPalate(values);
+  };
+
+  const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocation('')
+    setListing('')
+    const inputValue = e.target.value;
+    setCuisine(inputValue);
+
+    const newSelection = new Set<Key>();
+    const searchTerms = inputValue
+      .split(",")
+      .map(term => term.trim().toLowerCase())
+      .filter(term => term !== "");
+
+    if (searchTerms.length > 0) {
+      palateOptions.forEach((group) => {
+        group.children?.forEach((item) => {
+          const itemLabel = item.label.toLowerCase();
+          if (searchTerms.some(term => itemLabel.includes(term))) {
+            newSelection.add(item.key);
+          }
+        });
+      });
+    }
+
+    setSelectedPalates(newSelection);
+    await fetchAddressByPalate(newSelection);
+  };
+
+  const handleSearchModalClose = () => {
+    setShowSearchModal(false);
+  };
+
   return (
     <section className="hero mx-auto">
       <div className="hero__container mx-auto">
-        <div className="hero__content z-20 mx-auto">
+        <div className="hero__content mx-auto">
           <img
             src="/images/hero-bg.png"
             width={1980}
@@ -98,56 +215,85 @@ const Hero = () => {
             Find and share your favourite restaurants based on your palate.
           </p>
           <form onSubmit={handleSearch} className="hero__search">
-            <div className="hero__search-wrapper">
+            <div className="hero__search-wrapper relative">
+              {/* Mobile Search - Restaurant Name */}
               <div className="hero__search-restaurant text-center md:!hidden">
                 <input
                   type="text"
                   placeholder="Start Your Search"
                   className="hero__search-input text-center"
                   value={cuisine}
-                  onChange={(e) => setCuisine(e.target.value)}
+                  onChange={(e) => {
+                    setCuisine(e.target.value)
+                    setListing('')
+                  }}
                 />
               </div>
               {!isSearchListing ? (
                 <>
-                  <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start">
+                  <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-lg font-medium text-[#31343F]">
                       My Palate
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Search Palate"
-                      className="hero__search-input"
-                      value={cuisine}
-                      onChange={(e) => setCuisine(e.target.value)}
-                    />
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        placeholder="Search Palate"
+                        className="hero__search-input"
+                        value={cuisine}
+                        onChange={handleCuisineChange}
+                        onClick={handlePalateInputClick}
+                      />
+                    </div>
                   </div>
                   <div className="hero__search-divider"></div>
-                  <div className="hero__search-location !hidden md:!flex flex-col !items-start">
+                  <div className="hero__search-location !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-lg font-medium text-[#31343F]">
                       Location
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Search location"
-                      className="hero__search-input"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                    />
-                    {/* <button
-                  type="button"
-                  className="hero__location-button"
-                  onClick={getCurrentLocation}
-                  disabled={isLoading}
-                  title="Use current location"
-                >
-                  <FiNavigation
-                    className={`hero__location-icon ${
-                      isLoading ? "spinning" : ""
-                    }`}
-                  />
-                </button> */}
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        placeholder="Search location"
+                        className="hero__search-input"
+                        value={location}
+                        onChange={(e) => {
+                          setLocation(e.target.value)
+                          setListing('')
+                        }}
+                        onClick={handleLocationInputClick}
+                      />
+                    </div>
                   </div>
+                  <CustomMultipleSelect
+                    enableCheckboxHeader={true}
+                    enableSelectionDropdown={true}
+                    hideTagRendering={true}
+                    showModal={showSearchModal}
+                    hideDropdownLabel={true}
+                    hideDropdownSearch={true}
+                    items={palateOptions}
+                    value={selectedPalates}
+                    onChange={handlePalateChange}
+                    onClose={handleSearchModalClose}
+                    placeholder="Search Palate"
+                    dropDownClassName="!max-h-[350px]"
+                    baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-50"
+                    className="!bg-transparent !border-0 !shadow-none !w-full !cursor-default"
+                  />
+                  <SelectOptions
+                    isLoading={addressLoading}
+                    isOpen={showLocationModal}
+                    options={locationOptions}
+                    searchValue={location}
+                    onSelect={(label) => {
+                      setLocation(label);
+                      setShowLocationModal(false);
+                      setListing('')
+                    }}
+                    onClose={() => setShowLocationModal(false)}
+                    className="!p-2 !top-20 !absolute !right-0 !w-[55%] z-50 !max-h-[350px]"
+                  />
                 </>
               ) : (
                 <div className="hero__search-restaurant !bg-transparent">
@@ -157,14 +303,18 @@ const Hero = () => {
                     placeholder="Search by Listing Name"
                     className="hero__search-input md:my-3.5"
                     value={listing}
-                    onChange={(e) => setListing(e.target.value)}
+                    onChange={(e) => {
+                      setListing(e.target.value)
+                      setLocation('')
+                      setCuisine('')
+                    }}
                   />
                 </div>
               )}
               <button
                 type="submit"
                 className="hero__search-button h-8 w-8 sm:h-11 sm:w-11 text-center"
-                disabled={!location || !cuisine}
+                disabled={!listing ? (!location && !cuisine) ? true : false : false}
               >
                 <FiSearch className="hero__search-icon stroke-white" />
               </button>

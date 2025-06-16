@@ -7,6 +7,7 @@ import {
     GET_RESTAURANT_BY_ID,
 } from "@/app/graphql/Restaurant/restaurantQueries";
 import { user } from "@heroui/theme";
+import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -208,5 +209,26 @@ export class RestaurantRepository {
             console.error('Error fetching restaurant ratings count:', error);
             return 0;
         }
+    }
+
+    static async getAddressByPalate(
+        searchTerm: string,
+        taxQuery: any
+    ) {
+        const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
+
+        const { data } = await client.query({
+            query: hasTaxQuery
+                ? GET_ADDRESS_BY_PALATE_WITH_TAX
+                : GET_ADDRESS_BY_PALATE_NO_TAX,
+            variables: hasTaxQuery
+                ? { searchTerm, taxQuery }
+                : { searchTerm },
+        });
+
+        return {
+            nodes: data.listings.nodes,
+            pageInfo: data.listings.pageInfo,
+        };
     }
 }

@@ -117,4 +117,27 @@ export const RestaurantService = {
         return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
     },
 
+    async fetchAddressByPalate(
+        searchTerm: string,
+        palateSlugs: string[]
+    ) {
+        try {
+            const taxQuery = palateSlugs.length > 0 ? {
+                relation: 'AND',
+                taxArray: [
+                    {
+                        taxonomy: 'PALATE',
+                        field: 'SLUG',
+                        terms: palateSlugs,
+                        operator: 'IN',
+                    },
+                ],
+            } : {};
+
+            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery);
+        } catch (error) {
+            console.error('Error fetching by palate:', error);
+            throw new Error('Failed to fetch restaurants by palate');
+        }
+    }
 };
