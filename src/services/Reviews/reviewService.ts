@@ -5,6 +5,17 @@ export class ReviewService {
         try {
             const response = await ReviewRepository.getAllReviews(first, after, accessToken);
             return response;
+            // const filteredReviews = response?.reviews.filter((review: any) => {
+            //     return (
+            //         review.author?.node?.databaseId ||
+            //         review.author?.databaseId
+            //     );
+            // });
+
+            // return {
+            //     reviews: filteredReviews,
+            //     pageInfo: response.pageInfo,
+            // };
         } catch (error) {
             console.error('Error fetching reviews:', error);
             throw new Error('Failed to fetch reviews');
@@ -22,7 +33,7 @@ export class ReviewService {
     }
 
     static async postReview(reviewData: any, accessToken: string): Promise<any> {
-        
+
         const formattedData = {
             post: reviewData.restaurantId,
             parent: reviewData.parent || 0,
@@ -88,9 +99,9 @@ export class ReviewService {
         }
     }
 
-    static async fetchRestaurantReviewsById(restaurantId: string | number) {
+    static async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
         try {
-            return await ReviewRepository.getRestaurantReviewsById(restaurantId);
+            return await ReviewRepository.getRestaurantReviews(restaurantId, accessToken, first, after);
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
             throw new Error('Failed to fetch restaurant reviews');

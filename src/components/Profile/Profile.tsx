@@ -42,6 +42,7 @@ const Profile = () => {
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [userReviewCount, setUserReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
@@ -180,7 +181,7 @@ const Profile = () => {
 
     try {
       const first = isFirstLoad.current ? 16 : 8;
-      const { reviews: newReviews, pageInfo } =
+      const { reviews: newReviews, pageInfo, userCommentCount } =
         await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
 
       // Reset reviews array before setting new data
@@ -197,6 +198,7 @@ const Profile = () => {
         setReviews((prev) => [...prev, ...uniqueNewReviews]);
       }
 
+      setUserReviewCount(userCommentCount);
       setEndCursor(pageInfo.endCursor);
       setHasNextPage(pageInfo.hasNextPage);
     } catch (error) {
@@ -372,12 +374,6 @@ const Profile = () => {
       localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
-
-  // Count user reviews (robust version: count reviews for the profile being viewed, not just current user)
-  const userReviewCount = useMemo(() => {
-    if (!targetUserId) return 0;
-    return reviews.filter((r: any) => r.authorId === targetUserId).length;
-  }, [reviews, targetUserId]);
 
   // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [

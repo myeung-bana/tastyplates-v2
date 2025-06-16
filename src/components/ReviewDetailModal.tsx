@@ -46,6 +46,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
+  const authorUserId = data.userId;
+  const defaultImage = "/images/default-image.png"
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -79,7 +81,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data) {
-      console.log("userLiked on open:", data.userLiked);
       setUserLiked(data.userLiked ?? false);
       setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
     }
@@ -89,7 +90,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Fetch initial follow state when modal opens and author is available
     if (!isOpen) return;
     if (!session?.accessToken) return;
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       setIsFollowing(false);
       return;
@@ -122,7 +122,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -167,7 +166,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -413,11 +411,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                 </div>
                 {/* Hide follow button if user is the reviewer */}
-                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                {(!session?.user || (session?.user?.id !== (data.userId))) && (
                   <button
                     onClick={handleFollowClick}
-                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
-                    disabled={followLoading}
+                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''} disabled:opacity-50 disabled:pointer-events-none`}
+                    disabled={followLoading || !authorUserId}
                   >
                     {followLoading ? (
                       <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
@@ -470,7 +468,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                      src={defaultImage}
                       alt="Default"
                       width={400}
                       height={400}
@@ -507,11 +505,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                 </div>
                 {/* Hide follow button if user is the reviewer */}
-                {(!session?.user || (session?.user?.id !== (data.author?.node?.databaseId || data.author?.databaseId))) && (
+                {(!session?.user || (session?.user?.id !== (data.userId))) && (
                   <button
                     onClick={handleFollowClick}
-                    className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''}`}
-                    disabled={followLoading}
+                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''} disabled:opacity-50 disabled:pointer-events-none`}
+                    disabled={followLoading || !authorUserId}
                   >
                     {followLoading ? (
                       <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>

@@ -210,7 +210,6 @@ export default function RestaurantDetail() {
       });
   }, [slug]);
 
-  console.log(restaurant);
 
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
@@ -251,8 +250,6 @@ export default function RestaurantDetail() {
     comment: string;
     date: string;
   }) => {
-    // Here you would typically send the review to your backend
-    console.log("New review:", review);
   };
 
   const addReview = () => {
@@ -506,7 +503,7 @@ export default function RestaurantDetail() {
             ))}
           </div> */}
             <div className="restaurant-detail__reviews">
-              <RestaurantReviews reviewlist={[restaurantReviews]} />
+              <RestaurantReviews restaurantId={restaurant.databaseId} />
             </div>
           </div>
         </div>

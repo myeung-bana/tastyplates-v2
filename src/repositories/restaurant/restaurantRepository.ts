@@ -1,5 +1,6 @@
+// repositories/restaurant/restaurantRepository.ts
 import { gql } from "@apollo/client";
-import client,{ currentUserId}  from "@/app/graphql/client";
+import client from "@/app/graphql/client";
 import {
     GET_LISTINGS,
     GET_RESTAURANT_BY_SLUG,
@@ -31,16 +32,36 @@ export class RestaurantRepository {
             query: GET_RESTAURANT_BY_SLUG,
             variables: { slug },
         });
-
         return data.listing;
     }
 
-    static async getAllRestaurants(searchTerm: string, first = 8, after: string | null = null, status: string | null = null, userId?: number | null) {
+    static async getAllRestaurants(
+        searchTerm: string,
+        first = 8,
+        after: string | null = null,
+        taxQuery: any = {},
+        priceRange?: string | null,
+        status: string | null = null,
+        userId?: number | null,
+        recognition: string | null = null,
+        sortOption?: string | null,
+        rating: number | null = null
+    ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
-            variables: { searchTerm, first, after, status, userId },
+            variables: {
+                searchTerm,
+                first,
+                after,
+                taxQuery,
+                priceRange,
+                status,
+                userId,
+                recognition,
+                recognitionSort: sortOption,
+                minAverageRating: rating,
+            },
         });
-        console.log("Fetched restaurants:", data);
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
@@ -55,7 +76,7 @@ export class RestaurantRepository {
     ) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_ID,
-            variables: { id, idType, userId},
+            variables: { id, idType, userId },
             context: {
                 headers: {
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
@@ -87,22 +108,23 @@ export class RestaurantRepository {
         return res.json();
     }
     static async updateListing(
-        id: string,
-        formData: FormData,
+        id: number,
+        listingUpdateData: Record<string, any>, // Changed to accept a plain object
         accessToken?: string
     ): Promise<any> {
         try {
             const response = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing/${id}`, {
-                method: "PUT", // Use POST for updates if the endpoint expects it (common in WP REST API)
+                method: "PUT",
                 headers: {
+                    'Content-Type': 'application/json',
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                    // 'Content-Type' is usually set automatically by the browser for FormData
                 },
-                body: formData,
+                body: JSON.stringify(listingUpdateData),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('Backend error during update:', errorData);
                 throw new Error(errorData.message || "Failed to update restaurant listing");
             }
             return await response.json();
@@ -111,7 +133,52 @@ export class RestaurantRepository {
             console.error('Error updating restaurant listing in repository:', error);
             throw new Error('Failed to update restaurant listing');
         }
-    }   
+    }
+
+    static async deleteListing(id: number, accessToken?: string): Promise<any> {
+        try {
+            const response = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing/${id}`, {
+                method: "DELETE",
+                headers: {
+                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+                },
+            });
+
+            if (!response.ok) {
+                // If response is not ok, still try to get text to see error details
+                const errorText = await response.text();
+                console.error('Raw server error response on delete (not ok):', errorText);
+                try {
+                    const errorData = JSON.parse(errorText);
+                    throw new Error(errorData.message || "Failed to delete restaurant listing");
+                } catch (jsonError) {
+                    throw new Error(`Failed to delete restaurant listing: Server responded with non-JSON content or error. Response: ${errorText}`);
+                }
+            }
+
+            // If response is ok, attempt to parse JSON, but catch if it's not JSON
+            try {
+                // Check if the response actually has content before trying to parse as JSON
+                const text = await response.text();
+                if (!text) {
+                    // If the response is empty, assume success without JSON content
+                    console.log('Delete successful, but no content in response.');
+                    return { success: true, deleted: id }; // Return a custom success object
+                }
+                // Try parsing as JSON
+                return JSON.parse(text);
+            } catch (jsonParseError) {
+                // If parsing fails, it means even a successful response contained non-JSON
+                const rawResponseText = await response.text(); // Re-read if needed, or use the `text` from above
+                console.error('Raw server response on delete (ok but not JSON):', rawResponseText);
+                throw new Error(`Delete successful but server response was not valid JSON. Please check server logs for warnings/notices. Raw response: ${rawResponseText}`);
+            }
+
+        } catch (error) {
+            console.error('Error deleting restaurant listing in repository:', error);
+            throw new Error('Failed to delete restaurant listing');
+        }
+    }
 
     static async getlistingDrafts(token: string): Promise<any> {
         try {
@@ -122,7 +189,6 @@ export class RestaurantRepository {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
             }, true);
-            console.log("Fetched listing pending:", response);
             return response;
         } catch (error) {
             console.error("Failed to fetch listing pending", error);
