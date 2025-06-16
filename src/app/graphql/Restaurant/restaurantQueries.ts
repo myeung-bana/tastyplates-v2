@@ -58,9 +58,9 @@ export const GET_LISTINGS = gql`
                     slug
                 }
             }
-            countries {
-                nodes {
-                    name
+            listingDetails {
+                googleMapUrl {
+                    streetAddress
                 }
             }
         }
