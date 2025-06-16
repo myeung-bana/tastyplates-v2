@@ -204,3 +204,74 @@ export const GET_REVIEWS_BY_RESTAURANT_ID = gql`
     }
   }
 `;
+
+export const GET_RESTAURANT_REVIEWS = gql`
+query GetRestaurantComments($restaurantId: ID!, $first: Int!, $after: String) {
+comments(
+    where: {
+    commentType: "listing", 
+    orderby: COMMENT_DATE, 
+    order: DESC, 
+    contentId: $restaurantId,
+    contentStatus: PUBLISH
+    }
+    first: $first
+    after: $after
+  ) {
+    nodes {
+        id
+        databaseId
+        uri
+        reviewMainTitle
+        commentLikes
+        userLiked
+        reviewStars
+        date
+        content(format: RENDERED)
+        palates
+        userAvatar
+        recognitions
+        reviewImages {
+          databaseId
+          id
+          sourceUrl
+        }
+        author {
+          name
+            node {
+              ... on User {
+              id
+              databaseId
+        		  name
+              avatar {
+            	  url
+          	  }  
+            }
+          }
+        }
+        commentedOn {
+          node {
+            ... on Listing {
+              databaseId
+              title
+              slug
+              featuredImage {
+                node {
+                  databaseId
+                  altText
+                  mediaItemUrl
+                  mimeType
+                  mediaType
+                }
+              }
+            }
+          }
+      }
+    }
+     pageInfo {
+        hasNextPage
+        endCursor
+    }
+  }
+}
+`;

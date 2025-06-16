@@ -9,51 +9,66 @@ import Photos from "./Restaurant/Details/Photos";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ReviewService } from "@/services/Reviews/reviewService";
-
-// interface Review {
-//   id: string;
-//   authorId: string;
-//   restaurantId: string;
-//   user: string;
-//   rating: number;
-//   date: string;
-//   title?: string,
-//   comment: string;
-//   images: string[];
-//   userImage: string;
-// }
-
-// interface ReviewList {
-//   reviews: Array<Review>;
-// }
+import Pagination from "./Pagination";
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
-  // const params = useParams() as { slug: string };
-  // const slug = params.slug;
   const { data: session } = useSession();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
+  const [pageCursors, setPageCursors] = useState<{ [page: number]: string | null }>({ 1: null });
+  const [hasNextPage, setHasNextPage] = useState(false);
+
+  const fetchReviews = async (page: number, pageSize: number = 5) => {
+    setLoading(true);
+    try {
+      const after = pageCursors[page] ?? undefined;
+
+      const data = await ReviewService.getRestaurantReviews(
+        restaurantId,
+        session?.accessToken,
+        pageSize,
+        after
+      );
+
+      setReviews(data.reviews);
+      setHasNextPage(data.pageInfo.hasNextPage);
+
+      if (data.pageInfo.endCursor && !pageCursors[page + 1]) {
+        setPageCursors((prev) => ({
+          ...prev,
+          [page + 1]: data.pageInfo.endCursor,
+        }));
+      }
+
+      setCurrentPage(page);
+    } catch (err) {
+      setReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchReviews() {
-      setLoading(true);
-      try {
-        const data = await ReviewService.fetchRestaurantReview(restaurantId, session?.accessToken);
-        setReviews(Array.isArray(data) ? data : []);
-      } catch (error) {
-        setReviews([]);
-      } finally {
-        setLoading(false);
-      }
+    if (currentTab === "photos") {
+      fetchReviews(1, 20);
+    } else {
+      fetchReviews(1, 5);
     }
-    if (session) fetchReviews();
-  }, [restaurantId, session]);
+  }, [restaurantId, currentTab]);
+
+  const handleTabChange = (tabId: "all" | "photos") => {
+    setCurrentTab(tabId);
+    setPageCursors({ 1: null });
+    setCurrentPage(1);
+  };
 
   const tabs = [
     {
       id: "all",
       label: "All",
-      content:
+      content: (
         <div className="reviews-container">
           {loading ? (
             <div className="restaurant-detail__content mt-10">
@@ -73,39 +88,91 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
               </div>
             </div>
           ) : reviews.length ? (
-            reviews.map((review) => (
-              <ReviewBlock
-                key={review.id}
-                review={{
-                  id: review.id,
-                  authorId: review.author,
-                  restaurantId: review.post,
-                  user: review.author_name,
-                  rating: Number(review.review_stars) || 0,
-                  date: review.date,
-                  title: review.review_main_title,
-                  comment: review.content?.rendered || "",
-                  images: review.review_images?.map((img: any) => img.sourceUrl) || [],
-                  userImage: (review.author_avatar_urls && Object.values(review.author_avatar_urls).find(Boolean)) || "/profile-icon.svg",
-                  recognitions: review.recognitions || [],
-                  palateNames: Array.isArray(review.palates) && review.palates[0]
-                    ? review.palates[0].split("|").map((p: string) => p.trim()).filter(Boolean)
-                    : [],
-                  commentLikes: review._comment_likes || 0,
-                  userLiked: review.userLiked
-                }}
+            <>
+              {reviews.map((review) => (
+                <ReviewBlock
+                  key={review.databaseId}
+                  review={{
+                    id: review.databaseId,
+                    authorId: review?.author?.node?.databaseId ?? "",
+                    restaurantId: restaurantId.toString(),
+                    user:
+                      review?.author?.node?.name ??
+                      review?.author?.name ??
+                      "Unknown",
+                    rating: Number(review.reviewStars) || 0,
+                    date: review.date,
+                    title: review.reviewMainTitle,
+                    comment: review.content ?? "",
+                    images:
+                      review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
+                    userImage:
+                      review?.author?.node?.avatar?.url ??
+                      review?.userAvatar ??
+                      "/profile-icon.svg",
+                    recognitions: Array.isArray(review.recognitions)
+                      ? review.recognitions
+                      : [],
+                    palateNames: Array.isArray(review.palates)
+                      ? review.palates[0]
+                        ?.split("|")
+                        .map((p: any) => p.trim())
+                        .filter(Boolean)
+                      : [],
+                    commentLikes: review.commentLikes ?? 0,
+                    userLiked: review.userLiked ?? false,
+                  }}
+                />
+              ))}
+              <Pagination
+                currentPage={currentPage}
+                hasNextPage={hasNextPage}
+                onPageChange={(page) => fetchReviews(page, 5)}
               />
-            ))
+            </>
           ) : (
             <h1>No reviews</h1>
           )}
         </div>
+      ),
     },
     {
       id: "photos",
       label: "Photos",
-      content:
-        <Masonry items={reviews} render={Photos} columnGutter={32} columnWidth={304} maxColumnCount={4} />
+      content: (
+        <>
+          {loading ? (
+            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="review-card__image-container"
+                  style={{ width: "304px", height: "400px" }}
+                >
+                  <div className="bg-gray-300 animate-pulse rounded-2xl w-full h-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <Masonry
+                items={reviews}
+                render={Photos}
+                columnGutter={32}
+                columnWidth={304}
+                maxColumnCount={4}
+              />
+              {reviews.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  hasNextPage={hasNextPage}
+                  onPageChange={(page) => fetchReviews(page, 20)}
+                />
+              )}
+            </>
+          )}
+        </>
+      ),
     },
   ];
   const filterOptions = [
@@ -155,6 +222,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
             "group-data-[selected=true]:text-[#31343F] text-xs md:text-base font-semibold text-[#31343F]",
         }}
         variant="underlined"
+        selectedKey={currentTab}
+        onSelectionChange={(key) => handleTabChange(key as "all" | "photos")}
       >
         {(item) => (
           <Tab key={item.id} title={item.label}>

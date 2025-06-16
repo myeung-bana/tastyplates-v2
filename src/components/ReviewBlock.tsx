@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { FiHeart, FiMessageCircle, FiStar, FiThumbsUp } from "react-icons/fi";
 import { BiLike } from "react-icons/bi";
-// import { palates } from "@/data/dummyPalate";
-// import { users } from "@/data/dummyUsers";
+import SignupModal from "./SignupModal";
+import SigninModal from "./SigninModal";
 import PhotoSlider from "./Restaurant/Details/PhotoSlider";
 
 // Styles
@@ -27,9 +27,9 @@ interface ReviewBlockProps {
     images: string[];
     userImage: string;
     recognitions?: string[];
-    palateNames?: string[];      // <-- add this
-    commentLikes?: number;       // <-- add this
-    userLiked?: boolean;         // <-- add this
+    palateNames?: string[];
+    commentLikes?: number;
+    userLiked?: boolean;
   };
 }
 
@@ -44,6 +44,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
+  const [isShowSignin, setIsShowSignin] = useState(false);
   const [userLiked, setUserLiked] = useState(review.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(review.commentLikes ?? 0);
 
@@ -193,6 +194,22 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             <FiMessageCircle />
           </button> */}
       </div>
+      <SignupModal
+        isOpen={isShowSignup}
+        onClose={() => setIsShowSignup(false)}
+        onOpenSignin={() => {
+          setIsShowSignup(false);
+          setIsShowSignin(true);
+        }}
+      />
+      <SigninModal
+        isOpen={isShowSignin}
+        onClose={() => setIsShowSignin(false)}
+        onOpenSignup={() => {
+          setIsShowSignin(false);
+          setIsShowSignup(true);
+        }}
+      />
     </div>
   );
 };

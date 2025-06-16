@@ -6,11 +6,11 @@ import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review"
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
-import Photo from "../../public/images/default-image.png";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
+  const defaultImage = "/images/default-image.png"
 
  const UserPalateNames = data?.palates
   ?.split("|")
@@ -29,7 +29,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
             ? data.reviewImages[0].sourceUrl
-            : Photo
+            : defaultImage
           }
           alt="Review"
           width={400}
