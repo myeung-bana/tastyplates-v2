@@ -42,7 +42,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           <Image
-            src={data.userAvatar || "/profile-icon.svg"}
+            src={data.userAvatar || data.author?.node?.avatar?.url || "/profile-icon.svg"}
             alt={data.author?.node?.name || "User"}
             width={32}
             height={32}

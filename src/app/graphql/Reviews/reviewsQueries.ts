@@ -24,6 +24,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
         }
         palates
         userAvatar
+        userId
         author {
           name
             node {
@@ -90,6 +91,7 @@ query GetCommentWithReplies($id: ID!) {
 
 export const GET_USER_REVIEWS = gql`
   query GetUserReviews($userId: ID!, $first: Int = 16, $after: String) {
+    userCommentCount(userId: $userId)
     comments(
       where: { 
         commentType: "listing",
@@ -119,8 +121,7 @@ export const GET_USER_REVIEWS = gql`
               ... on User {
               id
               databaseId
-              name
-              palates
+              name  
               avatar {
                 url
               }  
