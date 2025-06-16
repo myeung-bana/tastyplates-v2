@@ -5,6 +5,8 @@ import { IoMdClose } from "react-icons/io";
 import { FaStar } from 'react-icons/fa';
 // import Photo from "../../public/images/default-image.png";
 import Photo from "../../../../public/images/Photos-Review-12.png"; // Adjust the path as necessary
+import { useSession } from 'next-auth/react';
+import { RestaurantService } from '@/services/restaurant/restaurantService';
 
 
 // Define the interface for the restaurant data passed to the card
@@ -23,16 +25,35 @@ interface FetchedRestaurant {
 
 interface ListingCardProps {
     restaurant: FetchedRestaurant;
-    onDelete: () => void; // Function to handle deleting the draft
+    onDeleteSuccess: () => void; // Function to handle deleting the draft
 }
 
-const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDelete }) => {
+const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSuccess }) => {
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
     const countryNames = restaurant.countries?.nodes?.map(country => country.name).join(', ') || restaurant.listingStreet || 'Unknown Location';
-
+    const { data: session } = useSession();
+    const accessToken = session?.accessToken || "";
     const addReview = () => {
         console.log(`Adding review for ${restaurant.title}`);
+    };
+
+        const handleDelete = async () => {
+        if (!accessToken) {
+            alert("Authentication token is missing. Please log in.");
+            return;
+        }
+
+        if (window.confirm(`Are you sure you want to delete "${restaurant.title}"?`)) {
+            try {
+                await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
+                alert("Listing deleted successfully!");
+                onDeleteSuccess(); // Call the parent's function to re-fetch listings or update UI
+            } catch (error: any) {
+                console.error("Failed to delete listing:", error);
+                alert(error.message || "Failed to delete listing. Please try again.");
+            }
+        }
     };
 
     return (
@@ -49,7 +70,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDelete }) 
                 <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
                 <button
                     className="rounded-full p-2 bg-white"
-                    onClick={() => onDelete()}
+                    onClick={handleDelete} 
                 >
                     <IoMdClose />
                 </button>

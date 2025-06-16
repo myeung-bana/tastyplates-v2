@@ -8,7 +8,7 @@ export default function RootLayout({
 }>) {
   return (
     <section>
-        <Navbar hasSearchBar />
+        <Navbar hasSearchBar hasSearchBarMobile />
         {children}
       <Footer isShowLinks={false} />
     </section>

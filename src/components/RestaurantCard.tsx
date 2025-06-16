@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
 
 export interface Restaurant {
   id: string;
@@ -22,6 +23,7 @@ export interface Restaurant {
   image: string;
   rating: number;
   palatesNames?: string[];
+  streetAddress?: string;
   countries: string;
   priceRange: string;
 }
@@ -30,9 +32,10 @@ export interface RestaurantCardProps {
   restaurant: Restaurant;
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
   initialSavedStatus?: boolean | null; // Add this line
+  ratingsCount?: number; // <-- Add this line
 }
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
@@ -42,6 +45,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
+  // const [averageRating, setAverageRating] = useState<number>(0);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -91,6 +96,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
       isMounted = false;
     };
   }, [restaurant.slug, session, status, initialSavedStatus]);
+
+  useEffect(() => {
+    if (typeof ratingsCount === 'undefined' && restaurant.databaseId) {
+      RestaurantService.fetchRestaurantRatingsCount(restaurant.databaseId)
+        .then(count => setLocalRatingsCount(count))
+        .catch(() => setLocalRatingsCount(0));
+    }
+  }, [ratingsCount, restaurant.databaseId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -144,8 +157,38 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
+    if (!session) {
+      setShowSignup(true);
+      setIsDeleteModalOpen(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const prevSaved = saved;
+    setSaved(false);
     setIsDeleteModalOpen(false);
+    window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+        },
+        body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      setSaved(data.status === "saved");
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+    } catch (err) {
+      setSaved(prevSaved); // Revert on error
+      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+      setError("Could not update favorite status");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const deleteModalContent = (
@@ -184,6 +227,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     setIsReviewModalOpen(true);
   };
 
+  const address = restaurant.streetAddress?.trim() || 'Default Location';
+
   return (
     <>
       <div className="restaurant-card">
@@ -205,7 +250,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
                 disabled={loading || saved === null}
                 aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
-                {saved === null ? (
+                {saved === null && loading ? (
                   <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
                   <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
@@ -225,39 +270,36 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         <Link href={`/restaurants/${restaurant.slug}`}>
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name line-clamp-1 w-[220px]">{restaurant.name}</h2>
+              <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
-
-                <>
-                  {restaurant.rating > 0 ? (
-                    <>
-                      <FaStar className="restaurant-card__icon -mt-1" />
-                      {restaurant.rating}
-                    </>
-                  ) : ""}
-                </>
-
+                {restaurant.rating > 0 ? (
+                  <>
+                    <FaStar className="restaurant-card__icon -mt-1" />
+                    {restaurant.rating}
+                    <span className="restaurant-card__rating-count">({typeof ratingsCount !== 'undefined' ? ratingsCount : (localRatingsCount ?? 0)})</span>
+                  </>
+                ) : null}
+                {/* <span>{averageRating}</span> */}
                 {/* <span>({restaurant.reviews})</span> */}
               </div>
             </div>
 
-              <div className="restaurant-card__info">
+              <div className="restaurant-card__info w-full">
                 <div className="restaurant-card__location">
-                  {/* <FiMapPin className="restaurant-card__icon" /> */}
-                  <span className="line-clamp-2 text-[10px] md:text-base">{restaurant.countries}</span>
+                  <span className="block w-full text-[10px] md:text-base mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
                 </div>
-                {/* <div className="restaurant-card__location">
-                  <FiMessageCircle className="restaurant-card__icon" />
-                  <span>{reviewsCount}</span>
-                </div> */}
               </div>
 
-              <div className="restaurant-card__tags">
-                {cuisineNames.map((cuisineName, index) => (
-                  <span key={index} className="restaurant-card__tag">
-                    &#8226; {cuisineName}
-                  </span>
-                ))}
+              <div className="restaurant-card__tags mt-1">
+                {(() => {
+                  const tags = [...cuisineNames];
+                  if (restaurant.priceRange) tags.push(restaurant.priceRange);
+                  return (
+                    <span className="restaurant-card__tag">
+                      {tags.filter(Boolean).join(' · ')}
+                    </span>
+                  );
+                })()}
               </div>
 
             </div>
@@ -293,7 +335,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
         <RestaurantReviewsModal
           isOpen={isReviewModalOpen}
           setIsOpen={setIsReviewModalOpen}
-          restaurant={restaurant}
+          restaurant={{
+            ...restaurant,
+            countries: restaurant.countries ?? '',
+          }}
         />
       )}
     </>

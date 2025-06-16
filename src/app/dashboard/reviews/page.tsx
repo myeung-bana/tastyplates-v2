@@ -22,9 +22,9 @@ const ReviewsPage = () => {
         <h1 className="dashboard-overview__title">Reviews</h1>
       </div>
       <div className="reviews-container">
-        {userReviews.map((review) => (
+        {/* {userReviews.map((review) => (
           <ReviewBlock key={review.id} review={review} />
-        ))}
+        ))} */}
       </div>
     </div>
   );

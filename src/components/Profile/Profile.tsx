@@ -42,6 +42,7 @@ const Profile = () => {
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [userReviewCount, setUserReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [afterCursor, setAfterCursor] = useState<string | null>(null);
@@ -57,6 +58,9 @@ const Profile = () => {
   const isFirstLoad = useRef(true);
   const user = session?.user;
   const targetUserId = user?.id;
+  const [wishlist, setWishlist] = useState<Restaurant[]>([]);
+  const [wishlistLoading, setWishlistLoading] = useState(true);
+
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
       id: item.id,
@@ -180,7 +184,7 @@ const Profile = () => {
 
     try {
       const first = isFirstLoad.current ? 16 : 8;
-      const { reviews: newReviews, pageInfo } =
+      const { reviews: newReviews, pageInfo, userCommentCount } =
         await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
 
       // Reset reviews array before setting new data
@@ -197,6 +201,7 @@ const Profile = () => {
         setReviews((prev) => [...prev, ...uniqueNewReviews]);
       }
 
+      setUserReviewCount(userCommentCount);
       setEndCursor(pageInfo.endCursor);
       setHasNextPage(pageInfo.hasNextPage);
     } catch (error) {
@@ -373,12 +378,6 @@ const Profile = () => {
     }
   };
 
-  // Count user reviews (robust version: count reviews for the profile being viewed, not just current user)
-  const userReviewCount = useMemo(() => {
-    if (!targetUserId) return 0;
-    return reviews.filter((r: any) => r.authorId === targetUserId).length;
-  }, [reviews, targetUserId]);
-
   // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [
     {
@@ -440,15 +439,47 @@ const Profile = () => {
       id: "wishlists",
       label: "Wishlists",
       content: (
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {restaurants.map((rest) => (
-            <RestaurantCard
-              key={rest.id}
-              restaurant={rest}
-              profileTablist="wishlists"
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+            {wishlist.map((rest) => (
+              <RestaurantCard
+                key={rest.id}
+                restaurant={rest}
+                profileTablist="wishlists"
+                initialSavedStatus={true}
+              />
+            ))}
+            {wishlist.length === 0 && !wishlistLoading && (
+              <div className="col-span-full text-center text-gray-400 py-12">
+                No wishlisted restaurants yet.
+              </div>
+            )}
+          </div>
+          <div className="flex justify-center text-center mt-6 min-h-[40px]">
+            {wishlistLoading && wishlist.length === 0 && (
+              <>
+                <svg
+                  className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="35"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeDasharray="164"
+                    strokeDashoffset="40"
+                  />
+                </svg>
+                <span className="text-gray-500 text-sm">Loading...</span>
+              </>
+            )}
+          </div>
+        </>
       ),
     },
     {
@@ -464,10 +495,56 @@ const Profile = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      setWishlistLoading(true);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/`,
+          {
+            headers: session?.accessToken
+              ? { Authorization: `Bearer ${session.accessToken}` }
+              : {},
+            credentials: "include",
+          }
+        );
+        const data = await res.json();
+        const favoriteIds = data.favorites || [];
+        setWishlist(
+          restaurants.filter((r) => favoriteIds.includes(r.databaseId))
+        );
+      } catch (e) {
+        setWishlist([]);
+      } finally {
+        setWishlistLoading(false);
+      }
+    };
+    if (session && restaurants.length > 0) fetchWishlist();
+    else setWishlist([]);
+  }, [session, restaurants]);
+
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { slug, status } = e.detail || {};
+      if (typeof slug !== 'string') return;
+      setWishlist((prev) => {
+        if (status === false) {
+          return prev.filter((r) => r.slug !== slug);
+        } else if (status === true && !prev.some((r) => r.slug === slug)) {
+          const found = restaurants.find((r) => r.slug === slug);
+          return found ? [...prev, found] : prev;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('restaurant-favorite-changed', handler as EventListener);
+    return () => window.removeEventListener('restaurant-favorite-changed', handler as EventListener);
+  }, [restaurants]);
+
   return (
     <>
-      <div className="flex flex-col sm:flex-row self-center justify-center items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-4 sm:px-0">
-        <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] relative">
+      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
+        <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <Image
             src={user?.image || "/profile-icon.svg"}
             fill
@@ -475,17 +552,17 @@ const Profile = () => {
             alt="profile"
           />
         </div>
-        <div className="flex flex-col gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start w-full">
+        <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">
+          <div className="flex flex-row justify-between items-start md:items-center sm:items-start w-full">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-medium truncate">
+              <h2 className="text-sm sm:text-xl font-medium truncate">
                 {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
                   userData?.display_name || userData?.name || ""
                 )}
               </h2>
-              <div className="flex gap-1 mt-2 flex-wrap justify-center sm:justify-start">
+              <div className="flex gap-1 mt-2 flex-wrap justify-start">
                 {palatesLoading ? (
                   <>
                     <span className="inline-block w-16 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
@@ -525,14 +602,14 @@ const Profile = () => {
               </Link>
             </div>
           </div>
-          <p className="text-sm px-4 sm:px-0">
+          <p className="text-[10px] md:text-sm">
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
               userData?.about_me
             )}
           </p>
-          <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-center sm:justify-start">
+          <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
             <span className="cursor-default">
               <span className="text-xs md:text-base font-semibold cursor-default">
                 {loading ? (
@@ -621,15 +698,15 @@ const Profile = () => {
         items={tabs}
         classNames={{
           tabWrapper: "w-full",
-          base: "w-full border-b justify-start sm:justify-center min-w-max sm:min-w-0 px-4 sm:px-0",
+          base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
             "py-4 px-0 justify-start px-10 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList:
-            "gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
+            "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",
           tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-sm sm:text-base font-semibold",
+            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-xs sm:text-base font-semibold",
         }}
         variant="underlined"
       >

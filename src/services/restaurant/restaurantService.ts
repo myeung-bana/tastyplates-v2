@@ -12,11 +12,11 @@ export const RestaurantService = {
         after: string | null = null,
         cuisineSlug: string | null = null,
         palateSlugs: string[] = [],
-        priceRange?: string | null, 
+        priceRange?: string | null,
         status: string | null = null,
         userId?: number | null,
         recognition: string | null = null,
-        sortOption?: string | null, 
+        sortOption?: string | null,
         rating: number | null = null
     ) {
         try {
@@ -91,17 +91,30 @@ export const RestaurantService = {
     },
 
     async updateRestaurantListing(
-        id: string,
-        formData: FormData,
+        id: number,
+        listingUpdateData: Record<string, any>,
         accessToken?: string
     ) {
         try {
             // Delegate the actual API call to the repository
-            return await RestaurantRepository.updateListing(id, formData, accessToken);
+            return await RestaurantRepository.updateListing(id, listingUpdateData, accessToken);
         } catch (error) {
             console.error('Error updating restaurant listing in service:', error);
             throw new Error('Failed to update restaurant listing');
         }
+    },
+
+    async deleteRestaurantListing(id: number, accessToken?: string): Promise<any> {
+        try {
+            return await RestaurantRepository.deleteListing(id, accessToken);
+        } catch (error) {
+            console.error('Error deleting restaurant listing in service:', error);
+            throw new Error('Failed to delete restaurant listing');
+        }
+    },
+
+    async fetchRestaurantRatingsCount(restaurantId: number): Promise<number> {
+        return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
     },
 
 };

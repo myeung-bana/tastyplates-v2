@@ -39,6 +39,7 @@ export interface Listing {
     countries: {
         nodes: { name: string }[];
     };
+    cuisines?: string[];
 }
 
 
