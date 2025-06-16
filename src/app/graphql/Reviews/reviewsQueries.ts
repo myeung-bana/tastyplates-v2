@@ -120,8 +120,7 @@ export const GET_USER_REVIEWS = gql`
               ... on User {
               id
               databaseId
-              name
-              palates
+              name  
               avatar {
                 url
               }  
