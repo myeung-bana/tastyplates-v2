@@ -29,7 +29,6 @@ interface Palate {
   }[];
 }
 
-
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [cuisine, setCuisine] = useState<string>("All");
   const [price, setPrice] = useState<string>("");
@@ -152,16 +151,27 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       case "Cuisine":
         setCuisine("All");
         setSelectedPalates(new Set());
+        onFilterChange({
+          cuisine: null,
+          palates: []
+        });
+        setIsModalOpen(false);
         break;
       case "Price":
-        setPrice(""); // Reset price to empty string
+        setPrice("");
+        onFilterChange({ price: null });
+        setIsModalOpen(false);
         break;
       case "Badges":
         setBadge("All");
         setSortOption("None");
+        onFilterChange({ badges: null, sortOption: null });
+        setIsModalOpen(false);
         break;
       case "Rating":
         setRating(0);
+        onFilterChange({ rating: null });
+        setIsModalOpen(false);
         break;
       default:
         break;

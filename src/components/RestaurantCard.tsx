@@ -51,52 +51,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const hasFetched = useRef(false);
 
   useEffect(() => {
-
-    if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
-      setSaved(initialSavedStatus);
-      return;
-    }
-
-
-    if (status === "loading") {
-      return;
-    }
-
-
-    setSaved(null);
-
-
-    if (!session) {
-      setSaved(false);
-      return;
-    }
-
-    let isMounted = true;
-    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (isMounted) {
-          setSaved(data.status === "saved");
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setSaved(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [restaurant.slug, session, status, initialSavedStatus]);
+    setSaved(initialSavedStatus ?? false);
+  }, [initialSavedStatus]);
 
   useEffect(() => {
     if (typeof ratingsCount === 'undefined' && restaurant.databaseId) {
