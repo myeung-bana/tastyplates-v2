@@ -257,6 +257,7 @@ const RestaurantPage = () => {
         </div>
 
         <div className="restaurants__grid mt-4">
+          <SkeletonCard key={`skeleton-${5}`} />
           {restaurants.map((rest) => (
             <RestaurantCard
               key={rest.id}
@@ -267,7 +268,6 @@ const RestaurantPage = () => {
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
         </div>
-
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (
             <>
