@@ -6,7 +6,7 @@ import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import Photo from "../../public/images/Photos-Review-12.png";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
@@ -36,6 +36,7 @@ export interface RestaurantCardProps {
 }
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
+  const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
@@ -50,52 +51,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const hasFetched = useRef(false);
 
   useEffect(() => {
-
-    if (initialSavedStatus !== undefined && initialSavedStatus !== null) {
-      setSaved(initialSavedStatus);
-      return;
-    }
-
-
-    if (status === "loading") {
-      return;
-    }
-
-
-    setSaved(null);
-
-
-    if (!session) {
-      setSaved(false);
-      return;
-    }
-
-    let isMounted = true;
-    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "check" }),
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (isMounted) {
-          setSaved(data.status === "saved");
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setSaved(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [restaurant.slug, session, status, initialSavedStatus]);
+    setSaved(initialSavedStatus ?? false);
+  }, [initialSavedStatus]);
 
   useEffect(() => {
     if (typeof ratingsCount === 'undefined' && restaurant.databaseId) {
@@ -229,6 +186,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const address = restaurant.streetAddress?.trim() || 'Default Location';
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (pathname === "/listing") {
+      e.preventDefault();
+      router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+    }
+  };
+
   return (
     <>
       <div className="restaurant-card">
@@ -239,7 +203,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
               alt={restaurant.name}
               width={304}
               height={228}
+              onClick={handleClick}
               className="restaurant-card__img cursor-pointer"
+              style={{ cursor: "pointer" }}
             />
           </Link>
           {profileTablist !== 'listings' && (

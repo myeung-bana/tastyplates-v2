@@ -63,6 +63,8 @@ export const GET_LISTINGS = gql`
                     streetAddress
                 }
             }
+            isFavorite
+            ratingsCount
         }
     }
 }
@@ -110,6 +112,11 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                     name
                 }
             }
+        comments(where: {commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1}) {
+                nodes {
+                    recognitions
+                }
+            }    
         }
     }`
     ;
