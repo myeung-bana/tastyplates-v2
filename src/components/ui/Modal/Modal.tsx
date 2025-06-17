@@ -22,6 +22,7 @@ export default function CustomModal(props: any) {
     headerClass = "",
     contentClass = "",
     closeButtonClass = "",
+    wrapperClass = ""
   } = props;
 
   return (
@@ -39,10 +40,11 @@ export default function CustomModal(props: any) {
           ),
           footer: cn("!pt-0", footerClass),
           closeButton: "hidden",
+          wrapper: wrapperClass
         }}
         placement="center"
         closeButton={false}
-        // disableAnimation
+        disableAnimation
       >
         <ModalContent>
           <ModalHeader>
