@@ -39,6 +39,7 @@ interface ListingCardProps {
 }
 
 const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
+  const defaultImage = "/images/default-image.png"
   // const reviewsCount = getRestaurantReviewsCount(restaurant.id);
   // const getCuisineNames = (cuisineIds: string[]) => {
   //   return cuisineIds
@@ -53,7 +54,7 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
     <div className="relative overflow-hidden rounded-md">
       <div className="restaurant-card__image relative">
         <Image
-          src={reviewDraft.reviewImages?.[0]?.sourceUrl || "http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"}
+          src={reviewDraft.reviewImages?.[0]?.sourceUrl || defaultImage}
           alt="Review Draft"
           width={304}
           height={228}

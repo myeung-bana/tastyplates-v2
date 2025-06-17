@@ -35,6 +35,7 @@ const ListingPage = () => {
   // const [hasMore, setHasMore] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
+  const [allDrafts, setAllDrafts] = useState<ReviewDraft[]>([]);
   const [draftToDelete, setDraftToDelete] = useState<ReviewDraft | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   // const [afterCursor, setAfterCursor] = useState<string | null>(null);
@@ -117,6 +118,7 @@ const ListingPage = () => {
       if (!session?.accessToken) return;
       const data = await ReviewService.fetchReviewDrafts(session.accessToken);
       const transformedDrafts = transformReviewDrafts(data);
+      setAllDrafts(transformedDrafts)
       setReviewDrafts(transformedDrafts.slice(0, 4));
     } catch (error) {
       console.error("Error fetching review drafts:", error);
@@ -134,6 +136,9 @@ const ListingPage = () => {
     try {
       await ReviewService.deleteReviewDraft(draftId, session.accessToken, true);
       setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
+      const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
+      setAllDrafts(updatedAllDrafts);
+      setReviewDrafts(updatedAllDrafts.slice(0, 4));
       setDraftToDelete(null);
       return true;  // success
     } catch (error) {

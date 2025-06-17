@@ -214,7 +214,7 @@ comments(
     orderby: COMMENT_DATE, 
     order: DESC, 
     contentId: $restaurantId,
-    contentStatus: PUBLISH
+    commentApproved: 1
     }
     first: $first
     after: $after
@@ -232,6 +232,7 @@ comments(
         palates
         userAvatar
         recognitions
+        userId
         reviewImages {
           databaseId
           id
