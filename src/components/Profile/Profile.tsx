@@ -68,7 +68,7 @@ const Profile = () => {
       name: item.title,
       image:
         item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5,
+      rating: item.averageRating || 0, // Default to 0 if not present
       databaseId: item.databaseId || 0, // Default to 0 if not present
       cuisineNames: item.palates || [],
       countries:
@@ -79,22 +79,26 @@ const Profile = () => {
   };
 
   const fetchRestaurants = async (
-    search: string,
     first = 8,
-    after: string | null = null
+    after: string | null = null,
+    userId: number | undefined
   ) => {
     setLoading(true);
     try {
       const data = await RestaurantService.fetchAllRestaurants(
-        search,
+        "", // Removed search parameter as it's not needed for user's listings
         first,
-        after
+        after,
+        "",
+        [],
+        null,
+        null,
+        userId // Pass the userId here
       );
       const transformed = transformNodes(data.nodes);
 
       setRestaurants((prev) => {
         if (!after) {
-          // New search: replace list
           return transformed;
         }
         // Pagination: append unique restaurants only
@@ -113,8 +117,10 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    fetchRestaurants("", 8, null);
-  }, []);
+    if (targetUserId) { // Only fetch if targetUserId is available
+      fetchRestaurants(8, null, targetUserId);
+    }
+  }, [targetUserId]); // Re-fetch when targetUserId changes
 
   useEffect(() => {
     window.addEventListener("load", () => {
