@@ -257,7 +257,6 @@ const RestaurantPage = () => {
         </div>
 
         <div className="restaurants__grid mt-4">
-          <SkeletonCard key={`skeleton-${5}`} />
           {restaurants.map((rest) => (
             <RestaurantCard
               key={rest.id}
