@@ -231,4 +231,23 @@ export class RestaurantRepository {
             pageInfo: data.listings.pageInfo,
         };
     }
+
+    static async getListingsName(
+        searchTerm: string,
+        first = 16,
+        after: string | null = null,
+    ) {
+        const { data } = await client.query({
+            query: GET_LISTINGS,
+            variables: {
+                searchTerm,
+                first,
+                after,
+            },
+        });
+        return {
+            nodes: data.listings.nodes,
+            pageInfo: data.listings.pageInfo,
+        };
+    }
 }

@@ -157,3 +157,25 @@ export const GET_RESTAURANT_BY_ID = gql`
         }
 }
 `;
+
+export const GET_LISTINGS_NAME = gql`
+    query GetListingsName ($searchTerm: String!) {
+        listings(
+            where: {
+            search: $searchTerm
+            }
+            first: 16
+            after: null
+        ) {
+            pageInfo {
+            endCursor
+            hasNextPage
+            }
+            nodes {
+            id
+            databaseId
+                title
+                slug    
+            }
+        }
+    }`;

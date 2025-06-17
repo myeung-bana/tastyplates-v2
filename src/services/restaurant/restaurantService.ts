@@ -139,5 +139,22 @@ export const RestaurantService = {
             console.error('Error fetching by palate:', error);
             throw new Error('Failed to fetch restaurants by palate');
         }
-    }
+    },
+
+    async fetchListingsName(
+        searchTerm: string,
+        first = 16,
+        after: string | null = null,
+    ) {
+        try {
+            return await RestaurantRepository.getListingsName(
+                searchTerm,
+                first,
+                after
+            );
+        } catch (error) {
+            console.error('Error fetching list:', error);
+            throw new Error('Failed to fetch list');
+        }
+    },
 };

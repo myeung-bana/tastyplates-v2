@@ -1,7 +1,7 @@
 "use client";
 import { FiSearch, FiMapPin, FiNavigation } from "react-icons/fi";
 import { MdStore } from "react-icons/md";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "@/styles/components/_hero.scss";
 import Image from "next/image";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
@@ -11,13 +11,14 @@ import { Key } from "@react-types/shared";
 import SelectOptions from "@/components/ui/Options/SelectOptions";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { useRouter } from "next/navigation";
+import { debounce } from "@/utils/debounce";
 
 const Hero = () => {
   const router = useRouter();
   const [location, setLocation] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [addressLoading, setAddressLoading] = useState(true);
+  const [addressLoading, setAddressLoading] = useState(false);
   const [isSearchListing, setIsSearchListing] = useState(false);
   const [listing, setListing] = useState("");
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
@@ -28,12 +29,21 @@ const Hero = () => {
     label: string;
     children?: any[];
   }[]>([]);
+  const [showListingModal, setShowListingModal] = useState(false);
+  const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
+  const [listingLoading, setListingLoading] = useState(false);
+  const fetchPalatesDebouncedRef = useRef<(values: Set<Key>) => void>();
+  const fetchListingsDebouncedRef = useRef<(input: string) => void>();
 
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchAddressByPalate(new Set<Key>());
-    };
-    fetchData();
+    // Initialize both debounced functions once
+    const [debouncedPalate] = debounce(fetchAddressByPalate, 500);
+    const [debouncedListing] = debounce(fetchListingsName, 500);
+
+    fetchPalatesDebouncedRef.current = debouncedPalate;
+    fetchListingsDebouncedRef.current = debouncedListing;
+    fetchPalatesDebouncedRef.current?.(new Set<Key>());
+    fetchListingsDebouncedRef.current?.('');
   }, []);
 
   const getCurrentLocation = () => {
@@ -140,6 +150,22 @@ const Hero = () => {
     }
   }
 
+  const fetchListingsName = async (search: string = '') => {
+    try {
+      const result = await RestaurantService.fetchListingsName(search);
+      const formatted = result.nodes.map((item: any) => ({
+        key: item.slug,
+        label: item.title,
+      }));
+      setListingOptions(formatted);
+    } catch (err) {
+      console.error("Error loading listing options", err);
+      setListingOptions([]);
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
   const handlePalateChange = async (values: Set<Key>) => {
     setLocation('')
     setListing('')
@@ -158,7 +184,7 @@ const Hero = () => {
 
     setCuisine(selectedLabels);
 
-    await fetchAddressByPalate(values);
+    fetchPalatesDebouncedRef.current?.(values);
   };
 
   const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,7 +211,28 @@ const Hero = () => {
     }
 
     setSelectedPalates(newSelection);
-    await fetchAddressByPalate(newSelection);
+    fetchPalatesDebouncedRef.current?.(newSelection);
+  };
+
+  const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setListing(inputValue);
+    setLocation('');
+    setCuisine('');
+    setShowListingModal(true);
+
+    const normalizedSearch = inputValue.trim().toLowerCase();
+    const alreadyExists = listingOptions.some(
+      (option) => option.label.toLowerCase().includes(normalizedSearch)
+    );
+
+    console.log('listing', listingOptions)
+    console.log('search', normalizedSearch)
+    console.log(alreadyExists ? 'yes' : 'no')
+    if (alreadyExists) return;
+    setListingLoading(true);
+
+    fetchListingsDebouncedRef.current?.(inputValue.trim());
   };
 
   const handleSearchModalClose = () => {
@@ -296,20 +343,37 @@ const Hero = () => {
                   />
                 </>
               ) : (
-                <div className="hero__search-restaurant !bg-transparent">
-                  <FiSearch className="hero__search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search by Listing Name"
-                    className="hero__search-input md:my-3.5"
-                    value={listing}
-                    onChange={(e) => {
-                      setListing(e.target.value)
-                      setLocation('')
-                      setCuisine('')
+                <>
+                  <div className="hero__search-restaurant !bg-transparent">
+                    <FiSearch className="hero__search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search by Listing Name"
+                      className="hero__search-input md:my-3.5"
+                      value={listing}
+                      onChange={(e) => {
+                        handleListingChange(e)
+                      }}
+                      onClick={() => {
+                        setShowListingModal(true)
+                      }}
+                    />
+                  </div>
+                  <SelectOptions
+                    isOpen={showListingModal}
+                    isLoading={listingLoading}
+                    options={listingOptions}
+                    searchValue={listing}
+                    onSelect={(label) => {
+                      setListing(label);
+                      setShowListingModal(false);
+                      setLocation('');
+                      setCuisine('');
                     }}
+                    onClose={() => setShowListingModal(false)}
+                    className="!p-2 !top-20 !absolute !left-0 !w-full z-50 !max-h-[350px]"
                   />
-                </div>
+                </>
               )}
               <button
                 type="submit"
