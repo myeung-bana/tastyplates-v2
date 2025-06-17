@@ -63,6 +63,8 @@ export const GET_LISTINGS = gql`
                     streetAddress
                 }
             }
+            isFavorite
+            ratingsCount
         }
     }
 }
