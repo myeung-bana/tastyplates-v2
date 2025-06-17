@@ -6,6 +6,7 @@ export interface Listing {
     listingStreet: string;
     priceRange: string;
     averageRating: number;
+    status : string;
     palates: {
         nodes: {
             name: string;

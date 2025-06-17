@@ -68,16 +68,18 @@ const Profile = () => {
       name: item.title,
       image:
         item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: item.averageRating || 0, // Default to 0 if not present
-      databaseId: item.databaseId || 0, // Default to 0 if not present
+      rating: item.averageRating || 0,
+      databaseId: item.databaseId || 0,
       cuisineNames: item.palates || [],
       countries:
         item.countries?.nodes.map((c) => c.name).join(", ") ||
         "Default Location",
-      priceRange: "$$",
+      priceRange: item.priceRange || "N/A",
+      status: item.status || "",
     }));
   };
 
+  const statuses = ["PUBLISH", "DRAFT"];
   const fetchRestaurants = async (
     first = 8,
     after: string | null = null,
@@ -86,14 +88,18 @@ const Profile = () => {
     setLoading(true);
     try {
       const data = await RestaurantService.fetchAllRestaurants(
-        "", // Removed search parameter as it's not needed for user's listings
+        "",
         first,
         after,
         "",
         [],
         null,
         null,
-        userId // Pass the userId here
+        userId,
+        null,
+        null,
+        null,
+        statuses
       );
       const transformed = transformNodes(data.nodes);
 
