@@ -205,6 +205,7 @@ const ReviewSubmissionPage = () => {
     try {
       const reviewData = {
         restaurantId,
+        authorId: session?.user?.userId,
         review_stars,
         review_main_title,
         content,

@@ -1,5 +1,6 @@
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
+import { Key } from "@react-types/shared";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import CustomSelect from "@/components/ui/Select/Select";
@@ -16,11 +17,12 @@ import { checkImageType } from "@/constants/utils";
 import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
 import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
 import { MdEdit, MdOutlineEdit } from "react-icons/md";
+import CustomModal from "../ui/Modal/Modal";
+import { PiCaretLeftBold } from "react-icons/pi";
 
-const Form = (props: any) => {
+const Form = () => {
   const { data: session, update } = useSession();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [step, setStep] = useState<number>(props.step ?? 0);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [profile, setProfile] = useState<any>(null);
   const [aboutMe, setAboutMe] = useState<string>(session?.user?.name ?? "");
@@ -29,13 +31,42 @@ const Form = (props: any) => {
   );
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
+  const [selectedPalates2, setSelectedPalates2] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState<string>("");
   const [profileError, setProfileError] = useState<string>("");
+  // Initialize isMobile to false or true only on the client
+  const [isMobile, setIsMobile] = useState<boolean>(false); // Default to false for server render
+
   const router = useRouter();
   const regionOptions = palateOptions.map((option) => ({
     key: option.key,
     label: option.label,
   }));
+
+  // Use a useEffect hook to set isMobile and add event listeners
+  // This ensures the code only runs after the component has mounted on the client
+  useEffect(() => {
+    // Check if window is defined before accessing it
+    if (typeof window !== "undefined") {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+
+      // Set initial value on client
+      handleResize();
+
+      window.addEventListener("resize", handleResize);
+      // No need for 'load' listener as useEffect already runs after DOM is loaded.
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }
+  }, []); // Empty dependency array means this runs once on mount and once on unmount
+
+  const handlePalateChange = (keys: Set<Key>) => {
+    setSelectedPalates2(keys);
+  };
 
   const getAllSelectedPalates = () => {
     return selectedPalates.map((palate) => {
@@ -131,7 +162,7 @@ const Form = (props: any) => {
         session.accessToken
       );
 
-      // Update local storage
+      // Update local storage (if needed, but session update is more direct with next-auth)
       // const localKey = `userData_${session.user.email}`;
       // localStorage.setItem(localKey, JSON.stringify({
       //   ...JSON.parse(localStorage.getItem(localKey) || '{}'),
@@ -220,9 +251,9 @@ const Form = (props: any) => {
     setAboutMe(e.target.value);
   };
 
-  return (
-    <>
-      <div className="font-inter mt-16 md:mt-20">
+  const FormContent = () => {
+    return (
+      <>
         {/* Overlay when modal is open */}
         {isSubmitted && (
           <>
@@ -242,7 +273,12 @@ const Form = (props: any) => {
                 </button>
                 <div className="flex flex-col items-center">
                   <div className="mb-4">
-                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                    <svg
+                      width="56"
+                      height="56"
+                      viewBox="0 0 56 56"
+                      fill="none"
+                    >
                       <circle cx="28" cy="28" r="28" fill="#FFF3E6" />
                       <path
                         d="M18 29.5L25 36.5L38 23.5"
@@ -265,7 +301,8 @@ const Form = (props: any) => {
             {/* Animation */}
             <style jsx>{`
               .animate-fade-in {
-                animation: fadeInScale 0.3s cubic-bezier(0.4, 2, 0.6, 1) both;
+                animation: fadeInScale 0.3s cubic-bezier(0.4, 2, 0.6, 1)
+                  both;
               }
               @keyframes fadeInScale {
                 0% {
@@ -317,12 +354,12 @@ const Form = (props: any) => {
                   </div>
                 </div>
               </label>
-            </div>
-            {profileError && (
-                <p className="text-sm text-red-600 text-center">
+              {profileError && (
+                <p className="mt-2 text-sm text-red-600 text-center">
                   {profileError}
                 </p>
               )}
+            </div>
             <div className="listing__form-group">
               <label className="listing__label">About Me</label>
               <div className="listing__input-group">
@@ -338,7 +375,7 @@ const Form = (props: any) => {
                 />
               </div>
             </div>
-            <div className="listing__form-group">
+            <div className="listing__form-group !hidden md:!flex">
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
@@ -355,9 +392,11 @@ const Form = (props: any) => {
             <div className="listing__form-group">
               <label className="listing__label">
                 Ethnic Palate{" "}
-                <span className="!font-medium">(Select up to 2 palates)</span>
+                <span className="!font-medium">
+                  (Select up to 2 palates)
+                </span>
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden md:flex flex-wrap gap-2">
                 {selectedRegion && (
                   <>
                     {palateOptions
@@ -368,14 +407,16 @@ const Form = (props: any) => {
                           type="button"
                           onClick={() => togglePalate(child.label)}
                           disabled={isLoading}
-                          className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D] 
-                            ${selectedPalates.some(
+                          className={`py-1 px-3 rounded-full text-sm font-medium transition-colors border border-[#494D5D]
+                      ${selectedPalates.some(
                             (p) =>
                               p.toLowerCase() === child.label.toLowerCase()
                           )
                               ? "bg-[#F1F1F1] !font-bold"
                               : "bg-[##FCFCFC] text-gray-600 hover:bg-gray-200"
-                            } ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                            } ${isLoading
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
                             }`}
                         >
                           {child.label}
@@ -389,12 +430,24 @@ const Form = (props: any) => {
                             .slice(0, 4)
                             .map((p) => p.palate)
                             .join(", ") +
-                            (getAllSelectedPalates().length > 4 ? "..." : "")}
+                            (getAllSelectedPalates().length > 4
+                              ? "..."
+                              : "")}
                         </p>
                       </div>
                     )}
                   </>
                 )}
+              </div>
+              <div className="flex md:hidden flex-wrap gap-2">
+                <CustomMultipleSelect
+                  label="Palate (Select up to 2 palates)"
+                  placeholder="Select your palate"
+                  items={palateOptions}
+                  className="!rounded-[10px] w-full"
+                  value={selectedPalates2}
+                  onChange={handlePalateChange}
+                />
               </div>
               {palateError && (
                 <p className="mt-2 text-sm text-red-600">{palateError}</p>
@@ -402,7 +455,7 @@ const Form = (props: any) => {
             </div>
             <div className="flex gap-4 items-center m-auto">
               <button
-                className="listing__button flex items-center justify-center gap-2"
+                className="listing__button flex items-center justify-center gap-2 text-sm md:text-base"
                 type="submit"
                 disabled={isLoading}
               >
@@ -446,6 +499,41 @@ const Form = (props: any) => {
             </div>
           </form>
         </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <CustomModal
+        header={<></>}
+        content={
+          <FormContent />
+        }
+        isOpen={isMobile}
+        backdropClass="bg-white backdrop-opacity-100"
+        baseClass="h-full md:h-3/4 !max-w-[1060px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
+        closeButtonClass="!top-5 md:!top-6 !right-unset !left-3 z-10"
+        headerClass="border-b border-[#CACACA] h-16"
+        contentClass="!p-0"
+        hasFooter={true}
+        footer={<></>}
+        footerClass="!p-0 hidden"
+        wrapperClass="!z-[1010]"
+        hasCustomCloseButton
+        customButton={
+          <button
+            onClick={() => {
+              router.back()
+            }}
+            className="absolute top-4 left-3 p-2"
+          >
+            <PiCaretLeftBold className="size-4 stroke-[#1C1B1F]" />
+          </button>
+        }
+      />
+      <div className="font-inter mt-16 md:mt-20 hidden md:block">
+        <FormContent />
       </div>
     </>
   );

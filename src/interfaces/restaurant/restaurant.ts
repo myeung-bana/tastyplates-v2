@@ -4,6 +4,8 @@ export interface Listing {
     slug: string;
     content: string;
     listingStreet: string;
+    priceRange: string;
+    averageRating: number;
     palates: {
         nodes: {
             name: string;
@@ -29,13 +31,15 @@ export interface Listing {
     };
     listingCategories: {
         nodes: {
-            databaseId: number
+            id: number
             name: string
+            slug: string;
         }[];
     };
     countries: {
         nodes: { name: string }[];
     };
+    cuisines?: string[];
 }
 
 

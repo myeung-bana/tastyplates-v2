@@ -1,43 +1,71 @@
 import { gql } from '@apollo/client';
 
 export const GET_LISTINGS = gql`
-    query GetAllRestaurants($searchTerm: String!, $first: Int, $after: String, $status: PostStatusEnum, $userId: Int) {
-        listings(where: { search: $searchTerm, status: $status, author: $userId }, first: $first, after: $after) {
-            pageInfo {
-                endCursor
-                hasNextPage
+  query GetAllRestaurants(
+    $searchTerm: String!
+    $priceRange: String
+    $first: Int
+    $after: String
+    $taxQuery: TaxQuery
+    $status: PostStatusEnum
+    $userId: Int
+    $recognition: String
+    $recognitionSort: String 
+    $minAverageRating: Float
+  ) {
+    listings(
+        where: {
+            search: $searchTerm 
+            priceRange: $priceRange
+            taxQuery: $taxQuery
+            status: $status
+            recognition: $recognition
+            recognitionSort: $recognitionSort
+            minAverageRating: $minAverageRating
+            author: $userId
+        }, 
+        first: $first
+        after: $after
+    ) {
+        pageInfo {
+            endCursor
+            hasNextPage
+        }
+        nodes {
+            id
+            databaseId
+            title
+            slug
+            content
+            priceRange
+            averageRating
+            listingStreet
+            palates {
+                nodes {
+                    name
+                    slug 
+                }
             }
-            nodes {
-                id
-                databaseId
-                title
-                slug
-                content
-                listingStreet
-                palates {
-                    nodes {
-                        name
-                    }
+            featuredImage {
+                node {
+                    sourceUrl
                 }
-                featuredImage {
-                    node {
-                        sourceUrl
-                    }
+            }
+            listingCategories {
+                nodes {
+                    id
+                    name
+                    slug
                 }
-                listingCategories {
-                    nodes {
-                        id
-                        name
-                    }
-                }
-                countries {
-                    nodes {
-                        name
-                    }
+            }
+            listingDetails {
+                googleMapUrl {
+                    streetAddress
                 }
             }
         }
     }
+}
 `;
 
 export const GET_RESTAURANT_BY_SLUG = gql`
@@ -47,6 +75,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         title
         slug
         content
+        priceRange
         palates {
             nodes {
                 name

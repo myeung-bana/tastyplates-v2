@@ -39,7 +39,7 @@ useEffect(() => {
 
     try {
       setLoading(true);
-      const data = await RestaurantService.fetchAllRestaurants("", 10, null, "PENDING", userId);
+      const data = await RestaurantService.fetchAllRestaurants("", 10, null, "", [], "", "PENDING", userId)
       console.log("Fetched pending listings:", data);
       setPendingListings(data.nodes);
     } catch (err) {
@@ -51,7 +51,7 @@ useEffect(() => {
   };
 
   getPendingListings();
-}, [status, userId]); // 👈 include dependencies
+}, [status, userId]);
 
 
     const removeListing = (item: FetchedRestaurant, index: number) => {
@@ -75,7 +75,7 @@ useEffect(() => {
                     // Assuming you have a ListingCard component that accepts `restaurant` prop
                     // and handles deletion. Replace the placeholder div with your ListingCard.
                     pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
-                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDelete={() => removeListing(restaurant, index)} />
+                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
                     ))
                 )}
             </div>
