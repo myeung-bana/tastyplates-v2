@@ -317,6 +317,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const handleCommentReplySubmit = async () => {
     if (!commentReply.trim() || isLoading || cooldown > 0) return;
 
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
+
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
 

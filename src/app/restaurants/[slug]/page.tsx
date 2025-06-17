@@ -174,6 +174,15 @@ export default function RestaurantDetail() {
     RestaurantService.fetchRestaurantDetails(slug)
       .then((data) => {
         if (!data) return notFound();
+        const recognitionCounts: Record<string, number> = {};
+
+        data.comments?.nodes?.forEach((comment: { recognitions: string[] }) => {
+          comment.recognitions.forEach((recog) => {
+            const trimmed = recog.trim();
+            if (!trimmed) return;
+            recognitionCounts[trimmed] = (recognitionCounts[trimmed] || 0) + 1;
+          });
+        });
         const transformed = {
           id: data.id,
           slug: data.slug,
@@ -199,7 +208,7 @@ export default function RestaurantDetail() {
             openingHours: data.listingDetails?.openingHours || "",
             phone: data.listingDetails?.phone || "",
           },
-
+          recognitions: recognitionCounts,
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -402,7 +411,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {japaneseAvgRating}
+                            {restaurant.recognitions["Must Revisit"] || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
@@ -419,7 +428,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {overallAvgRating}
+                            {restaurant.recognitions["Insta-Worthy"] || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
@@ -437,7 +446,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {italianMexicanAvgRating}
+                            {restaurant.recognitions["Value for Money"] || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
@@ -454,7 +463,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {italianMexicanAvgRating}
+                            {restaurant.recognitions["Best Service"] || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>

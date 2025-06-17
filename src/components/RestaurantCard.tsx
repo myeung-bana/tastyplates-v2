@@ -6,7 +6,7 @@ import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import Photo from "../../public/images/Photos-Review-12.png";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
@@ -36,6 +36,7 @@ export interface RestaurantCardProps {
 }
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
+  const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
@@ -229,6 +230,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const address = restaurant.streetAddress?.trim() || 'Default Location';
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (pathname === "/listing") {
+      e.preventDefault();
+      router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+    }
+  };
+
   return (
     <>
       <div className="restaurant-card">
@@ -239,7 +247,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
               alt={restaurant.name}
               width={304}
               height={228}
+              onClick={handleClick}
               className="restaurant-card__img cursor-pointer"
+              style={{ cursor: "pointer" }}
             />
           </Link>
           {profileTablist !== 'listings' && (
