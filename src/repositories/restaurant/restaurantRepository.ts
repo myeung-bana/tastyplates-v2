@@ -195,4 +195,18 @@ export class RestaurantRepository {
             throw new Error('Failed to fetch listing pending');
         }
     }
+
+    static async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
+        try {
+            const res = await fetch(`${API_BASE_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
+            const data = await res.json();
+            if (data && Array.isArray(data.reviews)) {
+                return data.reviews.length;
+            }
+            return 0;
+        } catch (error) {
+            console.error('Error fetching restaurant ratings count:', error);
+            return 0;
+        }
+    }
 }

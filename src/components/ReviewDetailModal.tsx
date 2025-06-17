@@ -47,6 +47,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     typeof window !== "undefined" ? window.innerWidth : 0
   );
   const authorUserId = data.userId;
+  const defaultImage = "/images/default-image.png"
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -467,7 +468,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                      src={defaultImage}
                       alt="Default"
                       width={400}
                       height={400}

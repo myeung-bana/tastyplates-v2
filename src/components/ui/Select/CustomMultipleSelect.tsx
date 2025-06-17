@@ -171,7 +171,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     };
 
     return (
-        <div className="relative" ref={selectRef} translate="no">
+        <div className="w-full relative" ref={selectRef} translate="no">
             <div
                 className={`w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${props.className || ''}`}
                 onClick={handleClick}

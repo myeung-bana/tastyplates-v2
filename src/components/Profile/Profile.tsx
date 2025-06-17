@@ -543,8 +543,8 @@ const Profile = () => {
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row self-center justify-center items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-4 sm:px-0">
-        <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] relative">
+      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
+        <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <Image
             src={user?.image || "/profile-icon.svg"}
             fill
@@ -552,17 +552,17 @@ const Profile = () => {
             alt="profile"
           />
         </div>
-        <div className="flex flex-col gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center sm:items-start w-full">
+        <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">
+          <div className="flex flex-row justify-between items-start md:items-center sm:items-start w-full">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-medium truncate">
+              <h2 className="text-sm sm:text-xl font-medium truncate">
                 {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
                   userData?.display_name || userData?.name || ""
                 )}
               </h2>
-              <div className="flex gap-1 mt-2 flex-wrap justify-center sm:justify-start">
+              <div className="flex gap-1 mt-2 flex-wrap justify-start">
                 {palatesLoading ? (
                   <>
                     <span className="inline-block w-16 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
@@ -602,14 +602,14 @@ const Profile = () => {
               </Link>
             </div>
           </div>
-          <p className="text-sm px-4 sm:px-0">
+          <p className="text-[10px] md:text-sm">
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
               userData?.about_me
             )}
           </p>
-          <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-center sm:justify-start">
+          <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
             <span className="cursor-default">
               <span className="text-xs md:text-base font-semibold cursor-default">
                 {loading ? (
@@ -698,15 +698,15 @@ const Profile = () => {
         items={tabs}
         classNames={{
           tabWrapper: "w-full",
-          base: "w-full border-b justify-start sm:justify-center min-w-max sm:min-w-0 px-4 sm:px-0",
+          base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
             "py-4 px-0 justify-start px-10 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList:
-            "gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
+            "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",
           tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-sm sm:text-base font-semibold",
+            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-xs sm:text-base font-semibold",
         }}
         variant="underlined"
       >

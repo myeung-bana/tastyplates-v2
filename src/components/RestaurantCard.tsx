@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
 
 export interface Restaurant {
   id: string;
@@ -31,9 +32,10 @@ export interface RestaurantCardProps {
   restaurant: Restaurant;
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
   initialSavedStatus?: boolean | null; // Add this line
+  ratingsCount?: number; // <-- Add this line
 }
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
@@ -43,7 +45,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ratingsCount, setRatingsCount] = useState<number>(0);
+  const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
   // const [averageRating, setAverageRating] = useState<number>(0);
   const hasFetched = useRef(false);
 
@@ -96,23 +98,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
   }, [restaurant.slug, session, status, initialSavedStatus]);
 
   useEffect(() => {
-    const fetchRatingsData = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurant.databaseId}`);
-        const data = await res.json();
-        if (data && Array.isArray(data.reviews)) {
-          setRatingsCount(data.reviews.length);
-        } else {
-          setRatingsCount(0);
-        }
-      } catch {
-        setRatingsCount(0);
-      }
-    };
-    if (restaurant.databaseId) {
-      fetchRatingsData();
+    if (typeof ratingsCount === 'undefined' && restaurant.databaseId) {
+      RestaurantService.fetchRestaurantRatingsCount(restaurant.databaseId)
+        .then(count => setLocalRatingsCount(count))
+        .catch(() => setLocalRatingsCount(0));
     }
-  }, [restaurant.databaseId]);
+  }, [ratingsCount, restaurant.databaseId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -285,7 +276,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
                   <>
                     <FaStar className="restaurant-card__icon -mt-1" />
                     {restaurant.rating}
-                    <span className="restaurant-card__rating-count">({ratingsCount})</span>
+                    <span className="restaurant-card__rating-count">({typeof ratingsCount !== 'undefined' ? ratingsCount : (localRatingsCount ?? 0)})</span>
                   </>
                 ) : null}
                 {/* <span>{averageRating}</span> */}

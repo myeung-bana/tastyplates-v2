@@ -33,7 +33,7 @@ export class ReviewService {
     }
 
     static async postReview(reviewData: any, accessToken: string): Promise<any> {
-        
+
         const formattedData = {
             post: reviewData.restaurantId,
             parent: reviewData.parent || 0,
@@ -96,6 +96,15 @@ export class ReviewService {
         } catch (error) {
             console.error("Failed to unlike comment", error);
             throw new Error("Failed to unlike comment");
+        }
+    }
+
+    static async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
+        try {
+            return await ReviewRepository.getRestaurantReviews(restaurantId, accessToken, first, after);
+        } catch (error) {
+            console.error('Error fetching restaurant reviews:', error);
+            throw new Error('Failed to fetch restaurant reviews');
         }
     }
 

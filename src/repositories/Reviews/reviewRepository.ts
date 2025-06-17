@@ -1,6 +1,5 @@
 import client from "@/app/graphql/client";
-import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
-import { GET_REVIEWS_BY_RESTAURANT_ID } from "@/app/graphql/Reviews/reviewsQueries";
+import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_RESTAURANT_REVIEWS, GET_REVIEWS_BY_RESTAURANT_ID, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 export class ReviewRepository {
@@ -133,6 +132,23 @@ export class ReviewRepository {
     }, true);
   }
 
+  static async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
+    const { data } = await client.query({
+      query: GET_RESTAURANT_REVIEWS,
+      variables: { restaurantId, first, after },
+      context: {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+        },
+      },
+      // fetchPolicy: "no-cache",
+    });
+
+    return {
+      reviews: data.comments.nodes ?? [],
+      pageInfo: data.comments.pageInfo ?? { endCursor: null, hasNextPage: false }
+    };
+  }
   static async getRestaurantReviewsById(restaurantId: string | number) {
     if (!restaurantId) throw new Error('Missing restaurantId');
     try {
