@@ -49,7 +49,7 @@ const SelectOptions = ({
     return (
         <ul
             ref={dropdownRef}
-            className={`bg-white border border-gray-300 rounded-md mt-1 w-full max-h-48 overflow-y-auto shadow-lg rounded-[24px] text-left ${className}`}
+            className={`bg-white border border-gray-300 mt-1 w-full max-h-48 overflow-y-auto shadow-lg rounded-[24px] text-left ${className}`}
         >
             {isLoading ? (
                 <li className="px-4 py-2 text-center text-gray-500 font-medium animate-pulse">
