@@ -111,7 +111,6 @@ const Hero = () => {
       if (location) queryParams.set("address", location);
     }
 
-    console.log(queryParams.toString())
     router.push(`/restaurants?${queryParams.toString()}`);
   };
 
@@ -226,9 +225,6 @@ const Hero = () => {
       (option) => option.label.toLowerCase().includes(normalizedSearch)
     );
 
-    console.log('listing', listingOptions)
-    console.log('search', normalizedSearch)
-    console.log(alreadyExists ? 'yes' : 'no')
     if (alreadyExists) return;
     setListingLoading(true);
 
