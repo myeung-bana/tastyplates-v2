@@ -44,6 +44,7 @@ const RestaurantPage = () => {
   const [selectedRating, setSelectedRating] = useState<number | null>(null); 
   const [selectedBadges, setSelectedBadges] = useState<string | null>(null); 
   const [selectedSortOption, setSelectedSortOption] = useState<string | null>(null);
+  const [ratingsCounts, setRatingsCounts] = useState<{ [id: number]: number }>({});
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -55,6 +56,7 @@ const RestaurantPage = () => {
       databaseId: item.databaseId || 0,
       palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
       listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
+      streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || '',
       countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
       priceRange: item.priceRange,
       initialSavedStatus: null,
@@ -212,6 +214,24 @@ const RestaurantPage = () => {
     setSelectedSortOption(filters.sortOption || null);
   }, []);
 
+  useEffect(() => {
+    const fetchAllCounts = async () => {
+      const counts: { [id: number]: number } = {};
+      await Promise.all(
+        restaurants.map(async (restaurant) => {
+          if (restaurant.databaseId) {
+            const count = await RestaurantService.fetchRestaurantRatingsCount(restaurant.databaseId);
+            counts[restaurant.databaseId] = count;
+          }
+        })
+      );
+      setRatingsCounts(counts);
+    };
+    if (restaurants.length > 0) {
+      fetchAllCounts();
+    }
+  }, [restaurants]);
+
   return (
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
@@ -238,7 +258,12 @@ const RestaurantPage = () => {
 
         <div className="restaurants__grid mt-4">
           {restaurants.map((rest) => (
-            <RestaurantCard key={rest.id} restaurant={rest} initialSavedStatus={rest.initialSavedStatus} />
+            <RestaurantCard
+              key={rest.id}
+              restaurant={rest}
+              initialSavedStatus={rest.initialSavedStatus}
+              ratingsCount={ratingsCounts[rest.databaseId]}
+            />
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
         </div>

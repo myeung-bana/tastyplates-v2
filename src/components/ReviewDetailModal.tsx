@@ -537,11 +537,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 <div className="flex flex-col h-full">
                   <div className="overflow-y-auto grow pr-1">
                     <div className="shrink-0">
-                      <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
+                      <p className="text-[15px] md:text-base font-semibold w-full line-clamp-2 md:line-clamp-3">
                         {stripTags(data.reviewMainTitle || "") ||
                           "Dorem ipsum dolor title."}
                       </p>
-                      <p className="review-card__text w-[304] mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
+                      <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4 !align-middle !leading-normal">
                         {stripTags(data.content || "") ||
                           "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
                       </p>

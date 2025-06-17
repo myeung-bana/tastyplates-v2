@@ -109,11 +109,12 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             const reviewTitle = review.title 
                    || review.reviewMainTitle || review.review_main_title || '';
             const reviewStars = review.rating ?? review.reviewStars ?? review.review_stars ?? 0;
+            const userAvatar = review.author?.userAvatar || review.author?.image || "/images/default-user-profile.jpg";
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
                   <Image
-                    src={review.author.image}
+                    src={userAvatar}
                     alt={review.author?.name || review.author?.node?.name || "User"}
                     width={40}
                     height={40}
