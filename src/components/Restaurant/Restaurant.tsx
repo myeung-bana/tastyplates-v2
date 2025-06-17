@@ -167,7 +167,7 @@ const RestaurantPage = () => {
               key={rest.id}
               restaurant={rest}
               initialSavedStatus={rest.initialSavedStatus}
-              ratingsCount={rest.ratingsCount} // <-- Pass ratingsCount directly
+              ratingsCount={rest.ratingsCount}
             />
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
