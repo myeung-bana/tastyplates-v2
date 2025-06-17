@@ -151,27 +151,16 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       case "Cuisine":
         setCuisine("All");
         setSelectedPalates(new Set());
-        onFilterChange({
-          cuisine: null,
-          palates: []
-        });
-        setIsModalOpen(false);
         break;
       case "Price":
         setPrice("");
-        onFilterChange({ price: null });
-        setIsModalOpen(false);
         break;
       case "Badges":
         setBadge("All");
         setSortOption("None");
-        onFilterChange({ badges: null, sortOption: null });
-        setIsModalOpen(false);
         break;
       case "Rating":
         setRating(0);
-        onFilterChange({ rating: null });
-        setIsModalOpen(false);
         break;
       default:
         break;
@@ -187,7 +176,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
       sortOption: sortOption === "None" ? null : sortOption,
-      palates: palatesArray.length ? palatesArray : null,
+      palates: palatesArray
     });
     setIsModalOpen(false);
   };
