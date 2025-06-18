@@ -12,6 +12,7 @@ export const GET_LISTINGS = gql`
     $recognition: String
     $recognitionSort: String 
     $minAverageRating: Float
+    $statuses: [PostStatusEnum]
   ) {
     listings(
         where: {
@@ -23,6 +24,7 @@ export const GET_LISTINGS = gql`
             recognitionSort: $recognitionSort
             minAverageRating: $minAverageRating
             author: $userId
+            statusIn: $statuses
         }, 
         first: $first
         after: $after
@@ -32,6 +34,7 @@ export const GET_LISTINGS = gql`
             hasNextPage
         }
         nodes {
+            status
             id
             databaseId
             title

@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FiStar, FiClock, FiMapPin, FiMessageCircle } from "react-icons/fi";
 import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
@@ -26,13 +25,14 @@ export interface Restaurant {
   streetAddress?: string;
   countries: string;
   priceRange: string;
+  status?: string;
 }
 
 export interface RestaurantCardProps {
   restaurant: Restaurant;
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
-  initialSavedStatus?: boolean | null; // Add this line
-  ratingsCount?: number; // <-- Add this line
+  initialSavedStatus?: boolean | null;
+  ratingsCount?: number;
 }
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
@@ -47,7 +47,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
-  // const [averageRating, setAverageRating] = useState<number>(0);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -198,6 +197,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <Link href={`/restaurants/${restaurant.slug}`}>
+            {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
+              <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
+                Pending for Approval
+              </div>
+            )}
             <Image
               src={restaurant.image}
               alt={restaurant.name}
@@ -245,8 +249,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                     <span className="restaurant-card__rating-count">({typeof ratingsCount !== 'undefined' ? ratingsCount : (localRatingsCount ?? 0)})</span>
                   </>
                 ) : null}
-                {/* <span>{averageRating}</span> */}
-                {/* <span>({restaurant.reviews})</span> */}
               </div>
             </div>
 
