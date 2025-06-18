@@ -60,6 +60,9 @@ const Profile = () => {
   const targetUserId = user?.id;
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [wishlistLoading, setWishlistLoading] = useState(true);
+  const [checkins, setCheckins] = useState<Restaurant[]>([]);
+  const [checkinsLoading, setCheckinsLoading] = useState(true);
+  const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -487,9 +490,20 @@ const Profile = () => {
       label: "Check-in",
       content: (
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {restaurants.map((rest) => (
-            <RestaurantCard key={rest.id} restaurant={rest} />
-          ))}
+          {checkinsLoading && !hasFetchedCheckins ? (
+            <div className="col-span-full text-center py-8">Loading…</div>
+          ) : checkins.length > 0 ? (
+            checkins.map((rest) => (
+              <RestaurantCard
+                key={rest.id}
+                restaurant={rest}
+                profileTablist="checkin"
+                initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8">No check-ins yet.</div>
+          )}
         </div>
       ),
     },
@@ -540,6 +554,46 @@ const Profile = () => {
     window.addEventListener('restaurant-favorite-changed', handler as EventListener);
     return () => window.removeEventListener('restaurant-favorite-changed', handler as EventListener);
   }, [restaurants]);
+
+  useEffect(() => {
+    let didCancel = false;
+    const fetchCheckins = async () => {
+      if (!hasFetchedCheckins) setCheckinsLoading(true);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
+          {
+            headers: session?.accessToken
+              ? { Authorization: `Bearer ${session.accessToken}` }
+              : {},
+            credentials: "include",
+          }
+        );
+        const data = await res.json();
+        const checkinIds = data.checkins || [];
+        if (!didCancel) {
+          setCheckins(
+            restaurants.filter((r) => checkinIds.includes(r.databaseId))
+          );
+          setHasFetchedCheckins(true);
+        }
+      } catch (e) {
+        if (!didCancel) setCheckins([]);
+      } finally {
+        if (!didCancel) setCheckinsLoading(false);
+      }
+    };
+    if (session && restaurants.length > 0) {
+      fetchCheckins();
+    }
+    else if (!session || restaurants.length === 0) {
+      setCheckins([]);
+      setHasFetchedCheckins(false);
+    }
+    return () => {
+      didCancel = true;
+    };
+  }, [session, restaurants]);
 
   return (
     <>
