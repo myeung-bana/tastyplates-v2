@@ -17,6 +17,7 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { useSearchParams } from "next/navigation";
+import { logOutSuccessfull } from "@/constants/messages";
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -40,6 +41,8 @@ export default function Navbar(props: any) {
   const handleLogout = async () => {
     removeAllCookies();
     localStorage.clear();
+    localStorage.setItem('logOutMessage', logOutSuccessfull);
+
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
@@ -64,11 +67,13 @@ export default function Navbar(props: any) {
 
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
-    if (loginMessage) {
-      toast.success(loginMessage, {
+    const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
+    if (loginMessage || logOutMessage) {
+      toast.success(loginMessage || logOutMessage, {
         duration: 3000, // 3 seconds
       });
       localStorage.removeItem('loginBackMessage');
+      localStorage.removeItem('logOutMessage');
     }
 
     window.addEventListener("scroll", changeNavBg);
