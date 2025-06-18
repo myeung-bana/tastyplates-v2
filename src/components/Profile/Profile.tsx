@@ -75,11 +75,12 @@ const Profile = () => {
         item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
       rating: item.averageRating ?? 0,
       databaseId: item.databaseId || 0, // Default to 0 if not present
-      cuisineNames: item.palates || [],
+      palatesNames: item.palates?.nodes?.map((p: any) => p.name) || [],
+      streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || '',
       countries:
         item.countries?.nodes.map((c) => c.name).join(", ") ||
         "Default Location",
-      priceRange: "$$",
+      priceRange: item.priceRange || "",
       averageRating: item.averageRating ?? 0,
       ratingsCount: item.ratingsCount ?? 0,
     }));
