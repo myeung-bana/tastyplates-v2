@@ -1,7 +1,6 @@
 // pages/RestaurantPage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import FilterSidebar from "@/components/FilterSidebar"; // This component is imported but not used in the provided JSX.
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter from "@/components/Filter/Filter";
@@ -25,6 +24,8 @@ interface Restaurant {
   initialSavedStatus?: boolean | null;
   recognitions?: string[];
   recognitionCount?: number;
+  streetAddress?: string;
+  ratingsCount?: number;
 }
 
 const RestaurantPage = () => {
@@ -37,115 +38,55 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const [hasFetchedInitialStatuses, setHasFetchedInitialStatuses] = useState(false);
-  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
-  const [selectedPalates, setSelectedPalates] = useState<string[]>([]);
-  const [selectedPrice, setSelectedPrice] = useState<string | null>(null);
-  const [selectedRating, setSelectedRating] = useState<number | null>(null); 
-  const [selectedBadges, setSelectedBadges] = useState<string | null>(null); 
-  const [selectedSortOption, setSelectedSortOption] = useState<string | null>(null);
-  const [ratingsCounts, setRatingsCounts] = useState<{ [id: number]: number }>({});
+  const [filters, setFilters] = useState({
+    cuisine: null as string | null,
+    palates: [] as string[],
+    price: null as string | null,
+    rating: null as number | null,
+    badges: null as string | null,
+    sortOption: null as string | null,
+  });
 
-  const transformNodes = (nodes: Listing[]): Restaurant[] => {
-    return nodes.map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      name: item.title,
-      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: item.averageRating, 
-      databaseId: item.databaseId || 0,
-      palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
-      listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
-      streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || '',
-      countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
-      priceRange: item.priceRange,
-      initialSavedStatus: null,
-    }));
-  };
+  const mapListingToRestaurant = (item: Listing): Restaurant => ({
+    id: item.id,
+    slug: item.slug,
+    name: item.title,
+    image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+    rating: item.averageRating,
+    databaseId: item.databaseId || 0,
+    palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
+    listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
+    countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
+    priceRange: item.priceRange,
+    initialSavedStatus: item.isFavorite ?? false,
+    streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || item.listingStreet || "",
+    ratingsCount: item.ratingsCount ?? 0,
+  });
 
-  const fetchSavedStatuses = async (restaurantsToProcess: Restaurant[]) => {
-    if (!session?.accessToken) return {};
-    const statuses: Record<string, boolean | null> = {};
-    const visibleRestaurants = restaurantsToProcess.slice(0, 8);
-    await Promise.all(
-      visibleRestaurants.map(async (rest) => {
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.accessToken}`,
-            },
-            body: JSON.stringify({ restaurant_slug: rest.slug, action: "check" }),
-            credentials: "include",
-          });
-          const data = await res.json();
-          statuses[rest.id] = data.status === "saved";
-        } catch (error) {
-          console.error(`Failed to fetch saved status for ${rest.name}:`, error);
-          statuses[rest.id] = false;
-        }
-      })
-    );
-    restaurantsToProcess.slice(8).forEach(rest => {
-      if (!(rest.id in statuses)) {
-        statuses[rest.id] = null;
-      }
-    });
-    return statuses;
-  };
-
-  const fetchRestaurants = async (
-    search: string,
-    first = 8,
-    after: string | null = null,
-    cuisineSlug: string | null,
-    palateSlugs: string[],
-    priceRange?: string | null,
-    status = null,
-    badges?: string | null,
-    sortOption?: string | null, 
-    rating?: number | null,
-  ) => {
+  const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
       const data = await RestaurantService.fetchAllRestaurants(
-        search,
-        first,
+        debouncedSearchTerm,
+        firstOverride ?? (reset && isFirstLoad.current ? 16 : 8),
         after,
-        cuisineSlug,
-        palateSlugs,
-        priceRange,
-        status,
+        filters.cuisine,
+        filters.palates ?? [],
+        filters.price,
         null,
-        badges,
-        sortOption,
-        rating
+        null,
+        filters.badges,
+        filters.sortOption,
+        filters.rating
       );
-      let transformed = transformNodes(data.nodes);
-      let savedStatuses: Record<string, boolean | null> = {};
-
-      if (session?.accessToken) {
-        savedStatuses = await fetchSavedStatuses(transformed);
-        transformed = transformed.map(r => ({ ...r, initialSavedStatus: savedStatuses[r.id] }));
-      } else {
-        transformed = transformed.map(r => ({ ...r, initialSavedStatus: false })); // Default to false if not logged in
-      }
-
-      setRestaurants((prev) => {
-        if (!after) return transformed;
-
+      const transformed = data.nodes.map(mapListingToRestaurant);
+      setRestaurants((prev: Restaurant[]) => {
+        if (reset || !after) return transformed;
         const uniqueMap = new Map<string, Restaurant>();
-
-        // Add existing restaurants to the map
-        prev.forEach(r => uniqueMap.set(r.id, r));
-
-        // Add new restaurants, overwriting if ID already exists (for freshness or updates)
-        transformed.forEach(r => uniqueMap.set(r.id, r));
-
+        prev.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
+        transformed.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
         return Array.from(uniqueMap.values());
       });
-
       setEndCursor(data.pageInfo.endCursor);
       setHasNextPage(data.pageInfo.hasNextPage);
     } catch (error) {
@@ -155,82 +96,55 @@ const RestaurantPage = () => {
     }
   };
 
-  // Effect for initial load and when search term or filters change
+  const handleFilterChange = useCallback((
+    newFilters:
+      {
+        cuisine?: string | null;
+        price?: string | null;
+        rating?: number | null;
+        badges?: string | null;
+        sortOption?: string | null;
+        palates?: string[] | null;
+      }
+  ) => {
+    setFilters(
+      prev => ({
+        ...prev,
+        ...newFilters,
+        palates: Array.isArray(newFilters.palates) ? newFilters.palates : prev.palates
+      }));
+  }, []);
+
   useEffect(() => {
-    // Reset data when search term or filters change
     setRestaurants([]);
     setEndCursor(null);
     setHasNextPage(true);
-    isFirstLoad.current = true; // Reset first load flag
-
-    // Fetch initial batch of restaurants
-    fetchRestaurants(
-      debouncedSearchTerm,
-      isFirstLoad.current ? 16 : 8, // Fetch more on first load
-      null,
-      selectedCuisine,
-      selectedPalates,
-      selectedPrice,
-      null,
-      selectedBadges,
-      selectedSortOption,
-      selectedRating,
-    );
+    isFirstLoad.current = true;
+    fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, , selectedBadges, selectedSortOption, selectedRating, session?.accessToken]);
+  }, [debouncedSearchTerm, JSON.stringify(filters), session?.accessToken]);
 
-  // Effect for infinite scrolling
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !loading) {
-          fetchRestaurants(debouncedSearchTerm, 8, endCursor, selectedCuisine, selectedPalates, selectedPrice,null, selectedBadges ,selectedSortOption, selectedRating);
+          fetchRestaurants(false, endCursor);
         }
       },
       { threshold: 1.0 }
     );
-
     const currentObserverRef = observerRef.current;
     if (currentObserverRef) observer.observe(currentObserverRef);
-
     return () => {
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, selectedCuisine, JSON.stringify(selectedPalates), selectedPrice, selectedSortOption, session?.accessToken]);
+  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, JSON.stringify(filters), session?.accessToken]);
 
-  const handleFilterChange = useCallback((filters: {
-    cuisine?: string | null;
-    price?: string | null;
-    rating?: number | null;
-    badges?: string | null;
-    palates?: string[] | null;
-    sortOption?: string | null;
-  }) => {
-    setSelectedCuisine(filters.cuisine || null);
-    setSelectedPalates(filters.palates || []);
-    setSelectedPrice(filters.price || null);
-    setSelectedRating(filters.rating || null);
-    setSelectedBadges(filters.badges || null);
-    setSelectedSortOption(filters.sortOption || null);
-  }, []);
-
-  useEffect(() => {
-    const fetchAllCounts = async () => {
-      const counts: { [id: number]: number } = {};
-      await Promise.all(
-        restaurants.map(async (restaurant) => {
-          if (restaurant.databaseId) {
-            const count = await RestaurantService.fetchRestaurantRatingsCount(restaurant.databaseId);
-            counts[restaurant.databaseId] = count;
-          }
-        })
-      );
-      setRatingsCounts(counts);
-    };
-    if (restaurants.length > 0) {
-      fetchAllCounts();
+  const handleLoadMore = () => {
+    if (hasNextPage && !loading) {
+      fetchRestaurants(false, endCursor);
     }
-  }, [restaurants]);
+  };
 
   return (
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
@@ -262,7 +176,7 @@ const RestaurantPage = () => {
               key={rest.id}
               restaurant={rest}
               initialSavedStatus={rest.initialSavedStatus}
-              ratingsCount={ratingsCounts[rest.databaseId]}
+              ratingsCount={rest.ratingsCount}
             />
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
@@ -293,7 +207,7 @@ const RestaurantPage = () => {
           {!hasNextPage && !loading && restaurants.length > 0 && ( // Only show if there are restaurants
             <p className="text-gray-400 text-sm">No more content to load.</p>
           )}
-           {!loading && !hasNextPage && restaurants.length === 0 && (
+          {!loading && !hasNextPage && restaurants.length === 0 && (
             <p className="text-gray-400 text-sm">No restaurants found matching your criteria.</p>
           )}
         </div>

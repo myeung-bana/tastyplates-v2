@@ -41,6 +41,8 @@ export interface Listing {
         nodes: { name: string }[];
     };
     cuisines?: string[];
+    isFavorite?: boolean;
+    ratingsCount?: number;
 }
 
 
