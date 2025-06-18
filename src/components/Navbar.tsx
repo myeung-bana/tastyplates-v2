@@ -248,7 +248,7 @@ export default function Navbar(props: any) {
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
+                      <div className={`bg-white flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link href="/listing" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Write a Review
                         </Link>
