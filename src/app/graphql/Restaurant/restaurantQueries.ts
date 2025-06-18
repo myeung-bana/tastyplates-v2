@@ -169,21 +169,25 @@ export const GET_RESTAURANT_BY_ID = gql`
 `;
 
 export const GET_LISTINGS_NAME = gql`
-    query GetListingsName ($searchTerm: String!) {
+    query GetListingsName (
+    $searchTerm: String!,
+    $first: Int,
+    $after: String
+    ) {
         listings(
             where: {
-            search: $searchTerm
+                search: $searchTerm
             }
-            first: 16
-            after: null
+            first: $first
+            after: $after
         ) {
             pageInfo {
-            endCursor
-            hasNextPage
+                endCursor
+                hasNextPage
             }
             nodes {
-            id
-            databaseId
+                id
+                databaseId
                 title
                 slug    
             }

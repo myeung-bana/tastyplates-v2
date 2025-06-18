@@ -215,17 +215,22 @@ export class RestaurantRepository {
 
     static async getAddressByPalate(
         searchTerm: string,
-        taxQuery: any
+        taxQuery: any,
+        first = 32,
+        after: string | null = null,
     ) {
         const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
+        let variables: any = { searchTerm, first, after };
+
+        if (hasTaxQuery) {
+            variables.taxQuery = taxQuery;
+        }
 
         const { data } = await client.query({
             query: hasTaxQuery
                 ? GET_ADDRESS_BY_PALATE_WITH_TAX
                 : GET_ADDRESS_BY_PALATE_NO_TAX,
-            variables: hasTaxQuery
-                ? { searchTerm, taxQuery }
-                : { searchTerm },
+            variables,
         });
 
         return {
@@ -236,7 +241,7 @@ export class RestaurantRepository {
 
     static async getListingsName(
         searchTerm: string,
-        first = 16,
+        first = 32,
         after: string | null = null,
     ) {
         const { data } = await client.query({

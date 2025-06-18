@@ -145,7 +145,7 @@ export const RestaurantService = {
 
     async fetchListingsName(
         searchTerm: string,
-        first = 16,
+        first = 32,
         after: string | null = null,
     ) {
         try {
