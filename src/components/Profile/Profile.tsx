@@ -493,22 +493,46 @@ const Profile = () => {
       id: "checkin",
       label: "Check-in",
       content: (
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {checkinsLoading && !hasFetchedCheckins ? (
-            <div className="col-span-full text-center py-8">Loading…</div>
-          ) : checkins.length > 0 ? (
-            checkins.map((rest) => (
-              <RestaurantCard
-                key={rest.id}
-                restaurant={rest}
-                profileTablist="checkin"
-                initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-8">No check-ins yet.</div>
-          )}
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+            {checkins.length > 0 ? (
+              checkins.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="checkin"
+                  initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+                />
+              ))
+            ) : !checkinsLoading && hasFetchedCheckins ? (
+              <div className="col-span-full text-center py-8">No check-ins yet.</div>
+            ) : null}
+          </div>
+          <div className="flex justify-center text-center mt-6 min-h-[40px]">
+            {checkinsLoading && !hasFetchedCheckins && (
+              <>
+                <svg
+                  className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="35"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeDasharray="164"
+                    strokeDashoffset="40"
+                  />
+                </svg>
+                <span className="text-gray-500 text-sm">Loading...</span>
+              </>
+            )}
+          </div>
+        </>
       ),
     },
   ];
