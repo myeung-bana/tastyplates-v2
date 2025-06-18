@@ -59,14 +59,6 @@ export default function Navbar(props: any) {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      // Clear error params if authenticated
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  // }, [searchParams, status]);
-  }, [status]);
-
-  useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
     if (googleErrorType == 'signup') {
       setIsOpenSignup(true);
