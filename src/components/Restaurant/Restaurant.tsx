@@ -9,6 +9,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -30,6 +31,7 @@ interface Restaurant {
 
 const RestaurantPage = () => {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -116,6 +118,21 @@ const RestaurantPage = () => {
   }, []);
 
   useEffect(() => {
+    const palatesParam = searchParams?.get("palates");
+    const listingParam = searchParams?.get("listing");
+    if (palatesParam) {
+      const decoded = decodeURIComponent(palatesParam);
+      const palatesArray = decoded.split(",").map(p => p.trim()).filter(Boolean);
+      handleFilterChange({ palates: palatesArray });
+    } else if (listingParam) {
+      const decodedListing = decodeURIComponent(listingParam);
+      setSearchTerm(decodedListing);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (searchParams?.get("palates")) return;
+
     setRestaurants([]);
     setEndCursor(null);
     setHasNextPage(true);
@@ -138,7 +155,7 @@ const RestaurantPage = () => {
     return () => {
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, JSON.stringify(filters), session?.accessToken]);
+  }, [hasNextPage, loading, debouncedSearchTerm, searchTerm, endCursor, JSON.stringify(filters), session?.accessToken]);
 
   const handleLoadMore = () => {
     if (hasNextPage && !loading) {

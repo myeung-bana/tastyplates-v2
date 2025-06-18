@@ -16,6 +16,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
+import { useSearchParams } from "next/navigation";
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -25,6 +26,8 @@ const navigationItems = [
 
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
+  const [palateSearch, setPalateSearch] = useState("");
+  const [addressSearch, setAddressSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props;
@@ -32,6 +35,7 @@ export default function Navbar(props: any) {
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
+  const searchParams = useSearchParams();
 
   const handleLogout = async () => {
     removeAllCookies();
@@ -42,6 +46,21 @@ export default function Navbar(props: any) {
   const changeNavBg = () => {
     window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
   };
+
+  useEffect(() => {
+    const palates = searchParams ? searchParams.get("palates") : null;
+    if (palates) {
+      const capitalized = palates.split(",").map((item) => item.trim().split("-").map(
+        (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      ).join("-")
+      ).join(", ");
+      setPalateSearch(capitalized);
+    }
+
+    const address = searchParams ? searchParams.get("address") : null;
+    setAddressSearch(address || "")
+  }, [searchParams]);
+
 
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
@@ -163,6 +182,8 @@ export default function Navbar(props: any) {
                       type="text"
                       placeholder="Search Ethnic"
                       className="hero__search-input"
+                      value={palateSearch}
+                      onChange={(e) => setPalateSearch(e.target.value)}
                     />
                   </div>
                   <div className="hero__search-divider"></div>
@@ -172,6 +193,8 @@ export default function Navbar(props: any) {
                       type="text"
                       placeholder="Search location"
                       className="hero__search-input"
+                      value={addressSearch}
+                      onChange={(e) => setAddressSearch(e.target.value)}
                     />
                     {/* <button
                                 type="button"
