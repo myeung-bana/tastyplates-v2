@@ -59,6 +59,7 @@ const Profile = () => {
   const user = session?.user;
   const targetUserId = user?.id;
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
+  const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
@@ -86,6 +87,7 @@ const Profile = () => {
     userId: number | undefined
   ) => {
     setLoading(true);
+    setlistingLoading(true);
     try {
       const data = await RestaurantService.fetchAllRestaurants(
         "",
@@ -119,6 +121,7 @@ const Profile = () => {
       console.error(error);
     } finally {
       setLoading(false);
+      setlistingLoading(false);
     }
   };
 
@@ -436,6 +439,7 @@ const Profile = () => {
       id: "listings",
       label: "Listings",
       content: (
+        <>
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
           {restaurants.map((rest) => (
             <RestaurantCard
@@ -445,6 +449,31 @@ const Profile = () => {
             />
           ))}
         </div>
+          <div className="flex justify-center text-center mt-6 min-h-[40px]">
+            {listingLoading && restaurants.length === 0 && (
+              <>
+                <svg
+                  className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="35"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeDasharray="164"
+                    strokeDashoffset="40"
+                  />
+                </svg>
+                <span className="text-gray-500 text-sm">Loading...</span>
+              </>
+            )}
+          </div>
+          </>
       ),
     },
     {
