@@ -116,7 +116,9 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
       aria-pressed={checkedIn}
     >
       <FaMapMarkerAlt className={checkedIn ? "text-primary" : undefined} />
-      <span className="underline">{checkedIn ? "Checked-In" : "Check-In"}</span>
+      <span className={checkedIn ? "underline font-bold" : "underline"}>
+        {checkedIn ? "Checked-in" : "Check-In"}
+      </span>
       {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
     </button>
   );
