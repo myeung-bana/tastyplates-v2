@@ -25,7 +25,7 @@ interface Restaurant {
   recognitions?: string[];
   recognitionCount?: number;
   streetAddress?: string;
-  ratingsCount?: number; // <-- Add ratingsCount to Restaurant interface
+  ratingsCount?: number;
 }
 
 const RestaurantPage = () => {
@@ -38,7 +38,6 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const [ratingsCounts, setRatingsCounts] = useState<{ [id: number]: number }>({});
   const [filters, setFilters] = useState({
     cuisine: null as string | null,
     palates: [] as string[],
@@ -48,7 +47,6 @@ const RestaurantPage = () => {
     sortOption: null as string | null,
   });
 
-  // Helper to map Listing to Restaurant
   const mapListingToRestaurant = (item: Listing): Restaurant => ({
     id: item.id,
     slug: item.slug,
@@ -65,7 +63,6 @@ const RestaurantPage = () => {
     ratingsCount: item.ratingsCount ?? 0,
   });
 
-  // Unified fetch function
   const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
@@ -74,13 +71,13 @@ const RestaurantPage = () => {
         firstOverride ?? (reset && isFirstLoad.current ? 16 : 8),
         after,
         filters.cuisine,
-        filters.palates ?? [], // always pass array
+        filters.palates ?? [],
         filters.price,
-        null, // status
-        null, // userId
-        filters.badges, // recognition
-        filters.sortOption, // sortOption
-        filters.rating // rating
+        null,
+        null,
+        filters.badges,
+        filters.sortOption,
+        filters.rating
       );
       const transformed = data.nodes.map(mapListingToRestaurant);
       setRestaurants((prev: Restaurant[]) => {
@@ -99,12 +96,25 @@ const RestaurantPage = () => {
     }
   };
 
-  // Unified filter handler
-  const handleFilterChange = useCallback((newFilters: { cuisine?: string | null; price?: string | null; rating?: number | null; badges?: string | null; sortOption?: string | null; palates?: string[] | null; }) => {
-    setFilters(prev => ({ ...prev, ...newFilters, palates: Array.isArray(newFilters.palates) ? newFilters.palates : prev.palates }));
+  const handleFilterChange = useCallback((
+    newFilters:
+      {
+        cuisine?: string | null;
+        price?: string | null;
+        rating?: number | null;
+        badges?: string | null;
+        sortOption?: string | null;
+        palates?: string[] | null;
+      }
+  ) => {
+    setFilters(
+      prev => ({
+        ...prev,
+        ...newFilters,
+        palates: Array.isArray(newFilters.palates) ? newFilters.palates : prev.palates
+      }));
   }, []);
 
-  // Reset and fetch on filter/search change
   useEffect(() => {
     setRestaurants([]);
     setEndCursor(null);
@@ -114,7 +124,6 @@ const RestaurantPage = () => {
     isFirstLoad.current = false;
   }, [debouncedSearchTerm, JSON.stringify(filters), session?.accessToken]);
 
-  // Infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -172,7 +181,6 @@ const RestaurantPage = () => {
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
         </div>
-
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (
             <>
