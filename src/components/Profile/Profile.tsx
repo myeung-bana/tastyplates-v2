@@ -27,6 +27,8 @@ interface Restaurant {
   priceRange: string;
   databaseId: number;
   palatesNames?: string[];
+  averageRating?: number;
+  ratingsCount?: number;
 }
 
 const Profile = () => {
@@ -71,13 +73,15 @@ const Profile = () => {
       name: item.title,
       image:
         item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5,
+      rating: item.averageRating ?? 0,
       databaseId: item.databaseId || 0, // Default to 0 if not present
       cuisineNames: item.palates || [],
       countries:
         item.countries?.nodes.map((c) => c.name).join(", ") ||
         "Default Location",
       priceRange: "$$",
+      averageRating: item.averageRating ?? 0,
+      ratingsCount: item.ratingsCount ?? 0,
     }));
   };
 
