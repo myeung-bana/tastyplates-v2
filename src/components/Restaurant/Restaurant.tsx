@@ -146,6 +146,20 @@ const RestaurantPage = () => {
     }
   };
 
+  const handleRestaurantClick = async (restaurantId: number) => {
+    if (!session?.accessToken) {
+      console.warn("User is not authenticated");
+      return;
+    }
+
+    try {
+      await RestaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
+      console.log("Visited restaurant recorded.");
+    } catch (error) {
+      console.error("Failed to record visited restaurant:", error);
+    }
+  };
+
   return (
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
@@ -177,6 +191,7 @@ const RestaurantPage = () => {
               restaurant={rest}
               initialSavedStatus={rest.initialSavedStatus}
               ratingsCount={rest.ratingsCount}
+              onClick={() => handleRestaurantClick(rest.databaseId)}
             />
           ))}
           {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}

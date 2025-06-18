@@ -129,6 +129,7 @@ export const GET_RESTAURANT_BY_ID = gql`
   listing(id: $id, idType: $idType) {
         id
         title
+        slug
         content
         palates {
             nodes {
@@ -166,4 +167,19 @@ export const GET_RESTAURANT_BY_ID = gql`
             }
         }
 }
+`;
+
+export const ADD_RECENTLY_VISITED_RESTAURANT = gql`
+  mutation AddRecentlyVisited($postId: Int!) {
+    addRecentlyVisited(postId: $postId)
+  }
+`;
+
+export const GET_RECENTLY_VISITED_RESTAURANTS = gql`
+    query {
+        currentUser {
+        id
+        recentlyVisited
+        }
+    }
 `;
