@@ -83,6 +83,19 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         slug
         content
         priceRange
+        averageRating
+        ratingsCount
+        recognitionCounts {
+            bestService
+            instaWorthy
+            mustRevisit
+            valueForMoney
+        }
+        palateStats {
+            name
+            avg
+            count
+        }
         palates {
             nodes {
                 name
@@ -116,12 +129,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                 nodes {
                     name
                 }
-            }
-        comments(where: {commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1}) {
-                nodes {
-                    recognitions
-                }
-            }    
+            }  
         }
     }`
     ;
