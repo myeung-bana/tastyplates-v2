@@ -13,6 +13,7 @@ export const GET_LISTINGS = gql`
     $recognitionSort: String 
     $minAverageRating: Float
     $statuses: [PostStatusEnum]
+    $streetAddress: String
   ) {
     listings(
         where: {
@@ -25,6 +26,7 @@ export const GET_LISTINGS = gql`
             minAverageRating: $minAverageRating
             author: $userId
             statusIn: $statuses
+            streetAddress: $streetAddress
         }, 
         first: $first
         after: $after
@@ -167,3 +169,29 @@ export const GET_RESTAURANT_BY_ID = gql`
         }
 }
 `;
+
+export const GET_LISTINGS_NAME = gql`
+    query GetListingsName (
+    $searchTerm: String!,
+    $first: Int,
+    $after: String
+    ) {
+        listings(
+            where: {
+                search: $searchTerm
+            }
+            first: $first
+            after: $after
+        ) {
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
+            nodes {
+                id
+                databaseId
+                title
+                slug    
+            }
+        }
+    }`;

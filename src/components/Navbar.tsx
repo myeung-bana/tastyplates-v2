@@ -1,3 +1,4 @@
+// Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -16,6 +17,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
+import { useSearchParams } from "next/navigation";
+import { logOutSuccessfull } from "@/constants/messages";
 
 const navigationItems = [
   { name: "Restaurant", href: "/restaurants" },
@@ -25,6 +28,8 @@ const navigationItems = [
 
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
+  const [palateSearch, setPalateSearch] = useState("");
+  const [addressSearch, setAddressSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props;
@@ -32,10 +37,13 @@ export default function Navbar(props: any) {
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
+  const searchParams = useSearchParams();
 
   const handleLogout = async () => {
     removeAllCookies();
     localStorage.clear();
+    localStorage.setItem('logOutMessage', logOutSuccessfull);
+
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
@@ -43,13 +51,42 @@ export default function Navbar(props: any) {
     window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
   };
 
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (palateSearch) {
+      params.set('palates', encodeURIComponent(palateSearch));
+    }
+    if (addressSearch) {
+      params.set('address', encodeURIComponent(addressSearch));
+    }
+    router.push(`/restaurants?${params.toString()}`);
+  };
+
+  useEffect(() => {
+    const palates = searchParams ? searchParams.get("palates") : null;
+    if (palates) {
+      const capitalized = palates.split(",").map((item) => item.trim().split("-").map(
+        (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      ).join("-")
+      ).join(", ");
+      setPalateSearch(capitalized);
+    }
+
+     const address = searchParams ? searchParams.get("address") : null;
+    // Decode address from URL before setting state
+    setAddressSearch(address ? decodeURIComponent(address) : "");
+  }, [searchParams]);
+
+
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
-    if (loginMessage) {
-      toast.success(loginMessage, {
+    const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
+    if (loginMessage || logOutMessage) {
+      toast.success(loginMessage || logOutMessage, {
         duration: 3000, // 3 seconds
       });
       localStorage.removeItem('loginBackMessage');
+      localStorage.removeItem('logOutMessage');
     }
 
     window.addEventListener("scroll", changeNavBg);
@@ -57,14 +94,6 @@ export default function Navbar(props: any) {
       window.removeEventListener("scroll", changeNavBg);
     };
   }, []);
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      // Clear error params if authenticated
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  // }, [searchParams, status]);
-  }, [status]);
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
@@ -78,7 +107,7 @@ export default function Navbar(props: any) {
 
   // Check for onboarding pages
   const isOnboardingPage = pathname?.includes('onboarding');
-  
+
   return (
     <>
       <SignupModal
@@ -171,6 +200,8 @@ export default function Navbar(props: any) {
                       type="text"
                       placeholder="Search Ethnic"
                       className="hero__search-input"
+                      value={palateSearch}
+                      onChange={(e) => setPalateSearch(e.target.value)}
                     />
                   </div>
                   <div className="hero__search-divider"></div>
@@ -180,6 +211,8 @@ export default function Navbar(props: any) {
                       type="text"
                       placeholder="Search location"
                       className="hero__search-input"
+                      value={addressSearch} // Set value to addressSearch
+                      onChange={(e) => setAddressSearch(e.target.value)}
                     />
                     {/* <button
                                 type="button"
@@ -198,6 +231,7 @@ export default function Navbar(props: any) {
                   <button
                     type="submit"
                     className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
+                    onClick={handleSearch} // Add onClick handler here
                   // disabled={!location || !cuisine}
                   >
                     <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
@@ -217,13 +251,19 @@ export default function Navbar(props: any) {
               </div> : (status !== "authenticated") ? (
                 <>
                   <button
-                    onClick={() => setIsOpenSignin(true)}
-                    className="navbar__button navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold hidden md:block"
+                    onClick={() => {
+                      setIsOpenSignup(false)
+                      setIsOpenSignin(true)
+                    }}
+                    className={`navbar__button navbar__button--primary hover:rounded-[50px] border-none ${isLandingPage && !navBg ? '!bg-transparent !text-white' : ''} ${!isLandingPage ? '!bg-transparent' : ''} font-semibold hidden md:block`}
                   >
                     Log In
                   </button>
                   <button
-                    onClick={() => setIsOpenSignup(true)}
+                    onClick={() => {
+                      setIsOpenSignup(true)
+                      setIsOpenSignin(false)
+                    }}
                     className="navbar__button navbar__button--secondary rounded-[50px] bg-white text-[#494D5D] font-semibold"
                   >
                     Sign Up
@@ -301,12 +341,15 @@ export default function Navbar(props: any) {
                     type="text"
                     placeholder="Start Your Search"
                     className="hero__search-input text-center"
+                    value={palateSearch} // Ensure mobile search also uses palateSearch
+                    onChange={(e) => setPalateSearch(e.target.value)}
                   />
                 </div>
                 <button
                   type="submit"
                   className="hero__search-button !rounded-full h-8 w-8 text-center"
-                  // disabled={!location || !cuisine}
+                  onClick={handleSearch} // Add onClick handler for mobile search
+                // disabled={!location || !cuisine}
                 >
                   <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
                 </button>
