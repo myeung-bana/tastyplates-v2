@@ -1,16 +1,14 @@
+// ListingDraft.tsx
 'use client'
-import { Restaurant } from "@/data/dummyRestaurants" // You'll likely replace this with actual fetched data types
+import { Restaurant } from "@/data/dummyRestaurants"
 import Link from "next/link"
-import { useState, useEffect, use, Suspense } from "react"
+import { useState, useEffect, use, Suspense } from "react" // Ensure Suspense is imported
 import CustomModal from "@/components/ui/Modal/Modal"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
 import { useSession } from "next-auth/react"
-import { user } from "@heroui/theme"
-// import RestaurantService from "@/services/RestaurantService" // Ensure this path is correct
 
-// You might want to define an interface for your fetched restaurant data
 interface FetchedRestaurant {
     id: string;
     databaseId: number;
@@ -22,7 +20,6 @@ interface FetchedRestaurant {
     featuredImage: { node: { sourceUrl: string } };
     listingCategories: { nodes: { id: string; name: string }[] };
     countries: { nodes: { name: string }[] };
-    // Add any other fields you expect, like status if your frontend needs to display it
 }
 
 const ListingDraftPage = () => {
@@ -35,7 +32,7 @@ const ListingDraftPage = () => {
 
     useEffect(() => {
         const getPendingListings = async () => {
-            if (status !== 'authenticated' || !userId) return; // Wait until session is ready
+            if (status !== 'authenticated' || !userId) return;
 
             try {
                 setLoading(true);
@@ -57,8 +54,6 @@ const ListingDraftPage = () => {
     const removeListing = (item: FetchedRestaurant, index: number) => {
         setIsShowDelete(true)
         console.log(item, 'item to remove')
-        // For actual deletion, you would call an API here that also sends the token.
-        // This part would involve another GraphQL mutation or REST API call.
     }
 
     return (
@@ -68,18 +63,21 @@ const ListingDraftPage = () => {
                 <Link href="/listing/explanation" className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
             </div>
             <div className="restaurants__grid mt-8">
-                <Suspense fallback={<div>Loading cards...</div>}>
-                    {loading && <p>Loading draft listings...</p>}
-                    {error && <p className="text-red-500">{error}</p>}
-                    {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
-                    {!loading && pendingListings.length > 0 && (
-                        // Assuming you have a ListingCard component that accepts `restaurant` prop
-                        // and handles deletion. Replace the placeholder div with your ListingCard.
-                        pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
+                {loading && <p>Loading draft listings...</p>}
+                {error && <p className="text-red-500">{error}</p>}
+                {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
+                {!loading && pendingListings.length > 0 && (
+                    // Wrap ListingCardDraft in Suspense if it uses useSearchParams
+                    // The outer Suspense in page.tsx already covers the initial load.
+                    // This inner Suspense would be more for cases where ListingCardDraft
+                    // itself might have async operations or client-side hooks
+                    // that need to be deferred.
+                    <Suspense fallback={<div>Loading card details...</div>}>
+                        {pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
                             <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
-                        ))
-                    )}
-                </Suspense>
+                        ))}
+                    </Suspense>
+                )}
             </div>
             <CustomModal
                 header="Delete this Draft?"
