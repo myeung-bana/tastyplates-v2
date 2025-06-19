@@ -5,6 +5,7 @@ import {
     GET_LISTINGS,
     GET_RESTAURANT_BY_SLUG,
     GET_RESTAURANT_BY_ID,
+    GET_LISTINGS_NAME,
 } from "@/app/graphql/Restaurant/restaurantQueries";
 import { user } from "@heroui/theme";
 import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
@@ -245,7 +246,7 @@ export class RestaurantRepository {
         after: string | null = null,
     ) {
         const { data } = await client.query({
-            query: GET_LISTINGS,
+            query: GET_LISTINGS_NAME,
             variables: {
                 searchTerm,
                 first,
