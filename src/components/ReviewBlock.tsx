@@ -136,7 +136,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           )} */}
           <span className="text-[#9ca3af] text-[10px] md:text-sm p-2">&#8226;</span>
           <span className="review-card__timestamp">
-            {formatDateT(review.date)}
+            {formatDate(review.date)}
           </span>
         </div>
         <div className="review-block__recognitions flex gap-2">
