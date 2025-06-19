@@ -1,3 +1,4 @@
+// Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -50,6 +51,17 @@ export default function Navbar(props: any) {
     window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
   };
 
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (palateSearch) {
+      params.set('palates', encodeURIComponent(palateSearch));
+    }
+    if (addressSearch) {
+      params.set('address', encodeURIComponent(addressSearch));
+    }
+    router.push(`/restaurants?${params.toString()}`);
+  };
+
   useEffect(() => {
     const palates = searchParams ? searchParams.get("palates") : null;
     if (palates) {
@@ -60,8 +72,9 @@ export default function Navbar(props: any) {
       setPalateSearch(capitalized);
     }
 
-    const address = searchParams ? searchParams.get("address") : null;
-    setAddressSearch(address || "")
+     const address = searchParams ? searchParams.get("address") : null;
+    // Decode address from URL before setting state
+    setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
 
 
@@ -94,7 +107,7 @@ export default function Navbar(props: any) {
 
   // Check for onboarding pages
   const isOnboardingPage = pathname?.includes('onboarding');
-  
+
   return (
     <>
       <SignupModal
@@ -198,7 +211,7 @@ export default function Navbar(props: any) {
                       type="text"
                       placeholder="Search location"
                       className="hero__search-input"
-                      value={addressSearch}
+                      value={addressSearch} // Set value to addressSearch
                       onChange={(e) => setAddressSearch(e.target.value)}
                     />
                     {/* <button
@@ -218,6 +231,7 @@ export default function Navbar(props: any) {
                   <button
                     type="submit"
                     className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
+                    onClick={handleSearch} // Add onClick handler here
                   // disabled={!location || !cuisine}
                   >
                     <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
@@ -321,12 +335,15 @@ export default function Navbar(props: any) {
                     type="text"
                     placeholder="Start Your Search"
                     className="hero__search-input text-center"
+                    value={palateSearch} // Ensure mobile search also uses palateSearch
+                    onChange={(e) => setPalateSearch(e.target.value)}
                   />
                 </div>
                 <button
                   type="submit"
                   className="hero__search-button !rounded-full h-8 w-8 text-center"
-                  // disabled={!location || !cuisine}
+                  onClick={handleSearch} // Add onClick handler for mobile search
+                // disabled={!location || !cuisine}
                 >
                   <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
                 </button>

@@ -47,7 +47,8 @@ export class RestaurantRepository {
         recognition: string | null = null,
         sortOption?: string | null,
         rating: number | null = null,
-        statuses: string[] | null = null
+        statuses: string[] | null = null,
+        address: string | null = null
     ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -63,6 +64,7 @@ export class RestaurantRepository {
                 recognitionSort: sortOption,
                 minAverageRating: rating,
                 statuses: statuses || [],
+                streetAddress: address || "",
             },
         });
         return {
