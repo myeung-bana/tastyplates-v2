@@ -67,11 +67,6 @@ const ListingDraftPage = () => {
                 {error && <p className="text-red-500">{error}</p>}
                 {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
                 {!loading && pendingListings.length > 0 && (
-                    // Wrap ListingCardDraft in Suspense if it uses useSearchParams
-                    // The outer Suspense in page.tsx already covers the initial load.
-                    // This inner Suspense would be more for cases where ListingCardDraft
-                    // itself might have async operations or client-side hooks
-                    // that need to be deferred.
                     <Suspense fallback={<div>Loading card details...</div>}>
                         {pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
                             <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
