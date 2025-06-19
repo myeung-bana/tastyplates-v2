@@ -190,7 +190,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
             <div className="auth__card !py-4 !rounded-3xl">
-              <h1 className="auth__title !text-xl !font-semibold bg-white">Sign up</h1>
+              <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
               <form className="auth__form border-y border-[#CACACA] !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
                 <div className="auth__form-group mt-6">
                   <label htmlFor="email" className="auth__label">
@@ -293,7 +293,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
-              <p className="auth__footer !mt-3.5 bg-white">
+              <p className="auth__footer !mt-3.5">
                 Already have an account?{" "}
                 <a
                   className="auth__link !text-[#494D5D] cursor-pointer"
