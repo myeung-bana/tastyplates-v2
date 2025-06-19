@@ -20,5 +20,6 @@ export const emailOccurredError = "An error occurred while checking the email.";
 export const invalidEmailFormat = "Invalid email format.";
 export const registrationSuccess = "Registration successful!";
 export const pleaseLoginAgain = "Please login again";
+export const logOutSuccessfull = "Logged out successfully";
 export const checkEmailTitle = "Error checking email:";
 export const unfinishedSaved = "Unfinished registration saved";

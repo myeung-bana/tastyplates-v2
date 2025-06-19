@@ -28,7 +28,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
   useEffect(() => {
     const googleError = Cookies.get('googleError');
     if (googleError) {
-      setMessage(decodeURIComponent(googleError));
+      if (googleError.includes('exist')) {
+        setMessage(decodeURIComponent(loginFailed));
+      } else {
+        setMessage(decodeURIComponent(googleError));
+      }
       setMessageType("error");
       removeAllCookies();
     }
