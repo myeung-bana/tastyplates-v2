@@ -79,15 +79,23 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     return review.palateNames.map((p: string) => p.toLowerCase()).includes(selectedPalate);
   });
 
+  const getNumericRating = (review: any) => {
+    if (typeof review.rating === 'number') return review.rating;
+    if (typeof review.rating === 'string' && !isNaN(Number(review.rating))) return Number(review.rating);
+    if (typeof review.reviewStars === 'number') return review.reviewStars;
+    if (typeof review.reviewStars === 'string' && !isNaN(Number(review.reviewStars))) return Number(review.reviewStars);
+    return 0;
+  };
+
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     if (sortOrder === "newest") {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     } else if (sortOrder === "oldest") {
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     } else if (sortOrder === "highest") {
-      return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      return getNumericRating(b) - getNumericRating(a);
     } else if (sortOrder === "lowest") {
-      return (Number(a.rating) || 0) - (Number(b.rating) || 0);
+      return getNumericRating(a) - getNumericRating(b);
     }
     return 0;
   });
@@ -215,6 +223,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
           <div className="search-bar">
             <select
               className="review-filter"
+              style={{ color: '#494D5D' }}
               value={selectedPalate}
               onChange={e => { setSelectedPalate(e.target.value); setCurrentPage(1); }}
             >
@@ -228,6 +237,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
           <div className="search-bar">
             <select
               className="review-filter"
+              style={{ color: '#494D5D' }}
               value={sortOrder}
               onChange={e => { setSortOrder(e.target.value); setCurrentPage(1); }}
             >
