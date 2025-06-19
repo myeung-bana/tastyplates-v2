@@ -218,7 +218,7 @@ export default function Navbar(props: any) {
                 <>
                   <button
                     onClick={() => setIsOpenSignin(true)}
-                    className="navbar__button navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold hidden md:block"
+                    className={`navbar__button navbar__button--primary hover:rounded-[50px] border-none ${isLandingPage && !navBg ? '!bg-transparent !text-white' : ''} ${!isLandingPage ? '!bg-transparent' : ''} font-semibold hidden md:block`}
                   >
                     Log In
                   </button>

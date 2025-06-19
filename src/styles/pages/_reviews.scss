@@ -81,10 +81,15 @@
   }
 
   &__user-image {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     object-fit: cover;
+
+    @media (max-width: 767px) {
+      width: 32px;
+      height: 32px;
+    }
   }
 
   &__user-info {
@@ -167,9 +172,13 @@
   }
 
   &__text {
-    color: #4b5563;
+    color: #494D5D;
     margin-bottom: 0.5rem;
-    line-height: 1;
+    line-height: 1.5;
+
+    @media (max-width: 767px) {
+      line-height: 1;
+    }
   }
 
   &__timestamp {
