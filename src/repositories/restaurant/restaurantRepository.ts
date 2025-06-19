@@ -87,8 +87,7 @@ export class RestaurantRepository {
             fetchPolicy: "no-cache",
         });
 
-        console.log("Raw GraphQL response data in getRestaurantById:", data); // Add this line
-        console.log("data.listing.nodes in getRestaurantById:", data.listing.nodes); // Add this line
+        console.log("Raw GraphQL response data in getRestaurantById:", data);
 
         return data.listing;
     }

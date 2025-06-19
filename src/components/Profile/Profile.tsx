@@ -73,15 +73,20 @@ const Profile = () => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
-      palatesNames: item.palates?.nodes?.map((p: any) => p.name) || [],
-      streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || '',
+      palatesNames:
+        Array.isArray(item?.palates?.nodes)
+          ? item.palates.nodes.map((p: any) => p?.name ?? "Unknown")
+          : [],
+      streetAddress:
+        item?.listingDetails?.googleMapUrl?.streetAddress || "",
       countries:
-        item.countries?.nodes.map((c) => c.name).join(", ") ||
-        "Default Location",
-      priceRange: item.priceRange || "N/A",
+        Array.isArray(item?.countries?.nodes)
+          ? item.countries.nodes.map((c) => c?.name ?? "Unknown").join(", ")
+          : "Default Location",
+      priceRange: item.priceRange ?? "N/A",
       averageRating: item.averageRating ?? 0,
       ratingsCount: item.ratingsCount ?? 0,
     }));
@@ -593,36 +598,30 @@ const Profile = () => {
         );
         const data = await res.json();
         const favoriteIds = data.favorites || [];
-        setWishlist(
-          restaurants.filter((r) => favoriteIds.includes(r.databaseId))
-        );
+        if (favoriteIds.length === 0) {
+          setWishlist([]);
+        } else {
+          const results = await Promise.all(
+            favoriteIds.map((id: number) =>
+              RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+            )
+          );
+
+          const validResults = results.filter(r => r && typeof r === "object" && r.id);
+          const transformed = transformNodes(validResults);
+          setWishlist(transformed);
+        }
       } catch (e) {
+        console.error("Error fetching wishlist:", e);
         setWishlist([]);
       } finally {
         setWishlistLoading(false);
       }
     };
-    if (session && restaurants.length > 0) fetchWishlist();
-    else setWishlist([]);
-  }, [session, restaurants]);
 
-  useEffect(() => {
-    const handler = (e: CustomEvent) => {
-      const { slug, status } = e.detail || {};
-      if (typeof slug !== 'string') return;
-      setWishlist((prev) => {
-        if (status === false) {
-          return prev.filter((r) => r.slug !== slug);
-        } else if (status === true && !prev.some((r) => r.slug === slug)) {
-          const found = restaurants.find((r) => r.slug === slug);
-          return found ? [...prev, found] : prev;
-        }
-        return prev;
-      });
-    };
-    window.addEventListener('restaurant-favorite-changed', handler as EventListener);
-    return () => window.removeEventListener('restaurant-favorite-changed', handler as EventListener);
-  }, [restaurants]);
+    if (session) fetchWishlist();
+    else setWishlist([]);
+  }, [session]);
 
   useEffect(() => {
     let didCancel = false;
@@ -641,9 +640,19 @@ const Profile = () => {
         const data = await res.json();
         const checkinIds = data.checkins || [];
         if (!didCancel) {
-          setCheckins(
-            restaurants.filter((r) => checkinIds.includes(r.databaseId))
-          );
+          if (checkinIds.length === 0) {
+            setCheckins([]);
+          } else {
+            const results = await Promise.all(
+              checkinIds.map((id: number) =>
+                RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+              )
+            );
+            // Only keep valid restaurant objects
+            const validResults = results.filter(r => r && typeof r === "object" && r.id);
+            const transformed = transformNodes(validResults);
+            setCheckins(transformed);
+          }
           setHasFetchedCheckins(true);
         }
       } catch (e) {
@@ -652,17 +661,16 @@ const Profile = () => {
         if (!didCancel) setCheckinsLoading(false);
       }
     };
-    if (session && restaurants.length > 0) {
+    if (session) {
       fetchCheckins();
-    }
-    else if (!session || restaurants.length === 0) {
+    } else {
       setCheckins([]);
       setHasFetchedCheckins(false);
     }
     return () => {
       didCancel = true;
     };
-  }, [session, restaurants]);
+  }, [session]);
 
   return (
     <>
