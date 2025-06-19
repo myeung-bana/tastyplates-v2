@@ -5,8 +5,10 @@ import {
     GET_LISTINGS,
     GET_RESTAURANT_BY_SLUG,
     GET_RESTAURANT_BY_ID,
+    GET_LISTINGS_NAME,
 } from "@/app/graphql/Restaurant/restaurantQueries";
 import { user } from "@heroui/theme";
+import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -46,7 +48,8 @@ export class RestaurantRepository {
         recognition: string | null = null,
         sortOption?: string | null,
         rating: number | null = null,
-        statuses: string[] | null = null
+        statuses: string[] | null = null,
+        address: string | null = null
     ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -62,6 +65,7 @@ export class RestaurantRepository {
                 recognitionSort: sortOption,
                 minAverageRating: rating,
                 statuses: statuses || [],
+                streetAddress: address || "",
             },
         });
         return {
@@ -209,5 +213,50 @@ export class RestaurantRepository {
             console.error('Error fetching restaurant ratings count:', error);
             return 0;
         }
+    }
+
+    static async getAddressByPalate(
+        searchTerm: string,
+        taxQuery: any,
+        first = 32,
+        after: string | null = null,
+    ) {
+        const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
+        let variables: any = { searchTerm, first, after };
+
+        if (hasTaxQuery) {
+            variables.taxQuery = taxQuery;
+        }
+
+        const { data } = await client.query({
+            query: hasTaxQuery
+                ? GET_ADDRESS_BY_PALATE_WITH_TAX
+                : GET_ADDRESS_BY_PALATE_NO_TAX,
+            variables,
+        });
+
+        return {
+            nodes: data.listings.nodes,
+            pageInfo: data.listings.pageInfo,
+        };
+    }
+
+    static async getListingsName(
+        searchTerm: string,
+        first = 32,
+        after: string | null = null,
+    ) {
+        const { data } = await client.query({
+            query: GET_LISTINGS_NAME,
+            variables: {
+                searchTerm,
+                first,
+                after,
+            },
+        });
+        return {
+            nodes: data.listings.nodes,
+            pageInfo: data.listings.pageInfo,
+        };
     }
 }
