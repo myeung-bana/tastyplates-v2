@@ -81,8 +81,10 @@ export default function Navbar(props: any) {
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
     const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
-    if (loginMessage || logOutMessage) {
-      toast.success(loginMessage || logOutMessage, {
+    const googleMessage = Cookies.get('logInMessage') ?? "";
+
+    if (loginMessage || logOutMessage || googleMessage) {
+      toast.success(loginMessage || logOutMessage || googleMessage, {
         duration: 3000, // 3 seconds
       });
       localStorage.removeItem('loginBackMessage');
