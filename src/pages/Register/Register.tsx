@@ -114,6 +114,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const signUpWithGoogle = async () => {
     try {
       setError("");
+      setIsLoading(true);
       localStorage.removeItem('registrationData');
       removeAllCookies();
       // Set a cookie to indicate signup intent
