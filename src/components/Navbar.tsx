@@ -237,13 +237,19 @@ export default function Navbar(props: any) {
               </div> : (status !== "authenticated") ? (
                 <>
                   <button
-                    onClick={() => setIsOpenSignin(true)}
+                    onClick={() => {
+                      setIsOpenSignup(false)
+                      setIsOpenSignin(true)
+                    }}
                     className={`navbar__button navbar__button--primary hover:rounded-[50px] border-none ${isLandingPage && !navBg ? '!bg-transparent !text-white' : ''} ${!isLandingPage ? '!bg-transparent' : ''} font-semibold hidden md:block`}
                   >
                     Log In
                   </button>
                   <button
-                    onClick={() => setIsOpenSignup(true)}
+                    onClick={() => {
+                      setIsOpenSignup(true)
+                      setIsOpenSignin(false)
+                    }}
                     className="navbar__button navbar__button--secondary rounded-[50px] bg-white text-[#494D5D] font-semibold"
                   >
                     Sign Up
