@@ -10,7 +10,7 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { Review } from "@/data/dummyReviews";
 import ReviewModal from "@/components/ReviewModal";
-import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import CheckInRestaurantButton from "@/components/CheckInRestaurantButton";
 
 type tParams = { slug: string };
 
@@ -290,15 +291,11 @@ export default function RestaurantDetail() {
                   </div>
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
-                  {/* <a
-                    href="/listing"
-                    className="restaurant-detail__review-button"
-                  > */}
+                  <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
                   <button onClick={addReview} className="flex items-center gap-2 hover:underline">
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
-                  {/* </a> */}
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
