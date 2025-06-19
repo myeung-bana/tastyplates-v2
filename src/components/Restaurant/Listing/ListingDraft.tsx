@@ -1,7 +1,7 @@
 'use client'
 import { Restaurant } from "@/data/dummyRestaurants" // You'll likely replace this with actual fetched data types
 import Link from "next/link"
-import { useState, useEffect, use } from "react"
+import { useState, useEffect, use, Suspense } from "react"
 import CustomModal from "@/components/ui/Modal/Modal"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
@@ -33,25 +33,25 @@ const ListingDraftPage = () => {
     const { data: session, status } = useSession();
     const userId = session?.user?.id || null;
 
-useEffect(() => {
-  const getPendingListings = async () => {
-    if (status !== 'authenticated' || !userId) return; // Wait until session is ready
+    useEffect(() => {
+        const getPendingListings = async () => {
+            if (status !== 'authenticated' || !userId) return; // Wait until session is ready
 
-    try {
-      setLoading(true);
-      const data = await RestaurantService.fetchAllRestaurants("", 10, null, "", [], "", "PENDING", userId)
-      console.log("Fetched pending listings:", data);
-      setPendingListings(data.nodes);
-    } catch (err) {
-      console.error("Failed to fetch pending listings:", err);
-      setError("Failed to load pending listings. Please ensure you are logged in.");
-    } finally {
-      setLoading(false);
-    }
-  };
+            try {
+                setLoading(true);
+                const data = await RestaurantService.fetchAllRestaurants("", 10, null, "", [], "", "PENDING", userId)
+                console.log("Fetched pending listings:", data);
+                setPendingListings(data.nodes);
+            } catch (err) {
+                console.error("Failed to fetch pending listings:", err);
+                setError("Failed to load pending listings. Please ensure you are logged in.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  getPendingListings();
-}, [status, userId]);
+        getPendingListings();
+    }, [status, userId]);
 
 
     const removeListing = (item: FetchedRestaurant, index: number) => {
@@ -68,16 +68,18 @@ useEffect(() => {
                 <Link href="/listing/explanation" className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
             </div>
             <div className="restaurants__grid mt-8">
-                {loading && <p>Loading draft listings...</p>}
-                {error && <p className="text-red-500">{error}</p>}
-                {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
-                {!loading && pendingListings.length > 0 && (
-                    // Assuming you have a ListingCard component that accepts `restaurant` prop
-                    // and handles deletion. Replace the placeholder div with your ListingCard.
-                    pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
-                        <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
-                    ))
-                )}
+                <Suspense fallback={<div>Loading cards...</div>}>
+                    {loading && <p>Loading draft listings...</p>}
+                    {error && <p className="text-red-500">{error}</p>}
+                    {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
+                    {!loading && pendingListings.length > 0 && (
+                        // Assuming you have a ListingCard component that accepts `restaurant` prop
+                        // and handles deletion. Replace the placeholder div with your ListingCard.
+                        pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
+                            <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
+                        ))
+                    )}
+                </Suspense>
             </div>
             <CustomModal
                 header="Delete this Draft?"

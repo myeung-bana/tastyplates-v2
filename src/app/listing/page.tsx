@@ -1,10 +1,13 @@
 import ListingPage from "@/components/Restaurant/Listing/Listing";
+import { Suspense } from "react";
 
 const AddReviewPage = () => {
   return (
-    <section>
-      <ListingPage />
-    </section>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <section>
+        <ListingPage />
+      </section>
+    </Suspense>
   );
 };
 
