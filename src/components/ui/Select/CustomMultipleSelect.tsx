@@ -21,7 +21,8 @@ interface CustomMultipleSelectProps {
     onChange?: (keys: Set<Key>) => void;
     className?: string;
     baseClassName?: string;
-    dropDownClassName?:string;
+    dropDownClassName?: string;
+    itemClassName?: string;
     hideDropdownLabel?: boolean;
     hideDropdownSearch?: boolean;
     enableCheckboxHeader?: boolean;
@@ -228,8 +229,8 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                     </div>) : ''}
                     <div className="overflow-y-auto">
                         {filteredItems.map((item, index) => (
-                            <div 
-                                key={item.key} 
+                            <div
+                                key={item.key}
                                 className={`border-b border-[#E5E5E5] last:border-b-0`}
                             >
                                 <div
@@ -260,7 +261,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                         {item.children?.map((child) => (
                                             <div
                                                 key={child.key}
-                                                className="flex items-center gap-2 h-[48px] px-6 cursor-pointer hover:bg-gray-50"
+                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 ${props.itemClassName}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     const newSelection = new Set(props.value || new Set<Key>());
