@@ -100,14 +100,12 @@ const Hero = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const palateLabels = Array.from(selectedPalates).join(",");
     const queryParams = new URLSearchParams();
 
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      if (palateLabels) queryParams.set("palates", palateLabels);
+      if (cuisine) queryParams.set("palates", cuisine);
       if (location) queryParams.set("address", location);
     }
 
@@ -166,25 +164,42 @@ const Hero = () => {
   };
 
   const handlePalateChange = async (values: Set<Key>) => {
-    setLocation('')
-    setListing('')
+    setLocation('');
+    setListing('');
     setSelectedPalates(values);
-    const selectedLabels = Array.from(values)
-      .map((value) => {
-        for (const category of palateOptions) {
-          const found = category.children?.find(
-            (child) => child.key === value
-          );
-          if (found) return found.label;
-        }
-        return value;
-      })
-      .join(", ");
 
-    setCuisine(selectedLabels);
+    // Get current custom inputs in cuisine that are NOT from palateOptions
+    const allPalateLabels = palateOptions.flatMap((group) =>
+      group.children?.map((child) => child.label.toLowerCase())
+    );
+
+    const currentCuisineParts = cuisine
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s !== '');
+
+    const customInputs = currentCuisineParts.filter(
+      (label) => !allPalateLabels.includes(label.toLowerCase())
+    );
+
+    // Extract new selected labels from palateOptions based on selected keys
+    const selectedLabels = Array.from(values).map((value) => {
+      for (const category of palateOptions) {
+        const found = category.children?.find((child) => child.key === value);
+        if (found) return found.label;
+      }
+      return null;
+    }).filter(Boolean) as string[];
+
+    // Merge and dedupe: custom inputs + new selected palate labels
+    const mergedLabels = Array.from(new Set([...customInputs, ...selectedLabels]));
+
+    setCuisine(mergedLabels.join(', '));
+
+    console.log('cuisine:', mergedLabels.join(', '))
 
     fetchPalatesDebouncedRef.current?.(values);
-  };
+  };  
 
   const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation('')
