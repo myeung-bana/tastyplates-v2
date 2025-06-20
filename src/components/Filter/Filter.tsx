@@ -1,3 +1,4 @@
+// Filter.tsx
 // components/Filter/Filter.tsx
 import { GiRoundStar } from "react-icons/gi";
 import "@/styles/components/filter.scss";
@@ -18,6 +19,7 @@ interface FilterProps {
     sortOption?: string | null;
     palates?: string[] | null;
   }) => void;
+  initialPalates?: string[]; // Add this prop
 }
 
 interface Palate {
@@ -29,7 +31,7 @@ interface Palate {
   }[];
 }
 
-const Filter = ({ onFilterChange }: FilterProps) => {
+const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // Initialize initialPalates
   const [cuisine, setCuisine] = useState<string>("All");
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
@@ -43,7 +45,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>("");
-  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
+  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set(initialPalates)); // Initialize with prop
   const [badge, setBadge] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("None");
 
@@ -91,6 +93,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       .catch((error) => console.error("Error fetching palates:", error))
       .finally(() => setIsLoadingPalates(false));
   }, []);
+
+  // Update selectedPalates when initialPalates prop changes
+  useEffect(() => {
+    setSelectedPalates(new Set(initialPalates));
+  }, [initialPalates]);
 
   const prices = [
     { name: "$", value: "$" },

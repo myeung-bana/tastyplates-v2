@@ -1,3 +1,4 @@
+// Restaurant.tsx
 // pages/RestaurantPage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -9,6 +10,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -30,7 +32,9 @@ interface Restaurant {
 
 const RestaurantPage = () => {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchAddress, setSearchAddress] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,7 +81,9 @@ const RestaurantPage = () => {
         null,
         filters.badges,
         filters.sortOption,
-        filters.rating
+        filters.rating,
+        null,
+        searchAddress,
       );
       const transformed = data.nodes.map(mapListingToRestaurant);
       setRestaurants((prev: Restaurant[]) => {
@@ -116,13 +122,44 @@ const RestaurantPage = () => {
   }, []);
 
   useEffect(() => {
+    const palatesParam = searchParams?.get("palates");
+    const addressParam = searchParams?.get("address");
+
+    // Handle palates filter: Add if present, or clear if not present
+    if (palatesParam) {
+      const decodedPalates = decodeURIComponent(palatesParam);
+      const newPalatesArray = decodedPalates.split(",").map(p => p.trim()).filter(Boolean);
+      setFilters(prevFilters => {
+        const combinedPalates = new Set([...prevFilters.palates, ...newPalatesArray]);
+        return {
+          ...prevFilters,
+          palates: Array.from(combinedPalates)
+        };
+      });
+    } else {
+      // If palatesParam is not in the URL, reset the palates filter
+      setFilters(prevFilters => ({
+        ...prevFilters,
+        palates: []
+      }));
+    }
+
+    if (addressParam) {
+      setSearchAddress(decodeURIComponent(addressParam));
+    } else {
+      setSearchAddress("");
+    }
+
+  }, [searchParams]); // Depend on searchParams to react to URL changes
+
+  useEffect(() => {
     setRestaurants([]);
     setEndCursor(null);
     setHasNextPage(true);
     isFirstLoad.current = true;
     fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, JSON.stringify(filters), session?.accessToken]);
+  }, [debouncedSearchTerm, JSON.stringify(filters), searchAddress, session?.accessToken]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -138,7 +175,7 @@ const RestaurantPage = () => {
     return () => {
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, endCursor, JSON.stringify(filters), session?.accessToken]);
+  }, [hasNextPage, loading, debouncedSearchTerm, searchTerm, endCursor, JSON.stringify(filters), searchAddress, session?.accessToken]);
 
   const handleLoadMore = () => {
     if (hasNextPage && !loading) {
@@ -164,11 +201,11 @@ const RestaurantPage = () => {
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
-          <Filter onFilterChange={handleFilterChange} />
+          <Filter onFilterChange={handleFilterChange} initialPalates={filters.palates} />
           <div className="search-bar hidden sm:block relative">
             <input
               type="text"
-              placeholder="Search by Listing Name"
+              placeholder="Search by Listing Name or Address"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar__input"

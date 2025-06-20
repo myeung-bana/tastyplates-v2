@@ -47,7 +47,7 @@ export default function CustomModal(props: any) {
           ),
           footer: cn("!pt-0", footerClass),
           closeButton: "hidden",
-          wrapper: cn(wrapperClass)
+          wrapper: wrapperClass
         }}
         placement="center"
         closeButton={false}
