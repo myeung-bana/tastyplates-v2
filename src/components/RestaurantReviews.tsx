@@ -113,10 +113,10 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                     recognitions: Array.isArray(review.recognitions)
                       ? review.recognitions
                       : [],
-                    palateNames: Array.isArray(review.palates)
-                      ? review.palates[0]
-                        ?.split("|")
-                        .map((p: any) => p.trim())
+                    palateNames: typeof review.palates === "string"
+                      ? review.palates
+                        .split("|")
+                        .map((p: string) => p.trim())
                         .filter(Boolean)
                       : [],
                     commentLikes: review.commentLikes ?? 0,

@@ -160,27 +160,6 @@ export const GET_USER_REVIEWS = gql`
   }
 `;
 
-// export const GET_USER_LIKED_TRUE_OR_FALSE = gql`
-//   query GetReviews($first: Int = 16, $after: String) {
-//     comments(
-//       where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
-//       first: $first
-//       after: $after
-//     ) {
-//       nodes {
-//         id
-//         content
-//         commentLikes
-//         userLiked
-//       }
-//       pageInfo {
-//         hasNextPage
-//         endCursor
-//       }
-//     }
-//   }
-// `;
-
 export const GET_REVIEWS_BY_RESTAURANT_ID = gql`
   query GetReviewsByRestaurantId($restaurantId: ID!) {
     reviews(where: { restaurant: $restaurantId }) {
