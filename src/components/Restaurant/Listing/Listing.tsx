@@ -30,17 +30,16 @@ const ListingPage = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
+  const [loadingVisited, setLoadingVisited] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
-  // const [hasMore, setHasMore] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
   const [allDrafts, setAllDrafts] = useState<ReviewDraft[]>([]);
   const [draftToDelete, setDraftToDelete] = useState<ReviewDraft | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
-  // const [afterCursor, setAfterCursor] = useState<string | null>(null);
+  const [recentlyVisitedRestaurants, setRecentlyVisitedRestaurants] = useState<Restaurant[]>([]);
 
-  //TEMPORARY DATA
   // Helper: transform GraphQL node to Restaurant
   const transformNodes = (nodes: any[]): Restaurant[] => {
     return nodes.map((item: any) => ({
@@ -112,6 +111,13 @@ const ListingPage = () => {
     fetchRestaurants("", 8, null);
   }, []);
 
+  const filteredRestaurants = searchTerm
+    ? restaurants.filter((restaurant) =>
+      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    : restaurants;
+
+
   const fetchReviewDrafts = async () => {
     setLoadingDrafts(true);
     try {
@@ -148,20 +154,6 @@ const ListingPage = () => {
     }
   };
 
-
-
-
-
-  // Filter restaurants based on the selected cuisine type
-  // const filteredRestaurants = restaurants.filter((restaurant) =>
-  //   restaurant.cuisineIds.some((cuisineId) =>
-  //     cuisines
-  //       .find((cuisine) => cuisine.id === cuisineId)
-  //       ?.name.toLowerCase()
-  //       .includes(searchTerm.toLowerCase())
-  //   )
-  // );
-
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
   }
@@ -171,11 +163,31 @@ const ListingPage = () => {
     setIsShowDelete(true);
   }
 
-  const filteredRestaurants = searchTerm
-    ? restaurants.filter((restaurant) =>
-      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    : restaurants;
+  const fetchRecentlyVisited = async () => {
+    if (!session?.accessToken) return;
+
+    setLoadingVisited(true);
+    try {
+      const visitedIds = await RestaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
+      const restaurantPromises = visitedIds.map((id: any) =>
+        RestaurantService.fetchRestaurantById(id)
+      );
+      const restaurants = await Promise.all(restaurantPromises);
+      const transformed = transformNodes(restaurants);
+      setRecentlyVisitedRestaurants(transformed);
+    } catch (error) {
+      console.error("Failed to fetch recently visited restaurants:", error);
+    } finally {
+      setLoadingVisited(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.accessToken) {
+      fetchRecentlyVisited();
+    }
+  }, [session?.accessToken]);
+
 
   return (
     <>
@@ -225,17 +237,30 @@ const ListingPage = () => {
           <div className="restaurants__container mt-6 md:mt-10 w-full">
             <div className="restaurants__content mt-6 md:mt-10">
               <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
+              {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
+                <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+                  You haven’t visited any restaurants yet.
+                </p>
+              )}
               <div className="restaurants__grid mt-6 md:mt-8">
-                {/* {restaurants.map((rest) => (
+                {recentlyVisitedRestaurants.map((rest) => (
                   <RestaurantCard key={rest.id} restaurant={rest} />
-                ))} */}
+                ))}
+                {loadingVisited && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            </div>
+          </div>
+          {/* <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__content mt-6 md:mt-10">
+              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Restaurants</h1>
+              <div className="restaurants__grid mt-6 md:mt-8">
                 {filteredRestaurants.map((rest) => (
                   <RestaurantCard key={rest.id} restaurant={rest} />
                 ))}
                 {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
       <ReviewModal

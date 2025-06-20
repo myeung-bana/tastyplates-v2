@@ -121,6 +121,24 @@ export const RestaurantService = {
         return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
     },
 
+    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
+        try {
+            return await RestaurantRepository.addRecentlyVisitedRestaurant(postId, accessToken);
+        } catch (error) {
+            console.error('Error adding recently visited restaurant:', error);
+            throw new Error('Failed to add recently visited restaurant');
+        }
+    },
+
+    async fetchRecentlyVisitedRestaurants(accessToken?: string) {
+        try {
+            return await RestaurantRepository.getRecentlyVisitedRestaurants(accessToken);
+        } catch (error) {
+            console.error('Error fetching recently visited restaurants:', error);
+            throw new Error('Failed to fetching recently visited restaurants');
+        }
+    },
+
     async fetchAddressByPalate(
         searchTerm: string,
         palateSlugs: string[]
