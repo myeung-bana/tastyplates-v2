@@ -31,6 +31,7 @@ const ListingPage = () => {
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loadingVisited, setLoadingVisited] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
@@ -78,6 +79,44 @@ const ListingPage = () => {
       reviewStars: item.review_stars,
     }));
   };
+
+  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+    setLoading(true);
+    try {
+      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const transformed = transformNodes(data.nodes);
+
+      setRestaurants(prev => {
+        const limited = !after ? transformed.slice(0, 4) : transformed;
+        if (!after) {
+          // New search: replace list
+          return limited;
+        }
+        // Pagination: append unique restaurants only
+        const all = [...prev, ...transformed];
+        const uniqueMap = new Map(all.map(r => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      // setAfterCursor(data.pageInfo.endCursor);
+      // setHasMore(data.pageInfo.hasNextPage);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRestaurants("", 8, null);
+  }, []);
+
+  const filteredRestaurants = searchTerm
+    ? restaurants.filter((restaurant) =>
+      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    : restaurants;
+
 
   const fetchReviewDrafts = async () => {
     setLoadingDrafts(true);
@@ -211,6 +250,17 @@ const ListingPage = () => {
               </div>
             </div>
           </div>
+          {/* <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__content mt-6 md:mt-10">
+              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Restaurants</h1>
+              <div className="restaurants__grid mt-6 md:mt-8">
+                {filteredRestaurants.map((rest) => (
+                  <RestaurantCard key={rest.id} restaurant={rest} />
+                ))}
+                {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            </div>
+          </div> */}
         </div>
       </div>
       <ReviewModal
