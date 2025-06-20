@@ -87,6 +87,8 @@ export default function Navbar(props: any) {
       toast.success(loginMessage || logOutMessage || googleMessage, {
         duration: 3000, // 3 seconds
       });
+
+      removeAllCookies(['logInMessage']);
       localStorage.removeItem('loginBackMessage');
       localStorage.removeItem('logOutMessage');
     }
