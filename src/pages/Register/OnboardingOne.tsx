@@ -232,7 +232,7 @@ const OnboardingOnePage = () => {
       value: name,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
       disabled: isLoading,
-      className: "!rounded-[10px]"
+      className: "!rounded-[10px] !h-[48px]"
     },
     {
       label: "Birthdate",
@@ -241,14 +241,14 @@ const OnboardingOnePage = () => {
       value: birthdate,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
       disabled: isLoading,
-      className: "relative",
+      className: "relative !h-[48px]",
     },
     {
       label: "Gender",
       type: "select",
       placeholder: "Select your gender",
       defaultValue: gender || "0",
-      className: "min-h-[48px] border border-gray-200 rounded-[10px] text-sm",
+      className: "!min-h-[48px] border border-gray-200 rounded-[10px] text-sm",
       value: gender,
       onChange: handleGenderChange,
       items: genderOptions.map(option => ({
@@ -294,7 +294,7 @@ const OnboardingOnePage = () => {
       onChange: handlePalateChange,
       items: palateOptions,
       disabled: isLoading,
-      className: "!rounded-[10px] text-sm",
+      className: "!min-h-[48px] !rounded-[10px] text-sm",
     },
   ];
 
@@ -329,8 +329,7 @@ const OnboardingOnePage = () => {
                         <input
                           type={field.type}
                           id={field.label?.toLowerCase()}
-                          className={`auth__input text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''
-                            }`}
+                          className={`auth__input text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
                           value={field.value}
                           onChange={field.onChange}
                           disabled={field.disabled}
