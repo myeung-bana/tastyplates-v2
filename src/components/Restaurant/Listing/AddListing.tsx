@@ -1,7 +1,7 @@
 // app/components/AddListing.tsx
 
 "use client";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState, Suspense } from "react"; // Add Suspense here
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import Rating from "../Review/Rating";
 import { CiLocationOn } from "react-icons/ci";
 import CustomModal from "@/components/ui/Modal/Modal";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // Keep useSearchParams
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
@@ -52,7 +52,9 @@ const AddListingPage = (props: any) => {
   const [reviewMainTitle, setReviewMainTitle] = useState("");
   const [content, setContent] = useState("");
   const [reviewStars, setReviewStars] = useState(0);
-  const searchParams = useSearchParams();
+
+  // Directly access searchParams here, as this is a client component
+  const searchParams = useSearchParams(); //
 
   const [currentRestaurantDbId, setCurrentRestaurantDbId] = useState(0);
 
@@ -170,7 +172,7 @@ const AddListingPage = (props: any) => {
 
       try {
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_Maps_API_KEY}`
         );
         const data = await response.json();
 
@@ -248,55 +250,60 @@ const AddListingPage = (props: any) => {
   };
 
   useEffect(() => {
-    const resIdFromUrl = searchParams?.get("resId");
-    const fetchDraftDetails = async () => {
-      const currentResId = Number(resIdFromUrl);
+    // Only attempt to read searchParams and fetch data if on the client
+    // and if the component has been hydrated.
+    // The Suspense in page.tsx will handle the loading state during SSR.
+    if (typeof window !== 'undefined') { // Check if window object is available (client-side)
+      const resIdFromUrl = searchParams?.get("resId"); // Access searchParams here
+      const fetchDraftDetails = async () => {
+        const currentResId = Number(resIdFromUrl);
 
-      if (currentResId > 0) {
-        console.log("Fetching draft details for ID:", currentResId);
+        if (currentResId > 0) {
+          console.log("Fetching draft details for ID:", currentResId);
 
-        setIsLoading(true);
-        try {
-          const restaurantData = await RestaurantService.fetchRestaurantById(
-            currentResId.toString(),
-            "DATABASE_ID"
-          );
-          localStorage.setItem('restID', currentResId.toString());
-          console.log("Fetched draft restaurant data:", restaurantData);
+          setIsLoading(true);
+          try {
+            const restaurantData = await RestaurantService.fetchRestaurantById(
+              currentResId.toString(),
+              "DATABASE_ID"
+            );
+            localStorage.setItem('restID', currentResId.toString());
+            console.log("Fetched draft restaurant data:", restaurantData);
 
-          if (restaurantData) {
-            setListing((prevListing) => ({
-              ...prevListing,
-              name: restaurantData.title || "",
-              title: restaurantData.title || "",
-              content: restaurantData.content || "",
-              address: restaurantData.listingStreet || "",
-              latitude: restaurantData.listingDetails?.latitude || 0,
-              longitude: restaurantData.listingDetails?.longitude || 0,
-              phone: restaurantData.listingDetails?.phone || "",
-              openingHours: restaurantData.listingDetails?.openingHours || "",
-              priceRange: restaurantData.priceRange || "",
-              palates: restaurantData.palates?.nodes || [],
-              listingCategories: restaurantData.listingCategories?.nodes || [],
-              countries: restaurantData.countries?.nodes || [],
-            }));
-            setCurrentRestaurantDbId(restaurantData.databaseId || 0);
-            setStep(1);
-          } else {
-            console.warn("No data returned for resId:", currentResId);
+            if (restaurantData) {
+              setListing((prevListing) => ({
+                ...prevListing,
+                name: restaurantData.title || "",
+                title: restaurantData.title || "",
+                content: restaurantData.content || "",
+                address: restaurantData.listingStreet || "",
+                latitude: restaurantData.listingDetails?.latitude || 0,
+                longitude: restaurantData.listingDetails?.longitude || 0,
+                phone: restaurantData.listingDetails?.phone || "",
+                openingHours: restaurantData.listingDetails?.openingHours || "",
+                priceRange: restaurantData.priceRange || "",
+                palates: restaurantData.palates?.nodes || [],
+                listingCategories: restaurantData.listingCategories?.nodes || [],
+                countries: restaurantData.countries?.nodes || [],
+              }));
+              setCurrentRestaurantDbId(restaurantData.databaseId || 0);
+              setStep(1);
+            } else {
+              console.warn("No data returned for resId:", currentResId);
+            }
+          } catch (error) {
+            console.error("Failed to fetch draft details:", error);
+          } finally {
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error("Failed to fetch draft details:", error);
-        } finally {
+        } else {
           setIsLoading(false);
         }
-      } else {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    fetchDraftDetails();
-  }, [searchParams]);
+      fetchDraftDetails();
+    }
+  }, [searchParams]); // Depend on searchParams to re-run if it changes
 
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
@@ -443,6 +450,7 @@ const AddListingPage = (props: any) => {
     <>
       <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">
         <div className="flex flex-col justify-center items-center">
+          {/* Conditional rendering for steps, covered by outer Suspense */}
           {step === 1 && (
             <>
               <h1 className="mt-8 text-lg md:text-2xl text-[#31343F] text font-medium">

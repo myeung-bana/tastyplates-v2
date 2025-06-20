@@ -1,10 +1,13 @@
 import Form from "@/components/Profile/Form";
+import { Suspense } from "react";
 
 const ProfileEditPage = () => {
   return (
-    <section>
-      <Form />
-    </section>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <section>
+        <Form />
+      </section>
+    </Suspense>
   );
 };
 

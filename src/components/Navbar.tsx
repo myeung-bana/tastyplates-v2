@@ -78,6 +78,7 @@ export default function Navbar(props: any) {
   }, [searchParams]);
 
 
+  
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
     const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
