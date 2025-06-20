@@ -13,6 +13,8 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from "next-auth/react";
 import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
 import SkeletonListingCard from "@/components/SkeletonListingCard";
+import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
+import toast from 'react-hot-toast';
 interface Restaurant {
   id: string;
   slug: string;
@@ -146,11 +148,12 @@ const ListingPage = () => {
       setAllDrafts(updatedAllDrafts);
       setReviewDrafts(updatedAllDrafts.slice(0, 4));
       setDraftToDelete(null);
-      return true;  // success
+      toast.success(deleteDraftSuccess)
+      return true;
     } catch (error) {
       console.error("Error deleting draft", error);
-      alert("Failed to delete draft.");
-      return false; // failure
+      toast.error(deleteDraftError)
+      return false;
     }
   };
 

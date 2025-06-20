@@ -16,7 +16,9 @@ import ReviewSubmissionSkeleton from "@/components/ui/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
-
+import toast from 'react-hot-toast';
+import { maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
+import { maximumImage } from "@/constants/validation";
 interface Restaurant {
   id: string;
   slug: string;
@@ -37,19 +39,13 @@ const ReviewSubmissionPage = () => {
   const params = useParams() as { slug: string; id: string };
   const restaurantId = params.id;
   const { data: session } = useSession();
-  // const searchParams = useSearchParams();
-  // const restaurantId = searchParams?.get('id');
   const [restaurantName, setRestaurantName] = useState('');
   const [review_main_title, setReviewMainTitle] = useState('');
   const [content, setContent] = useState('');
   const [review_stars, setReviewStars] = useState(0);
   const [loading, setLoading] = useState(true);
-  // const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  // console.log('session', session?.accessToken);
-  // const { token, isSignedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
-  // const [ratingError, setRatingError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
   const [uploadedImageError, setUploadedImageError] = useState('');
   const router = useRouter();
@@ -118,7 +114,7 @@ const ReviewSubmissionPage = () => {
       const totalImages = selectedFiles.length + files.length;
 
       if (totalImages > 6) {
-        setUploadedImageError('You can Upload a maximum of 6 images.');
+        setUploadedImageError(maximumImageLimit(maximumImage));
         return;
       } else {
         setUploadedImageError('');
@@ -179,15 +175,8 @@ const ReviewSubmissionPage = () => {
     e.preventDefault();
     let hasError = false;
 
-    // if (review_stars === 0) {
-    //   setRatingError('Rating is required.');
-    //   hasError = true;
-    // } else {
-    //   setRatingError('');
-    // }
-
     if (content.trim() === '') {
-      setDescriptionError('Description is required.');
+      setDescriptionError(requiredDescription);
       hasError = true;
     } else {
       setDescriptionError('');
@@ -218,6 +207,7 @@ const ReviewSubmissionPage = () => {
       if (mode === 'publish') {
         setIsSubmitted(true);
       } else if (mode === 'draft') {
+        toast.success(savedAsDraft);
         router.push('/listing');
       }
 
@@ -249,8 +239,6 @@ const ReviewSubmissionPage = () => {
   };
 
   const deleteSelectedFile = (index: string) => {
-    // let files = selectedFiles
-    // files = files.splice(selectedFiles.splice(1))
     setSelectedFiles(selectedFiles.filter((item: string) => item != index))
   }
 
