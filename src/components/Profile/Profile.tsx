@@ -27,6 +27,8 @@ interface Restaurant {
   priceRange: string;
   databaseId: number;
   palatesNames?: string[];
+  averageRating?: number;
+  ratingsCount?: number;
 }
 
 const Profile = () => {
@@ -61,6 +63,9 @@ const Profile = () => {
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
+  const [checkins, setCheckins] = useState<Restaurant[]>([]);
+  const [checkinsLoading, setCheckinsLoading] = useState(true);
+  const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -68,14 +73,22 @@ const Profile = () => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
-      cuisineNames: item.palates || [],
+      palatesNames:
+        Array.isArray(item?.palates?.nodes)
+          ? item.palates.nodes.map((p: any) => p?.name ?? "Unknown")
+          : [],
+      streetAddress:
+        item?.listingDetails?.googleMapUrl?.streetAddress || "",
       countries:
-        item.countries?.nodes.map((c) => c.name).join(", ") ||
-        "Default Location",
-      priceRange: item.priceRange || "N/A",
+        Array.isArray(item?.countries?.nodes)
+          ? item.countries.nodes.map((c) => c?.name ?? "Unknown").join(", ")
+          : "Default Location",
+      priceRange: item.priceRange ?? "N/A",
+      averageRating: item.averageRating ?? 0,
+      ratingsCount: item.ratingsCount ?? 0,
       status: item.status || "",
     }));
   };
@@ -536,11 +549,46 @@ const Profile = () => {
       id: "checkin",
       label: "Check-in",
       content: (
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {restaurants.map((rest) => (
-            <RestaurantCard key={rest.id} restaurant={rest} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+            {checkins.length > 0 ? (
+              checkins.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="checkin"
+                  initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+                />
+              ))
+            ) : !checkinsLoading && hasFetchedCheckins ? (
+              <div className="col-span-full text-center py-8">No check-ins yet.</div>
+            ) : null}
+          </div>
+          <div className="flex justify-center text-center mt-6 min-h-[40px]">
+            {checkinsLoading && !hasFetchedCheckins && (
+              <>
+                <svg
+                  className="w-5 h-5 text-gray-500 animate-spin mr-2"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="35"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeDasharray="164"
+                    strokeDashoffset="40"
+                  />
+                </svg>
+                <span className="text-gray-500 text-sm">Loading...</span>
+              </>
+            )}
+          </div>
+        </>
       ),
     },
   ];
@@ -560,36 +608,79 @@ const Profile = () => {
         );
         const data = await res.json();
         const favoriteIds = data.favorites || [];
-        setWishlist(
-          restaurants.filter((r) => favoriteIds.includes(r.databaseId))
-        );
+        if (favoriteIds.length === 0) {
+          setWishlist([]);
+        } else {
+          const results = await Promise.all(
+            favoriteIds.map((id: number) =>
+              RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+            )
+          );
+
+          const validResults = results.filter(r => r && typeof r === "object" && r.id);
+          const transformed = transformNodes(validResults);
+          setWishlist(transformed);
+        }
       } catch (e) {
+        console.error("Error fetching wishlist:", e);
         setWishlist([]);
       } finally {
         setWishlistLoading(false);
       }
     };
-    if (session && restaurants.length > 0) fetchWishlist();
+
+    if (session) fetchWishlist();
     else setWishlist([]);
-  }, [session, restaurants]);
+  }, [session]);
 
   useEffect(() => {
-    const handler = (e: CustomEvent) => {
-      const { slug, status } = e.detail || {};
-      if (typeof slug !== 'string') return;
-      setWishlist((prev) => {
-        if (status === false) {
-          return prev.filter((r) => r.slug !== slug);
-        } else if (status === true && !prev.some((r) => r.slug === slug)) {
-          const found = restaurants.find((r) => r.slug === slug);
-          return found ? [...prev, found] : prev;
+    let didCancel = false;
+    const fetchCheckins = async () => {
+      if (!hasFetchedCheckins) setCheckinsLoading(true);
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
+          {
+            headers: session?.accessToken
+              ? { Authorization: `Bearer ${session.accessToken}` }
+              : {},
+            credentials: "include",
+          }
+        );
+        const data = await res.json();
+        const checkinIds = data.checkins || [];
+        if (!didCancel) {
+          if (checkinIds.length === 0) {
+            setCheckins([]);
+          } else {
+            const results = await Promise.all(
+              checkinIds.map((id: number) =>
+                RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+              )
+            );
+            // Only keep valid restaurant objects
+            const validResults = results.filter(r => r && typeof r === "object" && r.id);
+            const transformed = transformNodes(validResults);
+            setCheckins(transformed);
+          }
+          setHasFetchedCheckins(true);
         }
-        return prev;
-      });
+      } catch (e) {
+        if (!didCancel) setCheckins([]);
+      } finally {
+        if (!didCancel) setCheckinsLoading(false);
+      }
     };
-    window.addEventListener('restaurant-favorite-changed', handler as EventListener);
-    return () => window.removeEventListener('restaurant-favorite-changed', handler as EventListener);
-  }, [restaurants]);
+    if (session) {
+      fetchCheckins();
+    } else {
+      setCheckins([]);
+      setHasFetchedCheckins(false);
+    }
+    return () => {
+      didCancel = true;
+    };
+  }, [session]);
 
   return (
     <>

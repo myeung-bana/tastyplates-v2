@@ -10,7 +10,7 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import { Review } from "@/data/dummyReviews";
 import ReviewModal from "@/components/ReviewModal";
-import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
+import { FaPen, FaRegHeart, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import CheckInRestaurantButton from "@/components/CheckInRestaurantButton";
 
 type tParams = { slug: string };
 
@@ -174,15 +175,6 @@ export default function RestaurantDetail() {
     RestaurantService.fetchRestaurantDetails(slug)
       .then((data) => {
         if (!data) return notFound();
-        const recognitionCounts: Record<string, number> = {};
-
-        data.comments?.nodes?.forEach((comment: { recognitions: string[] }) => {
-          comment.recognitions.forEach((recog) => {
-            const trimmed = recog.trim();
-            if (!trimmed) return;
-            recognitionCounts[trimmed] = (recognitionCounts[trimmed] || 0) + 1;
-          });
-        });
         const transformed = {
           id: data.id,
           slug: data.slug,
@@ -208,7 +200,10 @@ export default function RestaurantDetail() {
             openingHours: data.listingDetails?.openingHours || "",
             phone: data.listingDetails?.phone || "",
           },
-          recognitions: recognitionCounts,
+          overAllRating: data.averageRating,
+          overAllReviewCount: data.ratingsCount,
+          recognitionCounts: data.recognitionCounts,
+          palateStats: data.palateStats,
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -218,6 +213,7 @@ export default function RestaurantDetail() {
         setLoading(false);
       });
   }, [slug]);
+  // console.log('average palate', restaurant.palateStats?.[restaurant.palates[1].name]?.count)
 
 
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
@@ -290,15 +286,11 @@ export default function RestaurantDetail() {
                   </div>
                 </div>
                 <div className="flex flex-row flex-nowrap gap-4">
-                  {/* <a
-                    href="/listing"
-                    className="restaurant-detail__review-button"
-                  > */}
+                  <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
                   <button onClick={addReview} className="flex items-center gap-2 hover:underline">
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
-                  {/* </a> */}
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
@@ -356,44 +348,69 @@ export default function RestaurantDetail() {
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-t-2xl lg:rounded-none lg:rounded-l-3xl pt-4 pb-2">
                   <h1 className="text-xs lg:text-base font-bold">Rating</h1>
                   <div className="rating-summary w-full">
-                    <div className="rating-column">
-                      <h3>Chinese Palate</h3>
-                      <div className="rating-value">
-                        {/* <FiStar className="fill-yellow-500" /> */}
-                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {japaneseAvgRating}
+                    {restaurant?.palates?.[0] && (
+                      <>
+                      <div className="rating-column">
+                        <h3>{restaurant.palates[0]?.name} Palate</h3>
+                        <div className="rating-value">
+                          {/* <FiStar className="fill-yellow-500" /> */}
+                          <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                            {restaurant.palateStats?.[0]?.count > 0
+                              ? (Number(restaurant.palateStats[0].avg) % 1 === 0
+                                ? restaurant.palateStats[0].avg.toFixed(0)
+                                : restaurant.palateStats[0].avg.toFixed(2))
+                              : "0"}
+                          </span>
+                        </div>
+                        <span className="review-count">
+                          {restaurant.palateStats?.[0]?.count > 0
+                            ? `${restaurant.palateStats[0].count} reviews`
+                            : "No matching palate reviews"}
                         </span>
                       </div>
-                      <span className="review-count">
-                        {japanesePalateReviews.length} reviews
-                      </span>
-                    </div>
-                    <div className="h-[85%] border-l border-[#CACACA]"></div>
+                      <div className="h-[85%] border-l border-[#CACACA]"></div>
+                      </>
+                    )}
                     <div className="rating-column">
                       <h3>Overall Rating</h3>
                       <div className="rating-value">
                         {/* <FiStar className="fill-yellow-500" /> */}
                         <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {overallAvgRating}
+                          {restaurant.overAllReviewCount > 0
+                            ? (Number(restaurant.overAllRating) % 1 === 0
+                              ? Number(restaurant.overAllRating).toFixed(0)
+                              : restaurant.overAllRating.toFixed(2))
+                            : "0"}
                         </span>
                       </div>
                       <span className="review-count">
-                        {allReviews.length} reviews
+                        {restaurant.overAllReviewCount > 0
+                          ? `${restaurant.overAllReviewCount} reviews`
+                          : "No reviews yet"}
                       </span>
                     </div>
-                    <div className="h-[85%] border-l border-[#CACACA]"></div>
-                    <div className="rating-column">
-                      <h3>Restaurant Palate</h3>
-                      <div className="rating-value">
-                        {/* <FiStar className="fill-yellow-500" /> */}
-                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {italianMexicanAvgRating}
-                        </span>
-                      </div>
-                      <span className="review-count">
-                        {italianMexicanPalateReviews.length} reviews
-                      </span>
-                    </div>
+                    {restaurant?.palates?.[1] && (
+                      <>
+                        <div className="h-[85%] border-l border-[#CACACA]"></div>
+                        <div className="rating-column">
+                          <h3>{restaurant.palates[1].name} Palate</h3>
+                          <div className="rating-value">
+                            <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                              {restaurant.palateStats?.[1]?.count > 0
+                                ? (Number(restaurant.palateStats[1].avg) % 1 === 0
+                                  ? restaurant.palateStats[1].avg.toFixed(0)
+                                  : restaurant.palateStats[1].avg.toFixed(2))
+                                : "0"}
+                            </span>
+                          </div>
+                          <span className="review-count">
+                            {restaurant.palateStats?.[1]?.count > 0
+                              ? `${restaurant.palateStats[1].count} reviews`
+                              : "No matching palate reviews"}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
@@ -411,7 +428,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitions["Must Revisit"] || 0}
+                            {restaurant.recognitionCounts?.mustRevisit || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
@@ -428,7 +445,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitions["Insta-Worthy"] || 0}
+                            {restaurant.recognitionCounts?.instaWorthy || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
@@ -446,7 +463,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitions["Value for Money"] || 0}
+                            {restaurant.recognitionCounts?.valueForMoney || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
@@ -463,7 +480,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitions["Best Service"] || 0}
+                            {restaurant.recognitionCounts?.bestService || 0}
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>

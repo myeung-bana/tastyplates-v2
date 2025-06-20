@@ -18,7 +18,8 @@ export const RestaurantService = {
         recognition: string | null = null,
         sortOption?: string | null,
         rating: number | null = null,
-        statuses: string[] | null = null
+        statuses: string[] | null = null,
+        address: string | null = null
     ) {
         try {
             const taxArray = [];
@@ -57,7 +58,8 @@ export const RestaurantService = {
                 recognition,
                 sortOption,
                 rating,
-                statuses
+                statuses,
+                address
             );
         } catch (error) {
             console.error('Error fetching list:', error);
@@ -119,4 +121,62 @@ export const RestaurantService = {
         return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
     },
 
+    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
+        try {
+            return await RestaurantRepository.addRecentlyVisitedRestaurant(postId, accessToken);
+        } catch (error) {
+            console.error('Error adding recently visited restaurant:', error);
+            throw new Error('Failed to add recently visited restaurant');
+        }
+    },
+
+    async fetchRecentlyVisitedRestaurants(accessToken?: string) {
+        try {
+            return await RestaurantRepository.getRecentlyVisitedRestaurants(accessToken);
+        } catch (error) {
+            console.error('Error fetching recently visited restaurants:', error);
+            throw new Error('Failed to fetching recently visited restaurants');
+        }
+    },
+
+    async fetchAddressByPalate(
+        searchTerm: string,
+        palateSlugs: string[]
+    ) {
+        try {
+            const taxQuery = palateSlugs.length > 0 ? {
+                relation: 'AND',
+                taxArray: [
+                    {
+                        taxonomy: 'PALATE',
+                        field: 'SLUG',
+                        terms: palateSlugs,
+                        operator: 'IN',
+                    },
+                ],
+            } : {};
+
+            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery);
+        } catch (error) {
+            console.error('Error fetching by palate:', error);
+            throw new Error('Failed to fetch restaurants by palate');
+        }
+    },
+
+    async fetchListingsName(
+        searchTerm: string,
+        first = 32,
+        after: string | null = null,
+    ) {
+        try {
+            return await RestaurantRepository.getListingsName(
+                searchTerm,
+                first,
+                after
+            );
+        } catch (error) {
+            console.error('Error fetching list:', error);
+            throw new Error('Failed to fetch list');
+        }
+    },
 };

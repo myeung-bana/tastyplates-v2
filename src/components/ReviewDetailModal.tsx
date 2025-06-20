@@ -14,12 +14,14 @@ import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { BsStarFill, BsStarHalf, BsStar } from "react-icons/bs";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
+import toast from 'react-hot-toast';
 
 //styles
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
+import { commentedSuccess, commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -41,8 +43,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
+  // const [userLikedComment, setUserComment] = useState(replies.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false);
+  const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
@@ -90,6 +94,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Fetch initial follow state when modal opens and author is available
     if (!isOpen) return;
     if (!session?.accessToken) return;
+    const authorUserId =
+      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       setIsFollowing(false);
       return;
@@ -99,9 +105,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
               Authorization: `Bearer ${session.accessToken}`,
             },
             body: JSON.stringify({ user_id: authorUserId }),
@@ -111,7 +117,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
-        console.error('Error fetching follow state:', err);
+        console.error("Error fetching follow state:", err);
         setIsFollowing(false);
       }
     })();
@@ -122,20 +128,25 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
+    const authorUserId =
+      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: authorUserId }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ user_id: authorUserId }),
+        }
+      );
       const result = await res.json();
       if (!res.ok || result?.result !== "followed") {
         console.error("Follow failed", result);
@@ -150,7 +161,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           localStorage.removeItem(`following_${currentUserId}`);
           localStorage.removeItem(`followers_${currentUserId}`);
         }
-        localStorage.setItem('follow_sync', Date.now().toString());
+        localStorage.setItem("follow_sync", Date.now().toString());
       }
     } catch (err) {
       console.error("Follow error", err);
@@ -166,20 +177,25 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
+    const authorUserId =
+      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: authorUserId }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ user_id: authorUserId }),
+        }
+      );
       const result = await res.json();
       if (!res.ok || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
@@ -194,7 +210,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           localStorage.removeItem(`following_${currentUserId}`);
           localStorage.removeItem(`followers_${currentUserId}`);
         }
-        localStorage.setItem('follow_sync', Date.now().toString());
+        localStorage.setItem("follow_sync", Date.now().toString());
       }
     } catch (err) {
       console.error("Unfollow error", err);
@@ -265,7 +281,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     responsive: any;
     variableWidth: boolean;
     swipeToSlide: boolean;
-    swipe: boolean
+    swipe: boolean;
   };
 
   const settings: settings = {
@@ -284,9 +300,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     swipe: false,
     responsive: [
       {
-        breakpoint: 375,
+        breakpoint: 425,
         settings: {
           arrows: false,
+          dots: true,
         },
       },
     ],
@@ -296,18 +313,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     ?.split("|")
     .map((s: any) => s.trim())
     .filter((s: any) => s.length > 0);
-  //   .map((id) => {
-  //     const palate = palates.find((p) => p.id === id);
-  //     return palate ? palate.name : null;
-  //   })
-  //   .filter((name) => name);
-
-  // const restaurantPalateNames = restaurant?.cuisineIds
-  //   .map((rid) => {
-  //     const palate = palates.find((p) => p.cuisineId === rid);
-  //     return palate ? palate.name : null;
-  //   })
-  //   .filter((name) => name);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -334,6 +339,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       };
 
       await ReviewService.postReview(payload, session?.accessToken ?? "");
+      toast.success(commentedSuccess)
       setCommentReply("");
 
       const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
@@ -363,21 +369,60 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
+        toast.success(commentUnlikedSuccess)
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
+        toast.success(commentLikedSuccess)
       }
 
       setUserLiked(response.userLiked);
       setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
-      alert('Error updating like');
+      alert("Error updating like");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleReplyLike = async (replyId: number) => {
+    // Find the reply by id or databaseId
+    const reply = replies.find(r => r.id === replyId || r.databaseId === replyId);
+    const dbId = reply?.databaseId || replyId;
+
+    if (replyLoading[dbId]) return;
+
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
+    setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
+    try {
+      let response;
+      if (reply?.userLiked) {
+        response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
+        toast.success(commentUnlikedSuccess)
+      } else {
+        response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
+        toast.success(commentLikedSuccess)
+      }
+      setReplies(prev =>
+        prev.map(r =>
+          (r.id === replyId || r.databaseId === dbId)
+            ? {
+              ...r,
+              userLiked: response.userLiked,
+              commentLikes: response.likesCount
+            }
+            : r
+        )
+      );
+    } finally {
+      setReplyLoading((prev) => ({ ...prev, [dbId]: false }));
     }
   };
 
@@ -388,9 +433,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       <CustomModal
         header={<></>}
         content={
-          <div className="grid grid-cols-1 grid-rows-2 md:grid-rows-1 sm:grid-cols-2 !h-full md:!h-[520px]  xl:!h-[720px] w-full auto-rows-min">
+          <div className="flex flex-col md:grid grid-cols-1 grid-rows-2 md:grid-rows-1 sm:grid-cols-2 !h-full md:h-[530px] lg:h-[640px] w-full auto-rows-min">
             <div>
-              <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden">
+              <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
                   <Image
                     src={data.userAvatar || "/profile-icon.svg"}
@@ -409,7 +454,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           key={index}
                           className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
                         >
-                          {tag} {" "}
+                          {tag}{" "}
                         </span>
                       ))}
                     </div>
@@ -419,12 +464,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 {(!session?.user || (session?.user?.id !== (data.userId))) && (
                   <button
                     onClick={handleFollowClick}
-                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''} disabled:opacity-50 disabled:pointer-events-none`}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
                     disabled={followLoading || !authorUserId}
                   >
                     {followLoading ? (
-                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
-                    ) : isFollowing ? "Following" : "Follow"}
+                      <span className="animate-pulse">
+                        {isFollowing ? "Unfollowing..." : "Following..."}
+                      </span>
+                    ) : isFollowing ? (
+                      "Following"
+                    ) : (
+                      "Follow"
+                    )}
                   </button>
                 )}
                 <SignupModal
@@ -444,7 +495,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   }}
                 />
               </div>
-              <div className="review-card__image-container">
+              <div className="review-card__image-container hidden md:block">
                 <Slider
                   {...settings}
                   nextArrow={
@@ -483,238 +534,290 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 </Slider>
               </div>
             </div>
-            <div className="review-card__content h-full md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto">
-              <div className="justify-between pr-10 items-center hidden md:flex">
-                <div className="review-card__user">
-                  <Image
-                    src={data.userAvatar || "/profile-icon.svg"}
-                    alt={data.author?.node?.name || "User"}
-                    width={32}
-                    height={32}
-                    className="review-card__user-image"
-                  />
-                  <div className="review-card__user-info">
-                    <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                      {data.author?.name || "Unknown User"}
-                    </h3>
-                    <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                      {UserPalateNames?.map((tag: any, index: number) => (
-                        <span
-                          key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
-                        >
-                          {tag} {" "}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {/* Hide follow button if user is the reviewer */}
-                {(!session?.user || (session?.user?.id !== (data.userId))) && (
-                  <button
-                    onClick={handleFollowClick}
-                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : ''} disabled:opacity-50 disabled:pointer-events-none`}
-                    disabled={followLoading || !authorUserId}
-                  >
-                    {followLoading ? (
-                      <span className="animate-pulse">{isFollowing ? "Unfollowing..." : "Following..."}</span>
-                    ) : isFollowing ? "Following" : "Follow"}
-                  </button>
-                )}
-                <SignupModal
-                  isOpen={isShowSignup}
-                  onClose={() => setIsShowSignup(false)}
-                  onOpenSignin={() => {
-                    setIsShowSignup(false);
-                    setIsShowSignin(true);
+            <div>
+              <div className="review-card__image-container md:!hidden">
+                <Slider
+                  {...settings}
+                  nextArrow={
+                    <NextArrow length={data?.reviewImages?.length || 0} />
+                  }
+                  prevArrow={<PrevArrow />}
+                  beforeChange={(current: any) => {
+                    setActiveSlide(current + 1);
                   }}
-                />
-                <SigninModal
-                  isOpen={isShowSignin}
-                  onClose={() => setIsShowSignin(false)}
-                  onOpenSignup={() => {
-                    setIsShowSignin(false);
-                    setIsShowSignup(true);
-                  }}
-                />
+                  // afterChange={(current: any) => {
+                  //   setActiveSlide(current);
+                  // }}
+                  lazyLoad="progressive"
+                >
+                  {Array.isArray(data?.reviewImages) &&
+                    data.reviewImages.length > 0 ? (
+                    data.reviewImages.map((image: any, index: number) => (
+                      <Image
+                        key={index}
+                        src={image?.sourceUrl}
+                        alt="Review"
+                        width={400}
+                        height={400}
+                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                      />
+                    ))
+                  ) : (
+                    <Image
+                      src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                      alt="Default"
+                      width={400}
+                      height={400}
+                      className="review-card__image !h-[530px] lg:!h-[640px]  xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                    />
+                  )}
+                </Slider>
               </div>
-              <div className="flex flex-col overflow-hidden md:mt-4">
-                <div className="flex flex-col h-full">
-                  <div className="overflow-y-auto grow pr-1">
-                    <div className="shrink-0">
-                      <p className="text-[15px] md:text-base font-semibold w-full line-clamp-2 md:line-clamp-3">
-                        {stripTags(data.reviewMainTitle || "") ||
-                          "Dorem ipsum dolor title."}
-                      </p>
-                      <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4 !align-middle !leading-normal">
-                        {stripTags(data.content || "") ||
-                          "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
-                      </p>
-                      <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
-                        {Array.from({ length: 5 }, (_, i) => {
-                          const full = i + 1 <= data.reviewStars;
-                          const half = !full && i + 0.5 <= data.reviewStars;
-                          return full ? (
-                            <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
-                          ) : (
-                            <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
-                          );
-                        })}
-                        <span className="text-[#494D5D] text-[10px] md:text-sm">&#8226;</span>
-                        <span className="review-card__timestamp">
-                          {formatDate(data.date)}
-                        </span>
-                      </div>
-                      {replies.length > 0 && (
-                        <div className="overflow-y-auto grow pt-4 pr-1 pb-3 h-[350px]">
-                          {replies.map((reply, index) => {
-                            const UserPalateNames = reply?.palates
-                              ?.split("|")
-                              .map((s: string) => s.trim())
-                              .filter((s: string) => s.length > 0);
-
-                            return (
-                              <div
-                                key={index}
-                                className="reply flex items-start gap-3 mb-3"
-                              >
-                                <Image
-                                  src={
-                                    reply.userAvatar ||
-                                    "/profile-icon.svg"
-                                  }
-                                  alt={reply.author?.node?.name || "User"}
-                                  width={28}
-                                  height={28}
-                                  className="review-card__user-image"
-                                />
-                                <div className="review-card__user-info">
-                                  <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                                    {reply.author?.node?.name || "Unknown User"}
-                                  </h3>
-
-                                  <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                    {UserPalateNames?.map(
-                                      (tag: string, tagIndex: number) => (
-                                        <span
-                                          key={tagIndex}
-                                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
-                                        >
-                                          {tag}
-                                        </span>
-                                      )
-                                    )}
-                                  </div>
-
-                                  <p className="review-card__text w-[304] text-sm font-normal">
-                                    {stripTags(reply.content || "") ||
-                                      "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* {replies.length > 0 && (
-                      <div className="overflow-y-auto grow mt-4 border-t pt-4 pr-1">
-                        {replies.map((reply, index) => (
-                          
-                          <div key={index} className="reply flex items-start gap-3 mb-3">
-                            <Image
-                              src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
-                              alt={reply.author?.name || "User"}
-                              width={28}
-                              height={28}
-                              className="rounded-full"
-                            />
-                            <div className="review-card__user-info">
-                              <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                                {reply.author?.name || "Unknown User"}
-                              </h3>
-                              <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                {UserPalateNames?.map((tag: any, index: number) => (
-                                  <span
-                                    key={index}
-                                    className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
-                                  >
-                                    {tag}{" "}
-                                  </span>
-                                ))}
-                              </div>
-                              <p className="review-card__text w-[304] text-sm font-normal">{stripTags(reply.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
-                            </div>
-                          </div>
+              <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
+                <div className="justify-between pr-10 items-center hidden md:flex">
+                  <div className="review-card__user">
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image"
+                    />
+                    <div className="review-card__user-info">
+                      <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
+                        {data.author?.name || "Unknown User"}
+                      </h3>
+                      <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+                        {UserPalateNames?.map((tag: any, index: number) => (
+                          <span
+                            key={index}
+                            className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
+                          >
+                            {tag}{" "}
+                          </span>
                         ))}
                       </div>
-                    )} */}
                     </div>
                   </div>
-                </div>
-                {/* <div className="review-card__header">
-              <div className="review-card__user-info">
-                <h3>{restaurant?.name}</h3>
-                <Link
-                  href={`/restaurants/${data.id}`}
-                  className="review-card__restaurant"
-                >
-                  {restaurant?.address}
-                </Link>
-              </div>
-              </div> */}
-                <div className="w-full shrink-0 border-t border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-6">
-                  <div className="flex flex-row justify-start items-center gap-4">
-                    {isLoading ? (
-                      <div className="py-3 px-4 w-full border border-[#CACACA] rounded-[10px] text-gray-500 italic">
-                        Sending...
-                      </div>
-                    ) : (
-                      <textarea
-                        rows={1}
-                        cols={30}
-                        placeholder={
-                          cooldown > 0
-                            ? `Please wait ${cooldown}s before commenting again...`
-                            : "Add a comment"
-                        }
-                        value={commentReply}
-                        onChange={(e) => setCommentReply(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleCommentReplySubmit();
-                          }
-                        }}
-                        disabled={cooldown > 0}
-                        className="py-3 px-4 w-full border border-[#CACACA] resize-none rounded-[10px]"
-                      />
+                  {/* Hide follow button if user is the reviewer */}
+                  {(!session?.user ||
+                    session?.user?.id !==
+                    (data.author?.node?.databaseId ||
+                      data.author?.databaseId)) && (
+                      <button
+                        onClick={handleFollowClick}
+                        className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing
+                          ? "bg-[#494D5D] text-white"
+                          : "text-[#FCFCFC]"
+                          }`}
+                        disabled={followLoading}
+                      >
+                        {followLoading ? (
+                          <span className="animate-pulse">
+                            {isFollowing ? "Unfollowing..." : "Following..."}
+                          </span>
+                        ) : isFollowing ? (
+                          "Following"
+                        ) : (
+                          "Follow"
+                        )}
+                      </button>
                     )}
-                    <div className="flex gap-2 flex-row items-center">
-                      <div className="flex items-center relative text-center">
-                        <button
-                          onClick={toggleLike}
-                          disabled={loading}
-                          aria-pressed={userLiked}
-                          aria-label={userLiked ? "Unlike comment" : "Like comment"}
-                          className="focus:outline-none cursor-pointer"
-                        >
-                          {loading ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
-                          ) : (
-                            <MdOutlineThumbUp
-                              className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${userLiked ? 'text-blue-600' : ''
-                                }`}
-                            />
-                          )}
-                        </button>
-                        <span className="ml-2">{likesCount}</span>
+                  <SignupModal
+                    isOpen={isShowSignup}
+                    onClose={() => setIsShowSignup(false)}
+                    onOpenSignin={() => {
+                      setIsShowSignup(false);
+                      setIsShowSignin(true);
+                    }}
+                  />
+                  <SigninModal
+                    isOpen={isShowSignin}
+                    onClose={() => setIsShowSignin(false)}
+                    onOpenSignup={() => {
+                      setIsShowSignin(false);
+                      setIsShowSignup(true);
+                    }}
+                  />
+                </div>
+                <div className="pb-16 overflow-hidden md:mt-4">
+                  <div className="h-full">
+                    <div className="overflow-y-auto grow pr-1">
+                      <div className="shrink-0">
+                        <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
+                          {stripTags(data.reviewMainTitle || "") ||
+                            "Dorem ipsum dolor title."}
+                        </p>
+                        <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
+                          {stripTags(data.content || "") ||
+                            "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                        </p>
+                        <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
+                          {Array.from({ length: 5 }, (_, i) => {
+                            const full = i + 1 <= data.reviewStars;
+                            const half = !full && i + 0.5 <= data.reviewStars;
+                            return full ? (
+                              <Image
+                                src="/star-filled.svg"
+                                key={i}
+                                width={16}
+                                height={16}
+                                className="size-4"
+                                alt="star rating"
+                              />
+                            ) : (
+                              <Image
+                                src="/star.svg"
+                                key={i}
+                                width={16}
+                                height={16}
+                                className="size-4"
+                                alt="star rating"
+                              />
+                            );
+                          })}
+                          <span className="text-[#494D5D] text-[10px] md:text-sm">
+                            &#8226;
+                          </span>
+                          <span className="review-card__timestamp">
+                            {formatDate(data.date)}
+                          </span>
+                        </div>
+                        {replies.length > 0 && (
+                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[460px] overflow-y-auto">
+                            {replies.map((reply, index) => {
+                              const replyUserLiked = reply.userLiked ?? false;
+                              const replyUserLikedCounts = reply.commentLikes ?? 0;
+                              const UserPalateNames = reply?.palates
+                                ?.split("|")
+                                .map((s: string) => s.trim())
+                                .filter((s: string) => s.length > 0);
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="reply flex items-start gap-3 mb-3 md:mb-4"
+                                >
+                                  <Image
+                                    src={
+                                      reply.userAvatar || "/profile-icon.svg"
+                                    }
+                                    alt={reply.author?.node?.name || "User"}
+                                    width={28}
+                                    height={28}
+                                    className="review-card__user-image"
+                                  />
+                                  <div className="review-card__user-info">
+                                    <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
+                                      {reply.author?.node?.name ||
+                                        "Unknown User"}
+                                    </h3>
+
+                                    <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+                                      {UserPalateNames?.map(
+                                        (tag: string, tagIndex: number) => (
+                                          <span
+                                            key={tagIndex}
+                                            className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
+                                          >
+                                            {tag ?? "hello"}
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+
+                                    <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
+                                      {stripTags(reply.content || "") ||
+                                        "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                                    </p>
+                                    <div className="flex items-center relative text-center">
+                                      <button
+                                        onClick={() => toggleReplyLike(reply.databaseId)}
+                                        disabled={!!replyLoading[reply.databaseId]}
+                                        aria-pressed={replyUserLiked}
+                                        aria-label={replyUserLiked ? "Unlike comment" : "Like comment"}
+                                        className="focus:outline-none cursor-pointer"
+                                      >
+                                        {replyLoading[reply.databaseId] ? (
+                                          <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+                                        ) : (
+                                          <MdOutlineThumbUp
+                                            className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${replyUserLiked ? "text-blue-600" : ""}`}
+                                          />
+                                        )}
+                                      </button>
+                                      <span className="text-[#494D5D] ml-2 text-[10px] md:text-xs font-medium">
+                                        {replyUserLikedCounts}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center relative text-center">
-                        <button>
-                          <MdOutlineComment className="shrink-0 size-6 stroke-[#494D5D]" />
-                        </button>
-                        <span className="ml-2">{replies ? replies.length : 0}</span>
+                    </div>
+                  </div>
+                  <div className="w-full shrink-0 border-t bg-white border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-0">
+                    <div className="flex flex-row justify-start items-center gap-4">
+                      {isLoading ? (
+                        <div className="py-3 px-4 w-full border border-[#CACACA] rounded-[10px] text-gray-500 italic">
+                          Sending...
+                        </div>
+                      ) : (
+                        <textarea
+                          rows={1}
+                          cols={30}
+                          placeholder={
+                            cooldown > 0
+                              ? `Please wait ${cooldown}s before commenting again...`
+                              : "Add a comment"
+                          }
+                          value={commentReply}
+                          onChange={(e) => setCommentReply(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleCommentReplySubmit();
+                            }
+                          }}
+                          disabled={cooldown > 0}
+                          className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
+                        />
+                      )}
+                      <div className="flex gap-2 flex-row items-center">
+                        <div className="flex items-center relative text-center">
+                          <button
+                            onClick={toggleLike}
+                            disabled={loading}
+                            aria-pressed={userLiked}
+                            aria-label={
+                              userLiked ? "Unlike comment" : "Like comment"
+                            }
+                            className="focus:outline-none cursor-pointer"
+                          >
+                            {loading ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+                            ) : (
+                              <MdOutlineThumbUp
+                                className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${userLiked ? "text-blue-600" : ""
+                                  }`}
+                              />
+                            )}
+                          </button>
+                          <span className="ml-2 text-xs md:text-base">
+                            {likesCount}
+                          </span>
+                        </div>
+                        <div className="flex items-center relative text-center">
+                          <button>
+                            <MdOutlineComment className="shrink-0 size-6 stroke-[#494D5D]" />
+                          </button>
+                          <span className="ml-2 text-xs md:text-base">
+                            {replies ? replies.length : 0}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -725,13 +828,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         }
         isOpen={isOpen}
         setIsOpen={onClose}
-        baseClass="h-full md:h-3/4 !max-w-[1060px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
+        baseClass="h-full !max-w-[1060px] h-full md:h-[530px] lg:h-[640px] xl:h-[720px] m-0 rounded-none relative md:rounded-3xl"
         closeButtonClass="!top-5 md:!top-6 !right-3 z-10"
         headerClass="border-none !p-0"
-        contentClass="!p-0"
+        contentClass="!p-0 overflow-y-auto md:overflow-hidden"
         hasFooter={true}
         footer={<></>}
         footerClass="!p-0 hidden"
+        overlayClass="!z-[1010]"
+        wrapperClass="!z-[1010]"
       />
     </>
   );

@@ -114,6 +114,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const signUpWithGoogle = async () => {
     try {
       setError("");
+      setIsLoading(true);
       localStorage.removeItem('registrationData');
       removeAllCookies();
       // Set a cookie to indicate signup intent
@@ -153,7 +154,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button
                   onClick={() => router.push('/onboarding')}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium"
+                  className="bg-[#E36B00] hover:bg-[#d36400] text-white px-6 py-2 rounded-xl text-sm"
                 >
                   Continue Registration
                 </button>
@@ -162,7 +163,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                     localStorage.removeItem('registrationData');
                     setShowContinueModal(false);
                   }}
-                  className="text-gray-700 hover:text-gray-900 underline font-medium"
+                  className="text-gray-700 hover:text-gray-900 underline text-sm"
                 >
                   Start New Registration
                 </button>
@@ -190,7 +191,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
             <div className="auth__card !py-4 !rounded-3xl">
-              <h1 className="auth__title !text-xl !font-semibold bg-white">Sign up</h1>
+              <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
               <form className="auth__form border-y border-[#CACACA] !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
                 <div className="auth__form-group mt-6">
                   <label htmlFor="email" className="auth__label">
@@ -293,7 +294,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
-              <p className="auth__footer !mt-3.5 bg-white">
+              <p className="auth__footer !mt-3.5">
                 Already have an account?{" "}
                 <a
                   className="auth__link !text-[#494D5D] cursor-pointer"

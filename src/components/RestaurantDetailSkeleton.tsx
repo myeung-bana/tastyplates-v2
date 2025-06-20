@@ -18,6 +18,7 @@ const RestaurantDetailSkeleton = () => {
                                 </div>
                                 <div className="flex flex-row gap-4 mt-4 md:mt-0">
                                     <div className="h-10 w-32 bg-gray-300 rounded"></div>
+                                    <div className="h-10 w-32 bg-gray-300 rounded"></div>
                                     <div className="h-10 w-24 bg-gray-300 rounded"></div>
                                 </div>
                             </div>

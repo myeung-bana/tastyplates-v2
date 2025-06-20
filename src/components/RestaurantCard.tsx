@@ -25,6 +25,8 @@ export interface Restaurant {
   streetAddress?: string;
   countries: string;
   priceRange: string;
+  averageRating?: number;
+  ratingsCount?: number;
   status?: string;
 }
 
@@ -33,9 +35,10 @@ export interface RestaurantCardProps {
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
   initialSavedStatus?: boolean | null;
   ratingsCount?: number;
+  onClick?: () => void;
 }
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onClick }: RestaurantCardProps) => {
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -53,13 +56,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     setSaved(initialSavedStatus ?? false);
   }, [initialSavedStatus]);
 
-  useEffect(() => {
-    if (typeof ratingsCount === 'undefined' && restaurant.databaseId) {
-      RestaurantService.fetchRestaurantRatingsCount(restaurant.databaseId)
-        .then(count => setLocalRatingsCount(count))
-        .catch(() => setLocalRatingsCount(0));
-    }
-  }, [ratingsCount, restaurant.databaseId]);
+  const displayRating = typeof restaurant.averageRating === 'number' ? restaurant.averageRating : restaurant.rating;
+  const displayRatingsCount = typeof restaurant.ratingsCount === 'number' ? restaurant.ratingsCount : 0;
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -196,7 +194,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <Link href={`/restaurants/${restaurant.slug}`}>
+          <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
                 Pending for Approval
@@ -237,16 +235,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
             </div>
           )}
         </div>
-        <Link href={`/restaurants/${restaurant.slug}`}>
+        <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating">
-                {restaurant.rating > 0 ? (
+                {displayRating > 0 ? (
                   <>
                     <FaStar className="restaurant-card__icon -mt-1" />
-                    {restaurant.rating}
-                    <span className="restaurant-card__rating-count">({typeof ratingsCount !== 'undefined' ? ratingsCount : (localRatingsCount ?? 0)})</span>
+                    {displayRating}
+                    <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
                   </>
                 ) : null}
               </div>

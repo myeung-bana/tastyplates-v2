@@ -6,3 +6,4 @@ export const imageMBLimit = 5 // 5MB
 export const imageSizeLimit = imageMBLimit * 1024 * 1024 // 5MB
 export const aboutMeMaxLimit = 500
 export const palateLimit = 2
+export const maximumImage = 6

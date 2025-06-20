@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Key } from "@react-types/shared";
-import Dropdown from './Dropdown';
 import { FiChevronDown } from "react-icons/fi";
 
 interface ItemChild {
@@ -21,6 +20,16 @@ interface CustomMultipleSelectProps {
     value?: Set<Key>;
     onChange?: (keys: Set<Key>) => void;
     className?: string;
+    baseClassName?: string;
+    dropDownClassName?: string;
+    itemClassName?: string;
+    hideDropdownLabel?: boolean;
+    hideDropdownSearch?: boolean;
+    enableCheckboxHeader?: boolean;
+    enableSelectionDropdown?: boolean;
+    hideTagRendering?: boolean;
+    showModal?: boolean;
+    onClose?: () => void;
 }
 
 interface SelectedTag {
@@ -30,11 +39,16 @@ interface SelectedTag {
 
 const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     const [search, setSearch] = useState("");
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(props.showModal || false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('bottom');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const selectRef = useRef<HTMLDivElement>(null);
+    const hideDropdownLabel = props.hideDropdownLabel || false;
+    const hideDropdownSearch = props.hideDropdownSearch || false;
+    const enableCheckboxHeader = props.enableCheckboxHeader || false;
+    const enableSelectionDropdown = props.enableSelectionDropdown || false;
+    const hideTagRendering = props.hideTagRendering || false;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -42,17 +56,22 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                 setIsOpen(false);
                 setShowDropdown(false);
                 setSearch("");
+                props.onClose?.();
             }
         };
 
-        if (isOpen) {
+        if (isOpen || props.showModal) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen]);
+    }, [isOpen, props.showModal]);
+
+    useEffect(() => {
+        setIsOpen(props.showModal || false);
+    }, [props.showModal]);
 
     useEffect(() => {
         if (isOpen && selectRef.current) {
@@ -78,19 +97,6 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         }))
         .filter((section) => section.children && section.children.length > 0);
 
-    const handleSelectionChange = (keys: any) => {
-        if (keys instanceof Set) {
-            props.onChange?.(keys);
-        }
-    };
-
-    const handleOpenChange = (open: boolean) => {
-        setIsOpen(open);
-        if (!open) {
-            setSearch("");
-        }
-    };
-
     const getSelectedTags = (): SelectedTag[] => {
         const tags: SelectedTag[] = [];
         props.items.forEach(section => {
@@ -114,7 +120,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     const renderTags = () => {
         const tags = getSelectedTags();
 
-        if (tags.length == 0) {
+        if (!hideDropdownLabel && tags.length == 0) {
             return <span className="text-gray-400">{props.placeholder}</span>;
         }
 
@@ -149,10 +155,6 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         );
     };
 
-    const handleSearchFocus = () => {
-        setShowDropdown(!showDropdown);
-    };
-
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
         setShowDropdown(!showDropdown);  // Add this line
@@ -170,25 +172,53 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         toggleDropdown();
     };
 
+    const areAllChildrenSelected = (item: ItemInterface) => {
+        if (!item.children) return false;
+        return item.children.every(child => props.value?.has(child.key));
+    };
+
+    const handleHeaderCheckboxChange = (item: ItemInterface) => {
+        if (!item.children) return;
+        const newSelection = new Set(props.value || new Set<Key>());
+        const allSelected = areAllChildrenSelected(item);
+
+        item.children.forEach(child => {
+            if (allSelected) {
+                newSelection.delete(child.key);
+            } else {
+                newSelection.add(child.key);
+            }
+        });
+        props.onChange?.(newSelection);
+    };
+
+    const toggleSection = (key: string) => {
+        const newExpandedSections = new Set(expandedSections);
+        if (newExpandedSections.has(key)) {
+            newExpandedSections.delete(key);
+        } else {
+            newExpandedSections.add(key);
+        }
+        setExpandedSections(newExpandedSections);
+    };
+
     return (
-        <div className="w-full relative" ref={selectRef} translate="no">
+        <div className={`w-full relative ${props.baseClassName}`} ref={selectRef} translate="no">
             <div
-                className={`w-full px-4 py-2 border border-gray-300 rounded-md min-h-[48px] flex items-center justify-between cursor-pointer ${props.className || ''}`}
-                onClick={handleClick}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-md flex items-center justify-between cursor-pointer ${props.className || ''}`}
+                onClick={!hideDropdownLabel ? handleClick : undefined}
             >
-                <div className="flex-1">{renderTags()}</div>
-                <div onClick={(e) => {
+                {!hideTagRendering && (<div className="flex-1">{renderTags()}</div>)}
+                {!hideDropdownLabel ? (<div onClick={(e) => {
                     toggleDropdown();
                 }}>
                     <FiChevronDown className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </div>
+
+                </div>) : ''}
             </div>
             {isOpen && (
-                <div 
-                    className={`${getDropdownStyles()} ${!isOpen ? 'hidden' : ''}`}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="sticky top-0 bg-white p-4 z-10">
+                <div className={`${getDropdownStyles()} ${!isOpen ? 'hidden' : ''} ${props.dropDownClassName}`}>
+                    {!hideDropdownSearch ? (<div className="sticky top-0 bg-white p-4 z-10">
                         <input
                             type="text"
                             className="w-full px-3 py-2 border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -196,35 +226,64 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
-                    </div>
+                    </div>) : ''}
                     <div className="overflow-y-auto">
-                        {filteredItems.map((item) => (
-                            <div key={item.key} className="py-2 px-4">
-                                <div className="font-semibold mb-2">{item.label}</div>
-                                {item.children?.map((child) => (
-                                    <div
-                                        key={child.key}
-                                        className="flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-gray-50"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const newSelection = new Set(props.value || new Set<Key>());
-                                            if (newSelection.has(child.key)) {
-                                                newSelection.delete(child.key);
-                                            } else {
-                                                newSelection.add(child.key);
-                                            }
-                                            props.onChange?.(newSelection);
-                                        }}
-                                    >
+                        {filteredItems.map((item, index) => (
+                            <div
+                                key={item.key}
+                                className={`border-b border-[#E5E5E5] last:border-b-0`}
+                            >
+                                <div
+                                    className={`flex items-center gap-2 h-[48px] px-4 ${enableSelectionDropdown ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                                    onClick={() => enableSelectionDropdown && toggleSection(item.key)}
+                                >
+                                    {enableCheckboxHeader && (
                                         <input
                                             type="checkbox"
                                             className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                            checked={props.value?.has(child.key)}
+                                            checked={areAllChildrenSelected(item)}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                handleHeaderCheckboxChange(item);
+                                            }}
                                             readOnly
                                         />
-                                        <span className="font-medium">{child.label}</span>
+                                    )}
+                                    <span className="font-semibold text-[#494D5D]">{item.label}</span>
+                                    {enableSelectionDropdown && (
+                                        <FiChevronDown
+                                            className={`ml-auto transition-transform ${expandedSections.has(item.key) ? 'rotate-180' : ''}`}
+                                        />
+                                    )}
+                                </div>
+                                {(!enableSelectionDropdown || expandedSections.has(item.key)) && (
+                                    <div className="space-y-0">
+                                        {item.children?.map((child) => (
+                                            <div
+                                                key={child.key}
+                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 ${props.itemClassName}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const newSelection = new Set(props.value || new Set<Key>());
+                                                    if (newSelection.has(child.key)) {
+                                                        newSelection.delete(child.key);
+                                                    } else {
+                                                        newSelection.add(child.key);
+                                                    }
+                                                    props.onChange?.(newSelection);
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                                    checked={props.value?.has(child.key)}
+                                                    readOnly
+                                                />
+                                                <span className="font-medium">{child.label}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         ))}
                     </div>

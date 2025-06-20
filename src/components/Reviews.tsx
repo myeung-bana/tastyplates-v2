@@ -84,7 +84,13 @@ const Reviews = () => {
   }, [hasNextPage, loading]);
 
   if (!initialLoaded) {
-    return <div>Loading session...</div>;
+    return (
+      <div className="!w-full mt-10">
+        <div className="flex justify-center text-center min-h-[40px] ml-50">
+          <span className="text-gray-500 text-sm">Loading session...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
