@@ -23,3 +23,11 @@ export const pleaseLoginAgain = "Please login again";
 export const logOutSuccessfull = "Logged out successfully";
 export const checkEmailTitle = "Error checking email:";
 export const unfinishedSaved = "Unfinished registration saved";
+export const requiredDescription = "Description is required.";
+export const maximumImageLimit = (max: number) => `You can Upload a maximum of ${max} images.`
+export const savedAsDraft = "Review saved as draft!"
+export const deleteDraftError = "Failed to delete draft."
+export const deleteDraftSuccess = "Draft deleted successfully!"
+export const commentedSuccess = "Replied successfully!"
+export const commentLikedSuccess = "Liked comment successfully!"
+export const commentUnlikedSuccess = "Un-Liked comment successfully!"

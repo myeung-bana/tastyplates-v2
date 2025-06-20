@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 export const GET_ALL_RECENT_REVIEWS = gql`
   query GetReviews($first: Int = 16, $after: String) {
     comments(
-      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
+      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1 }
       first: $first
       after: $after
     ) {
@@ -68,9 +68,13 @@ export const GET_ALL_RECENT_REVIEWS = gql`
 export const GET_COMMENT_REPLIES = gql`
 query GetCommentWithReplies($id: ID!) {
   comment(id: $id) {
-    replies {
+      replies {
       nodes {
+        id
+        databaseId
         content(format: RENDERED)
+        commentLikes
+        userLiked
         palates
         userAvatar
         author {
