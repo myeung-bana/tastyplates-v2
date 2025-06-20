@@ -393,6 +393,12 @@ const Profile = () => {
     }
   };
 
+  const getColumns = () => {
+    if (width >= 1024) return 4;
+    if (width >= 768) return 3;
+    return 2;
+  };
+
   // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [
     {
@@ -400,11 +406,14 @@ const Profile = () => {
       label: "Reviews",
       content: (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {reviews.map((review) => (
-              <ReviewCard key={review.id} data={review} index={0} width={0} />
-            ))}
-          </div>
+          <Masonry
+            items={reviews}
+            render={ReviewCard}
+            columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12}
+            maxColumnWidth={304}
+            columnCount={getColumns()}
+            maxColumnCount={4}
+          />
           <div
             ref={observerRef}
             className="flex justify-center text-center mt-6 min-h-[40px]"
@@ -741,7 +750,7 @@ const Profile = () => {
           tabWrapper: "w-full",
           base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
-            "py-4 px-0 justify-start px-10 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
+            "py-4 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList:
             "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",

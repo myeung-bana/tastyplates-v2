@@ -3,18 +3,10 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard from "./ReviewCard";
 import "@/styles/pages/_reviews.scss";
-import { Masonry, useInfiniteLoader } from "masonic";
+import { Masonry } from "masonic";
 import { useState, useEffect, useRef, useCallback } from "react";
-import ReviewDetailModal from "./ModalPopup2";
 import { useSession } from "next-auth/react";
 
-const MasonryCard = ({ index, data, width }: { index: number, data: any, width: number }) => (
-  <div>
-    <div>Index: {index}</div>
-    <img src={data.images[0]} />
-    <div>Column width: {width}</div>
-  </div>
-);
 const Reviews = () => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const { data: session, status } = useSession();
@@ -97,13 +89,13 @@ const Reviews = () => {
 
   return (
     <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
-      <div className="reviews__container">
+      <div className="reviews__container xl:!px-0">
         <h2 className="reviews__title">Latest Reviews</h2>
         <p className="reviews__subtitle">
           See what others are saying about their dining experiences
         </p>
 
-        <Masonry items={reviews} render={ReviewCard} columnGutter={width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
+        <Masonry items={reviews} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (
             <>

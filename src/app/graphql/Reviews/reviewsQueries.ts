@@ -134,7 +134,6 @@ export const GET_USER_REVIEWS = gql`
               databaseId
               title
               slug
-              fieldMultiCheck90
               featuredImage {
                 node {
                   databaseId
