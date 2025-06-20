@@ -89,6 +89,7 @@ const Profile = () => {
       priceRange: item.priceRange ?? "N/A",
       averageRating: item.averageRating ?? 0,
       ratingsCount: item.ratingsCount ?? 0,
+      status: item.status || "",
     }));
   };
 
