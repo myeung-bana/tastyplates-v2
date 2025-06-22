@@ -35,9 +35,10 @@ export interface RestaurantCardProps {
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
   initialSavedStatus?: boolean | null;
   ratingsCount?: number;
+  onClick?: () => void;
 }
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onClick }: RestaurantCardProps) => {
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -193,7 +194,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <Link href={`/restaurants/${restaurant.slug}`}>
+          <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
                 Pending for Approval
@@ -234,7 +235,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus }: Rest
             </div>
           )}
         </div>
-        <Link href={`/restaurants/${restaurant.slug}`}>
+        <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>

@@ -34,13 +34,6 @@ interface ReviewBlockProps {
 }
 
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
-  // const author = users.find((user) => user.id === review.authorId);
-  // const palateNames = (review?.palateNames ?? [])
-  //   .map((id) => {
-  //     const palate = palates.find((p) => p.id === id);
-  //     return palate ? palate.name : null; // Return the name or null if not found
-  //   })
-  //   .filter((name) => name); // Filter out any null values
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);

@@ -78,13 +78,18 @@ export default function Navbar(props: any) {
   }, [searchParams]);
 
 
+  
   useEffect(() => {
     const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
     const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
-    if (loginMessage || logOutMessage) {
-      toast.success(loginMessage || logOutMessage, {
+    const googleMessage = Cookies.get('logInMessage') ?? "";
+
+    if (loginMessage || logOutMessage || googleMessage) {
+      toast.success(loginMessage || logOutMessage || googleMessage, {
         duration: 3000, // 3 seconds
       });
+
+      removeAllCookies(['logInMessage']);
       localStorage.removeItem('loginBackMessage');
       localStorage.removeItem('logOutMessage');
     }

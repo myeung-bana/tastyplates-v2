@@ -1,13 +1,12 @@
-import AddListingPage from "@/components/Restaurant/Listing/AddListing";
+// app/listing/step-1/page.tsx
 import { Suspense } from "react";
+import AddListingWrapper from "@/components/Restaurant/Listing/AddListingClient";
 
 const AddReviewPage = () => {
   return (
-    <section>
-      <Suspense fallback={<div></div>}>
-          <AddListingPage />
-        </Suspense>
-    </section>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading application...</div>}>
+      <AddListingWrapper step={1} />
+    </Suspense>
   );
 };
 
