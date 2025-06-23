@@ -151,8 +151,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs md:text-base font-medium mb-2">{stripTags(review?.title || "") ?? "Dorem ipsum dolor title."}</h3>
-        <p className="review-block__text">{stripTags(review.comment || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
+        <h3 className="text-xs md:text-base font-medium mb-2">{stripTags(review?.title || "") ?? ""}</h3>
+        <p className="review-block__text">{stripTags(review.comment || "") || ""}</p>
       </div>
       <div className="">
         {" "}
