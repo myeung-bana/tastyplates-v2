@@ -60,12 +60,20 @@ const Reviews = () => {
   useEffect(() => {
     if (!initialLoaded && status !== "loading") {
       setInitialLoaded(true);
-      loadMore();
     }
   }, [session, status]);
 
-  // Setup Intersection Observer
+  // Call loadMore only when initialLoaded becomes true
   useEffect(() => {
+    if (initialLoaded) {
+      loadMore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoaded]);
+
+  // Setup Intersection Observer, but only after initial load
+  useEffect(() => {
+    if (!initialLoaded) return;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && hasNextPage && !loading) {
@@ -81,7 +89,7 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading]);
+  }, [hasNextPage, loading, initialLoaded]);
 
   if (!initialLoaded) {
     return (
