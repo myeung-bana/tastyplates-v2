@@ -49,7 +49,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
         const data = await ReviewService.getRestaurantReviews(
           restaurantId,
           session?.accessToken,
-          50, // Fetch in larger chunks for efficiency
+          9999,
           after
         );
         allFetched = allFetched.concat(data.reviews);
