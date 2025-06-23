@@ -94,9 +94,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Fetch initial follow state when modal opens and author is available
     if (!isOpen) return;
     if (!session?.accessToken) return;
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
+      setIsFollowing(false);
+      return;
+    }
+    if (authorUserId === session?.user?.id) {
       setIsFollowing(false);
       return;
     }
@@ -128,8 +130,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -177,8 +177,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -465,7 +463,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <button
                     onClick={handleFollowClick}
                     className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
-                    disabled={followLoading || !authorUserId}
+                    disabled={!!session?.user && (followLoading || !authorUserId)}
                   >
                     {followLoading ? (
                       <span className="animate-pulse">
@@ -600,17 +598,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </div>
                   {/* Hide follow button if user is the reviewer */}
-                  {(!session?.user ||
-                    session?.user?.id !==
-                    (data.author?.node?.databaseId ||
-                      data.author?.databaseId)) && (
+                  {(!session?.user || (session?.user?.id !== (data.userId))) && (
                       <button
                         onClick={handleFollowClick}
-                        className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing
-                          ? "bg-[#494D5D] text-white"
-                          : "text-[#FCFCFC]"
-                          }`}
-                        disabled={followLoading}
+                        className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
+                        disabled={!!session?.user && (followLoading || !authorUserId)}
                       >
                         {followLoading ? (
                           <span className="animate-pulse">
@@ -646,11 +638,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       <div className="shrink-0">
                         <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
                           {stripTags(data.reviewMainTitle || "") ||
-                            "Dorem ipsum dolor title."}
+                            ""}
                         </p>
                         <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
                           {stripTags(data.content || "") ||
-                            "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                            ""}
                         </p>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
