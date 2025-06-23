@@ -107,7 +107,6 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                     images:
                       review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
                     userImage:
-                      review?.author?.node?.avatar?.url ??
                       review?.userAvatar ??
                       "/profile-icon.svg",
                     recognitions: Array.isArray(review.recognitions)
