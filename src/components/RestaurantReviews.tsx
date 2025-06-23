@@ -86,9 +86,9 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   // Filtering and sorting logic
   const filteredReviews = allReviews.filter((review) => {
     if (!selectedPalate) return true;
-    // Filter by star rating
+    // Filter by star rating (compare as integer)
     const rating = getNumericRating(review);
-    return String(rating) === selectedPalate;
+    return parseInt(selectedPalate) === Math.round(Number(rating));
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
