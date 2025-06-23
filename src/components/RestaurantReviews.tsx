@@ -17,7 +17,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
-  const [selectedPalate, setSelectedPalate] = useState<string>("");
+  const [selectedStarRating, setSelectedStarRating] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const REVIEWS_PER_PAGE = 5;
 
@@ -85,10 +85,10 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
 
   // Filtering and sorting logic
   const filteredReviews = allReviews.filter((review) => {
-    if (!selectedPalate) return true;
+    if (!selectedStarRating) return true;
     // Filter by star rating (compare as integer)
     const rating = getNumericRating(review);
-    return parseInt(selectedPalate) === Math.round(Number(rating));
+    return parseInt(selectedStarRating) === Math.round(Number(rating));
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
@@ -228,8 +228,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
             <select
               className="review-filter"
               style={{ color: '#494D5D' }}
-              value={selectedPalate}
-              onChange={e => { setSelectedPalate(e.target.value); setCurrentPage(1); }}
+              value={selectedStarRating}
+              onChange={e => { setSelectedStarRating(e.target.value); setCurrentPage(1); }}
             >
               {starOptions.map((option, index) =>
                 <option value={option.value} key={index}>
