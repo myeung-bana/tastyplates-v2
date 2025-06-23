@@ -89,7 +89,7 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
             })}
           </div>
         </div>
-        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(reviewDraft?.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
+        <p className="text-[10px] sm:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(reviewDraft?.reviewMainTitle || "") || ""}</p>
         <p className="review-card__text w-[304] text-[10px] sm:text-sm font-normal line-clamp-2 mb-3">{stripTags(reviewDraft?.content?.rendered || "")}</p>
         <span className="review-card__timestamp">{formatDateT(reviewDraft.date)}</span>
         {/* <div className="restaurant-card__info">
