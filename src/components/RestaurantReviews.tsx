@@ -21,12 +21,14 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const REVIEWS_PER_PAGE = 5;
 
-  // Palate filter options
-  const palateOptions = [
-    { value: "", label: "All Reviews" },
-    { value: "chocolate", label: "Chocolate" },
-    { value: "strawberry", label: "Strawberry" },
-    { value: "vanilla", label: "Vanilla" },
+  // Star rating filter options
+  const starOptions = [
+    { value: '', label: 'All Reviews' },
+    { value: '5', label: '5 Stars' },
+    { value: '4', label: '4 Stars' },
+    { value: '3', label: '3 Stars' },
+    { value: '2', label: '2 Stars' },
+    { value: '1', label: '1 Star' },
   ];
   // Sort options
   const sortOptions = [
@@ -72,13 +74,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     setCurrentPage(1);
   };
 
-  // Filtering and sorting logic
-  const filteredReviews = allReviews.filter((review) => {
-    if (!selectedPalate) return true;
-    if (!review.palateNames) return false;
-    return review.palateNames.map((p: string) => p.toLowerCase()).includes(selectedPalate);
-  });
-
+  // Helper: Ensure rating is always a number for filtering/sorting
   const getNumericRating = (review: any) => {
     if (typeof review.rating === 'number') return review.rating;
     if (typeof review.rating === 'string' && !isNaN(Number(review.rating))) return Number(review.rating);
@@ -86,6 +82,14 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     if (typeof review.reviewStars === 'string' && !isNaN(Number(review.reviewStars))) return Number(review.reviewStars);
     return 0;
   };
+
+  // Filtering and sorting logic
+  const filteredReviews = allReviews.filter((review) => {
+    if (!selectedPalate) return true;
+    // Filter by star rating
+    const rating = getNumericRating(review);
+    return String(rating) === selectedPalate;
+  });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     if (sortOrder === "newest") {
@@ -227,7 +231,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
               value={selectedPalate}
               onChange={e => { setSelectedPalate(e.target.value); setCurrentPage(1); }}
             >
-              {palateOptions.map((option, index) =>
+              {starOptions.map((option, index) =>
                 <option value={option.value} key={index}>
                   {option.label}
                 </option>
