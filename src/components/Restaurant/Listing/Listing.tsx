@@ -1,3 +1,4 @@
+// Listing.tsx
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
@@ -15,6 +16,9 @@ import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
 import SkeletonListingCard from "@/components/SkeletonListingCard";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
+import { useDebounce } from "use-debounce"; // Import useDebounce
+import Link from "next/link";
+
 interface Restaurant {
   id: string;
   slug: string;
@@ -30,10 +34,11 @@ interface Restaurant {
 const ListingPage = () => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // Debounced search term
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loadingVisited, setLoadingVisited] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed initial state to false
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
@@ -50,10 +55,10 @@ const ListingPage = () => {
       slug: item.slug,
       name: item.title,
       image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
-      rating: 4.5,
+      rating: item.averageRating || "", // Default to 0 if not present
       cuisineNames: item.palates || [],
       countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
-      priceRange: "$$"
+      priceRange: item.priceRange // Default price range
     }));
   };
 
@@ -89,19 +94,14 @@ const ListingPage = () => {
       const transformed = transformNodes(data.nodes);
 
       setRestaurants(prev => {
-        const limited = !after ? transformed.slice(0, 4) : transformed;
         if (!after) {
-          // New search: replace list
-          return limited;
+          return transformed;
         }
-        // Pagination: append unique restaurants only
         const all = [...prev, ...transformed];
         const uniqueMap = new Map(all.map(r => [r.id, r]));
         return Array.from(uniqueMap.values());
       });
 
-      // setAfterCursor(data.pageInfo.endCursor);
-      // setHasMore(data.pageInfo.hasNextPage);
     } catch (error) {
       console.error(error);
     } finally {
@@ -110,15 +110,12 @@ const ListingPage = () => {
   };
 
   useEffect(() => {
-    fetchRestaurants("", 8, null);
-  }, []);
-
-  const filteredRestaurants = searchTerm
-    ? restaurants.filter((restaurant) =>
-      restaurant.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    : restaurants;
-
+    if (debouncedSearchTerm) {
+      fetchRestaurants(debouncedSearchTerm, 8, null);
+    } else {
+      setRestaurants([]);
+    }
+  }, [debouncedSearchTerm]);
 
   const fetchReviewDrafts = async () => {
     setLoadingDrafts(true);
@@ -136,8 +133,10 @@ const ListingPage = () => {
   };
 
   useEffect(() => {
-    fetchReviewDrafts();
-  }, [session?.accessToken]);
+    if (!debouncedSearchTerm) {
+      fetchReviewDrafts();
+    }
+  }, [session?.accessToken, debouncedSearchTerm]);
 
   const confirmDeleteDraft = async (draftId: number) => {
     if (!session?.accessToken) return;
@@ -158,7 +157,8 @@ const ListingPage = () => {
   };
 
   const handleSearch = (e: FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setSearchTerm(listing);
   }
 
   const removeListing = (item: ReviewDraft) => {
@@ -186,17 +186,17 @@ const ListingPage = () => {
   };
 
   useEffect(() => {
-    if (session?.accessToken) {
+    if (session?.accessToken && !debouncedSearchTerm) {
       fetchRecentlyVisited();
     }
-  }, [session?.accessToken]);
+  }, [session?.accessToken, debouncedSearchTerm]);
 
 
   return (
     <>
       <div className="font-inter max-w-[82rem] mx-auto mt-16">
         <div className="py-6 md:py-8 flex flex-col justify-center items-center">
-          <h1 className="text-lg md:text-2xl text-[#31343F] text font-medium">Find a listing to review</h1>
+          <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-medium">Find a listing to review</h1>
           <form onSubmit={handleSearch} className="my-6 md:my-10 max-w-[525px] w-full px-6 lg:px-0">
             <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
               <div className="hero__search-restaurant !bg-transparent">
@@ -217,53 +217,91 @@ const ListingPage = () => {
               </button>
             </div>
           </form>
-          <div className="restaurants__container mt-6 md:mt-10 w-full">
-            <div className="restaurants__content">
-              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
-              {reviewDrafts.length === 0 && !loadingDrafts && (
-                <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
-                  You don't have any review drafts.
-                </p>
-              )}
-              <div className="restaurants__grid mt-6 md:mt-8">
-                {reviewDrafts.map((revDraft) => (
-                  <ListingCard
-                    key={revDraft.id}
-                    reviewDraft={revDraft}
-                    onDelete={() => removeListing(revDraft)}
-                  />
-                ))}
-                {loadingDrafts && [...Array(4)].map((_, i) => <SkeletonListingCard key={i} />)}
+
+          {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
+            <div className="w-full text-center mb-6">
+              <h2 className="text-lg md:text-xl text-[#31343F] font-medium">
+                {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
+              </h2>
+            </div>
+          )}
+
+          {/* Conditional rendering of "My Review Drafts" */}
+          {!debouncedSearchTerm && (
+            <div className="restaurants__container mt-6 md:mt-10 w-full">
+              <div className="restaurants__content">
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
+                {reviewDrafts.length === 0 && !loadingDrafts && (
+                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+                    You don't have any review drafts.
+                  </p>
+                )}
+                <div className="restaurants__grid mt-6 md:mt-8">
+                  {reviewDrafts.map((revDraft) => (
+                    <ListingCard
+                      key={revDraft.id}
+                      reviewDraft={revDraft}
+                      onDelete={() => removeListing(revDraft)}
+                    />
+                  ))}
+                  {loadingDrafts && [...Array(4)].map((_, i) => <SkeletonListingCard key={i} />)}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="restaurants__container mt-6 md:mt-10 w-full">
-            <div className="restaurants__content mt-6 md:mt-10">
-              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
-              {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
-                <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
-                  You haven’t visited any restaurants yet.
-                </p>
-              )}
-              <div className="restaurants__grid mt-6 md:mt-8">
-                {recentlyVisitedRestaurants.map((rest) => (
-                  <RestaurantCard key={rest.id} restaurant={rest} />
-                ))}
-                {loadingVisited && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          )}
+
+          {/* Conditional rendering of "Recently Visited" */}
+          {!debouncedSearchTerm && (
+            <div className="restaurants__container mt-6 md:mt-10 w-full">
+              <div className="restaurants__content mt-6 md:mt-10">
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
+                {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
+                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+                    You haven’t visited any restaurants yet.
+                  </p>
+                )}
+                <div className="restaurants__grid mt-6 md:mt-8">
+                  {recentlyVisitedRestaurants.map((rest) => (
+                    <RestaurantCard key={rest.id} restaurant={rest} />
+                  ))}
+                  {loadingVisited && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                </div>
               </div>
             </div>
-          </div>
-          {/* <div className="restaurants__container mt-6 md:mt-10 w-full">
-            <div className="restaurants__content mt-6 md:mt-10">
-              <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Restaurants</h1>
-              <div className="restaurants__grid mt-6 md:mt-8">
-                {filteredRestaurants.map((rest) => (
-                  <RestaurantCard key={rest.id} restaurant={rest} />
-                ))}
-                {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+          )}
+
+          {/* Display Restaurants section only when there's an active search or it's loading search results */}
+          {debouncedSearchTerm && (
+            <div className="restaurants__container mt-6 md:mt-10 w-full">
+              <div className="restaurants__content mt-6 md:mt-10">
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">
+                  Search Results
+                </h1>
+                <div className="flex justify-center text-center mt-6 min-h-[40px]">
+                  {!loading && restaurants.length === 0 && (
+                    <div className="flex flex-col items-center gap-4">
+                      <p className="text-m">
+                        No listings found for "{debouncedSearchTerm}". Try a different search!
+                      </p>
+                      <Link
+                        href="/listing/explanation"
+                        type="submit"
+                        className="rounded-full    text-sm md:text-base text-black h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center"
+                      >
+                        Add Listing
+                      </Link>
+                    </div>
+                  )}
+                </div>
+                <div className="restaurants__grid mt-6 md:mt-8">
+                  {!loading && restaurants.map((rest) => (
+                    <RestaurantCard key={rest.id} restaurant={rest} />
+                  ))}
+                  {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                </div>
               </div>
             </div>
-          </div> */}
+          )}
         </div>
       </div>
       <ReviewModal
