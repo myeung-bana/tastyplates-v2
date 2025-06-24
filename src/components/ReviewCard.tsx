@@ -18,7 +18,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   .filter((s) => s.length > 0);
 
   return (
-    <div className={`review-card !w-[${width}px]`}>
+    <div className={`review-card !w-[${width}px] !border-none`}>
       <ReviewDetailModal
         data={data}
         isOpen={isModalOpen}
