@@ -263,7 +263,7 @@ export default function RestaurantDetail() {
 
   return (
     <div className="restaurant-detail mt-32 md:mt-10">
-      <div className="restaurant-detail__container">
+      <div className="restaurant-detail__container !max-w-[82rem]">
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
             <div className="flex flex-col-reverse md:flex-col">
