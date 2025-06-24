@@ -9,7 +9,7 @@ export default function RootLayout({
 }>) {
   return (
     <section>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div></div>}>
         <Navbar />
         {children}
         <Footer isShowLinks={false} />
