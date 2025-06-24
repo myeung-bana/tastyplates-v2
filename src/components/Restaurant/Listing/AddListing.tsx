@@ -452,12 +452,12 @@ const AddListingPage = (props: any) => {
     <>
       <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">
         <div className="flex flex-col justify-center items-center">
+          <h1 className="mt-8 text-lg leading-[22px] md:text-2xl md:leading-[27px] text-[#31343F] text font-medium">
+            Add Listing
+          </h1>
           {/* Conditional rendering for steps, covered by outer Suspense */}
           {step === 1 && (
             <>
-              <h1 className="mt-8 text-lg md:text-2xl text-[#31343F] text font-medium">
-                Add Listing
-              </h1>
               <form
                 className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
                 onSubmit={(e) => e.preventDefault()}
@@ -628,7 +628,7 @@ const AddListingPage = (props: any) => {
                     Listing Guidelines
                   </Link>
                 </p>
-                <div className="flex gap-3 md:gap-4 items-center">
+                <div className="flex gap-3 md:gap-4 justify-center items-center">
                   <button
                     type="button"
                     className="listing__button"
@@ -864,7 +864,7 @@ const AddListingPage = (props: any) => {
                 <button
                   type="button"
                   onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
-                  className="underline flex h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                  className="underline flex h-fit text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
                   {isLoading && (
                     <svg
@@ -884,7 +884,7 @@ const AddListingPage = (props: any) => {
                       />
                     </svg>
                   )}
-                  Save and exit
+                  Save and Exit
                 </button>
               </div>
             </form>

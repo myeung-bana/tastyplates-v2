@@ -33,3 +33,5 @@ export const commentedSuccess = "Replied successfully!"
 export const commentLikedSuccess = "Liked comment successfully!"
 export const commentUnlikedSuccess = "Un-Liked comment successfully!"
 export const googleAuthenticationFailed = "Google authentication failed";
+export const sessionExpired = "Session expired — signing out"
+export const Inactive = "Inactivity detected — signing out"
