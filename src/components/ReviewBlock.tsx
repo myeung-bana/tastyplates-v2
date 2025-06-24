@@ -34,13 +34,6 @@ interface ReviewBlockProps {
 }
 
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
-  // const author = users.find((user) => user.id === review.authorId);
-  // const palateNames = (review?.palateNames ?? [])
-  //   .map((id) => {
-  //     const palate = palates.find((p) => p.id === id);
-  //     return palate ? palate.name : null; // Return the name or null if not found
-  //   })
-  //   .filter((name) => name); // Filter out any null values
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
@@ -136,7 +129,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           )} */}
           <span className="text-[#9ca3af] text-[10px] md:text-sm p-2">&#8226;</span>
           <span className="review-card__timestamp">
-            {formatDateT(review.date)}
+            {formatDate(review.date)}
           </span>
         </div>
         <div className="review-block__recognitions flex gap-2">
@@ -158,8 +151,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs md:text-base font-medium mb-2">{stripTags(review?.title || "") ?? "Dorem ipsum dolor title."}</h3>
-        <p className="review-block__text">{stripTags(review.comment || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
+        <h3 className="text-xs md:text-base font-medium mb-2">{stripTags(review?.title || "") ?? ""}</h3>
+        <p className="review-block__text">{stripTags(review.comment || "") || ""}</p>
       </div>
       <div className="">
         {" "}

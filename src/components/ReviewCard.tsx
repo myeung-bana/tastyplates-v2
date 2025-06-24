@@ -42,7 +42,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           <Image
-            src={data.userAvatar || data.author?.node?.avatar?.url || "/profile-icon.svg"}
+            src={data.userAvatar || "/profile-icon.svg"}
             alt={data.author?.node?.name || "User"}
             width={32}
             height={32}
@@ -72,8 +72,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               </div>
           </div>
         </div>
-        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}</p>
-        <p className="review-card__text w-[304] text-[10px] md:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
+        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || ""}</p>
+        <p className="review-card__text w-[304] text-[10px] md:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>

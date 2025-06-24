@@ -154,7 +154,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button
                   onClick={() => router.push('/onboarding')}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-medium"
+                  className="bg-[#E36B00] hover:bg-[#d36400] text-white px-6 py-2 rounded-xl text-sm"
                 >
                   Continue Registration
                 </button>
@@ -163,7 +163,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                     localStorage.removeItem('registrationData');
                     setShowContinueModal(false);
                   }}
-                  className="text-gray-700 hover:text-gray-900 underline font-medium"
+                  className="text-gray-700 hover:text-gray-900 underline text-sm"
                 >
                   Start New Registration
                 </button>

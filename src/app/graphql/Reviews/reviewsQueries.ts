@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 export const GET_ALL_RECENT_REVIEWS = gql`
   query GetReviews($first: Int = 16, $after: String) {
     comments(
-      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
+      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1 }
       first: $first
       after: $after
     ) {
@@ -68,9 +68,13 @@ export const GET_ALL_RECENT_REVIEWS = gql`
 export const GET_COMMENT_REPLIES = gql`
 query GetCommentWithReplies($id: ID!) {
   comment(id: $id) {
-    replies {
+      replies {
       nodes {
+        id
+        databaseId
         content(format: RENDERED)
+        commentLikes
+        userLiked
         palates
         userAvatar
         author {
@@ -134,7 +138,6 @@ export const GET_USER_REVIEWS = gql`
               databaseId
               title
               slug
-              fieldMultiCheck90
               featuredImage {
                 node {
                   databaseId
@@ -155,27 +158,6 @@ export const GET_USER_REVIEWS = gql`
     }
   }
 `;
-
-// export const GET_USER_LIKED_TRUE_OR_FALSE = gql`
-//   query GetReviews($first: Int = 16, $after: String) {
-//     comments(
-//       where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC }
-//       first: $first
-//       after: $after
-//     ) {
-//       nodes {
-//         id
-//         content
-//         commentLikes
-//         userLiked
-//       }
-//       pageInfo {
-//         hasNextPage
-//         endCursor
-//       }
-//     }
-//   }
-// `;
 
 export const GET_REVIEWS_BY_RESTAURANT_ID = gql`
   query GetReviewsByRestaurantId($restaurantId: ID!) {

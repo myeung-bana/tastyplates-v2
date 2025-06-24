@@ -3,18 +3,10 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard from "./ReviewCard";
 import "@/styles/pages/_reviews.scss";
-import { Masonry, useInfiniteLoader } from "masonic";
+import { Masonry } from "masonic";
 import { useState, useEffect, useRef, useCallback } from "react";
-import ReviewDetailModal from "./ModalPopup2";
 import { useSession } from "next-auth/react";
 
-const MasonryCard = ({ index, data, width }: { index: number, data: any, width: number }) => (
-  <div>
-    <div>Index: {index}</div>
-    <img src={data.images[0]} />
-    <div>Column width: {width}</div>
-  </div>
-);
 const Reviews = () => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const { data: session, status } = useSession();
@@ -68,12 +60,20 @@ const Reviews = () => {
   useEffect(() => {
     if (!initialLoaded && status !== "loading") {
       setInitialLoaded(true);
-      loadMore();
     }
   }, [session, status]);
 
-  // Setup Intersection Observer
+  // Call loadMore only when initialLoaded becomes true
   useEffect(() => {
+    if (initialLoaded) {
+      loadMore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLoaded]);
+
+  // Setup Intersection Observer, but only after initial load
+  useEffect(() => {
+    if (!initialLoaded) return;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && hasNextPage && !loading) {
@@ -89,21 +89,27 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading]);
+  }, [hasNextPage, loading, initialLoaded]);
 
   if (!initialLoaded) {
-    return <div>Loading session...</div>;
+    return (
+      <div className="!w-full mt-10">
+        <div className="flex justify-center text-center min-h-[40px] ml-50">
+          <span className="text-gray-500 text-sm">Loading session...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
     <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
-      <div className="reviews__container">
+      <div className="reviews__container xl:!px-0">
         <h2 className="reviews__title">Latest Reviews</h2>
         <p className="reviews__subtitle">
           See what others are saying about their dining experiences
         </p>
 
-        <Masonry items={reviews} render={ReviewCard} columnGutter={width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
+        <Masonry items={reviews} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (
             <>

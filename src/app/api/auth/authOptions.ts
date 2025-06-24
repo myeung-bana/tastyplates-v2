@@ -4,6 +4,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { UserRepository } from "@/repositories/userRepository";
 import { UserService } from '@/services/userService';
+import { googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
+
+const cookieObject = { path: '/', sameSite: 'lax' as const }
 
 export const authOptions: AuthOptions = {
     providers: [
@@ -32,6 +35,7 @@ export const authOptions: AuthOptions = {
                     });
 
                     if (data.token) {
+                        cookieStore.set('logInMessage', logInSuccessfull, cookieObject);
                         return {
                             id: data.id ?? "",
                             userId: data.id ?? 0,
@@ -40,13 +44,13 @@ export const authOptions: AuthOptions = {
                             token: data.token,
                         };
                     }
-                    cookieStore.set('googleErrorType', 'login', { path: '/', sameSite: 'lax' });
-                    cookieStore.set('googleError', 'Login failed. Please try again.', { path: '/', sameSite: 'lax' });
+                    cookieStore.set('googleErrorType', 'login', cookieObject);
+                    cookieStore.set('googleError', loginFailed, cookieObject);
                     return null;
                 } catch (error) {
                     console.error("Auth error:", error);
-                    cookieStore.set('googleErrorType', 'login', { path: '/', sameSite: 'lax' });
-                    cookieStore.set('googleError', String(error), { path: '/', sameSite: 'lax' });
+                    cookieStore.set('googleErrorType', 'login', cookieObject);
+                    cookieStore.set('googleError', String(error), cookieObject);
                     return null;
                 }
             },
@@ -64,14 +68,14 @@ export const authOptions: AuthOptions = {
                 if (account?.provider === "google") {
                     if (type === "signup") {
                         // set the cookie to be use in the onboarding page
-                        cookieStore.set('googleAuth', 'true', { path: '/', sameSite: 'lax' });
-                        cookieStore.set('email', user.email || '', { path: '/', sameSite: 'lax' });
-                        cookieStore.set('username', user.name || '', { path: '/', sameSite: 'lax' });
+                        cookieStore.set('googleAuth', 'true', cookieObject);
+                        cookieStore.set('email', user.email || '', cookieObject);
+                        cookieStore.set('username', user.name || '', cookieObject);
 
                         const checkEmail = await UserService.checkEmailExists(user.email);
                         if (checkEmail.status == 400 || checkEmail.exists) {
-                            cookieStore.set('googleErrorType', 'signup', { path: '/', sameSite: 'lax' });
-                            cookieStore.set('googleError', encodeURIComponent(checkEmail.message), { path: '/', sameSite: 'lax' });
+                            cookieStore.set('googleErrorType', 'signup', cookieObject);
+                            cookieStore.set('googleError', encodeURIComponent(checkEmail.message), cookieObject);
                             return '/';
                         }
 
@@ -87,8 +91,8 @@ export const authOptions: AuthOptions = {
                     
                     if (response.status !== 200) {
                         const cookieStore = await cookies();
-                        cookieStore.set('googleErrorType', 'login', { path: '/', sameSite: 'lax' });
-                        cookieStore.set('googleError', encodeURIComponent(response.message || "Google authentication failed"), { path: '/', sameSite: 'lax' });
+                        cookieStore.set('googleErrorType', 'login', cookieObject);
+                        cookieStore.set('googleError', encodeURIComponent(response.message || googleAuthenticationFailed), cookieObject);
                         return '/';
                     }
 
@@ -96,6 +100,7 @@ export const authOptions: AuthOptions = {
                     user.userId = response.id;
                     user.birthdate = '';
                     user.provider = 'google';
+                    cookieStore.set('logInMessage', logInSuccessfull, cookieObject);
                     return true;
 
                 }

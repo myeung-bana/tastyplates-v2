@@ -14,12 +14,14 @@ import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { BsStarFill, BsStarHalf, BsStar } from "react-icons/bs";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
+import toast from 'react-hot-toast';
 
 //styles
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
+import { commentedSuccess, commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -41,8 +43,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
+  // const [userLikedComment, setUserComment] = useState(replies.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false);
+  const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
@@ -90,9 +94,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Fetch initial follow state when modal opens and author is available
     if (!isOpen) return;
     if (!session?.accessToken) return;
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
+      setIsFollowing(false);
+      return;
+    }
+    if (authorUserId === session?.user?.id) {
       setIsFollowing(false);
       return;
     }
@@ -124,8 +130,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -173,8 +177,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsShowSignup(true);
       return;
     }
-    const authorUserId =
-      data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
       alert("Author user ID is missing.");
       return;
@@ -309,18 +311,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     ?.split("|")
     .map((s: any) => s.trim())
     .filter((s: any) => s.length > 0);
-  //   .map((id) => {
-  //     const palate = palates.find((p) => p.id === id);
-  //     return palate ? palate.name : null;
-  //   })
-  //   .filter((name) => name);
-
-  // const restaurantPalateNames = restaurant?.cuisineIds
-  //   .map((rid) => {
-  //     const palate = palates.find((p) => p.cuisineId === rid);
-  //     return palate ? palate.name : null;
-  //   })
-  //   .filter((name) => name);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,6 +337,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       };
 
       await ReviewService.postReview(payload, session?.accessToken ?? "");
+      toast.success(commentedSuccess)
       setCommentReply("");
 
       const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
@@ -376,12 +367,14 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
+        toast.success(commentUnlikedSuccess)
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
+        toast.success(commentLikedSuccess)
       }
 
       setUserLiked(response.userLiked);
@@ -391,6 +384,43 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       alert("Error updating like");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleReplyLike = async (replyId: number) => {
+    // Find the reply by id or databaseId
+    const reply = replies.find(r => r.id === replyId || r.databaseId === replyId);
+    const dbId = reply?.databaseId || replyId;
+
+    if (replyLoading[dbId]) return;
+
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
+    setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
+    try {
+      let response;
+      if (reply?.userLiked) {
+        response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
+        toast.success(commentUnlikedSuccess)
+      } else {
+        response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
+        toast.success(commentLikedSuccess)
+      }
+      setReplies(prev =>
+        prev.map(r =>
+          (r.id === replyId || r.databaseId === dbId)
+            ? {
+              ...r,
+              userLiked: response.userLiked,
+              commentLikes: response.likesCount
+            }
+            : r
+        )
+      );
+    } finally {
+      setReplyLoading((prev) => ({ ...prev, [dbId]: false }));
     }
   };
 
@@ -432,8 +462,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 {(!session?.user || (session?.user?.id !== (data.userId))) && (
                   <button
                     onClick={handleFollowClick}
-                      className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
-                    disabled={followLoading || !authorUserId}
+                    className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
+                    disabled={!!session?.user && (followLoading || !authorUserId)}
                   >
                     {followLoading ? (
                       <span className="animate-pulse">
@@ -479,7 +509,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   lazyLoad="progressive"
                 >
                   {Array.isArray(data?.reviewImages) &&
-                  data.reviewImages.length > 0 ? (
+                    data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
                       <Image
                         key={index}
@@ -519,7 +549,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   lazyLoad="progressive"
                 >
                   {Array.isArray(data?.reviewImages) &&
-                  data.reviewImages.length > 0 ? (
+                    data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
                       <Image
                         key={index}
@@ -568,30 +598,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     </div>
                   </div>
                   {/* Hide follow button if user is the reviewer */}
-                  {(!session?.user ||
-                    session?.user?.id !==
-                      (data.author?.node?.databaseId ||
-                        data.author?.databaseId)) && (
-                    <button
-                      onClick={handleFollowClick}
-                      className={`px-4 py-2 bg-[#E36B00] text-xs md:text-sm font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${
-                        isFollowing
-                          ? "bg-[#494D5D] text-white"
-                          : "text-[#FCFCFC]"
-                      }`}
-                      disabled={followLoading}
-                    >
-                      {followLoading ? (
-                        <span className="animate-pulse">
-                          {isFollowing ? "Unfollowing..." : "Following..."}
-                        </span>
-                      ) : isFollowing ? (
-                        "Following"
-                      ) : (
-                        "Follow"
-                      )}
-                    </button>
-                  )}
+                  {(!session?.user || (session?.user?.id !== (data.userId))) && (
+                      <button
+                        onClick={handleFollowClick}
+                        className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
+                        disabled={!!session?.user && (followLoading || !authorUserId)}
+                      >
+                        {followLoading ? (
+                          <span className="animate-pulse">
+                            {isFollowing ? "Unfollowing..." : "Following..."}
+                          </span>
+                        ) : isFollowing ? (
+                          "Following"
+                        ) : (
+                          "Follow"
+                        )}
+                      </button>
+                    )}
                   <SignupModal
                     isOpen={isShowSignup}
                     onClose={() => setIsShowSignup(false)}
@@ -615,11 +638,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       <div className="shrink-0">
                         <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
                           {stripTags(data.reviewMainTitle || "") ||
-                            "Dorem ipsum dolor title."}
+                            ""}
                         </p>
                         <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
                           {stripTags(data.content || "") ||
-                            "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                            ""}
                         </p>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
@@ -655,16 +678,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {replies.length > 0 && (
                           <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[460px] overflow-y-auto">
                             {replies.map((reply, index) => {
+                              const replyUserLiked = reply.userLiked ?? false;
+                              const replyUserLikedCounts = reply.commentLikes ?? 0;
                               const UserPalateNames = reply?.palates
                                 ?.split("|")
                                 .map((s: string) => s.trim())
                                 .filter((s: string) => s.length > 0);
-
-                              console.log(
-                                UserPalateNames,
-                                reply?.palates,
-                                "palates"
-                              );
 
                               return (
                                 <div
@@ -705,28 +724,22 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                     </p>
                                     <div className="flex items-center relative text-center">
                                       <button
-                                        onClick={toggleLike}
-                                        disabled={loading}
-                                        aria-pressed={userLiked}
-                                        aria-label={
-                                          userLiked
-                                            ? "Unlike comment"
-                                            : "Like comment"
-                                        }
+                                        onClick={() => toggleReplyLike(reply.databaseId)}
+                                        disabled={!!replyLoading[reply.databaseId]}
+                                        aria-pressed={replyUserLiked}
+                                        aria-label={replyUserLiked ? "Unlike comment" : "Like comment"}
                                         className="focus:outline-none cursor-pointer"
                                       >
-                                        {loading ? (
+                                        {replyLoading[reply.databaseId] ? (
                                           <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
                                         ) : (
                                           <MdOutlineThumbUp
-                                            className={`shrink-0 size-4 stroke-[#494D5D] transition-colors duration-200 ${
-                                              userLiked ? "text-blue-600" : ""
-                                            }`}
+                                            className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${replyUserLiked ? "text-blue-600" : ""}`}
                                           />
                                         )}
                                       </button>
                                       <span className="text-[#494D5D] ml-2 text-[10px] md:text-xs font-medium">
-                                        {likesCount}
+                                        {replyUserLikedCounts}
                                       </span>
                                     </div>
                                   </div>
@@ -735,53 +748,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             })}
                           </div>
                         )}
-
-                        {/* {replies.length > 0 && (
-                      <div className="overflow-y-auto grow mt-4 border-t pt-4 pr-1">
-                        {replies.map((reply, index) => (
-                          
-                          <div key={index} className="reply flex items-start gap-3 mb-3">
-                            <Image
-                              src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
-                              alt={reply.author?.name || "User"}
-                              width={28}
-                              height={28}
-                              className="rounded-full"
-                            />
-                            <div className="review-card__user-info">
-                              <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                                {reply.author?.name || "Unknown User"}
-                              </h3>
-                              <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                {UserPalateNames?.map((tag: any, index: number) => (
-                                  <span
-                                    key={index}
-                                    className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
-                                  >
-                                    {tag}{" "}
-                                  </span>
-                                ))}
-                              </div>
-                              <p className="review-card__text w-full text-sm font-normal">{stripTags(reply.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )} */}
                       </div>
                     </div>
                   </div>
-                  {/* <div className="review-card__header">
-              <div className="review-card__user-info">
-                <h3>{restaurant?.name}</h3>
-                <Link
-                  href={`/restaurants/${data.id}`}
-                  className="review-card__restaurant"
-                >
-                  {restaurant?.address}
-                </Link>
-              </div>
-              </div> */}
                   <div className="w-full shrink-0 border-t bg-white border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-0">
                     <div className="flex flex-row justify-start items-center gap-4">
                       {isLoading ? (
@@ -806,7 +775,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             }
                           }}
                           disabled={cooldown > 0}
-                          className="py-[11px] px-4 w-full border border-[#CACACA] text-[#ACAFB8] resize-none rounded-[10px]"
+                          className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
                         />
                       )}
                       <div className="flex gap-2 flex-row items-center">
@@ -824,9 +793,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
                             ) : (
                               <MdOutlineThumbUp
-                                className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${
-                                  userLiked ? "text-blue-600" : ""
-                                }`}
+                                className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${userLiked ? "text-blue-600" : ""
+                                  }`}
                               />
                             )}
                           </button>

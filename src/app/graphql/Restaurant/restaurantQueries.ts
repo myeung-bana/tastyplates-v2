@@ -41,6 +41,7 @@ export const GET_LISTINGS = gql`
             databaseId
             title
             slug
+            status
             content
             priceRange
             averageRating
@@ -83,6 +84,19 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         slug
         content
         priceRange
+        averageRating
+        ratingsCount
+        recognitionCounts {
+            bestService
+            instaWorthy
+            mustRevisit
+            valueForMoney
+        }
+        palateStats {
+            name
+            avg
+            count
+        }
         palates {
             nodes {
                 name
@@ -116,12 +130,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                 nodes {
                     name
                 }
-            }
-        comments(where: {commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1}) {
-                nodes {
-                    recognitions
-                }
-            }    
+            }  
         }
     }`
     ;
@@ -131,6 +140,7 @@ export const GET_RESTAURANT_BY_ID = gql`
   listing(id: $id, idType: $idType) {
         id
         title
+        slug
         content
         palates {
             nodes {
@@ -168,6 +178,21 @@ export const GET_RESTAURANT_BY_ID = gql`
             }
         }
 }
+`;
+
+export const ADD_RECENTLY_VISITED_RESTAURANT = gql`
+  mutation AddRecentlyVisited($postId: Int!) {
+    addRecentlyVisited(postId: $postId)
+  }
+`;
+
+export const GET_RECENTLY_VISITED_RESTAURANTS = gql`
+    query {
+        currentUser {
+        id
+        recentlyVisited
+        }
+    }
 `;
 
 export const GET_LISTINGS_NAME = gql`

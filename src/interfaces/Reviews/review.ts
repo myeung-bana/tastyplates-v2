@@ -31,7 +31,7 @@ export interface ReviewedDataProps {
       databaseId: number;
       title: string;
       slug: string;
-      fieldMultiCheck90: string;
+      fieldMultiCheck90?: string;
       featuredImage: {
         node: {
           databaseId: string;
