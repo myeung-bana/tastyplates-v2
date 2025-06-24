@@ -57,7 +57,7 @@ const ListingDraftPage = () => {
     }
 
     return (
-        <div className="mt-20 mb-10 pt-10 lg:px-16">
+        <div className="mt-20 mb-10 pt-10 px-3 md:px-6 xl:px-16">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-medium text-black">My Listing Draft</h1>
                 <Link href="/listing/explanation" className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
