@@ -309,7 +309,7 @@ const AddListingPage = (props: any) => {
 
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
-  const submitReviewAndListing = async (e: FormEvent, reviewMode: "listing_draft" | "publish", listingStatus: "pending" | "draft") => {
+  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft") => {
     e.preventDefault();
 
     let hasError = false;
@@ -389,7 +389,7 @@ const AddListingPage = (props: any) => {
       await ReviewService.postReview(reviewData, sess);
 
       setIsSubmitted(true);
-      if (reviewMode === "listing_draft") {
+      if (reviewMode === "draft") {
         // router.push("/listing/draft");
       } else {
         router.push("/listing");
@@ -839,7 +839,7 @@ const AddListingPage = (props: any) => {
                 <button
                   type="button"
                   className="listing__button flex"
-                  onClick={(e) => submitReviewAndListing(e, "listing_draft", "draft")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "draft")}
                 >
                   {isLoading && (
                     <svg
@@ -863,7 +863,7 @@ const AddListingPage = (props: any) => {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => submitReviewAndListing(e, "listing_draft", "pending")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
                   className="underline flex h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
                   {isLoading && (
