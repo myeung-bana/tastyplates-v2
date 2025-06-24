@@ -67,7 +67,7 @@ const ListingDraftPage = () => {
                 {error && <p className="text-red-500">{error}</p>}
                 {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
                 {!loading && pendingListings.length > 0 && (
-                    <Suspense fallback={<div>Loading card details...</div>}>
+                    <Suspense fallback={<div></div>}>
                         {pendingListings.map((restaurant: FetchedRestaurant, index: number) => (
                             <ListingCardDraft key={restaurant.id} restaurant={restaurant} onDeleteSuccess={() => removeListing(restaurant, index)} />
                         ))}

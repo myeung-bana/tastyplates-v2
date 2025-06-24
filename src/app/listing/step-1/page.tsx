@@ -4,7 +4,7 @@ import AddListingWrapper from "@/components/Restaurant/Listing/AddListingClient"
 
 const AddReviewPage = () => {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading application...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"></div>}>
       <AddListingWrapper step={1} />
     </Suspense>
   );

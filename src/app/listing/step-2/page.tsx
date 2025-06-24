@@ -10,7 +10,7 @@ const AddListingPage = dynamic(
 const AddReviewPage = () => {
   return (
     <section>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div></div>}>
         <AddListingPage step={2} />
       </Suspense>
     </section>
