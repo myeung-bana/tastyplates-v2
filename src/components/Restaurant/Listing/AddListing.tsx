@@ -172,7 +172,7 @@ const AddListingPage = (props: any) => {
 
       try {
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_Maps_API_KEY}`
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
         );
         const data = await response.json();
 
@@ -200,7 +200,9 @@ const AddListingPage = (props: any) => {
       setSelectedPalates(selected);
       setPalatesError("");
     } else {
-      alert("You can select up to 2 palates only.");
+      setPalatesError("You can select a maximum of 2 palates.");
+      // Reset to previous valid selection
+      setSelectedPalates(selected.slice(0, 2));
     }
   };
 
@@ -632,6 +634,24 @@ const AddListingPage = (props: any) => {
                     className="listing__button"
                     onClick={(e) => submitListing(e, "continue")}
                   >
+                    {isLoading && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-white"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                     Continue
                   </button>
                   <button
@@ -639,6 +659,24 @@ const AddListingPage = (props: any) => {
                     type="button"
                     onClick={(e) => submitListing(e, "saveDraft")}
                   >
+                    {isLoading && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-white"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                     Save and Exit
                   </button>
                 </div>
@@ -800,16 +838,52 @@ const AddListingPage = (props: any) => {
               <div className="flex justify-center gap-3 md:gap-4 items-center">
                 <button
                   type="button"
-                  className="listing__button"
+                  className="listing__button flex"
                   onClick={(e) => submitReviewAndListing(e, "draft", "draft")}
                 >
+                  {isLoading && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-white"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                   Submit Listing
                 </button>
                 <button
                   type="button"
                   onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
-                  className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                  className="underline flex h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
+                  {isLoading && (
+                    <svg
+                      className="animate-spin w-5 h-5 text-white"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeDasharray="164"
+                        strokeDashoffset="40"
+                      />
+                    </svg>
+                  )}
                   Save and exit
                 </button>
               </div>

@@ -1,4 +1,3 @@
-// Restaurant.tsx
 // pages/RestaurantPage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -10,7 +9,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 
 interface Restaurant {
   id: string;
@@ -33,6 +32,7 @@ interface Restaurant {
 const RestaurantPage = () => {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchAddress, setSearchAddress] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -124,6 +124,10 @@ const RestaurantPage = () => {
   useEffect(() => {
     const palatesParam = searchParams?.get("palates");
     const addressParam = searchParams?.get("address");
+    const listingParam = searchParams?.get("listing");
+
+    let shouldUpdateUrl = false;
+    const currentSearchParams = new URLSearchParams(searchParams?.toString());
 
     // Handle palates filter: Add if present, or clear if not present
     if (palatesParam) {
@@ -136,8 +140,9 @@ const RestaurantPage = () => {
           palates: Array.from(combinedPalates)
         };
       });
+      currentSearchParams.delete("palates");
+      shouldUpdateUrl = true;
     } else {
-      // If palatesParam is not in the URL, reset the palates filter
       setFilters(prevFilters => ({
         ...prevFilters,
         palates: []
@@ -146,11 +151,23 @@ const RestaurantPage = () => {
 
     if (addressParam) {
       setSearchAddress(decodeURIComponent(addressParam));
-    } else {
-      setSearchAddress("");
+      currentSearchParams.delete("address"); 
+      shouldUpdateUrl = true;
     }
 
-  }, [searchParams]); // Depend on searchParams to react to URL changes
+    if (listingParam) {
+      setSearchTerm(decodeURIComponent(listingParam));
+      currentSearchParams.delete("listing");
+      shouldUpdateUrl = true;
+    }
+
+    if (shouldUpdateUrl) {
+      const newPathname = window.location.pathname;
+      const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
+      router.replace(newUrl);
+    }
+
+  }, [searchParams, router]);
 
   useEffect(() => {
     setRestaurants([]);
@@ -205,7 +222,7 @@ const RestaurantPage = () => {
           <div className="search-bar hidden sm:block relative">
             <input
               type="text"
-              placeholder="Search by Listing Name or Address"
+              placeholder="Search by Listing Name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-bar__input"
