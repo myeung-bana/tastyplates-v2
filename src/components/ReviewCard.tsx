@@ -39,7 +39,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
         />
       </div>
 
-      <div className="review-card__content mt-2 md:mt-0">
+      <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           <Image
             src={data.userAvatar || data.author?.node?.avatar?.url || "/profile-icon.svg"}
@@ -73,7 +73,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           </div>
         </div>
         <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || ""}</p>
-        <p className="review-card__text w-[304] text-[10px] md:text-sm font-normal line-clamp-2">{stripTags(data.content || "") || ""}</p>
+        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{stripTags(data.content || "") || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>
