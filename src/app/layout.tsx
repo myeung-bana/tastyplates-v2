@@ -3,6 +3,7 @@ import "@/styles/global.scss";
 import SessionWrapper from "@/components/SessionWrapper";
 import { Toaster } from 'react-hot-toast';
 import { FollowProvider } from "@/components/FollowContext";
+import InactivityLogout from "@/components/InactivityLogout";
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
@@ -18,7 +19,7 @@ export default function RootLayout({
       <body>
         <Toaster position="top-center" reverseOrder={false} />
         <FollowProvider>
-          <SessionWrapper>{children}</SessionWrapper>
+          <SessionWrapper><InactivityLogout />{children}</SessionWrapper>
         </FollowProvider>
       </body>
     </html>
