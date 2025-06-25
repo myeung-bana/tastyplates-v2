@@ -55,7 +55,7 @@ const RestaurantPage = () => {
     id: item.id,
     slug: item.slug,
     name: item.title,
-    image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+    image: item.featuredImage?.node.sourceUrl || "/images/default-image.png",
     rating: item.averageRating,
     databaseId: item.databaseId || 0,
     palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
