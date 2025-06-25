@@ -1,36 +1,35 @@
 import "@/styles/pages/_restaurant-details.scss";
-import ReviewBlock from "./ReviewBlock"; // Import the ReviewBlock component
-import { users } from "@/data/dummyUsers"; // Import users data
-import { useEffect, useState } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
-import { cn } from "@/lib/utils";
 import { Masonry } from "masonic";
-import Photos from "./Restaurant/Details/Photos";
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { ReviewService } from "@/services/Reviews/reviewService";
+import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
+import ReviewBlock from "./ReviewBlock";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { UserService } from '@/services/userService';
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
+  // Session and user state
   const { data: session } = useSession();
-  const [allReviews, setAllReviews] = useState<any[]>([]); // All fetched reviews
+  const currentUserId = session?.user?.id || null;
+
+  // Review and filter state
+  const [allReviews, setAllReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
-  const [selectedStarRating, setSelectedStarRating] = useState<string>("");
+  const [selectedReviewFilter, setSelectedReviewFilter] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<string>("newest");
-  const REVIEWS_PER_PAGE = 5;
+  const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);
 
-  // Star rating filter options
-  const starOptions = [
+  // Constants
+  const REVIEWS_PER_PAGE = 5;
+  const reviewFilterOptions = [
     { value: '', label: 'All Reviews' },
-    { value: '5', label: '5 Stars' },
-    { value: '4', label: '4 Stars' },
-    { value: '3', label: '3 Stars' },
-    { value: '2', label: '2 Stars' },
-    { value: '1', label: '1 Star' },
+    { value: 'following', label: 'Following' },
+    { value: 'mine', label: 'My Reviews' },
   ];
-  // Sort options
   const sortOptions = [
     { value: "newest", label: "Newest First" },
     { value: "oldest", label: "Oldest First" },
@@ -49,7 +48,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
         const data = await ReviewService.getRestaurantReviews(
           restaurantId,
           session?.accessToken,
-          50, // Fetch in larger chunks for efficiency
+          50,
           after
         );
         allFetched = allFetched.concat(data.reviews);
@@ -64,11 +63,27 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     }
   };
 
+  // Fetch following user IDs on mount/session change
+  useEffect(() => {
+    const fetchFollowing = async () => {
+      if (!session?.user?.id || !session?.accessToken) return;
+      try {
+        const followingList = await UserService.getFollowingList(session.user.id, session.accessToken);
+        setFollowingUserIds(followingList.map((u: any) => String(u.id)));
+      } catch (e) {
+        setFollowingUserIds([]);
+      }
+    };
+    fetchFollowing();
+  }, [session]);
+
+  // Fetch reviews on restaurant, tab, or session change
   useEffect(() => {
     fetchAllReviews();
     setCurrentPage(1);
   }, [restaurantId, currentTab, session]);
 
+  // Tab change handler
   const handleTabChange = (tabId: "all" | "photos") => {
     setCurrentTab(tabId);
     setCurrentPage(1);
@@ -85,10 +100,15 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
 
   // Filtering and sorting logic
   const filteredReviews = allReviews.filter((review) => {
-    if (!selectedStarRating) return true;
-    // Filter by star rating (compare as integer)
-    const rating = getNumericRating(review);
-    return parseInt(selectedStarRating) === Math.round(Number(rating));
+    if (!selectedReviewFilter) return true;
+    if (selectedReviewFilter === 'following') {
+      const authorId = String(review?.author?.node?.databaseId ?? review?.authorId ?? '');
+      return followingUserIds.includes(authorId);
+    }
+    if (selectedReviewFilter === 'mine') {
+      return String(review?.author?.node?.databaseId) === String(currentUserId);
+    }
+    return true;
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
@@ -104,10 +124,11 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     return 0;
   });
 
-  // Paginate the sorted/filtered reviews
+  // Pagination
   const paginatedReviews = sortedReviews.slice((currentPage - 1) * REVIEWS_PER_PAGE, currentPage * REVIEWS_PER_PAGE);
   const totalPages = Math.ceil(sortedReviews.length / REVIEWS_PER_PAGE);
 
+  // Tab content
   const tabs = [
     {
       id: "all",
@@ -119,10 +140,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
               <div className="h-6 w-24 bg-gray-300 rounded mx-auto mb-6"></div>
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="border border-[#CACACA] rounded-lg p-4 space-y-2"
-                  >
+                  <div key={i} className="border border-[#CACACA] rounded-lg p-4 space-y-2">
                     <div className="h-5 w-32 bg-gray-300 rounded"></div>
                     <div className="h-4 w-full bg-gray-300 rounded"></div>
                     <div className="h-4 w-full bg-gray-300 rounded"></div>
@@ -140,27 +158,16 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                     id: review.databaseId,
                     authorId: review?.author?.node?.databaseId ?? "",
                     restaurantId: restaurantId.toString(),
-                    user:
-                      review?.author?.node?.name ??
-                      review?.author?.name ??
-                      "Unknown",
+                    user: review?.author?.node?.name ?? review?.author?.name ?? "Unknown",
                     rating: Number(review.reviewStars) || 0,
                     date: review.date,
                     title: review.reviewMainTitle,
                     comment: review.content ?? "",
-                    images:
-                      review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
-                    userImage:
-                      review?.userAvatar ??
-                      "/profile-icon.svg",
-                    recognitions: Array.isArray(review.recognitions)
-                      ? review.recognitions
-                      : [],
+                    images: review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
+                    userImage: review?.userAvatar ?? "/profile-icon.svg",
+                    recognitions: Array.isArray(review.recognitions) ? review.recognitions : [],
                     palateNames: typeof review.palates === "string"
-                      ? review.palates
-                        .split("|")
-                        .map((p: string) => p.trim())
-                        .filter(Boolean)
+                      ? review.palates.split("|").map((p: string) => p.trim()).filter(Boolean)
                       : [],
                     commentLikes: review.commentLikes ?? 0,
                     userLiked: review.userLiked ?? false,
@@ -218,6 +225,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
       ),
     },
   ];
+
+  // Render
   return (
     <section className="restaurant-reviews">
       <div className="flex justify-between items-center">
@@ -227,10 +236,10 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
             <select
               className="review-filter"
               style={{ color: '#494D5D' }}
-              value={selectedStarRating}
-              onChange={e => { setSelectedStarRating(e.target.value); setCurrentPage(1); }}
+              value={selectedReviewFilter}
+              onChange={e => { setSelectedReviewFilter(e.target.value); setCurrentPage(1); }}
             >
-              {starOptions.map((option, index) =>
+              {reviewFilterOptions.map((option, index) =>
                 <option value={option.value} key={index}>
                   {option.label}
                 </option>
