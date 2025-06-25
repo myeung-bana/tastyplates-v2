@@ -327,8 +327,6 @@ export default function RestaurantDetail() {
                     </div>
 
                     <div className="restaurant-detail__detail-item">
-                      <FiPhone />
-                      <span>{restaurant.listingDetails?.phone || restaurant.phone}</span>
                     </div>
                     {restaurant.listingDetails?.openingHours && (
                       <div className="restaurant-detail__detail-item" key="opening-hours">
