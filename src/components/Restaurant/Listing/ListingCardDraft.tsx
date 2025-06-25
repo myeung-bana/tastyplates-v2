@@ -1,13 +1,14 @@
 // ListingCardDraft.tsx
-import React from 'react';
+import React, { useState } from 'react'; // Import useState
 import Image from "next/image";
 import { IoMdClose } from "react-icons/io";
 import { FaStar } from 'react-icons/fa';
-// import Photo from "../../public/images/default-image.png";
-import Photo from "../../../../public/images/Photos-Review-12.png"; // Adjust the path as necessary
+import Photo from "../../../../public/images/Photos-Review-12.png";
 import { useSession } from 'next-auth/react';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
-
+import ReviewModal from "@/components/ui/Modal/ReviewModal"; // Import ReviewModal
+import toast from 'react-hot-toast'; // Import toast
+import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages"; // Assuming these are defined similarly to Listing.tsx
 
 // Define the interface for the restaurant data passed to the card
 interface FetchedRestaurant {
@@ -34,25 +35,31 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     const countryNames = restaurant.countries?.nodes?.map(country => country.name).join(', ') || restaurant.listingStreet || 'Unknown Location';
     const { data: session } = useSession();
     const accessToken = session?.accessToken || "";
-    const addReview = () => {
-        console.log(`Adding review for ${restaurant.title}`);
+
+    const [isShowDelete, setIsShowDelete] = useState<boolean>(false); // State for modal visibility
+    const [isLoadingDelete, setIsLoadingDelete] = useState<boolean>(false); // State for loading during deletion
+
+    const handleDeleteClick = () => {
+        setIsShowDelete(true); // Show the confirmation modal
     };
 
-        const handleDelete = async () => {
+    const confirmDelete = async () => {
         if (!accessToken) {
-            alert("Authentication token is missing. Please log in.");
+            toast.error("Authentication token is missing. Please log in.");
             return;
         }
 
-        if (window.confirm(`Are you sure you want to delete "${restaurant.title}"?`)) {
-            try {
-                await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
-                alert("Listing deleted successfully!");
-                onDeleteSuccess(); // Call the parent's function to re-fetch listings or update UI
-            } catch (error: any) {
-                console.error("Failed to delete listing:", error);
-                alert(error.message || "Failed to delete listing. Please try again.");
-            }
+        setIsLoadingDelete(true);
+        try {
+            await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
+            toast.success(deleteDraftSuccess); // Use toast for success message
+            onDeleteSuccess(); // Call the parent's function to re-fetch listings or update UI
+            setIsShowDelete(false); // Close the modal on success
+        } catch (error: any) {
+            console.error("Failed to delete listing:", error);
+            toast.error(error.message || deleteDraftError); // Use toast for error message
+        } finally {
+            setIsLoadingDelete(false);
         }
     };
 
@@ -60,20 +67,20 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
         <div className="restaurant-card border rounded-lg overflow-hidden shadow-md bg-white">
             <div className="restaurant-card__image relative">
                 <Image
-                src={imageUrl }
-                alt="Review Draft"
-                width={304}
-                height={228}
-                className="restaurant-card__img"
+                    src={imageUrl}
+                    alt="Review Draft"
+                    width={304}
+                    height={228}
+                    className="restaurant-card__img"
                 />
                 {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
                 <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
-                <button
-                    className="rounded-full p-2 bg-white"
-                    onClick={handleDelete} 
-                >
-                    <IoMdClose />
-                </button>
+                    <button
+                        className="rounded-full p-2 bg-white"
+                        onClick={handleDeleteClick} // Use new handler to open modal
+                    >
+                        <IoMdClose />
+                    </button>
                 </div>
             </div>
             {/* Modified Link to point to /add-listing with resId */}
@@ -96,9 +103,19 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
                             </span>
                         ))}
                     </div>
-
                 </div>
             </a>
+
+            <ReviewModal
+                header="Delete this Draft?"
+                content="Your draft will be removed."
+                isOpen={isShowDelete}
+                setIsOpen={(open: boolean) => {
+                    if (!isLoadingDelete) setIsShowDelete(open);
+                }}
+                onConfirm={confirmDelete}
+                loading={isLoadingDelete} // pass loading flag to modal
+            />
         </div>
     );
 };
