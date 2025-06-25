@@ -34,6 +34,7 @@ export class RestaurantRepository {
     static async getRestaurantBySlug(slug: string) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_SLUG,
+            fetchPolicy: "no-cache",
             variables: { slug },
         });
         return data.listing;

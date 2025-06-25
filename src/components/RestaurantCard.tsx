@@ -194,7 +194,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
+          <a 
+          href={`/restaurants/${restaurant.slug}`} 
+          onClick={async (e) => {
+            e.preventDefault();
+            if (onClick) await onClick(); // Wait for mutation to complete
+            // router.push(`/restaurants/${restaurant.slug}`);
+          }}
+          >
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
                 Pending for Approval
@@ -209,7 +216,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
               className="restaurant-card__img cursor-pointer"
               style={{ cursor: "pointer" }}
             />
-          </Link>
+          </a>
           {profileTablist !== 'listings' && (
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
@@ -235,7 +242,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
             </div>
           )}
         </div>
-        <Link href={`/restaurants/${restaurant.slug}`} onClick={onClick}>
+        <a 
+        href={`/restaurants/${restaurant.slug}`} 
+        onClick={async (e) => {
+          e.preventDefault();
+          if (onClick) await onClick(); // Wait for mutation to complete
+          router.push(`/restaurants/${restaurant.slug}`);
+        }}
+        >
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
@@ -269,7 +283,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
               </div>
 
             </div>
-          </Link>
+          </a>
         </div>
 
       <CustomModal
