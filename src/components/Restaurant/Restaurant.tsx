@@ -152,6 +152,10 @@ const RestaurantPage = () => {
       setSearchAddress(decodeURIComponent(addressParam));
       currentSearchParams.delete("address"); 
     }
+    else {
+      setSearchAddress("");
+    }
+      
 
     if (listingParam) {
       setSearchTerm(decodeURIComponent(listingParam));
