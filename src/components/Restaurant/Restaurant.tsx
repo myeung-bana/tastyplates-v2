@@ -141,7 +141,6 @@ const RestaurantPage = () => {
         };
       });
       currentSearchParams.delete("palates");
-      shouldUpdateUrl = true;
     } else {
       setFilters(prevFilters => ({
         ...prevFilters,
@@ -152,7 +151,6 @@ const RestaurantPage = () => {
     if (addressParam) {
       setSearchAddress(decodeURIComponent(addressParam));
       currentSearchParams.delete("address"); 
-      shouldUpdateUrl = true;
     }
 
     if (listingParam) {
