@@ -18,6 +18,7 @@ interface FetchedRestaurant {
     slug: string;
     content: string;
     listingStreet: string;
+    listingDetails: { googleMapUrl: { streetAddress: string} } | null;
     palates: { nodes: { name: string }[] };
     featuredImage: { node: { sourceUrl: string } };
     listingCategories: { nodes: { id: string; name: string }[] };
@@ -32,7 +33,7 @@ interface ListingCardProps {
 const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSuccess }) => {
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
-    const countryNames = restaurant.countries?.nodes?.map(country => country.name).join(', ') || restaurant.listingStreet || 'Unknown Location';
+    const countryNames = restaurant.listingDetails?.googleMapUrl.streetAddress || restaurant.listingStreet || 'Unknown Location';
     const { data: session } = useSession();
     const accessToken = session?.accessToken || "";
 
@@ -84,7 +85,9 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
                 </div>
             </div>
             {/* Modified Link to point to /add-listing with resId */}
-            <a href={`/listing/step-1?resId=${restaurant.databaseId}`}>
+            <a href="#"
+            // {`/listing/step-1?resId=${restaurant.databaseId}`}
+            >
                 <div className="restaurant-card__content p-4">
                     <div className="restaurant-card__header flex justify-between items-start mb-2">
                         <h2 className="restaurant-card__name text-lg font-semibold line-clamp-1 flex-grow pr-2">{restaurant.title}</h2>

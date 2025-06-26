@@ -16,6 +16,7 @@ interface FetchedRestaurant {
     slug: string;
     content: string;
     listingStreet: string;
+    listingDetails: { googleMapUrl: { streetAddress: string } } | null;
     palates: { nodes: { name: string }[] };
     featuredImage: { node: { sourceUrl: string } };
     listingCategories: { nodes: { id: string; name: string }[] };
