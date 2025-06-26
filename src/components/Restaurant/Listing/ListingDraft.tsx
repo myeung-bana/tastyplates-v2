@@ -1,9 +1,7 @@
 // ListingDraft.tsx
 'use client'
-import { Restaurant } from "@/data/dummyRestaurants" // This import might be unused or for dummy data
 import Link from "next/link"
-import { useState, useEffect, Suspense } from "react" // Ensure Suspense is imported
-import CustomModal from "@/components/ui/Modal/Modal" // This CustomModal seems unrelated to ReviewModal for deletion
+import { useState, useEffect, Suspense } from "react"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
@@ -14,6 +12,7 @@ interface FetchedRestaurant {
     databaseId: number;
     title: string;
     slug: string;
+    date: string;
     content: string;
     listingStreet: string;
     listingDetails: { googleMapUrl: { streetAddress: string } } | null;
@@ -24,21 +23,16 @@ interface FetchedRestaurant {
 }
 
 const ListingDraftPage = () => {
-    // isShowDelete and removeListing here are for CustomModal, not the delete confirmation for ListingCardDraft
-    // You might want to remove `isShowDelete` and `removeListing` if CustomModal is not used for this specific delete flow.
-    // For the delete confirmation modal, ListingCardDraft handles its own modal internally now.
-    // So, we only need state for the actual listings.
 
     const [pendingListings, setPendingListings] = useState<FetchedRestaurant[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const { data: session, status } = useSession();
     const userId = session?.user?.id || null;
-
-    // Function to fetch pending listings
     const getPendingListings = async () => {
+
         if (status !== 'authenticated' || !userId) {
-            setLoading(false); // Stop loading if not authenticated
+            setLoading(false);
             return;
         }
 
@@ -59,13 +53,10 @@ const ListingDraftPage = () => {
         getPendingListings();
     }, [status, userId]);
 
-    // This function will be passed to ListingCardDraft's onDeleteSuccess prop.
-    // It should remove the deleted listing from the state without redirecting.
     const handleListingDeleted = (deletedRestaurantId: string) => {
         setPendingListings(prevListings =>
             prevListings.filter(listing => listing.id !== deletedRestaurantId)
         );
-        // No redirection needed here
     };
 
     return (
@@ -80,24 +71,16 @@ const ListingDraftPage = () => {
                 {!loading && pendingListings.length === 0 && !error && <p>No pending draft listings found.</p>}
                 {!loading && pendingListings.length > 0 && (
                     <Suspense fallback={<div></div>}>
-                        {pendingListings.map((restaurant: FetchedRestaurant) => ( // Removed index as it's not needed for key
+                        {pendingListings.map((restaurant: FetchedRestaurant) => (
                             <ListingCardDraft
                                 key={restaurant.id}
                                 restaurant={restaurant}
-                                // Pass the ID of the deleted restaurant back to the parent
                                 onDeleteSuccess={() => handleListingDeleted(restaurant.id)}
                             />
                         ))}
                     </Suspense>
                 )}
             </div>
-            {/* If CustomModal is not used for this delete flow, you can remove it */}
-            {/* <CustomModal
-                header="Delete this Draft?"
-                content="Your draft will be removed."
-                isOpen={isShowDelete}
-                setIsOpen={() => setIsShowDelete(!isShowDelete)}
-            /> */}
         </div>
     )
 }
