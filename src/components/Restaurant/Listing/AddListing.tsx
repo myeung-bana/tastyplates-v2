@@ -52,9 +52,7 @@ const AddListingPage = (props: any) => {
   const [reviewMainTitle, setReviewMainTitle] = useState("");
   const [content, setContent] = useState("");
   const [reviewStars, setReviewStars] = useState(0);
-
-  // Directly access searchParams here, as this is a client component
-  const searchParams = useSearchParams(); //
+  const searchParams = useSearchParams();
 
   const [currentRestaurantDbId, setCurrentRestaurantDbId] = useState(0);
 
@@ -252,11 +250,8 @@ const AddListingPage = (props: any) => {
   };
 
   useEffect(() => {
-    // Only attempt to read searchParams and fetch data if on the client
-    // and if the component has been hydrated.
-    // The Suspense in page.tsx will handle the loading state during SSR.
-    if (typeof window !== 'undefined') { // Check if window object is available (client-side)
-      const resIdFromUrl = searchParams?.get("resId"); // Access searchParams here
+    if (typeof window !== 'undefined') {
+      const resIdFromUrl = searchParams?.get("resId");
       const fetchDraftDetails = async () => {
         const currentResId = Number(resIdFromUrl);
 
@@ -273,21 +268,26 @@ const AddListingPage = (props: any) => {
             console.log("Fetched draft restaurant data:", restaurantData);
 
             if (restaurantData) {
+              const initialSelectedPalates = restaurantData.palates?.nodes?.map((palate: any) => ({
+                label: palate.name,
+                value: palate.databaseId,
+              })) || [];
+              const initialCategory = restaurantData.listingCategories?.nodes?.[0]?.name || "";
+
               setListing((prevListing) => ({
                 ...prevListing,
                 name: restaurantData.title || "",
                 title: restaurantData.title || "",
                 content: restaurantData.content || "",
-                address: restaurantData.listingStreet || "",
-                latitude: restaurantData.listingDetails?.latitude || 0,
-                longitude: restaurantData.listingDetails?.longitude || 0,
+                address: restaurantData.listingDetails?.googleMapUrl?.streetAddress || restaurantData.listingStreet || "",
+                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || 0,
+                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || 0,
                 phone: restaurantData.listingDetails?.phone || "",
                 openingHours: restaurantData.listingDetails?.openingHours || "",
                 priceRange: restaurantData.priceRange || "",
-                palates: restaurantData.palates?.nodes || [],
-                listingCategories: restaurantData.listingCategories?.nodes || [],
-                countries: restaurantData.countries?.nodes || [],
+                category: initialCategory,
               }));
+              setSelectedPalates(initialSelectedPalates);
               setCurrentRestaurantDbId(restaurantData.databaseId || 0);
               setStep(1);
             } else {
@@ -305,7 +305,7 @@ const AddListingPage = (props: any) => {
 
       fetchDraftDetails();
     }
-  }, [searchParams]); // Depend on searchParams to re-run if it changes
+  }, [searchParams]);
 
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
@@ -359,15 +359,15 @@ const AddListingPage = (props: any) => {
         setCurrentRestaurantDbId(finalRestaurantId);
       } else {
         const listingUpdateData = {
-            name: listing.name,
-            listingStreet: listing.address || "",
-            priceRange: listing.priceRange,
-            streetAddress: listing.address,
-            categories: listing.category,
-            latitude: String(listing.latitude),
-            longitude: String(listing.longitude),
-            palates: selectedPalates.map(p => p.label),
-            status: listingStatus,
+          name: listing.name,
+          listingStreet: listing.address || "",
+          priceRange: listing.priceRange,
+          streetAddress: listing.address,
+          categories: listing.category,
+          latitude: String(listing.latitude),
+          longitude: String(listing.longitude),
+          palates: selectedPalates.map(p => p.label),
+          status: listingStatus,
         };
 
         console.log("Updating listing before review:", listingUpdateData);
@@ -635,23 +635,23 @@ const AddListingPage = (props: any) => {
                     onClick={(e) => submitListing(e, "continue")}
                   >
                     {isLoading && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-white"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
-                  )}
+                      <svg
+                        className="animate-spin w-5 h-5 text-white"
+                        viewBox="0 0 100 100"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke="currentColor"
+                          strokeWidth="10"
+                          strokeDasharray="164"
+                          strokeDashoffset="40"
+                        />
+                      </svg>
+                    )}
                     Continue
                   </button>
                   <button
@@ -660,23 +660,23 @@ const AddListingPage = (props: any) => {
                     onClick={(e) => submitListing(e, "saveDraft")}
                   >
                     {isLoading && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-white"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
-                  )}
+                      <svg
+                        className="animate-spin w-5 h-5 text-white"
+                        viewBox="0 0 100 100"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke="currentColor"
+                          strokeWidth="10"
+                          strokeDasharray="164"
+                          strokeDashoffset="40"
+                        />
+                      </svg>
+                    )}
                     Save and Exit
                   </button>
                 </div>

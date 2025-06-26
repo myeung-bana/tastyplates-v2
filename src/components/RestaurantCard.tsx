@@ -183,36 +183,34 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const address = restaurant.streetAddress?.trim() || 'Default Location';
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (pathname === "/listing") {
-      e.preventDefault();
-      router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
-    }
-  };
-
   return (
     <>
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
-          <a 
-          href={`/restaurants/${restaurant.slug}`} 
-          onClick={async (e) => {
-            e.preventDefault();
-            if (onClick) await onClick(); // Wait for mutation to complete
-            // router.push(`/restaurants/${restaurant.slug}`);
-          }}
-          >
+          <a
+            href={`/restaurants/${restaurant.slug}`}
+            onClick={async (e) => {
+              e.preventDefault();
+              const clickedElement = e.target as HTMLElement;
+              // Detect if the image was clicked and you're on the /listing page
+              if (pathname === "/listing" && clickedElement.dataset.role === "image") {
+                router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`); 
+                return;
+              }
+              if (onClick) await onClick(); // Wait for mutation to complete
+              router.push(`/restaurants/${restaurant.slug}`);
+            }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
                 Pending for Approval
               </div>
             )}
             <Image
+              data-role="image"
               src={restaurant.image}
               alt={restaurant.name}
               width={304}
               height={228}
-              onClick={handleClick}
               className="restaurant-card__img cursor-pointer"
               style={{ cursor: "pointer" }}
             />
