@@ -21,14 +21,14 @@ export default function InactivityLogout () {
 
     if (lastActive && now - lastActive > INACTIVITY_TIMEOUT) {
       localStorage.removeItem(LAST_ACTIVE_KEY);
-      signOut();
+      signOut({ redirect: true, callbackUrl: '/' });
       toast.error(Inactive);
       return;
     }
 
     const handleLogout = () => {
       localStorage.removeItem(LAST_ACTIVE_KEY);
-      signOut();
+      signOut({ redirect: true, callbackUrl: '/' });
       toast.error(Inactive);
     };
 
