@@ -160,6 +160,9 @@ const Form = () => {
         updateData.palates = formattedPalates;
       }
 
+      setProfileError("");
+      setPalateError("");
+      
       // Get response from API
       const response = await UserService.updateUserFields(
         updateData,
@@ -177,7 +180,6 @@ const Form = () => {
         },
       });
 
-      setPalateError("");
       setIsSubmitted(true);
 
       // Redirect after successful update
