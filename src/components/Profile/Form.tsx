@@ -366,6 +366,7 @@ const Form = () => {
                   value={aboutMe}
                   onChange={handleTextAreaChange}
                   rows={5}
+                  disabled={isLoading}
                 ></textarea>
               </div>
             </div>
