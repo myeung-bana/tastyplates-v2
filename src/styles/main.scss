@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Import base styles
+// @import "base/variables";
+@import "base/typography";
+@import "base/reset";
+
+// Import layout styles
+@import "layout/container";
+
+// Import component styles
+@import "components/navbar";
+@import "components/footer";

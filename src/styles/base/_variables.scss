@@ -1,0 +1,23 @@
+// tastyplates-frontend/src/styles/base/_variables.scss
+// Colors
+$color-primary: #ff5a5f; // Airbnb red
+$color-primary-dark: #c1353d; // Darker red
+$color-gray-800: #31343F; // Dark gray
+$color-gray-400: #b0b0b0; // Light gray
+$color-gray-300: #e0e0e0; // Very light gray
+$color-white: #ffffff; // White
+
+// Breakpoints
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+
+// Layout
+$container-max: 1200px; // Adjusted for a more compact layout
+
+// Spacing
+$spacing-base: 0.5rem; // Increased base spacing
+$spacing-2: 1rem;
+$spacing-4: 1.5rem; // Adjusted spacing
+$spacing-8: 2.5rem; // Adjusted spacing
+$spacing-12: 3.5rem; // Adjusted spacing

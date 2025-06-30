@@ -1,0 +1,41 @@
+.footer {
+  @apply bg-gray-800 text-gray-300;
+
+  &__container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12;
+  }
+
+  &__grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-8;
+  }
+
+  &__column {
+    h2 {
+      @apply text-white text-lg font-semibold mb-4;
+    }
+
+    h3 {
+      @apply text-white text-sm font-semibold mb-4;
+    }
+
+    p {
+      @apply text-sm text-gray-400;
+    }
+  }
+
+  &__social {
+    @apply flex space-x-4;
+
+    a {
+      @apply hover:text-white;
+    }
+  }
+
+  &__links {
+    @apply space-y-3;
+
+    a {
+      @apply text-sm hover:text-white;
+    }
+  }
+}

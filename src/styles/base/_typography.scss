@@ -1,0 +1,13 @@
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/InterVF.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; // optional but good for performance
+}
+
+// tastyplates-frontend/src/styles/base/_variables.scss
+// Typography
+$font-sans: "Nunito Sans", ui-sans-serif, system-ui, -apple-system,
+  BlinkMacSystemFont; // Replaced Circular Std with Nunito Sans
+$font-inter: "Inter", sans-serif

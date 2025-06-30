@@ -1,0 +1,139 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  // box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+
+  &__container {
+    max-width: 80rem; // 7xl
+    // height: 88px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+
+    @media (min-width: 640px) {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  &__content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 4rem;
+  }
+
+  &__brand {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1f2937; // gray-800
+    }
+  }
+
+  &__menu {
+    display: none;
+    align-items: center;
+
+    a {
+      color: #111827; // gray-900
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+
+      &:hover {
+        color: #6b7280; // gray-500
+      }
+    }
+
+    @media (min-width: 640px) {
+      display: flex;
+      margin-left: 1.5rem;
+      gap: 2rem;
+
+      a {
+        padding: 0.5rem 0.75rem;
+      }
+    }
+  }
+  &__links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center; // Center links in mobile
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: center; // Center links in desktop
+    }
+  }
+
+  &__link {
+    color: #4b5563;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.375rem 0.75rem; // Match button padding
+    border-radius: 0.375rem; // Match button radius
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #2563eb;
+      background-color: #f3f4f6;
+    }
+  }
+
+  &__auth {
+    display: flex;
+    gap: 1rem;
+    // margin-top: 1rem;
+    align-items: center;
+
+    @media (min-width: 768px) {
+      margin-top: 0;
+      margin-left: 2rem;
+    }
+  }
+
+  &__button {
+    padding: 0.375rem 0.75rem; // Reduced padding
+    border-radius: 3.125rem;
+    font-weight: 600;
+    font-size: 0.875rem; // Smaller font size
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap; // Prevents text wrapping
+
+    &--secondary {
+      color: #31343f;
+      background-color: #FCFCFC;
+      border: 1px solid #e5e7eb;
+
+      &:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+      }
+    }
+
+    &--primary {
+      color: #31343f;
+      background-color: #FCFCFC;
+      border: 1px solid transparent;
+
+      &:hover {
+        background-color: #FCFCFC;
+      }
+    }
+  }
+}

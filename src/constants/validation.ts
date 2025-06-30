@@ -1,0 +1,9 @@
+export const minimumPassword = 5
+export const ageLimit = 18
+export const userNameMinLimit = 1
+export const userNameMaxLimit = 20
+export const imageMBLimit = 5 // 5MB
+export const imageSizeLimit = imageMBLimit * 1024 * 1024 // 5MB
+export const aboutMeMaxLimit = 500
+export const palateLimit = 2
+export const maximumImage = 6
