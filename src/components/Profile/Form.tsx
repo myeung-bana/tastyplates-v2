@@ -344,6 +344,7 @@ const Form = () => {
                       height={120}
                       className="rounded-full size-20 md:size-[120px] object-cover"
                       alt="profile"
+                      unoptimized
                     />
                     <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] border-1.5 bg-white text-center">
                       <MdOutlineEdit className="size-4 md:size-5" />
