@@ -229,9 +229,14 @@ const Form = () => {
   }, [session]);
 
   useEffect(() => {
-    if (textareaRef.current && cursorPosition !== null) {
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.focus();
+      
+      setTimeout(() => {
+        const position = cursorPosition !== null ? cursorPosition : textarea.value.length;
+        textarea.setSelectionRange(position, position);
+      }, 50);
     }
   }, [aboutMe, cursorPosition]);
 
@@ -375,6 +380,11 @@ const Form = () => {
                   placeholder="About Me"
                   value={aboutMe}
                   onChange={handleTextAreaChange}
+                  onFocus={(e) => {
+                    const position = cursorPosition !== null ? cursorPosition : e.target.value.length;
+                    e.target.setSelectionRange(position, position);
+                  }}
+                  autoFocus
                   rows={5}
                   disabled={isLoading}
                 ></textarea>
