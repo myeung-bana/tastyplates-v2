@@ -10,6 +10,11 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
+import CustomModal from "../ui/Modal/Modal";
+import { FiSearch } from "react-icons/fi";
+import SelectOptions from "../ui/Options/SelectOptions";
+import { debounce } from "@/utils/debounce";
+import { MdArrowBackIos } from "react-icons/md";
 
 interface Restaurant {
   id: string;
@@ -50,6 +55,36 @@ const RestaurantPage = () => {
     badges: null as string | null,
     sortOption: null as string | null,
   });
+  const [listing, setListing] = useState("");
+  const [isShowPopup, setIsShowPopup] = useState<boolean>(false)
+  const [showListingModal, setShowListingModal] = useState(false);
+  const [listingLoading, setListingLoading] = useState(false);
+  const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
+  const fetchListingsDebouncedRef = useRef<(input: string) => void>();
+  const [width, setWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
+  const searchForm = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    window.addEventListener("load", () => {
+      if (typeof window !== "undefined") {
+        handleResize();
+      }
+    });
+    window.addEventListener("resize", () => {
+      handleResize();
+    });
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("load", handleResize);
+    };
+  }, []);
+
+  const handleResize = () => {
+      setWidth(window.innerWidth);
+  };
 
   const mapListingToRestaurant = (item: Listing): Restaurant => ({
     id: item.id,
@@ -66,6 +101,42 @@ const RestaurantPage = () => {
     streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || item.listingStreet || "",
     ratingsCount: item.ratingsCount ?? 0,
   });
+
+  const fetchListingsName = async (search: string = '') => {
+    try {
+      const result = await RestaurantService.fetchListingsName(search);
+      const formatted = result.nodes.map((item: any) => ({
+        key: item.slug,
+        label: item.title,
+      }));
+      setListingOptions(formatted);
+    } catch (err) {
+      setListingOptions([]);
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
+  const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setListing(inputValue);
+    setShowListingModal(true);
+    const normalizedSearch = inputValue.trim().toLowerCase();
+    const alreadyExists = listingOptions.some(
+      (option) => option.label.toLowerCase().includes(normalizedSearch)
+    );
+
+    if (alreadyExists) return;
+    setListingLoading(true);
+
+    fetchListingsDebouncedRef.current?.(inputValue.trim());
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsShowPopup(false)
+    setSearchTerm(listing)
+  };
 
   const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
@@ -154,7 +225,9 @@ const RestaurantPage = () => {
     }
 
     if (listingParam) {
-      setSearchTerm(decodeURIComponent(listingParam));
+      const decodedListingParam = decodeURIComponent(listingParam)
+      setSearchTerm(decodedListingParam);
+      setListing(decodedListingParam);
       currentSearchParams.delete("listing");
       shouldUpdateUrl = true;
     }
@@ -166,6 +239,13 @@ const RestaurantPage = () => {
     }
 
   }, [searchParams, router]);
+
+  useEffect(() => {
+    const [debouncedListing] = debounce(fetchListingsName, 500);
+
+    fetchListingsDebouncedRef.current = debouncedListing;
+    fetchListingsDebouncedRef.current?.('');
+  }, [])
 
   useEffect(() => {
     setRestaurants([]);
@@ -214,39 +294,112 @@ const RestaurantPage = () => {
 
   return (
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
-      <div className="restaurants__container">
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
+      <div className="restaurants__container !px-0 !gap-3 md:!gap-8">
+        <div className="flex flex-row items-center justify-between overflow-x-auto">
           <Filter onFilterChange={handleFilterChange} initialPalates={filters.palates} />
-          <div className="search-bar hidden sm:block relative">
-            <input
-              type="text"
-              placeholder="Search by Listing Name"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-bar__input"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2 top-2 text-sm text-gray-500 hover:text-black"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+            <div className="max-w-[218px] md:max-w-[345px] flex gap-2.5 md:gap-2 justify-between items-center border shrink-0 border-[#494D5D] bg-[#FCFCFC] px-4 py-2 md:px-6 md:py-[15px] rounded-[50px] relative">
+              <FiSearch className="hero__search-icon shrink-0 !mr-0" />
+              <input
+                type="text"
+                placeholder="Search by Listing Name"
+                value={listing}
+                onChange={(e) => {
+                  handleListingChange(e)
+                }}
+                onClick={() => setIsShowPopup(!isShowPopup)}
+                className="search-bar__input !border-none text-sm md:text-base !text-left bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => {
+                    setListing("")
+                    setSearchTerm("")
+                  }}
+                  className="absolute right-2 top-2 bg-[#FCFCFC] px-1 md:top-4 text-sm text-[#494D5D] hover:text-black"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          <CustomModal
+            isOpen={isShowPopup}
+            setIsOpen={setIsShowPopup}
+            header={<></>}
+            content={
+              <>
+                <div className="flex flex-row gap-3 items-center py-7 px-3 md:p-0 border-b border-[#CACACA]">
+                    <button onClick={() => setIsShowPopup(false) } className="size-8 md:hidden flex justify-center items-center">
+                      <MdArrowBackIos className="size-4" />
+                    </button>
+                  <form id="searchForm" onSubmit={handleSearch} className="w-full flex gap-2.5 md:gap-6 justify-between items-center border border-[#E5E5E5] bg-[#FCFCFC] px-4 py-3 md:px-6 md:py-[15px] rounded-[50px]">
+                    <div className="hero__search-restaurant !bg-transparent w-full">
+                      <FiSearch className="hero__search-icon hidden md:block" />
+                      <input
+                        type="text"
+                        placeholder="Search by Listing Name"
+                        value={listing}
+                        onChange={(e) => {
+                          handleListingChange(e)
+                        }}
+                        className="bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="hidden md:block rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00] md:leading-none"
+                      disabled={!listing}
+                    >
+                      Search
+                    </button>
+                  </form>
+                </div>
+                <SelectOptions
+                    isOpen={showListingModal}
+                    isLoading={listingLoading}
+                    options={listingOptions}
+                    searchValue={listing}
+                    onSelect={(label) => {
+                      if (width > 767) {
+                        setListing(label);
+                        setShowListingModal(false);
+                      } else {
+                        setListing(label)
+                        setShowListingModal(false);
+                        setIsShowPopup(false)
+                        setSearchTerm(label)
+                      }
+                    }}
+                    onClose={() => setShowListingModal(false)}
+                    className="!p-2 !w-full z-50 !max-h-[85vh] md:!max-h-[350px] !border-none !shadow-none"
+                  />
+              </>
+            }
+            hasFooter
+            footerClass="!p-0"
+            headerClass="!p-0 !border-none"
+            contentClass="md:!gap-10 !p-0"
+            baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0"
+            hasCustomCloseButton
+            customButton={<></>}
+            wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent"
+          />
         </div>
-
-        <div className="restaurants__grid mt-4">
-          {restaurants.map((rest) => (
-            <RestaurantCard
-              key={rest.id}
-              restaurant={rest}
-              initialSavedStatus={rest.initialSavedStatus}
-              ratingsCount={rest.ratingsCount}
-              onClick={() => handleRestaurantClick(rest.databaseId)}
-            />
-          ))}
-          {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
+        <div>
+          <h3 className="pl-3 md:pl-6 xl:pl-0 text-sm md:text-xl">
+            {restaurants.length} {restaurants.length > 1 ? 'results' : 'result'}
+          </h3>
+          <div className="restaurants__grid mt-3 md:mt-4 px-3 md:px-6 xl:px-0">
+            {restaurants.map((rest) => (
+              <RestaurantCard
+                key={rest.id}
+                restaurant={rest}
+                initialSavedStatus={rest.initialSavedStatus}
+                ratingsCount={rest.ratingsCount}
+                onClick={() => handleRestaurantClick(rest.databaseId)}
+              />
+            ))}
+            {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
+          </div>
         </div>
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (
