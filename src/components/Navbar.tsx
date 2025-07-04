@@ -313,6 +313,7 @@ export default function Navbar(props: any) {
                           width={44}
                           height={44}
                           className="w-full h-full object-cover rounded-full"
+                          unoptimized
                         />
                       </div>
                     }

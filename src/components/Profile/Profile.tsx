@@ -691,6 +691,7 @@ const Profile = () => {
             fill
             className="rounded-full object-cover"
             alt="profile"
+            unoptimized
           />
         </div>
         <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">

@@ -162,6 +162,9 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 }
 
 export default function RestaurantDetail() {
+  const { data: session } = useSession();
+  const [isShowSignup, setIsShowSignup] = useState(false);
+  const [isShowSignin, setIsShowSignin] = useState(false);
   const [restaurant, setRestaurant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -258,6 +261,10 @@ export default function RestaurantDetail() {
   };
 
   const addReview = () => {
+    if (!session?.user) {
+      setIsShowSignup(true);
+      return;
+    }
     router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
   }
 
@@ -291,6 +298,22 @@ export default function RestaurantDetail() {
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
+                  <SignupModal
+                    isOpen={isShowSignup}
+                    onClose={() => setIsShowSignup(false)}
+                    onOpenSignin={() => {
+                    setIsShowSignup(false);
+                    setIsShowSignin(true);
+                    }}
+                  />
+                  <SigninModal
+                    isOpen={isShowSignin}
+                    onClose={() => setIsShowSignin(false)}
+                    onOpenSignup={() => {
+                    setIsShowSignin(false);
+                    setIsShowSignup(true);
+                    }}
+                  />
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
@@ -327,8 +350,6 @@ export default function RestaurantDetail() {
                     </div>
 
                     <div className="restaurant-detail__detail-item">
-                      <FiPhone />
-                      <span>{restaurant.listingDetails?.phone || restaurant.phone}</span>
                     </div>
                     {restaurant.listingDetails?.openingHours && (
                       <div className="restaurant-detail__detail-item" key="opening-hours">

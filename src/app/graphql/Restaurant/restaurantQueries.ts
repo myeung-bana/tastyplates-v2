@@ -42,6 +42,7 @@ export const GET_LISTINGS = gql`
             title
             slug
             status
+            date
             content
             priceRange
             averageRating

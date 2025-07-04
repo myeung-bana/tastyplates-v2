@@ -1,22 +1,24 @@
 // ListingCardDraft.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import Image from "next/image";
 import { IoMdClose } from "react-icons/io";
-import { FaStar } from 'react-icons/fa';
-// import Photo from "../../public/images/default-image.png";
-import Photo from "../../../../public/images/Photos-Review-12.png"; // Adjust the path as necessary
+import Photo from "../../../../public/images/Photos-Review-12.png";
 import { useSession } from 'next-auth/react';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
+import ReviewModal from "@/components/ui/Modal/ReviewModal"; 
+import toast from 'react-hot-toast';
+import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
+import { formatDateT } from '@/lib/utils';
 
-
-// Define the interface for the restaurant data passed to the card
 interface FetchedRestaurant {
     id: string;
     databaseId: number;
     title: string;
     slug: string;
+    date: string;
     content: string;
     listingStreet: string;
+    listingDetails: { googleMapUrl: { streetAddress: string} } | null;
     palates: { nodes: { name: string }[] };
     featuredImage: { node: { sourceUrl: string } };
     listingCategories: { nodes: { id: string; name: string }[] };
@@ -25,34 +27,40 @@ interface FetchedRestaurant {
 
 interface ListingCardProps {
     restaurant: FetchedRestaurant;
-    onDeleteSuccess: () => void; // Function to handle deleting the draft
+    onDeleteSuccess: () => void;
 }
 
 const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSuccess }) => {
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
-    const countryNames = restaurant.countries?.nodes?.map(country => country.name).join(', ') || restaurant.listingStreet || 'Unknown Location';
+    const countryNames = restaurant.listingDetails?.googleMapUrl.streetAddress || restaurant.listingStreet || 'Unknown Location';
     const { data: session } = useSession();
     const accessToken = session?.accessToken || "";
-    const addReview = () => {
-        console.log(`Adding review for ${restaurant.title}`);
+
+    const [isShowDelete, setIsShowDelete] = useState<boolean>(false);
+    const [isLoadingDelete, setIsLoadingDelete] = useState<boolean>(false);
+
+    const handleDeleteClick = () => {
+        setIsShowDelete(true);
     };
 
-        const handleDelete = async () => {
+    const confirmDelete = async () => {
         if (!accessToken) {
-            alert("Authentication token is missing. Please log in.");
+            toast.error("Authentication token is missing. Please log in.");
             return;
         }
 
-        if (window.confirm(`Are you sure you want to delete "${restaurant.title}"?`)) {
-            try {
-                await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
-                alert("Listing deleted successfully!");
-                onDeleteSuccess(); // Call the parent's function to re-fetch listings or update UI
-            } catch (error: any) {
-                console.error("Failed to delete listing:", error);
-                alert(error.message || "Failed to delete listing. Please try again.");
-            }
+        setIsLoadingDelete(true);
+        try {
+            await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
+            toast.success(deleteDraftSuccess);
+            onDeleteSuccess();
+            setIsShowDelete(false);
+        } catch (error: any) {
+            console.error("Failed to delete listing:", error);
+            toast.error(error.message || deleteDraftError);
+        } finally {
+            setIsLoadingDelete(false);
         }
     };
 
@@ -60,25 +68,24 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
         <div className="restaurant-card border rounded-lg overflow-hidden shadow-md bg-white">
             <div className="restaurant-card__image relative">
                 <Image
-                src={imageUrl }
-                alt="Review Draft"
-                width={304}
-                height={228}
-                className="restaurant-card__img"
+                    src={imageUrl}
+                    alt="Review Draft"
+                    width={304}
+                    height={228}
+                    className="restaurant-card__img"
                 />
-                {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
                 <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
-                <button
-                    className="rounded-full p-2 bg-white"
-                    onClick={handleDelete} 
-                >
-                    <IoMdClose />
-                </button>
+                    <button
+                        className="rounded-full p-2 bg-white"
+                        onClick={handleDeleteClick}
+                    >
+                        <IoMdClose />
+                    </button>
                 </div>
             </div>
-            {/* Modified Link to point to /add-listing with resId */}
-            <a href={`/listing/step-1?resId=${restaurant.databaseId}`}>
-                <div className="restaurant-card__content p-4">
+            <a href="#">
+                 {/* {`/listing/step-1?resId=${restaurant.databaseId}`}> */}
+                <div className="restaurant-card__content p-5">
                     <div className="restaurant-card__header flex justify-between items-start mb-2">
                         <h2 className="restaurant-card__name text-lg font-semibold line-clamp-1 flex-grow pr-2">{restaurant.title}</h2>
                     </div>
@@ -96,9 +103,20 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
                             </span>
                         ))}
                     </div>
-
+                    <span className="restaurant-card__tags flex flex-wrap gap-1 text-xs text-gray-500 mt-3 p-2">{formatDateT(restaurant.date)}</span>
                 </div>
             </a>
+
+            <ReviewModal
+                header="Delete this Draft?"
+                content="Your draft will be removed."
+                isOpen={isShowDelete}
+                setIsOpen={(open: boolean) => {
+                    if (!isLoadingDelete) setIsShowDelete(open);
+                }}
+                onConfirm={confirmDelete}
+                loading={isLoadingDelete}
+            />
         </div>
     );
 };
