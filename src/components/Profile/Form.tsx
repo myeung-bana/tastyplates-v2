@@ -51,7 +51,7 @@ const Form = () => {
   // This ensures the code only runs after the component has mounted on the client
   useEffect(() => {
     if (session?.user) {
-      const palates = session.user.palates
+      const palates = session?.user?.palates
       if (palates) {
         setSelectedPalates2(new Set(palates.split(/[|,]/).map((p) => p.trim().toLowerCase())));
       }
