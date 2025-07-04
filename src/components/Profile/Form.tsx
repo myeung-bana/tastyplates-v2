@@ -462,6 +462,7 @@ const Form = () => {
                   className="!rounded-[10px] w-full"
                   value={selectedPalates2}
                   onChange={handlePalateChange}
+                  limitValueLength={palateLimit}
                 />
               </div>
               {palateError && (
