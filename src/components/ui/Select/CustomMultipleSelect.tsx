@@ -98,15 +98,16 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         .filter((section) => section.children && section.children.length > 0);
 
     const getSelectedTags = (): SelectedTag[] => {
-        const tags: SelectedTag[] = [];
-        props.items.forEach(section => {
-            section.children?.forEach(child => {
-                if (props.value?.has(child.key)) {
-                    tags.push({ key: child.key, label: child.label });
+        const selectedKeys = Array.from(props.value || new Set());
+        return (selectedKeys as Key[]).map((key: Key) => {
+            for (const section of props.items) {
+                const child = section.children?.find(child => child.key === key);
+                if (child) {
+                    return { key: child.key, label: child.label };
                 }
-            });
+            }
+            return { key, label: String(key) };
         });
-        return tags;
     };
 
     const handleRemoveTag = (tagKey: Key) => {
