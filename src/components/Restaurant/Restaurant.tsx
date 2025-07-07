@@ -59,21 +59,23 @@ const RestaurantPage = () => {
     setSearchAddress(initialAddressFromUrl);
     setSearchEthnic(initialEthnicFromUrl);
   }, [initialAddressFromUrl, initialEthnicFromUrl]);
-  // useEffect(() => {
-  //   const currentSearchParams = new URLSearchParams(searchParams?.toString());
-  //   let shouldUpdateUrl = false;
+  useEffect(() => {
+    const currentSearchParams = new URLSearchParams(searchParams?.toString());
+    let shouldUpdateUrl = false;
 
-  //   // if (currentSearchParams.has("ethnic")) {
-  //   // }
-  //   // if (currentSearchParams.has("address")) {
-  //   // }
+    if (currentSearchParams.has("ethnic")) {
+      setSearchEthnic(initialEthnicFromUrl);
+      shouldUpdateUrl = true;
+    }
+    // if (currentSearchParams.has("address")) {
+    // }
 
-  //   if (shouldUpdateUrl) {
-  //     const newPathname = window.location.pathname;
-  //     const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
-  //     router.replace(newUrl);
-  //   }
-  // }, [searchParams, router]);
+    if (shouldUpdateUrl) {
+      const newPathname = window.location.pathname;
+      const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
+      router.replace(newUrl);
+    }
+  }, [searchParams, router]);
 
   const mapListingToRestaurant = (item: Listing): Restaurant => ({
     id: item.id,

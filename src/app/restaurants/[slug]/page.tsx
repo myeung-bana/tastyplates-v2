@@ -170,7 +170,7 @@ export default function RestaurantDetail() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const palatesParam = searchParams?.get("palates") || null;
+  const palatesParam = searchParams?.get("ethnic") || null;
 
   const params = useParams();
   const slug = params?.slug as string;

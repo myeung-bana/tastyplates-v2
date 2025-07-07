@@ -66,13 +66,12 @@ export default function Navbar(props: any) {
     const ethnic = searchParams ? searchParams.get("ethnic") : null;
     if (ethnic) {
       setEthnicSearch(decodeURIComponent(ethnic));
-    } else {
-      setEthnicSearch("");
-    }
+    } 
+    // else {
+    //   setEthnicSearch("");
+    // }
 
     const address = searchParams ? searchParams.get("address") : null;
-    // Decode address from URL before setting state
-    setPalateSearch(palates ? decodeURIComponent(palates) : "");
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
 

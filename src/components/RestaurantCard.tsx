@@ -52,7 +52,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [error, setError] = useState<string | null>(null);
   const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
   const hasFetched = useRef(false);
-  const palateParam = searchParams?.get("palates");
+  const palateParam = searchParams?.get("ethnic");
 
   useEffect(() => {
     setSaved(initialSavedStatus ?? false);
@@ -190,7 +190,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <a
-            href={`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`}
+            href={`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`}
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
@@ -200,7 +200,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`);
+              router.push(`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`);
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
@@ -243,11 +243,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           )}
         </div>
         <a 
-        href={`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`}
+        href={`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`}
         onClick={async (e) => {
           e.preventDefault();
           if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`);
+          router.push(`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`);
         }}
         >
           <div className="restaurant-card__content">
