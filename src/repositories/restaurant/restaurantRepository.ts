@@ -31,11 +31,14 @@ export class RestaurantRepository {
         return response;
     }
 
-    static async getRestaurantBySlug(slug: string) {
+    static async getRestaurantBySlug(slug: string, palates: string) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_SLUG,
             fetchPolicy: "no-cache",
-            variables: { slug },
+            variables: { 
+                slug,
+                palates
+            },
         });
         return data.listing;
     }

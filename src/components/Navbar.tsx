@@ -57,7 +57,7 @@ export default function Navbar(props: any) {
       params.set('ethnic', encodeURIComponent(ethnicSearch));
     }
     if (addressSearch) {
-      params.set('address', encodeURIComponent(addressSearch));
+      params.set('address',(addressSearch));
     }
     router.push(`/restaurants?${params.toString()}`);
   };
@@ -72,6 +72,7 @@ export default function Navbar(props: any) {
 
     const address = searchParams ? searchParams.get("address") : null;
     // Decode address from URL before setting state
+    setPalateSearch(palates ? decodeURIComponent(palates) : "");
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
 
