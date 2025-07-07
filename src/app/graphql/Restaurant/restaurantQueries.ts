@@ -14,6 +14,7 @@ export const GET_LISTINGS = gql`
     $minAverageRating: Float
     $statuses: [PostStatusEnum]
     $streetAddress: String
+    $ethnicSearch: String
   ) {
     listings(
         where: {
@@ -27,6 +28,7 @@ export const GET_LISTINGS = gql`
             author: $userId
             statusIn: $statuses
             streetAddress: $streetAddress
+            palateReviewedBy: $ethnicSearch
         }, 
         first: $first
         after: $after

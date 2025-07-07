@@ -9,7 +9,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -35,6 +35,7 @@ const RestaurantPage = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchAddress, setSearchAddress] = useState("");
+  const [searchEthnic, setSearchEthnic] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,9 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
+  const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
+  const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
+
   const [filters, setFilters] = useState({
     cuisine: null as string | null,
     palates: [] as string[],
@@ -51,8 +55,25 @@ const RestaurantPage = () => {
     sortOption: null as string | null,
   });
 
-  // New state to hold palates from the URL, which won't affect the UI's selected filters
-  const [urlPalates, setUrlPalates] = useState<string[]>([]);
+  useEffect(() => {
+    setSearchAddress(initialAddressFromUrl);
+    setSearchEthnic(initialEthnicFromUrl);
+  }, [initialAddressFromUrl, initialEthnicFromUrl]);
+  // useEffect(() => {
+  //   const currentSearchParams = new URLSearchParams(searchParams?.toString());
+  //   let shouldUpdateUrl = false;
+
+  //   // if (currentSearchParams.has("ethnic")) {
+  //   // }
+  //   // if (currentSearchParams.has("address")) {
+  //   // }
+
+  //   if (shouldUpdateUrl) {
+  //     const newPathname = window.location.pathname;
+  //     const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
+  //     router.replace(newUrl);
+  //   }
+  // }, [searchParams, router]);
 
   const mapListingToRestaurant = (item: Listing): Restaurant => ({
     id: item.id,
@@ -73,15 +94,12 @@ const RestaurantPage = () => {
   const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
-      // Combine palates from UI filters and URL for the API call
-      const combinedPalates = Array.from(new Set([...(filters.palates ?? []), ...urlPalates]));
-
       const data = await RestaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
         firstOverride ?? (reset && isFirstLoad.current ? 16 : 8),
         after,
         filters.cuisine,
-        combinedPalates,
+        filters.palates,
         filters.price,
         null,
         null,
@@ -90,6 +108,7 @@ const RestaurantPage = () => {
         filters.rating,
         null,
         searchAddress,
+        searchEthnic
       );
       const transformed = data.nodes.map(mapListingToRestaurant);
       setRestaurants((prev: Restaurant[]) => {
@@ -128,55 +147,13 @@ const RestaurantPage = () => {
   }, []);
 
   useEffect(() => {
-    const palatesParam = searchParams?.get("palates")?.toLocaleLowerCase();
-    const addressParam = searchParams?.get("address");
-    const listingParam = searchParams?.get("listing");
-
-    let shouldUpdateUrl = false;
-    const currentSearchParams = new URLSearchParams(searchParams?.toString());
-
-    // Handle palates filter: Add if present, or clear if not present
-    if (palatesParam) {
-      const decodedPalates = decodeURIComponent(palatesParam);
-      const newPalatesArray = decodedPalates.split(",").map(p => p.trim()).filter(Boolean);
-      setUrlPalates(newPalatesArray);
-      currentSearchParams.delete("palates");
-    } else {
-      setUrlPalates([]);
-    }
-
-    if (addressParam) {
-      setSearchAddress(decodeURIComponent(addressParam));
-      currentSearchParams.delete("address");
-    }
-    else {
-      setSearchAddress("");
-    }
-
-
-    if (listingParam) {
-      setSearchTerm(decodeURIComponent(listingParam));
-      currentSearchParams.delete("listing");
-      shouldUpdateUrl = true;
-    }
-
-    if (shouldUpdateUrl) {
-      const newPathname = window.location.pathname;
-      const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
-      router.replace(newUrl);
-    }
-
-  }, [searchParams, router]);
-
-  useEffect(() => {
     setRestaurants([]);
     setEndCursor(null);
     setHasNextPage(true);
     isFirstLoad.current = true;
-    // The effect now also depends on `urlPalates` to trigger a re-fetch
     fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, JSON.stringify(filters), searchAddress, session?.accessToken, JSON.stringify(urlPalates)]);
+  }, [debouncedSearchTerm, JSON.stringify(filters), searchAddress, searchEthnic, session?.accessToken]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -192,7 +169,7 @@ const RestaurantPage = () => {
     return () => {
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, searchTerm, endCursor, JSON.stringify(filters), searchAddress, session?.accessToken, JSON.stringify(urlPalates)]);
+  }, [hasNextPage, loading, debouncedSearchTerm, searchEthnic, endCursor, JSON.stringify(filters), searchAddress, session?.accessToken]);
 
   const handleLoadMore = () => {
     if (hasNextPage && !loading) {
@@ -218,8 +195,9 @@ const RestaurantPage = () => {
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container">
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between">
-          {/* Pass the `filters.palates` state to the Filter component, which is not updated from the URL */}
-          <Filter onFilterChange={handleFilterChange} initialPalates={filters.palates} />
+          <Filter
+            onFilterChange={handleFilterChange}
+          />
           <div className="search-bar hidden sm:block relative">
             <input
               type="text"
@@ -274,7 +252,7 @@ const RestaurantPage = () => {
               <span className="text-gray-500 text-sm">Loading more Content</span>
             </>
           )}
-          {!hasNextPage && !loading && restaurants.length > 0 && ( // Only show if there are restaurants
+          {!hasNextPage && !loading && restaurants.length > 0 && (
             <p className="text-gray-400 text-sm">No more content to load.</p>
           )}
           {!loading && !hasNextPage && restaurants.length === 0 && (

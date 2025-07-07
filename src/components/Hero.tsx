@@ -111,7 +111,7 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      if (cuisine) queryParams.set("palates", cuisine);
+      if (cuisine) queryParams.set("ethnic", cuisine);
       if (location) queryParams.set("address", location);
     }
 
