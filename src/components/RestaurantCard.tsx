@@ -5,7 +5,7 @@ import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
 import Photo from "../../public/images/Photos-Review-12.png";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
@@ -45,12 +45,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [showSignin, setShowSignin] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
   const hasFetched = useRef(false);
+  const palateParam = searchParams?.get("palates");
 
   useEffect(() => {
     setSaved(initialSavedStatus ?? false);
@@ -188,7 +190,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <a
-            href={`/restaurants/${restaurant.slug}`}
+            href={`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`}
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
@@ -198,7 +200,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(`/restaurants/${restaurant.slug}`);
+              router.push(`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`);
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
@@ -241,11 +243,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           )}
         </div>
         <a 
-        href={`/restaurants/${restaurant.slug}`} 
+        href={`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`}
         onClick={async (e) => {
           e.preventDefault();
           if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(`/restaurants/${restaurant.slug}`);
+          router.push(`/restaurants/${restaurant.slug}${palateParam ? `?palates=${encodeURIComponent(palateParam)}` : ""}`);
         }}
         >
           <div className="restaurant-card__content">
