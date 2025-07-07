@@ -19,7 +19,6 @@ interface FilterProps {
     sortOption?: string | null;
     palates?: string[] | null;
   }) => void;
-  initialPalates?: string[]; // Add this prop
 }
 
 interface Palate {
@@ -31,21 +30,20 @@ interface Palate {
   }[];
 }
 
-const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // Initialize initialPalates
-  const [cuisine, setCuisine] = useState<string>("All");
+const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuisine
+  const [currentCuisine, setCurrentCuisine] = useState<string>("All"); // Use currentCuisine for internal state
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
   const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
   const [isRatingOpen, setIsRatingOpen] = useState<boolean>(false);
-  // const [badges, setBadges] = useState<string | null>(null); // State for badges filter
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
   const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>("");
-  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set(initialPalates)); // Initialize with prop
+  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
   const [badge, setBadge] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("None");
 
@@ -94,10 +92,6 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
       .finally(() => setIsLoadingPalates(false));
   }, []);
 
-  // Update selectedPalates when initialPalates prop changes
-  useEffect(() => {
-    setSelectedPalates(new Set(initialPalates));
-  }, [initialPalates]);
 
   const prices = [
     { name: "$", value: "$" },
@@ -139,7 +133,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
         setIsSortOpen(false);
         break;
       default: // For Cuisine
-        setCuisine(value);
+        setCurrentCuisine(value); // Use setCurrentCuisine
         setIsCuisineOpen(false);
         break;
     }
@@ -147,16 +141,13 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
 
   const handleChangePrice = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // If the clicked value is already selected, unselect it (set price to empty)
-    // Otherwise, select the new value
     setPrice(price === value ? "" : value);
   };
-
 
   const resetFilter = () => {
     switch (filterType) {
       case "Cuisine":
-        setCuisine("All");
+        setCurrentCuisine("All"); // Use setCurrentCuisine
         setSelectedPalates(new Set());
         break;
       case "Price":
@@ -178,7 +169,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
     const palatesArray = Array.from(selectedPalates);
 
     onFilterChange({
-      cuisine: cuisine === "All" ? null : cuisine,
+      cuisine: currentCuisine === "All" ? null : currentCuisine, // Use currentCuisine
       price: price || null,
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
@@ -257,7 +248,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                         onClick={() => setIsCuisineOpen(!isCuisineOpen)}
                         className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
-                          {cuisine}
+                          {currentCuisine} {/* Use currentCuisine */}
                         </span>
                         <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
@@ -266,7 +257,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                       <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
                           onClick={() => selectFilter("All")}
-                          className={`py-2 px-4 ${cuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent"
+                          className={`py-2 px-4 ${currentCuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent" // Use currentCuisine
                             } text-sm md:text-lg font-semibold`}
                         >
                           All
@@ -277,7 +268,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                           dbCuisines.map((item: { name: string, slug: string }, index: number) => (
                             <div
                               onClick={() => selectFilter(item.slug || item.name)}
-                              className={`py-2 px-4 ${cuisine == (item.slug || item.name)
+                              className={`py-2 px-4 ${currentCuisine == (item.slug || item.name)
                                   ? "bg-[#F1F1F1]"
                                   : "bg-transparent"
                                 } text-sm md:text-lg font-semibold`}
@@ -427,7 +418,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                     className="flex flex-nowrap items-center gap-2"
                   >
                     <div
-                      className={`w-full rounded-[8px] py-3 px-6 ${price === item.value // Check if the current item's value matches the selected price
+                      className={`w-full rounded-[8px] py-3 px-6 ${price === item.value
                           ? "bg-[#F1F1F1]"
                           : "bg-transparent"
                         }`}
@@ -437,7 +428,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                         type="checkbox"
                         name="price"
                         value={item.value}
-                        checked={price === item.value} // Check if the current item's value matches the selected price
+                        checked={price === item.value}
                         onChange={handleChangePrice}
                         className="appearance-none size-6 absolute hidden inset-0"
                       />

@@ -105,7 +105,7 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      if (cuisine) queryParams.set("palates", cuisine);
+      if (cuisine) queryParams.set("ethnic", cuisine);
       if (location) queryParams.set("address", location);
     }
 
@@ -290,7 +290,7 @@ const Hero = () => {
               {!isSearchListing ? (
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
-                    <label className="text-sm md:text-lg font-medium text-[#31343F]">
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
                       My Palate
                     </label>
                     <div className="relative w-full">
@@ -306,7 +306,7 @@ const Hero = () => {
                   </div>
                   <div className="hero__search-divider"></div>
                   <div className="hero__search-location !hidden md:!flex flex-col !items-start w-[50%]">
-                    <label className="text-sm md:text-lg font-medium text-[#31343F]">
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
                       Location
                     </label>
                     <div className="relative w-full">

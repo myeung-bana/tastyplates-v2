@@ -31,11 +31,14 @@ export class RestaurantRepository {
         return response;
     }
 
-    static async getRestaurantBySlug(slug: string) {
+    static async getRestaurantBySlug(slug: string, palates: string) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_SLUG,
             fetchPolicy: "no-cache",
-            variables: { slug },
+            variables: { 
+                slug,
+                palates
+            },
         });
         return data.listing;
     }
@@ -52,7 +55,8 @@ export class RestaurantRepository {
         sortOption?: string | null,
         rating: number | null = null,
         statuses: string[] | null = null,
-        address: string | null = null
+        address: string | null = null,
+        ethnicSearch: string | null = null
     ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -69,6 +73,7 @@ export class RestaurantRepository {
                 minAverageRating: rating,
                 statuses: statuses || [],
                 streetAddress: address || "",
+                ethnicSearch: ethnicSearch || "",
             },
         });
         return {
