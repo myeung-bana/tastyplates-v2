@@ -6,8 +6,9 @@ import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
 import { UserService } from "@/services/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch } from "@/constants/messages";
+import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
+import { emailExistCode } from "@/constants/response";
 
 const formatDateForInput = (dateString: string) => {
   if (!dateString) return '';
@@ -179,10 +180,16 @@ const Settings = (props: any) => {
         updateData.password = passwordFields.new;
       }
 
-      await UserService.updateUserFields(
+      const response = await UserService.updateUserFields(
         updateData,
         session.accessToken
       );
+
+      if (response?.code == emailExistCode) {
+        setEmailError(response?.message || emailOccurredError);
+        setIsLoading(false);
+        return;
+      }
 
       // Update local cache
       const localKey = `userData_${session.user.email}`;
