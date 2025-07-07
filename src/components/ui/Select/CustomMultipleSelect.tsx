@@ -134,6 +134,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
         const displayTags = limit ? tags.slice(0, limit) : tags;
 
+        
         return (
             <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                 {displayTags.map(tag => (
