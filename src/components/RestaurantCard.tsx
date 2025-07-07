@@ -264,7 +264,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
               <div className="restaurant-card__info w-full">
                 <div className="restaurant-card__location">
-                  <span className="block w-full text-[10px] md:text-base mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
+                  <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
                 </div>
               </div>
 
