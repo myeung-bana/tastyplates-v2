@@ -28,7 +28,7 @@ const navigationItems = [
 
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
-  const [palateSearch, setPalateSearch] = useState("");
+  const [ethnicSearch, setEthnicSearch] = useState("");
   const [addressSearch, setAddressSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
@@ -53,8 +53,8 @@ export default function Navbar(props: any) {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (palateSearch) {
-      params.set('palates', encodeURIComponent(palateSearch));
+    if (ethnicSearch) {
+      params.set('ethnic', encodeURIComponent(ethnicSearch));
     }
     if (addressSearch) {
       params.set('address', encodeURIComponent(addressSearch));
@@ -63,16 +63,14 @@ export default function Navbar(props: any) {
   };
 
   useEffect(() => {
-    const palates = searchParams ? searchParams.get("palates") : null;
-    if (palates) {
-      const capitalized = palates.split(",").map((item) => item.trim().split("-").map(
-        (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-      ).join("-")
-      ).join(", ");
-      setPalateSearch(capitalized);
+    const ethnic = searchParams ? searchParams.get("ethnic") : null;
+    if (ethnic) {
+      setEthnicSearch(decodeURIComponent(ethnic));
+    } else {
+      setEthnicSearch("");
     }
 
-     const address = searchParams ? searchParams.get("address") : null;
+    const address = searchParams ? searchParams.get("address") : null;
     // Decode address from URL before setting state
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
@@ -199,14 +197,12 @@ export default function Navbar(props: any) {
               <div className="hidden md:block">
                 <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                   <div className="hero__search-restaurant !bg-transparent">
-                    {/* <FiSearch className="hero__search-icon" /> */}
-                    {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
                     <input
                       type="text"
                       placeholder="Search Ethnic"
                       className="hero__search-input"
-                      value={palateSearch}
-                      onChange={(e) => setPalateSearch(e.target.value)}
+                      value={ethnicSearch}
+                      onChange={(e) => setEthnicSearch(e.target.value)}
                     />
                   </div>
                   <div className="hero__search-divider"></div>
@@ -347,8 +343,8 @@ export default function Navbar(props: any) {
                     type="text"
                     placeholder="Start Your Search"
                     className="hero__search-input text-center"
-                    value={palateSearch} // Ensure mobile search also uses palateSearch
-                    onChange={(e) => setPalateSearch(e.target.value)}
+                    value={ethnicSearch}
+                    onChange={(e) => setEthnicSearch(e.target.value)}
                   />
                 </div>
                 <button

@@ -19,7 +19,8 @@ export const RestaurantService = {
         sortOption?: string | null,
         rating: number | null = null,
         statuses: string[] | null = null,
-        address: string | null = null
+        address: string | null = null,
+        ethnicSearch: string | null = null
     ) {
         try {
             const taxArray = [];
@@ -59,7 +60,8 @@ export const RestaurantService = {
                 sortOption,
                 rating,
                 statuses,
-                address
+                address,
+                ethnicSearch
             );
         } catch (error) {
             console.error('Error fetching list:', error);
