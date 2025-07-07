@@ -12,7 +12,7 @@ import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
 import { checkImageType } from "@/constants/utils";
 import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
-import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
+import { palateMaxLimit, palateRequired, profileImageSizeLimit } from "@/constants/messages";
 import { MdOutlineEdit } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
 import { PiCaretLeftBold } from "react-icons/pi";
@@ -50,6 +50,13 @@ const Form = () => {
   // Use a useEffect hook to set isMobile and add event listeners
   // This ensures the code only runs after the component has mounted on the client
   useEffect(() => {
+    if (session?.user) {
+      const palates = session?.user?.palates
+      if (palates) {
+        setSelectedPalates2(new Set(palates.split(/[|,]/).map((p) => p.trim().toLowerCase())));
+      }
+    }
+
     // Check if window is defined before accessing it
     if (typeof window !== "undefined") {
       const handleResize = () => {
@@ -125,8 +132,8 @@ const Form = () => {
     setIsLoading(true);
 
     // Validate palates count
-    if (selectedPalates.length > palateLimit) {
-      setPalateError(palateMaxLimit(palateLimit));
+    if (selectedPalates2.size == 0 || selectedPalates2.size > palateLimit) {
+      setPalateError(selectedPalates2.size == 0 ? palateRequired : palateMaxLimit(palateLimit));
       setIsLoading(false);
       return;
     }
@@ -147,7 +154,7 @@ const Form = () => {
         throw new Error("No session token found");
       }
 
-      const formattedPalates = selectedPalates.map((p) => p.trim()).join("|");
+      const formattedPalates = Array.from(selectedPalates2).map((p) => String(p).trim()).join("|");
       const updateData: Record<string, any> = {};
 
       if (profile) {
@@ -222,9 +229,14 @@ const Form = () => {
   }, [session]);
 
   useEffect(() => {
-    if (textareaRef.current && cursorPosition !== null) {
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(cursorPosition, cursorPosition);
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.focus();
+      
+      setTimeout(() => {
+        const position = cursorPosition !== null ? cursorPosition : textarea.value.length;
+        textarea.setSelectionRange(position, position);
+      }, 50);
     }
   }, [aboutMe, cursorPosition]);
 
@@ -368,12 +380,17 @@ const Form = () => {
                   placeholder="About Me"
                   value={aboutMe}
                   onChange={handleTextAreaChange}
+                  onFocus={(e) => {
+                    const position = cursorPosition !== null ? cursorPosition : e.target.value.length;
+                    e.target.setSelectionRange(position, position);
+                  }}
+                  autoFocus
                   rows={5}
                   disabled={isLoading}
                 ></textarea>
               </div>
             </div>
-            <div className="listing__form-group !hidden md:!flex">
+            {/* <div className="listing__form-group !hidden md:!flex">
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
@@ -386,7 +403,7 @@ const Form = () => {
                   disabled={isLoading}
                 />
               </div>
-            </div>
+            </div> */}
             <div className="listing__form-group">
               <label className="listing__label">
                 Ethnic Palate{" "}
@@ -394,7 +411,7 @@ const Form = () => {
                   (Select up to 2 palates)
                 </span>
               </label>
-              <div className="hidden md:flex flex-wrap gap-2">
+              {/* <div className="hidden md:flex flex-wrap gap-2">
                 {selectedRegion && (
                   <>
                     {palateOptions
@@ -436,8 +453,8 @@ const Form = () => {
                     )}
                   </>
                 )}
-              </div>
-              <div className="flex md:hidden flex-wrap gap-2">
+              </div> */}
+              <div className={`flex flex-wrap gap-2 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                 <CustomMultipleSelect
                   label="Palate (Select up to 2 palates)"
                   placeholder="Select your palate"
@@ -445,6 +462,7 @@ const Form = () => {
                   className="!rounded-[10px] w-full"
                   value={selectedPalates2}
                   onChange={handlePalateChange}
+                  limitValueLength={palateLimit}
                 />
               </div>
               {palateError && (

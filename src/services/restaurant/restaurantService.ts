@@ -141,7 +141,9 @@ export const RestaurantService = {
 
     async fetchAddressByPalate(
         searchTerm: string,
-        palateSlugs: string[]
+        palateSlugs: string[],
+        first = 32,
+        after: string | null = null
     ) {
         try {
             const taxQuery = palateSlugs.length > 0 ? {
@@ -156,7 +158,7 @@ export const RestaurantService = {
                 ],
             } : {};
 
-            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery);
+            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery, first, after);
         } catch (error) {
             console.error('Error fetching by palate:', error);
             throw new Error('Failed to fetch restaurants by palate');
