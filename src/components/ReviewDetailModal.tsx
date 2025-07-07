@@ -493,7 +493,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   }}
                 />
               </div>
-              <div className="review-card__image-container hidden md:block">
+              <div className="review-card__image-container bg-black overflow-hidden hidden md:block">
                 <Slider
                   {...settings}
                   nextArrow={
@@ -517,7 +517,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -533,7 +533,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
             </div>
             <div>
-              <div className="review-card__image-container md:!hidden">
+              <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
                 <Slider
                   {...settings}
                   nextArrow={
@@ -557,7 +557,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
