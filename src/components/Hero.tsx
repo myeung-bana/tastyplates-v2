@@ -34,12 +34,6 @@ const Hero = () => {
   const [listingLoading, setListingLoading] = useState(false);
   const fetchPalatesDebouncedRef = useRef<(values: Set<Key>) => void>();
   const fetchListingsDebouncedRef = useRef<(input: string) => void>();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
-  const [listingHasNextPage, setListingHasNextPage] = useState(false);
-  const [listingCurrentPage, setListingCurrentPage] = useState(1);
 
   useEffect(() => {
     // Initialize both debounced functions once
@@ -130,12 +124,12 @@ const Hero = () => {
     setShowLocationModal(true)
   };
 
-  const fetchAddressByPalate = async (values: Set<Key>, page = 1) => {
+  const fetchAddressByPalate = async (values: Set<Key>) => {
     try {
       setAddressLoading(true);
       const slugs = Array.from(values).map((val) => val.toString());
 
-      const result = await RestaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
+      const result = await RestaurantService.fetchAddressByPalate("", slugs);
       const uniqueLocations = Array.from(
         new Set(result.nodes.map((r: any) => r.listingDetails?.googleMapUrl?.streetAddress?.toLowerCase().trim()))
       ).filter(Boolean);
@@ -145,10 +139,7 @@ const Hero = () => {
         label: loc as string,
       }));
 
-      setLocationOptions(prev => page === 1 ? locationOptionsFormatted : [...prev, ...locationOptionsFormatted]);
-      setCurrentPage(page);
-      setEndCursor(result.endCursor);
-      setHasNextPage(result.hasNextPage);
+      setLocationOptions(locationOptionsFormatted);
       setAddressLoading(false);
     } catch (error) {
       console.error("Failed to fetch restaurant locations by palate:", error);
@@ -156,23 +147,14 @@ const Hero = () => {
     }
   }
 
-  const fetchListingsName = async (search: string = '', page = 1) => {
+  const fetchListingsName = async (search: string = '') => {
     try {
-      setListingLoading(true);
-      const result = await RestaurantService.fetchListingsName(
-        search,
-        32,
-        page === 1 ? null : listingEndCursor
-      );
+      const result = await RestaurantService.fetchListingsName(search);
       const formatted = result.nodes.map((item: any) => ({
         key: item.slug,
         label: item.title,
       }));
-      
-      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
-      setListingCurrentPage(page);
-      setListingEndCursor(result.pageInfo.endCursor);
-      setListingHasNextPage(result.pageInfo.hasNextPage);
+      setListingOptions(formatted);
     } catch (err) {
       console.error("Error loading listing options", err);
       setListingOptions([]);
@@ -362,8 +344,6 @@ const Hero = () => {
                     isOpen={showLocationModal}
                     options={locationOptions}
                     searchValue={location}
-                    hasNextPage={hasNextPage}
-                    onLoadMore={() => fetchAddressByPalate(selectedPalates, currentPage + 1)}
                     onSelect={(label) => {
                       setLocation(label);
                       setShowLocationModal(false);
@@ -395,8 +375,6 @@ const Hero = () => {
                     isLoading={listingLoading}
                     options={listingOptions}
                     searchValue={listing}
-                    hasNextPage={listingHasNextPage}
-                    onLoadMore={() => fetchListingsName(listing.trim(), listingCurrentPage + 1)}
                     onSelect={(label) => {
                       setListing(label);
                       setShowListingModal(false);

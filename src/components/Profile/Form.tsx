@@ -1,35 +1,31 @@
 "use client";
-import React, { FormEvent, useEffect, useState, useRef } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { Key } from "@react-types/shared";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { FaPen, FaPenAlt } from "react-icons/fa";
+import { List } from "@/data/dummyList";
+import { users } from "@/data/dummyUsers";
 import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/userService";
 import { checkImageType } from "@/constants/utils";
 import { imageMBLimit, imageSizeLimit, palateLimit } from "@/constants/validation";
-import { palateMaxLimit, palateRequired, profileImageSizeLimit } from "@/constants/messages";
-import { MdOutlineEdit } from "react-icons/md";
+import { palateMaxLimit, profileImageSizeLimit } from "@/constants/messages";
+import { MdEdit, MdOutlineEdit } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
 import { PiCaretLeftBold } from "react-icons/pi";
 
 const Form = () => {
   const { data: session, update } = useSession();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [cursorPosition, setCursorPosition] = useState<number | null>(null);
-  const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const curPos = e.target.selectionStart;
-    setAboutMe(e.target.value);
-    setCursorPosition(curPos);
-  };
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [profile, setProfile] = useState<any>(null);
-  const [aboutMe, setAboutMe] = useState<string>(session?.user?.about_me ?? "");
+  const [aboutMe, setAboutMe] = useState<string>(session?.user?.name ?? "");
   const [profilePreview, setProfilePreview] = useState<any>(
     session?.user?.image ?? "/profile-icon.svg"
   );
@@ -50,13 +46,6 @@ const Form = () => {
   // Use a useEffect hook to set isMobile and add event listeners
   // This ensures the code only runs after the component has mounted on the client
   useEffect(() => {
-    if (session?.user) {
-      const palates = session?.user?.palates
-      if (palates) {
-        setSelectedPalates2(new Set(palates.split(/[|,]/).map((p) => p.trim().toLowerCase())));
-      }
-    }
-
     // Check if window is defined before accessing it
     if (typeof window !== "undefined") {
       const handleResize = () => {
@@ -132,8 +121,8 @@ const Form = () => {
     setIsLoading(true);
 
     // Validate palates count
-    if (selectedPalates2.size == 0 || selectedPalates2.size > palateLimit) {
-      setPalateError(selectedPalates2.size == 0 ? palateRequired : palateMaxLimit(palateLimit));
+    if (selectedPalates.length > palateLimit) {
+      setPalateError(palateMaxLimit(palateLimit));
       setIsLoading(false);
       return;
     }
@@ -154,7 +143,7 @@ const Form = () => {
         throw new Error("No session token found");
       }
 
-      const formattedPalates = Array.from(selectedPalates2).map((p) => String(p).trim()).join("|");
+      const formattedPalates = selectedPalates.map((p) => p.trim()).join("|");
       const updateData: Record<string, any> = {};
 
       if (profile) {
@@ -167,14 +156,20 @@ const Form = () => {
         updateData.palates = formattedPalates;
       }
 
-      setProfileError("");
-      setPalateError("");
-      
       // Get response from API
       const response = await UserService.updateUserFields(
         updateData,
         session.accessToken
       );
+
+      // Update local storage (if needed, but session update is more direct with next-auth)
+      // const localKey = `userData_${session.user.email}`;
+      // localStorage.setItem(localKey, JSON.stringify({
+      //   ...JSON.parse(localStorage.getItem(localKey) || '{}'),
+      //   image: response.profile_image,
+      //   about_me: aboutMe,
+      //   palates: formattedPalates,
+      // }));
 
       // Update session with direct user field modification
       await update({
@@ -187,6 +182,7 @@ const Form = () => {
         },
       });
 
+      setPalateError("");
       setIsSubmitted(true);
 
       // Redirect after successful update
@@ -203,6 +199,9 @@ const Form = () => {
 
   useEffect(() => {
     if (session?.user) {
+      setProfilePreview(session.user.image || "/profile-icon.svg");
+      setAboutMe(session.user.about_me || "");
+
       if (session.user.palates) {
         // Split and trim each palate name
         const palates = session.user.palates
@@ -228,18 +227,6 @@ const Form = () => {
     }
   }, [session]);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      textarea.focus();
-      
-      setTimeout(() => {
-        const position = cursorPosition !== null ? cursorPosition : textarea.value.length;
-        textarea.setSelectionRange(position, position);
-      }, 50);
-    }
-  }, [aboutMe, cursorPosition]);
-
   const handleRegionChange = (value: string) => {
     setSelectedRegion(value);
     // Don't reset palates when region changes
@@ -257,6 +244,11 @@ const Form = () => {
       }
       return [...prev, palate]; // Remove the 2 palate limit check here
     });
+  };
+
+  // Update the aboutMe change handler
+  const handleAboutMeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAboutMe(e.target.value);
   };
 
   const FormContent = () => {
@@ -333,37 +325,35 @@ const Form = () => {
             className="listing__form max-w-[672px] w-full my-4 md:my-10 mx-3 py-6 px-4 md:py-8 md:px-6 lg:mx-0 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
             onSubmit={submitReview}
           >
-            <div className="listing__form-group">
-              <div className="relative flex justify-center">
-                <label
-                  htmlFor="image"
-                  className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""}`}
-                >
-                  <input
-                    id="image"
-                    type="file"
-                    name="image"
-                    onChange={handleFileChange}
-                    placeholder="Image"
-                    className="hidden"
-                    accept="image/*"
-                    disabled={isLoading}
+            <div className="listing__form-group relative justify-center self-center">
+              <label
+                htmlFor="image"
+                className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""
+                  }`}
+              >
+                <input
+                  id="image"
+                  type="file"
+                  name="image"
+                  onChange={handleFileChange}
+                  placeholder="Image"
+                  className="hidden"
+                  accept="image/*"
+                  disabled={isLoading}
+                />
+                <div>
+                  <Image
+                    src={profilePreview}
+                    width={120}
+                    height={120}
+                    className="rounded-full size-20 md:size-[120px] object-contain"
+                    alt="profile"
                   />
-                  <div className="relative">
-                    <Image
-                      src={profilePreview}
-                      width={120}
-                      height={120}
-                      className="rounded-full size-20 md:size-[120px] object-cover"
-                      alt="profile"
-                      unoptimized
-                    />
-                    <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] border-1.5 bg-white text-center">
-                      <MdOutlineEdit className="size-4 md:size-5" />
-                    </div>
+                  <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] border-1.5 bg-white text-center">
+                    <MdOutlineEdit className="size-4 md:size-5" />
                   </div>
-                </label>
-              </div>
+                </div>
+              </label>
               {profileError && (
                 <p className="mt-2 text-sm text-red-600 text-center">
                   {profileError}
@@ -374,23 +364,18 @@ const Form = () => {
               <label className="listing__label">About Me</label>
               <div className="listing__input-group">
                 <textarea
-                  ref={textareaRef}
-                  name="aboutMe"
-                  className={`listing__input resize-none ${isLoading ? "opacity-50" : ""}`}
+                  name="name"
+                  className={`listing__input resize-none ${isLoading ? "opacity-50" : ""
+                    }`}
                   placeholder="About Me"
                   value={aboutMe}
-                  onChange={handleTextAreaChange}
-                  onFocus={(e) => {
-                    const position = cursorPosition !== null ? cursorPosition : e.target.value.length;
-                    e.target.setSelectionRange(position, position);
-                  }}
-                  autoFocus
+                  onChange={handleAboutMeChange}
                   rows={5}
                   disabled={isLoading}
-                ></textarea>
+                />
               </div>
             </div>
-            {/* <div className="listing__form-group !hidden md:!flex">
+            <div className="listing__form-group !hidden md:!flex">
               <label className="listing__label">Region</label>
               <div className="listing__input-group">
                 <CustomSelect
@@ -403,7 +388,7 @@ const Form = () => {
                   disabled={isLoading}
                 />
               </div>
-            </div> */}
+            </div>
             <div className="listing__form-group">
               <label className="listing__label">
                 Ethnic Palate{" "}
@@ -411,7 +396,7 @@ const Form = () => {
                   (Select up to 2 palates)
                 </span>
               </label>
-              {/* <div className="hidden md:flex flex-wrap gap-2">
+              <div className="hidden md:flex flex-wrap gap-2">
                 {selectedRegion && (
                   <>
                     {palateOptions
@@ -453,8 +438,8 @@ const Form = () => {
                     )}
                   </>
                 )}
-              </div> */}
-              <div className={`flex flex-wrap gap-2 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+              </div>
+              <div className="flex md:hidden flex-wrap gap-2">
                 <CustomMultipleSelect
                   label="Palate (Select up to 2 palates)"
                   placeholder="Select your palate"
@@ -462,7 +447,6 @@ const Form = () => {
                   className="!rounded-[10px] w-full"
                   value={selectedPalates2}
                   onChange={handlePalateChange}
-                  limitValueLength={palateLimit}
                 />
               </div>
               {palateError && (

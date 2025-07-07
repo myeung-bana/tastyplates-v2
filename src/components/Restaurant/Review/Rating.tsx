@@ -1,57 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { GiRoundStar } from 'react-icons/gi';
 
-const Star = ({ fill = 0, onSelect }: { fill: number, onSelect: (e: React.MouseEvent<HTMLDivElement>) => void }) => {
+const  Star = ({ selected = false, onSelect }: {selected: boolean, onSelect: () => void}) => {
     return (
-      <div
-        className='size-6 md:size-8 relative cursor-pointer'
+      <GiRoundStar
+        color={selected ? '#31343F' : '#CACACA'}
         onClick={onSelect}
-      >
-        <GiRoundStar
-          color='#CACACA'
-          className='size-6 md:size-8'
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: `${fill * 100}%`,
-            overflow: 'hidden',
-          }}
-        >
-          <GiRoundStar
-            color='#31343F'
-            className='size-6 md:size-8'
-          />
-        </div>
-      </div>
+        className='cursor-pointer size-6 md:size-8'
+      />
     );
   }
 
-export default function Rating({ totalStars = 5, defaultRating = 0, onRating }: {
+export default function Rating({ totalStars = 5, defaultRating = 0, onRating } :{
     totalStars: number, defaultRating: number, onRating?: any}
 ) {
   const [rating, setRating] = useState(defaultRating);
 
    useEffect(() => {
     setRating(defaultRating);
-  }, [defaultRating]);
+  }, [defaultRating]); // reset rating state when defaultRating changes
 
-  const handleSelect = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
-    const { left, width } = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const clickPosition = e.clientX - left;
-    const fraction = clickPosition / width > 0.5 ? 1 : 0.5;
-    const newRating = index + fraction;
-    setRating(newRating);
-    onRating?.(newRating);
-  };
-
-  const getStarFill = (index: number) => {
-    if (rating > index) {
-      return Math.min(1, rating - index);
-    }
-    return 0;
+  const handleSelect = (star: any) => {
+    setRating(star);
+    onRating?.(star) //Optional callback to parent component
   };
 
   return (
@@ -60,14 +31,12 @@ export default function Rating({ totalStars = 5, defaultRating = 0, onRating }: 
             {Array.from({ length: totalStars }, (_, i) => (
                 <Star
                 key={i}
-                fill={getStarFill(i)}
-                onSelect={(e) => handleSelect(i, e)}
+                selected={i < rating}
+                onSelect={() => handleSelect(i + 1)}
                 />
             ))}
         </div>
-        <span className='text-sm md:text-xl'>
-            {rating}
-        </span>
+        <span className='text-sm md:text-xl text-center'>{rating.toFixed(1)}</span>
     </div>
   );
 }

@@ -262,11 +262,7 @@ export class RestaurantRepository {
         after: string | null = null,
     ) {
         const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
-        let variables: any = { 
-            searchTerm, 
-            first, 
-            after: after || null // Ensure after is either the cursor or null
-        };
+        let variables: any = { searchTerm, first, after };
 
         if (hasTaxQuery) {
             variables.taxQuery = taxQuery;
@@ -277,14 +273,11 @@ export class RestaurantRepository {
                 ? GET_ADDRESS_BY_PALATE_WITH_TAX
                 : GET_ADDRESS_BY_PALATE_NO_TAX,
             variables,
-            fetchPolicy: 'network-only',
         });
 
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
-            hasNextPage: data.listings.pageInfo.hasNextPage,
-            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 
@@ -300,13 +293,10 @@ export class RestaurantRepository {
                 first,
                 after,
             },
-            fetchPolicy: 'network-only',
         });
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
-            hasNextPage: data.listings.pageInfo.hasNextPage,
-            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 }
