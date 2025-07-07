@@ -2,8 +2,8 @@
 import { RestaurantRepository } from "@/repositories/restaurant/restaurantRepository";
 
 export const RestaurantService = {
-    async fetchRestaurantDetails(slug: string) {
-        return await RestaurantRepository.getRestaurantBySlug(slug);
+    async fetchRestaurantDetails(slug: string, palates: string | null = null) {
+        return await RestaurantRepository.getRestaurantBySlug(slug, palates ?? '');
     },
 
     async fetchAllRestaurants(

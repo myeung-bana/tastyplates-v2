@@ -78,7 +78,7 @@ export const GET_LISTINGS = gql`
 `;
 
 export const GET_RESTAURANT_BY_SLUG = gql`
-    query GetRestaurantBySlug($slug: ID!) {
+    query GetRestaurantBySlug($slug: ID!, $palates: String) {
         listing(id: $slug, idType: URI) {
         id
         title
@@ -95,6 +95,10 @@ export const GET_RESTAURANT_BY_SLUG = gql`
         }
         palateStats {
             name
+            avg
+            count
+        }
+        searchPalateStats(palates: $palates) {
             avg
             count
         }
