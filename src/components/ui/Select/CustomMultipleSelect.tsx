@@ -30,6 +30,7 @@ interface CustomMultipleSelectProps {
     hideTagRendering?: boolean;
     showModal?: boolean;
     onClose?: () => void;
+    limitValueLength?: number;
 }
 
 interface SelectedTag {
@@ -98,15 +99,16 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         .filter((section) => section.children && section.children.length > 0);
 
     const getSelectedTags = (): SelectedTag[] => {
-        const tags: SelectedTag[] = [];
-        props.items.forEach(section => {
-            section.children?.forEach(child => {
-                if (props.value?.has(child.key)) {
-                    tags.push({ key: child.key, label: child.label });
+        const selectedKeys = Array.from(props.value || new Set());
+        return (selectedKeys as Key[]).map((key: Key) => {
+            for (const section of props.items) {
+                const child = section.children?.find(child => child.key === key);
+                if (child) {
+                    return { key: child.key, label: child.label };
                 }
-            });
+            }
+            return { key, label: String(key) };
         });
-        return tags;
     };
 
     const handleRemoveTag = (tagKey: Key) => {
@@ -117,16 +119,25 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         }
     };
 
+    const isSelectionLimitReached = () => {
+        return props.limitValueLength !== undefined &&
+            (props.value?.size || 0) >= props.limitValueLength;
+    };
+
     const renderTags = () => {
         const tags = getSelectedTags();
+        const limit = props.limitValueLength;
 
         if (!hideDropdownLabel && tags.length == 0) {
             return <span className="text-gray-400">{props.placeholder}</span>;
         }
 
+        const displayTags = limit ? tags.slice(0, limit) : tags;
+
+        
         return (
             <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                {tags.map(tag => (
+                {displayTags.map(tag => (
                     <div
                         key={tag.key}
                         className="flex items-center gap-2 px-2 py-1 bg-[#F1F1F1] rounded-[50px] text-sm group"
@@ -261,16 +272,19 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                         {item.children?.map((child) => (
                                             <div
                                                 key={child.key}
-                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 ${props.itemClassName}`}
+                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 
+                                                    ${props.itemClassName} 
+                                                    ${isSelectionLimitReached() && !props.value?.has(child.key) ? 'opacity-50 !cursor-default' : ''}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     const newSelection = new Set(props.value || new Set<Key>());
                                                     if (newSelection.has(child.key)) {
                                                         newSelection.delete(child.key);
-                                                    } else {
+                                                        props.onChange?.(newSelection);
+                                                    } else if (!isSelectionLimitReached()) {
                                                         newSelection.add(child.key);
+                                                        props.onChange?.(newSelection);
                                                     }
-                                                    props.onChange?.(newSelection);
                                                 }}
                                             >
                                                 <input
