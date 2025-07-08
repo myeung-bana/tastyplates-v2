@@ -455,7 +455,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
-                              src={palateFlagMap[tag]}
+                              src={palateFlagMap[tag.toLowerCase()]}
                               alt={`${tag} flag`}
                               width={12}
                               height={12}
@@ -603,7 +603,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
-                                src={palateFlagMap[tag]}
+                                src={palateFlagMap[tag.toLowerCase()]}
                                 alt={`${tag} flag`}
                                 width={12}
                                 height={12}
@@ -733,7 +733,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
-                                                src={palateFlagMap[tag]}
+                                                src={palateFlagMap[tag.toLowerCase()]}
                                                 alt={`${tag} flag`}
                                                 width={12}
                                                 height={12}
