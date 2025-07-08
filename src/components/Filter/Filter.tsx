@@ -12,7 +12,7 @@ import { PalatesService } from "@/services/palates/palatestService";
 
 interface FilterProps {
   onFilterChange: (filters: {
-    cuisine?: string | null;
+    cuisine?: string[] | null;
     price?: string | null;
     rating?: number | null;
     badges?: string | null;
@@ -30,8 +30,8 @@ interface Palate {
   }[];
 }
 
-const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuisine
-  const [currentCuisine, setCurrentCuisine] = useState<string>("All"); // Use currentCuisine for internal state
+const Filter = ({ onFilterChange }: FilterProps) => {
+  const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
@@ -133,7 +133,14 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
         setIsSortOpen(false);
         break;
       default: // For Cuisine
-        setCurrentCuisine(value); // Use setCurrentCuisine
+        const newSelection = new Set(selectedCuisines);
+        if (newSelection.has(value)) {
+          newSelection.delete(value);
+        } else {
+          newSelection.add(value);
+        }
+        setSelectedCuisines(newSelection);
+
         setIsCuisineOpen(false);
         break;
     }
@@ -147,7 +154,7 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
   const resetFilter = () => {
     switch (filterType) {
       case "Cuisine":
-        setCurrentCuisine("All"); // Use setCurrentCuisine
+        setSelectedCuisines(new Set());
         setSelectedPalates(new Set());
         break;
       case "Price":
@@ -164,20 +171,22 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
         break;
     }
   };
-
   const applyFilters = () => {
     const palatesArray = Array.from(selectedPalates);
+    const cuisinesArray = Array.from(selectedCuisines);
 
     onFilterChange({
-      cuisine: currentCuisine === "All" ? null : currentCuisine, // Use currentCuisine
+      cuisine: cuisinesArray.length > 0 ? cuisinesArray : null,
       price: price || null,
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
       sortOption: sortOption === "None" ? null : sortOption,
-      palates: palatesArray
+      palates: palatesArray,
     });
+
     setIsModalOpen(false);
   };
+
 
   return (
     <>
@@ -248,7 +257,12 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
                         onClick={() => setIsCuisineOpen(!isCuisineOpen)}
                         className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
-                          {currentCuisine} {/* Use currentCuisine */}
+                          {selectedCuisines.size > 0
+                            ? Array.from(selectedCuisines).map(slug => {
+                              const cuisine = dbCuisines.find(c => c.slug === slug || c.name === slug);
+                              return cuisine?.name || slug;
+                            }).join(", ")
+                            : "Select Cuisine"}
                         </span>
                         <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
                       </button>
@@ -256,8 +270,8 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
                     content={
                       <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
-                          onClick={() => selectFilter("All")}
-                          className={`py-2 px-4 ${currentCuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent" // Use currentCuisine
+                          onClick={() => setSelectedCuisines(new Set())}
+                          className={`py-2 px-4 ${selectedCuisines.size === 0 ? "bg-[#F1F1F1]" : "bg-transparent"
                             } text-sm md:text-lg font-semibold`}
                         >
                           All
@@ -268,9 +282,9 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
                           dbCuisines.map((item: { name: string, slug: string }, index: number) => (
                             <div
                               onClick={() => selectFilter(item.slug || item.name)}
-                              className={`py-2 px-4 ${currentCuisine == (item.slug || item.name)
-                                  ? "bg-[#F1F1F1]"
-                                  : "bg-transparent"
+                              className={`py-2 px-4 ${selectedCuisines.has(item.slug || item.name)
+                                ? "bg-[#F1F1F1]"
+                                : "bg-transparent"
                                 } text-sm md:text-lg font-semibold`}
                               key={index}
                             >
@@ -419,8 +433,8 @@ const Filter = ({ onFilterChange}: FilterProps) => { // Changed from initialCuis
                   >
                     <div
                       className={`w-full rounded-[8px] py-3 px-6 ${price === item.value
-                          ? "bg-[#F1F1F1]"
-                          : "bg-transparent"
+                        ? "bg-[#F1F1F1]"
+                        : "bg-transparent"
                         }`}
                     >
                       <input

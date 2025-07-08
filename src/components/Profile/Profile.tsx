@@ -106,7 +106,7 @@ const Profile = () => {
         "",
         first,
         after,
-        "",
+        [],
         [],
         null,
         null,

@@ -10,7 +10,7 @@ export const RestaurantService = {
         searchTerm: string,
         first = 8,
         after: string | null = null,
-        cuisineSlug: string | null = null,
+        cuisineSlug: string[] | null = null,
         palateSlugs: string[] = [],
         priceRange?: string | null,
         status: string | null = null,
@@ -25,11 +25,11 @@ export const RestaurantService = {
         try {
             const taxArray = [];
 
-            if (cuisineSlug && cuisineSlug !== 'all') {
+            if (cuisineSlug && cuisineSlug.length > 0 && cuisineSlug[0] !== 'all') {
                 taxArray.push({
                     taxonomy: 'LISTINGCATEGORY',
                     field: 'SLUG',
-                    terms: [cuisineSlug],
+                    terms: cuisineSlug,
                     operator: 'IN',
                 });
             }
@@ -143,7 +143,9 @@ export const RestaurantService = {
 
     async fetchAddressByPalate(
         searchTerm: string,
-        palateSlugs: string[]
+        palateSlugs: string[],
+        first = 32,
+        after: string | null = null
     ) {
         try {
             const taxQuery = palateSlugs.length > 0 ? {
@@ -158,7 +160,7 @@ export const RestaurantService = {
                 ],
             } : {};
 
-            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery);
+            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery, first, after);
         } catch (error) {
             console.error('Error fetching by palate:', error);
             throw new Error('Failed to fetch restaurants by palate');
