@@ -5,11 +5,13 @@ import { FiChevronDown } from "react-icons/fi";
 interface ItemChild {
     key: string;
     label: string;
+    flag?: string;
 }
 
 interface ItemInterface {
     key: string;
     label: string;
+    flag?: string;
     children?: ItemChild[];
 }
 
@@ -36,6 +38,7 @@ interface CustomMultipleSelectProps {
 interface SelectedTag {
     key: Key;
     label: string;
+    flag?: string;
 }
 
 const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
@@ -293,6 +296,13 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                                     checked={props.value?.has(child.key)}
                                                     readOnly
                                                 />
+                                                {child.flag && (
+                                                    <img
+                                                        src={child.flag}
+                                                        alt={`${child.label} flag`}
+                                                        className="w-4 h-4 rounded-full"
+                                                    />
+                                                )}
                                                 <span className="font-medium">{child.label}</span>
                                             </div>
                                         ))}

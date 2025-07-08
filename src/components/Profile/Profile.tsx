@@ -16,6 +16,7 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 interface Restaurant {
   id: string;
@@ -722,11 +723,21 @@ const Profile = () => {
                             word.slice(1).toLowerCase()
                         )
                         .join(" ");
+                       const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
                       return (
                         <span
                           key={index}
-                          className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]"
+                          className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
                         >
+                          {flagSrc && (
+                            <img
+                              src={flagSrc}
+                              alt={`${capitalizedPalate} flag`}
+                              width={12}
+                              height={12}
+                              className="rounded-full"
+                            />
+                          )}
                           {capitalizedPalate}
                         </span>
                       );
