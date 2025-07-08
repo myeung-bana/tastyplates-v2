@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { MdOutlineThumbUp } from "react-icons/md";
 import { useSession } from "next-auth/react";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 interface Restaurant {
   id: string;
@@ -106,8 +107,8 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             <div className="text-center text-gray-400">No reviews</div>
           )}
           {!loading && !error && reviews.map((review: any) => {
-            const reviewTitle = review.title 
-                   || review.reviewMainTitle || review.review_main_title || '';
+            const reviewTitle = review.title
+              || review.reviewMainTitle || review.review_main_title || '';
             const reviewStars = review.rating ?? review.reviewStars ?? review.review_stars ?? 0;
             const userAvatar = review.author?.userAvatar || review.author?.image || "/images/default-user-profile.jpg";
             return (
@@ -122,12 +123,30 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                   />
                   <div>
                     <div className="font-semibold text-[#31343F]">{review.author?.name || review.author?.node?.name || "Unknown User"}</div>
-                    <div className="flex gap-2 mt-1">
-                      {(review.author?.palates || review.author?.node?.palates?.split("|").map((s: string) => ({ name: s.trim() })).filter((s: any) => s.name)).map((p: any, idx: number) => (
-                        <span key={p.name + idx} className="bg-[#D56253] text-xs text-[#FDF0EF] rounded-full px-2 py-0.5 font-medium">
-                          {p.name}
-                        </span>
-                      ))}
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      {(review.author?.palates ||
+                        review.author?.node?.palates
+                          ?.split("|")
+                          .map((s: string) => ({ name: s.trim() }))
+                          .filter((s: any) => s.name)
+                      ).map((p: any, idx: number) => {
+                        const lowerName = p.name.toLowerCase();
+                        return (
+                          <span
+                            key={p.name + idx}
+                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-0.5 font-medium"
+                          >
+                            {palateFlagMap[lowerName] && (
+                              <img
+                                src={palateFlagMap[lowerName]}
+                                alt={`${p.name} flag`}
+                                className="w-4 h-3 rounded-sm object-cover"
+                              />
+                            )}
+                            {p.name}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
