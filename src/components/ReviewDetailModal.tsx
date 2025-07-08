@@ -441,7 +441,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     alt={data.author?.node?.name || "User"}
                     width={32}
                     height={32}
-                    className="review-card__user-image"
+                    className="review-card__user-image !size-8 md:!size-11"
                   />
                   <div className="review-card__user-info">
                     <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
@@ -589,7 +589,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       alt={data.author?.node?.name || "User"}
                       width={32}
                       height={32}
-                      className="review-card__user-image"
+                      className="review-card__user-image !size-8 md:!size-11"
                     />
                     <div className="review-card__user-info">
                       <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
@@ -714,9 +714,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       reply.userAvatar || "/profile-icon.svg"
                                     }
                                     alt={reply.author?.node?.name || "User"}
-                                    width={28}
-                                    height={28}
-                                    className="review-card__user-image"
+                                    width={44}
+                                    height={44}
+                                    className="review-card__user-image !size-8 md:!size-11"
                                   />
                                   <div className="review-card__user-info">
                                     <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
@@ -762,7 +762,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                           <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
                                         ) : (
                                           <MdOutlineThumbUp
-                                            className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${replyUserLiked ? "text-blue-600" : ""}`}
+                                            className={`shrink-0 size-4 stroke-[#494D5D] transition-colors duration-200 ${replyUserLiked ? "text-blue-600" : ""}`}
                                           />
                                         )}
                                       </button>
