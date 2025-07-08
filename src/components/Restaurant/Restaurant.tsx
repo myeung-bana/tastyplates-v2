@@ -47,7 +47,7 @@ const RestaurantPage = () => {
   const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
 
   const [filters, setFilters] = useState({
-    cuisine: null as string | null,
+    cuisine: null as string[] | null,
     palates: [] as string[],
     price: null as string | null,
     rating: null as number | null,
@@ -132,7 +132,7 @@ const RestaurantPage = () => {
   const handleFilterChange = useCallback((
     newFilters:
       {
-        cuisine?: string | null;
+        cuisine?: string[] | null;
         price?: string | null;
         rating?: number | null;
         badges?: string | null;
@@ -142,8 +142,10 @@ const RestaurantPage = () => {
   ) => {
     setFilters(
       prev => ({
+
         ...prev,
         ...newFilters,
+        cuisine: Array.isArray(newFilters.cuisine) ? newFilters.cuisine : prev.cuisine,
         palates: Array.isArray(newFilters.palates) ? newFilters.palates : prev.palates
       }));
   }, []);
