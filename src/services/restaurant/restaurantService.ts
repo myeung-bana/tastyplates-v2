@@ -10,7 +10,7 @@ export const RestaurantService = {
         searchTerm: string,
         first = 8,
         after: string | null = null,
-        cuisineSlug: string | null = null,
+        cuisineSlug: string[] | null = null,
         palateSlugs: string[] = [],
         priceRange?: string | null,
         status: string | null = null,
@@ -25,11 +25,11 @@ export const RestaurantService = {
         try {
             const taxArray = [];
 
-            if (cuisineSlug && cuisineSlug !== 'all') {
+            if (cuisineSlug && cuisineSlug.length > 0 && cuisineSlug[0] !== 'all') {
                 taxArray.push({
                     taxonomy: 'LISTINGCATEGORY',
                     field: 'SLUG',
-                    terms: [cuisineSlug],
+                    terms: cuisineSlug,
                     operator: 'IN',
                 });
             }

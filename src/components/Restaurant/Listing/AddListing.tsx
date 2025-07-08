@@ -36,6 +36,7 @@ const AddListingPage = (props: any) => {
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(true);
   const [step, setStep] = useState<number>(props.step ?? 1);
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -88,8 +89,8 @@ const AddListingPage = (props: any) => {
     } else {
       setNameError("");
     }
-    if (!listing.category) {
-      setCategoryError("Category is required.");
+    if (!listing.listingCategories || listing.listingCategories.length === 0) {
+      setCategoryError("At least one cuisine is required.");
       isValid = false;
     } else {
       setCategoryError("");
@@ -123,18 +124,21 @@ const AddListingPage = (props: any) => {
     }
 
     if (action === "continue") {
+      setIsLoading(true);
       setStep(2);
       return;
     }
-
-    setIsLoading(true);
+    setIsLoadingDraft(true);
     try {
       const formData = new FormData();
       formData.append("name", listing.name);
       formData.append("listingStreet", listing.address || "");
       formData.append("priceRange", listing.priceRange);
       formData.append("streetAddress", listing.address);
-      formData.append("categories", listing.category);
+      listing.listingCategories.forEach((cat) => {
+        formData.append("categories[]", cat);
+      });
+
       formData.append("latitude", String(listing.latitude));
       formData.append("longitude", String(listing.longitude));
       selectedPalates.forEach((p) => formData.append("palates[]", p.label));
@@ -154,6 +158,7 @@ const AddListingPage = (props: any) => {
       alert(err.message || "An error occurred during listing submission as draft.");
     } finally {
       setIsLoading(false);
+      setIsLoadingDraft(false);
     }
   };
 
@@ -490,30 +495,31 @@ const AddListingPage = (props: any) => {
                       </p>
                     )}
                   </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">Category</label>
+                </div><div className="listing__form-group">
+                  <label className="listing__label">
+                    Category (Select multiple cuisines)
+                  </label>
                   <div className="listing__input-group">
-                    <select
-                      className="listing__input"
-                      disabled={isLoading}
-                      value={listing.category}
-                      onChange={(e) => {
-                        setListing({ ...listing, category: e.target.value });
+                    <Select
+                      options={categories.map((c: any) => ({
+                        value: c.slug || c.name,
+                        label: c.name,
+                      }))}
+                      value={listing.listingCategories.map((cat) => ({
+                        label: cat,
+                        value: cat,
+                      }))}
+                      onChange={(selected: any) => {
+                        const selectedValues = selected.map((item: any) => item.value);
+                        setListing({ ...listing, listingCategories: selectedValues });
                         setCategoryError("");
                       }}
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map((category: any, index) => (
-                        <option value={category.name} key={index}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                      isMulti
+                      placeholder="Select categories..."
+                      className="!rounded-[10px] text-sm"
+                    />
                     {categoryError && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {categoryError}
-                      </p>
+                      <p className="text-red-500 text-sm mt-1">{categoryError}</p>
                     )}
                   </div>
                 </div>
@@ -636,7 +642,7 @@ const AddListingPage = (props: any) => {
                   >
                     {isLoading && (
                       <svg
-                        className="animate-spin w-5 h-5 text-white"
+                        className="animate-spin w-5 h-5 text-white inline-block mr-2"
                         viewBox="0 0 100 100"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -659,9 +665,9 @@ const AddListingPage = (props: any) => {
                     type="button"
                     onClick={(e) => submitListing(e, "saveDraft")}
                   >
-                    {isLoading && (
+                    {!isLoadingDraft && (
                       <svg
-                        className="animate-spin w-5 h-5 text-white"
+                        className="animate-spin w-5 h-5 text-black inline-block mr-2"
                         viewBox="0 0 100 100"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -843,7 +849,7 @@ const AddListingPage = (props: any) => {
                 >
                   {isLoading && (
                     <svg
-                      className="animate-spin w-5 h-5 text-white"
+                      className="animate-spin w-5 h-5 text-white inline-block mr-2"
                       viewBox="0 0 100 100"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
@@ -866,9 +872,9 @@ const AddListingPage = (props: any) => {
                   onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
                   className="underline flex h-fit text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
-                  {isLoading && (
+                  {!isLoadingDraft && (
                     <svg
-                      className="animate-spin w-5 h-5 text-white"
+                      className="animate-spin w-5 h-5 text-black inline-block mr-2"
                       viewBox="0 0 100 100"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
