@@ -13,6 +13,7 @@ import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
 import { formatDate, formatDateT, stripTags } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 interface ReviewBlockProps {
   review: {
@@ -105,12 +106,27 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             <h3 className="review-block__username">
               {review?.user || "Unknown User"}
             </h3>
-            <div className="review-block__palate-tags">
-              {review.palateNames?.map((tag, index) => (
-                <span key={index} className="review-block__palate-tag">
-                  {tag}
-                </span>
-              ))}
+            <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+              {review.palateNames?.map((tag, index) => {
+                const flagSrc = palateFlagMap[tag.toLowerCase()];
+                return (
+                  <span
+                    key={index}
+                    className="review-block__palate-tag flex items-center gap-1"
+                  >
+                    {flagSrc && (
+                      <img
+                        src={flagSrc}
+                        alt={`${tag} flag`}
+                        width={12}
+                        height={12}
+                        className="rounded-full"
+                      />
+                    )}
+                    {tag}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -119,6 +119,7 @@ export const GET_USER_REVIEWS = gql`
           id
           sourceUrl
         }
+        palates
         userAvatar
         author {
           name
