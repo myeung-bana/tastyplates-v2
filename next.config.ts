@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
         hostname: "www.tastyplates.co",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "www.tastyplates-v2-xi.vercel.app",
+        pathname: "/**",
+      },
     ],
   },
   env: {
