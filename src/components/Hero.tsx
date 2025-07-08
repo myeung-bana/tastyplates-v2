@@ -348,6 +348,7 @@ const Hero = () => {
                     hideDropdownLabel={true}
                     hideDropdownSearch={true}
                     items={palateOptions}
+                    limitValueLength={1}
                     value={selectedPalates}
                     onChange={handlePalateChange}
                     onClose={handleSearchModalClose}
