@@ -22,6 +22,7 @@ import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
 import { commentedSuccess, commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -450,9 +451,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
+                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
                         >
-                          {tag}{" "}
+                          {palateFlagMap[tag.toLowerCase()] && (
+                            <Image
+                              src={palateFlagMap[tag]}
+                              alt={`${tag} flag`}
+                              width={12}
+                              height={12}
+                              className="rounded-full"
+                            />
+                          )}
+                          {tag}
                         </span>
                       ))}
                     </div>
@@ -493,7 +503,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   }}
                 />
               </div>
-              <div className="review-card__image-container hidden md:block">
+              <div className="review-card__image-container bg-black overflow-hidden hidden md:block">
                 <Slider
                   {...settings}
                   nextArrow={
@@ -517,7 +527,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -533,7 +543,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
             </div>
             <div>
-              <div className="review-card__image-container md:!hidden">
+              <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
                 <Slider
                   {...settings}
                   nextArrow={
@@ -557,7 +567,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -589,9 +599,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[8px] text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
+                            className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
                           >
-                            {tag}{" "}
+                            {palateFlagMap[tag.toLowerCase()] && (
+                              <Image
+                                src={palateFlagMap[tag]}
+                                alt={`${tag} flag`}
+                                width={12}
+                                height={12}
+                                className="rounded-full"
+                              />
+                            )}
+                            {tag}
                           </span>
                         ))}
                       </div>
@@ -710,9 +729,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         (tag: string, tagIndex: number) => (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#D56253]"
+                                            className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
                                           >
-                                            {tag ?? "hello"}
+                                            {palateFlagMap[tag.toLowerCase()] && (
+                                              <Image
+                                                src={palateFlagMap[tag]}
+                                                alt={`${tag} flag`}
+                                                width={12}
+                                                height={12}
+                                                className="rounded-full"
+                                              />
+                                            )}
+                                            {tag}
                                           </span>
                                         )
                                       )}

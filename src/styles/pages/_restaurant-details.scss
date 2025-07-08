@@ -472,8 +472,8 @@
 }
 
 .review-block__palate-tag {
-  display: inline-block; // Make tags inline
-  background-color: #D56253; // Light gray background for tags
+  display: flex; // Make tags flex
+  background-color: #1b1b1b; // Light black background for tags
   color: #FDF0EF; // Dark text color
   border-radius: 50px; // Rounded corners
   padding: 4px 8px; // Padding inside the tag
@@ -579,22 +579,27 @@
 .review-filter {
   border-radius: 50px;
   border: solid 1.5px #494D5D;
-  padding: 12px 24px;
-  // -webkit-appearance: none;
-  // -moz-appearance: none;
-  // appearance: none;
-  -webkit-padding-end: 24px;
-  -moz-padding-end: 24px;
-  -webkit-padding-start: 12px;
-  -moz-padding-start: 12px;
+  padding: 12px 32px;
+  background: transparent;
+  background-image: url("/dropdown.svg");
+  background-repeat: no-repeat;
+  background-position-x: 90%;
+  background-position-y: 12px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  -webkit-padding-end: 32px;
+  -moz-padding-end: 32px;
+  -webkit-padding-start: 24px;
+  -moz-padding-start: 24px;
   background-color: transparent;
   /* Remove default arrow */
 
   @media (max-width: 767px) {
-    padding: 8px 12px;
-    -webkit-padding-end: 12px;
-    -moz-padding-end: 12px;
-    -webkit-padding-start: 8px;
-    -moz-padding-start: 8px;
+    padding: 12px 32px;
+    -webkit-padding-end: 32px;
+    -moz-padding-end: 32px;
+    -webkit-padding-start: 12px;
+    -moz-padding-start: 12px;
   }
 }

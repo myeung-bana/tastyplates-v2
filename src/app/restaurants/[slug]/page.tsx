@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useSearchParams } from "next/navigation";
 import { FiMapPin, FiPhone } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import { getRestaurantReviews } from "@/utils/reviewUtils";
@@ -169,13 +169,15 @@ export default function RestaurantDetail() {
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const palatesParam = searchParams?.get("ethnic") || null;
 
   const params = useParams();
   const slug = params?.slug as string;
 
   useEffect(() => {
     if (!slug) return;
-    RestaurantService.fetchRestaurantDetails(slug)
+    RestaurantService.fetchRestaurantDetails(slug, palatesParam)
       .then((data) => {
         if (!data) return notFound();
         const transformed = {
@@ -207,6 +209,7 @@ export default function RestaurantDetail() {
           overAllReviewCount: data.ratingsCount,
           recognitionCounts: data.recognitionCounts,
           palateStats: data.palateStats,
+          searchPalateStats: data.searchPalateStats,
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -219,6 +222,10 @@ export default function RestaurantDetail() {
   // console.log('average palate', restaurant.palateStats?.[restaurant.palates[1].name]?.count)
 
 
+  const searchRatingStats = restaurant?.searchPalateStats;
+  const myPreferenceStats = restaurant?.palateStats?.find(
+    (stat: any) => stat.name === "My Preference"
+  );
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
   const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
@@ -302,16 +309,16 @@ export default function RestaurantDetail() {
                     isOpen={isShowSignup}
                     onClose={() => setIsShowSignup(false)}
                     onOpenSignin={() => {
-                    setIsShowSignup(false);
-                    setIsShowSignin(true);
+                      setIsShowSignup(false);
+                      setIsShowSignin(true);
                     }}
                   />
                   <SigninModal
                     isOpen={isShowSignin}
                     onClose={() => setIsShowSignin(false)}
                     onOpenSignup={() => {
-                    setIsShowSignin(false);
-                    setIsShowSignup(true);
+                      setIsShowSignin(false);
+                      setIsShowSignup(true);
                     }}
                   />
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
@@ -369,29 +376,6 @@ export default function RestaurantDetail() {
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-t-2xl lg:rounded-none lg:rounded-l-3xl pt-4 pb-2">
                   <h1 className="text-xs lg:text-base font-bold">Rating</h1>
                   <div className="rating-summary w-full">
-                    {restaurant?.palates?.[0] && (
-                      <>
-                      <div className="rating-column">
-                        <h3>{restaurant.palates[0]?.name} Palate</h3>
-                        <div className="rating-value">
-                          {/* <FiStar className="fill-yellow-500" /> */}
-                          <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                            {restaurant.palateStats?.[0]?.count > 0
-                              ? (Number(restaurant.palateStats[0].avg) % 1 === 0
-                                ? restaurant.palateStats[0].avg.toFixed(0)
-                                : restaurant.palateStats[0].avg.toFixed(2))
-                              : "0"}
-                          </span>
-                        </div>
-                        <span className="review-count">
-                          {restaurant.palateStats?.[0]?.count > 0
-                            ? `${restaurant.palateStats[0].count} reviews`
-                            : "No matching palate reviews"}
-                        </span>
-                      </div>
-                      <div className="h-[85%] border-l border-[#CACACA]"></div>
-                      </>
-                    )}
                     <div className="rating-column">
                       <h3>Overall Rating</h3>
                       <div className="rating-value">
@@ -410,28 +394,43 @@ export default function RestaurantDetail() {
                           : "No reviews yet"}
                       </span>
                     </div>
-                    {restaurant?.palates?.[1] && (
-                      <>
-                        <div className="h-[85%] border-l border-[#CACACA]"></div>
-                        <div className="rating-column">
-                          <h3>{restaurant.palates[1].name} Palate</h3>
-                          <div className="rating-value">
-                            <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                              {restaurant.palateStats?.[1]?.count > 0
-                                ? (Number(restaurant.palateStats[1].avg) % 1 === 0
-                                  ? restaurant.palateStats[1].avg.toFixed(0)
-                                  : restaurant.palateStats[1].avg.toFixed(2))
-                                : "0"}
-                            </span>
-                          </div>
-                          <span className="review-count">
-                            {restaurant.palateStats?.[1]?.count > 0
-                              ? `${restaurant.palateStats[1].count} reviews`
-                              : "No matching palate reviews"}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                    <div className="h-[85%] border-l border-[#CACACA]"></div>
+                    <div className="rating-column">
+                      <h3>Search Rating</h3>
+                      <div className="rating-value">
+                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                          {searchRatingStats && searchRatingStats.count > 0
+                            ? (searchRatingStats.avg % 1 === 0
+                              ? searchRatingStats.avg.toFixed(0)
+                              : searchRatingStats.avg.toFixed(2))
+                            : "0"}
+                        </span>
+                      </div>
+                      <span className="review-count">
+                        {searchRatingStats && searchRatingStats.count > 0
+                          ? `${searchRatingStats.count} reviews`
+                          : "No matching palate reviews"}
+                      </span>
+                    </div>
+                    <div className="h-[85%] border-l border-[#CACACA]"></div>
+                    <div className="rating-column">
+                      <h3>My Preference</h3>
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                          {myPreferenceStats?.count > 0
+                            ? (myPreferenceStats.avg % 1 === 0
+                              ? myPreferenceStats.avg.toFixed(0)
+                              : myPreferenceStats.avg.toFixed(2))
+                            : "0"}
+                        </span>
+                      </div>
+                      <span className="review-count">
+                        {myPreferenceStats?.count > 0
+                          ? `${myPreferenceStats.count} reviews`
+                          : "No matching palate reviews"}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
