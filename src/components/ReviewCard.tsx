@@ -62,7 +62,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
-                      src={palateFlagMap[tag]}
+                      src={palateFlagMap[tag.toLowerCase()]}
                       alt={`${tag} flag`}
                       width={12}
                       height={12}
