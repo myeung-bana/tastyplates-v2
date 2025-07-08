@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import Select, { components } from "react-select";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import CustomOption from "@/components/ui/Select/CustomOption";
 
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState({
@@ -90,13 +91,13 @@ const AddListingPage = (props: any) => {
       setNameError("");
     }
     if (!listing.listingCategories || listing.listingCategories.length === 0) {
-      setCategoryError("At least one cuisine is required.");
+      setCategoryError("At least one category is required.");
       isValid = false;
     } else {
       setCategoryError("");
     }
     if (selectedPalates.length === 0) {
-      setPalatesError("At least one palate must be selected.");
+      setPalatesError("At least one cuisine must be selected.");
       isValid = false;
     } else {
       setPalatesError("");
@@ -203,7 +204,7 @@ const AddListingPage = (props: any) => {
       setSelectedPalates(selected);
       setPalatesError("");
     } else {
-      setPalatesError("You can select a maximum of 2 palates.");
+      setPalatesError("You can select a maximum of 2 cuisines.");
       // Reset to previous valid selection
       setSelectedPalates(selected.slice(0, 2));
     }
@@ -495,9 +496,37 @@ const AddListingPage = (props: any) => {
                       </p>
                     )}
                   </div>
-                </div><div className="listing__form-group">
+                </div>
+                <div className="listing__form-group">
                   <label className="listing__label">
-                    Category (Select multiple cuisines)
+                    Cuisine (Select up to 2 cuisines)
+                  </label>
+                  <div className="listing__input-group">
+                    <Select
+                      options={palateOptions}
+                      value={selectedPalates}
+                      onChange={handleChange}
+                      isMulti
+                      closeMenuOnSelect={false}
+                      isSearchable
+                      placeholder="Select palates..."
+                      className="!rounded-[10px] text-sm"
+                      hideSelectedOptions={false}
+                      components={{
+                        Option: CustomOption,
+                        GroupHeading: CustomGroupHeading,
+                      }}
+                    />
+                    {palatesError && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {palatesError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="listing__form-group">
+                  <label className="listing__label">
+                    Category (Select up to 3 categories)
                   </label>
                   <div className="listing__input-group">
                     <Select
@@ -511,40 +540,27 @@ const AddListingPage = (props: any) => {
                       }))}
                       onChange={(selected: any) => {
                         const selectedValues = selected.map((item: any) => item.value);
-                        setListing({ ...listing, listingCategories: selectedValues });
-                        setCategoryError("");
+
+                        if (selectedValues.length > 3) {
+                          setCategoryError("You can select a maximum of 3 categories.");
+                          const trimmed = selected.slice(0, 3).map((item: any) => item.value);
+                          setListing({ ...listing, listingCategories: trimmed });
+                        } else {
+                          setListing({ ...listing, listingCategories: selectedValues });
+                          setCategoryError("");
+                        }
                       }}
                       isMulti
                       placeholder="Select categories..."
                       className="!rounded-[10px] text-sm"
+                      hideSelectedOptions={false}
+                      closeMenuOnSelect={false}
+                      components={{
+                        Option: CustomOption,
+                      }}
                     />
                     {categoryError && (
                       <p className="text-red-500 text-sm mt-1">{categoryError}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">
-                    Palate (Select up to 2 palates)
-                  </label>
-                  <div className="listing__input-group">
-                    <Select
-                      options={palateOptions}
-                      value={selectedPalates}
-                      onChange={handleChange}
-                      isMulti
-                      closeMenuOnSelect={false}
-                      isSearchable
-                      placeholder="Select palates..."
-                      className="!rounded-[10px] text-sm"
-                      components={{
-                        GroupHeading: CustomGroupHeading,
-                      }}
-                    />
-                    {palatesError && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {palatesError}
-                      </p>
                     )}
                   </div>
                 </div>
