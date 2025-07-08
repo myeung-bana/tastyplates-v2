@@ -472,8 +472,8 @@
 }
 
 .review-block__palate-tag {
-  display: inline-block; // Make tags inline
-  background-color: #D56253; // Light gray background for tags
+  display: flex; // Make tags inline
+  background-color: #1b1b1b; // Light gray background for tags
   color: #FDF0EF; // Dark text color
   border-radius: 50px; // Rounded corners
   padding: 4px 8px; // Padding inside the tag

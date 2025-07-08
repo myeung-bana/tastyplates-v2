@@ -6,6 +6,7 @@ import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review"
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -54,9 +55,20 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             </h3>
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {UserPalateNames?.map((tag, index) => (
-                <span key={index} 
-                className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]">
-                  {tag}{" "}
+                <span
+                  key={index}
+                  className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                >
+                  {palateFlagMap[tag.toLowerCase()] && (
+                    <Image
+                      src={palateFlagMap[tag]}
+                      alt={`${tag} flag`}
+                      width={12}
+                      height={12}
+                      className="rounded-full"
+                    />
+                  )}
+                  {tag}
                 </span>
               ))}
             </div>
