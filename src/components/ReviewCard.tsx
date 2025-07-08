@@ -16,6 +16,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   ?.split("|")
   .map((s) => s.trim())
   .filter((s) => s.length > 0);
+  console.log(["Images", data.reviewImages, "Palates", UserPalateNames]);
 
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
