@@ -401,7 +401,7 @@ const Hero = () => {
               onClick={searchByListingName}
               className="border-b border-[#FCFCFC] font-semibold text-sm sm:text-base text-[#FCFCFC] leading-5"
             >
-              Search by Listing Name
+             {!isSearchListing ? ( "Search by Listing Name" ) : ( "Search by Palate" )}
             </button>
           </div>
         </div>
