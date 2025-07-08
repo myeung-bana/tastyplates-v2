@@ -273,11 +273,14 @@ export class RestaurantRepository {
                 ? GET_ADDRESS_BY_PALATE_WITH_TAX
                 : GET_ADDRESS_BY_PALATE_NO_TAX,
             variables,
+            fetchPolicy: 'network-only',
         });
 
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
+            hasNextPage: data.listings.pageInfo.hasNextPage,
+            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 
@@ -293,10 +296,13 @@ export class RestaurantRepository {
                 first,
                 after,
             },
+            fetchPolicy: 'network-only',
         });
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
+            hasNextPage: data.listings.pageInfo.hasNextPage,
+            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 }
