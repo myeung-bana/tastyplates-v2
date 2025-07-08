@@ -23,7 +23,6 @@ export function formatDateT(dateString: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
-
 export function capitalizeWords(str: string): string {
   return str
     .trim()
