@@ -37,7 +37,7 @@ const AddListingPage = (props: any) => {
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(true);
+  const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(false);
   const [step, setStep] = useState<number>(props.step ?? 1);
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -126,7 +126,10 @@ const AddListingPage = (props: any) => {
 
     if (action === "continue") {
       setIsLoading(true);
-      setStep(2);
+      setTimeout(() => {
+        setStep(2);
+        setIsLoading(false);
+      }, 300); // Simulate loading, or remove timeout if not needed
       return;
     }
     setIsLoadingDraft(true);
@@ -315,7 +318,7 @@ const AddListingPage = (props: any) => {
 
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
-  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft") => {
+  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft", isSaveAndExit = false) => {
     e.preventDefault();
 
     let hasError = false;
@@ -336,8 +339,11 @@ const AddListingPage = (props: any) => {
 
     if (hasError) return;
 
-    setIsLoading(true);
-
+    if (isSaveAndExit) {
+      setIsLoadingDraft(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       let finalRestaurantId = currentRestaurantDbId;
       console.log("Restaurant ID for submission:", finalRestaurantId);
@@ -413,6 +419,7 @@ const AddListingPage = (props: any) => {
       alert("Failed to submit. Please try again.");
     } finally {
       setIsLoading(false);
+      setIsLoadingDraft(false);
     }
   };
 
@@ -681,7 +688,7 @@ const AddListingPage = (props: any) => {
                     type="button"
                     onClick={(e) => submitListing(e, "saveDraft")}
                   >
-                    {!isLoadingDraft && (
+                    {isLoadingDraft && (
                       <svg
                         className="animate-spin w-5 h-5 text-black inline-block mr-2"
                         viewBox="0 0 100 100"
@@ -861,7 +868,7 @@ const AddListingPage = (props: any) => {
                 <button
                   type="button"
                   className="listing__button flex"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "draft")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "draft", false)}
                 >
                   {isLoading && (
                     <svg
@@ -885,10 +892,10 @@ const AddListingPage = (props: any) => {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "pending", true)}
                   className="underline flex h-fit text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
-                  {!isLoadingDraft && (
+                  {isLoadingDraft && (
                     <svg
                       className="animate-spin w-5 h-5 text-black inline-block mr-2"
                       viewBox="0 0 100 100"
