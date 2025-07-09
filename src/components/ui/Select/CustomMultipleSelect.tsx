@@ -78,19 +78,28 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     }, [props.showModal]);
 
     useEffect(() => {
-        if (isOpen && selectRef.current) {
-            const selectRect = selectRef.current.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-            const dropdownHeight = 320; // Approximate max height of dropdown
+        const autoPositionDropdown = () => {
+            if (selectRef.current) {
+                const selectRect = selectRef.current.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                const dropdownHeight = 320; // Approximate max height of dropdown
 
-            // If there's not enough space below, position above
-            if (selectRect.bottom + dropdownHeight > windowHeight) {
-                setDropdownPosition('top');
-            } else {
-                setDropdownPosition('bottom');
+                // If there's not enough space below, position above
+                if (selectRect.bottom + dropdownHeight > windowHeight) {
+                    setDropdownPosition('top');
+                } else {
+                    setDropdownPosition('bottom');
+                }
             }
         }
-    }, [isOpen]);
+
+        autoPositionDropdown();
+
+        window.addEventListener('resize', autoPositionDropdown);
+        return () => {
+            window.removeEventListener('resize', autoPositionDropdown);
+        }
+    }, []);
 
     const filteredItems = props.items
         .map((section) => ({
@@ -137,7 +146,6 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
         const displayTags = limit ? tags.slice(0, limit) : tags;
 
-        
         return (
             <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                 {displayTags.map(tag => (
