@@ -1,6 +1,6 @@
 import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
-import { stripTags } from "../lib/utils"
+import { capitalizeWords, stripTags } from "../lib/utils"
 // import '@fortawesome/fontawesome-free/css/all.min.css';
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 import { useEffect, useState } from "react";
@@ -12,12 +12,10 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
   const defaultImage = "/images/default-image.png"
-
- const UserPalateNames = data?.palates
-  ?.split("|")
-  .map((s) => s.trim())
-  .filter((s) => s.length > 0);
-  console.log(["Images", data.reviewImages, "Palates", UserPalateNames]);
+  const UserPalateNames = data?.palates
+    ?.split("|")
+    .map((s) => capitalizeWords(s.trim()))
+    .filter((s) => s.length > 0);
 
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
@@ -81,7 +79,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                   <i className="rating-counter">
                     {data.reviewStars}
                   </i>
-               </span>
+                </span>
               </div>
           </div>
         </div>

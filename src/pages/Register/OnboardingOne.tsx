@@ -25,6 +25,7 @@ import {
   palateRequired,
 } from "@/constants/messages";
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
+import CustomDatePicker from "@/components/CustomDatepicker";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
@@ -41,6 +42,7 @@ const OnboardingOnePage = () => {
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [selected, setSelected] = useState<Date>();
 
   useEffect(() => {
     setHasMounted(true); // Ensures code only runs after client-side mount
@@ -239,7 +241,7 @@ const OnboardingOnePage = () => {
       type: "date",
       placeholder: "DD/MM/YYYY",
       value: birthdate,
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
+      onChange: (val: string) => setBirthdate(val),
       disabled: isLoading,
       className: "relative !h-[48px]",
     },
@@ -325,21 +327,14 @@ const OnboardingOnePage = () => {
                   </label>
                   <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
                     {field.type === "date" ? (
-                      <div className="relative">
-                        <input
-                          type={field.type}
+                        <CustomDatePicker
                           id={field.label?.toLowerCase()}
-                          className={`auth__input text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
+                          className={`!w-full text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
                           value={field.value}
                           onChange={field.onChange}
+                          formatValue="MM/dd/yyyy"
                           disabled={field.disabled}
                         />
-                        {!field.value && (
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none !text-sm">
-                            DD/MM/YYYY
-                          </span>
-                        )}
-                      </div>
                     ) : field.type === "select" ? (
                       <CustomSelect {...field} />
                     ) : field.type === "multiple-select" ? (

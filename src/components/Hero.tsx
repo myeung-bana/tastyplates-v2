@@ -111,7 +111,19 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      if (cuisine) queryParams.set("ethnic", cuisine);
+      // Prioritize selectedPalates for the 'ethnic' parameter
+      if (selectedPalates.size > 0) {
+        const selectedSlugs = Array.from(selectedPalates).map(key => key.toString());
+        queryParams.set("ethnic", selectedSlugs.join(','));
+      } else if (cuisine) { 
+        let ethnicValue = cuisine;
+        if (cuisine.startsWith("What ") && cuisine.endsWith(" like to eat?")) {
+          ethnicValue = cuisine.substring("What ".length, cuisine.length - " like to eat?".length);
+        }
+        if (ethnicValue) {
+            queryParams.set("ethnic", ethnicValue);
+        }
+      }
       if (location) queryParams.set("address", location);
     }
 
@@ -185,21 +197,7 @@ const Hero = () => {
     setListing('');
     setSelectedPalates(values);
 
-    // Get current custom inputs in cuisine that are NOT from palateOptions
-    const allPalateLabels = palateOptions.flatMap((group) =>
-      group.children?.map((child) => child.label.toLowerCase())
-    );
-
-    const currentCuisineParts = cuisine
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s !== '');
-
-    const customInputs = currentCuisineParts.filter(
-      (label) => !allPalateLabels.includes(label.toLowerCase())
-    );
-
-    // Extract new selected labels from palateOptions based on selected keys
+    // Get the labels for the currently selected keys from palateOptions
     const selectedLabels = Array.from(values).map((value) => {
       for (const category of palateOptions) {
         const found = category.children?.find((child) => child.key === value);
@@ -208,15 +206,14 @@ const Hero = () => {
       return null;
     }).filter(Boolean) as string[];
 
-    // Merge and dedupe: custom inputs + new selected palate labels
-    const mergedLabels = Array.from(new Set([...customInputs, ...selectedLabels]));
-
-    setCuisine(mergedLabels.join(', '));
-
-    console.log('cuisine:', mergedLabels.join(', '))
+    if (selectedLabels.length > 0) {
+      setCuisine(`What ${selectedLabels.join(', ')} like to eat?`);
+    } else {
+      setCuisine('');
+    }
 
     fetchPalatesDebouncedRef.current?.(values);
-  };  
+  };
 
   const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation('')
@@ -224,25 +221,8 @@ const Hero = () => {
     const inputValue = e.target.value;
     setCuisine(inputValue);
 
-    const newSelection = new Set<Key>();
-    const searchTerms = inputValue
-      .split(",")
-      .map(term => term.trim().toLowerCase())
-      .filter(term => term !== "");
-
-    if (searchTerms.length > 0) {
-      palateOptions.forEach((group) => {
-        group.children?.forEach((item) => {
-          const itemLabel = item.label.toLowerCase();
-          if (searchTerms.some(term => itemLabel.includes(term))) {
-            newSelection.add(item.key);
-          }
-        });
-      });
-    }
-
-    setSelectedPalates(newSelection);
-    fetchPalatesDebouncedRef.current?.(newSelection);
+    // Clear selected palates when typing, as typing should not implicitly select
+    setSelectedPalates(new Set<Key>());
   };
 
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -308,12 +288,12 @@ const Hero = () => {
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
-                      My Palate
+                     {cuisine.length > 0 ? "" : "What ______ like to eat?"}
                     </label>
                     <div className="relative w-full">
                       <input
                         type="text"
-                        placeholder="Search Palate"
+                        placeholder="Search Cuisine"
                         className="hero__search-input"
                         value={cuisine}
                         onChange={handleCuisineChange}
@@ -341,7 +321,7 @@ const Hero = () => {
                     </div>
                   </div>
                   <CustomMultipleSelect
-                    enableCheckboxHeader={true}
+                    enableCheckboxHeader={false}
                     enableSelectionDropdown={true}
                     hideTagRendering={true}
                     showModal={showSearchModal}
@@ -352,7 +332,7 @@ const Hero = () => {
                     value={selectedPalates}
                     onChange={handlePalateChange}
                     onClose={handleSearchModalClose}
-                    placeholder="Search Palate"
+                    placeholder="Search Cuisine"
                     dropDownClassName="!max-h-[350px]"
                     baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-50"
                     className="!bg-transparent !border-0 !shadow-none !w-full !cursor-default"
@@ -411,7 +391,7 @@ const Hero = () => {
               <button
                 type="submit"
                 className="hero__search-button h-8 w-8 sm:h-11 sm:w-11 text-center"
-                disabled={!listing ? (!location && !cuisine) ? true : false : false}
+                disabled={!listing && !location && !cuisine && selectedPalates.size === 0}
               >
                 <FiSearch className="hero__search-icon stroke-white" />
               </button>
@@ -423,7 +403,7 @@ const Hero = () => {
               onClick={searchByListingName}
               className="border-b border-[#FCFCFC] font-semibold text-sm sm:text-base text-[#FCFCFC] leading-5"
             >
-             {!isSearchListing ? ( "Search by Listing Name" ) : ( "Search by Palate" )}
+              {!isSearchListing ? ("Search by Listing Name") : ("Search by Palate")}
             </button>
           </div>
         </div>

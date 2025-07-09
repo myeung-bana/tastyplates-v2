@@ -1,7 +1,7 @@
 // app/components/AddListing.tsx
 
 "use client";
-import React, { FormEvent, useEffect, useState, Suspense } from "react"; // Add Suspense here
+import React, { FormEvent, useEffect, useState, Suspense, useRef, useCallback } from "react";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import Rating from "../Review/Rating";
 import { CiLocationOn } from "react-icons/ci";
 import CustomModal from "@/components/ui/Modal/Modal";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation"; // Keep useSearchParams
+import { useRouter, useSearchParams } from "next/navigation";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
@@ -17,7 +17,15 @@ import { useSession } from "next-auth/react";
 import Select, { components } from "react-select";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import CustomOption from "@/components/ui/Select/CustomOption";
+import debounce from 'lodash.debounce'; // Make sure you 
 
+declare global {
+  interface Window {
+    google: typeof google;
+    initMap: () => void;
+  }
+}
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState({
     address: "",
@@ -36,12 +44,12 @@ const AddListingPage = (props: any) => {
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(true);
+  const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(false);
   const [step, setStep] = useState<number>(props.step ?? 1);
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedrecognition, setSelectedRecognition] = useState<string[]>([]);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false); // Used for modal display
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const router = useRouter();
   const [categories, setCategories] = useState([]);
   const [palates, setPalates] = useState([]);
@@ -57,7 +65,6 @@ const AddListingPage = (props: any) => {
 
   const [currentRestaurantDbId, setCurrentRestaurantDbId] = useState(0);
 
-
   const [descriptionError, setDescriptionError] = useState("");
   const [uploadedImageError, setUploadedImageError] = useState("");
   const [ratingError, setRatingError] = useState("");
@@ -66,6 +73,41 @@ const AddListingPage = (props: any) => {
   const [palatesError, setPalatesError] = useState("");
   const [addressError, setAddressError] = useState("");
   const [priceRangeError, setPriceRangeError] = useState("");
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
+  const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
+  const [addressPredictions, setAddressPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [showPredictions, setShowPredictions] = useState<boolean>(false);
+
+  useEffect(() => {
+    const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.error("Google Maps API Key is not set in environment variables.");
+      return;
+    }
+
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+
+      window.initMap = () => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          setAutocompleteService(new window.google.maps.places.AutocompleteService());
+          const dummyDiv = document.createElement('div');
+          setPlacesService(new window.google.maps.places.PlacesService(dummyDiv));
+        }
+      };
+    } else {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setAutocompleteService(new window.google.maps.places.AutocompleteService());
+        const dummyDiv = document.createElement('div');
+        setPlacesService(new window.google.maps.places.PlacesService(dummyDiv));
+      }
+    }
+  }, []);
 
   const CustomGroupHeading = (props: any) => (
     <components.GroupHeading {...props}>
@@ -90,13 +132,13 @@ const AddListingPage = (props: any) => {
       setNameError("");
     }
     if (!listing.listingCategories || listing.listingCategories.length === 0) {
-      setCategoryError("At least one cuisine is required.");
+      setCategoryError("At least one category is required.");
       isValid = false;
     } else {
       setCategoryError("");
     }
     if (selectedPalates.length === 0) {
-      setPalatesError("At least one palate must be selected.");
+      setPalatesError("At least one cuisine must be selected.");
       isValid = false;
     } else {
       setPalatesError("");
@@ -125,7 +167,10 @@ const AddListingPage = (props: any) => {
 
     if (action === "continue") {
       setIsLoading(true);
-      setStep(2);
+      setTimeout(() => {
+        setStep(2);
+        setIsLoading(false);
+      }, 300);
       return;
     }
     setIsLoadingDraft(true);
@@ -155,17 +200,18 @@ const AddListingPage = (props: any) => {
       router.push("/listing");
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
-      alert(err.message || "An error occurred during listing submission as draft.");
+      // Use a custom modal or toast for alerts instead of window.alert
+      // alert(err.message || "An error occurred during listing submission as draft.");
     } finally {
       setIsLoading(false);
       setIsLoadingDraft(false);
     }
   };
 
-
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      // Use a custom modal or toast for alerts instead of window.alert
+      // alert("Geolocation is not supported by your browser");
       return;
     }
 
@@ -173,27 +219,31 @@ const AddListingPage = (props: any) => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      try {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-        );
-        const data = await response.json();
-
-        const formattedAddress =
-          data.results?.[0]?.formatted_address || "Unknown location";
-
-        setListing((prev) => ({
-          ...prev,
-          address: formattedAddress,
-          latitude: lat,
-          longitude: lng,
-        }));
-      } catch (error) {
-        console.error("Geocoding error:", error);
-        alert("Failed to get address from Google Maps");
+      if (!placesService) {
+        console.error("PlacesService not initialized.");
+        // alert("Google Maps services not ready.");
+        return;
       }
+
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === window.google.maps.GeocoderStatus.OK && results && results[0]) {
+          const formattedAddress = results[0].formatted_address;
+          setListing((prev) => ({
+            ...prev,
+            address: formattedAddress,
+            latitude: lat,
+            longitude: lng,
+          }));
+          setAddressError("");
+        } else {
+          console.error("Geocoding error:", status, results);
+          // alert("Failed to get address from Google Maps");
+        }
+      });
     }, (error) => {
-      alert("Unable to retrieve your location");
+      // Use a custom modal or toast for alerts instead of window.alert
+      // alert("Unable to retrieve your location");
       console.error(error);
     });
   };
@@ -203,8 +253,7 @@ const AddListingPage = (props: any) => {
       setSelectedPalates(selected);
       setPalatesError("");
     } else {
-      setPalatesError("You can select a maximum of 2 palates.");
-      // Reset to previous valid selection
+      setPalatesError("You can select a maximum of 2 cuisines.");
       setSelectedPalates(selected.slice(0, 2));
     }
   };
@@ -314,7 +363,7 @@ const AddListingPage = (props: any) => {
 
   console.log("Current restaurantDbId state:", currentRestaurantDbId);
 
-  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft") => {
+  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft", isSaveAndExit = false) => {
     e.preventDefault();
 
     let hasError = false;
@@ -335,8 +384,11 @@ const AddListingPage = (props: any) => {
 
     if (hasError) return;
 
-    setIsLoading(true);
-
+    if (isSaveAndExit) {
+      setIsLoadingDraft(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       let finalRestaurantId = currentRestaurantDbId;
       console.log("Restaurant ID for submission:", finalRestaurantId);
@@ -352,7 +404,16 @@ const AddListingPage = (props: any) => {
         formData.append("listingStreet", listing.address || "");
         formData.append("priceRange", listing.priceRange);
         formData.append("streetAddress", listing.address);
-        formData.append("categories", listing.category);
+        // Ensure listing.category is an array or handle it correctly if it's a single string
+        if (Array.isArray(listing.listingCategories)) {
+          listing.listingCategories.forEach((cat) => {
+            formData.append("categories[]", cat);
+          });
+        } else if (listing.category) { // Fallback for single string
+          formData.append("categories", listing.category);
+        }
+
+
         formData.append("latitude", String(listing.latitude));
         formData.append("longitude", String(listing.longitude));
 
@@ -368,7 +429,8 @@ const AddListingPage = (props: any) => {
           listingStreet: listing.address || "",
           priceRange: listing.priceRange,
           streetAddress: listing.address,
-          categories: listing.category,
+          // Ensure listing.category is an array or handle it correctly if it's a single string
+          categories: Array.isArray(listing.listingCategories) ? listing.listingCategories : [listing.category],
           latitude: String(listing.latitude),
           longitude: String(listing.longitude),
           palates: selectedPalates.map(p => p.label),
@@ -409,9 +471,10 @@ const AddListingPage = (props: any) => {
 
     } catch (error) {
       console.error("Failed to submit review and/or listing:", error);
-      alert("Failed to submit. Please try again.");
+      // alert("Failed to submit. Please try again."); // Use custom modal/toast
     } finally {
       setIsLoading(false);
+      setIsLoadingDraft(false);
     }
   };
 
@@ -453,6 +516,69 @@ const AddListingPage = (props: any) => {
       setIsDoneSelecting(false);
     }
   };
+
+  // Function to fetch address predictions using AutocompleteService
+  const fetchAddressPredictions = useCallback(
+    debounce(async (input: string) => {
+      if (!autocompleteService || input.length < 3) {
+        setAddressPredictions([]);
+        setShowPredictions(false);
+        return;
+      }
+
+      autocompleteService.getPlacePredictions(
+        { input: input, },
+        (predictions, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setAddressPredictions(predictions);
+            setShowPredictions(true);
+          } else {
+            setAddressPredictions([]);
+            setShowPredictions(false);
+            console.error("Error fetching place predictions:", status);
+          }
+        }
+      );
+    }, 500),
+    [autocompleteService] // Recreate debounce if autocompleteService changes
+  );
+
+  // Handle address input change
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setListing({ ...listing, address: value });
+    setAddressError("");
+    fetchAddressPredictions(value);
+  };
+
+  // Handle selecting an address prediction
+  const handlePredictionSelect = (prediction: google.maps.places.AutocompletePrediction) => {
+    setListing((prev) => ({
+      ...prev,
+      address: prediction.description,
+    }));
+    setAddressPredictions([]);
+    setShowPredictions(false);
+    setAddressError("");
+
+    if (placesService) {
+      placesService.getDetails(
+        { placeId: prediction.place_id, fields: ['geometry.location'] },
+        (place, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+            setListing((prev) => ({
+              ...prev,
+              latitude: place.geometry?.location?.lat?.() ?? 0,
+              longitude: place.geometry?.location?.lng?.() ?? 0,
+            }));
+          } else {
+            console.error("Error fetching place details:", status);
+          }
+        }
+      );
+    }
+  };
+
   return (
     <>
       <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">
@@ -495,9 +621,37 @@ const AddListingPage = (props: any) => {
                       </p>
                     )}
                   </div>
-                </div><div className="listing__form-group">
+                </div>
+                <div className="listing__form-group">
                   <label className="listing__label">
-                    Category (Select multiple cuisines)
+                    Cuisine (Select up to 2 cuisines)
+                  </label>
+                  <div className="listing__input-group">
+                    <Select
+                      options={palateOptions}
+                      value={selectedPalates}
+                      onChange={handleChange}
+                      isMulti
+                      closeMenuOnSelect={false}
+                      isSearchable
+                      placeholder="Select palates..."
+                      className="!rounded-[10px] text-sm"
+                      hideSelectedOptions={false}
+                      components={{
+                        Option: CustomOption,
+                        GroupHeading: CustomGroupHeading,
+                      }}
+                    />
+                    {palatesError && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {palatesError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="listing__form-group">
+                  <label className="listing__label">
+                    Category (Select up to 3 categories)
                   </label>
                   <div className="listing__input-group">
                     <Select
@@ -511,12 +665,24 @@ const AddListingPage = (props: any) => {
                       }))}
                       onChange={(selected: any) => {
                         const selectedValues = selected.map((item: any) => item.value);
-                        setListing({ ...listing, listingCategories: selectedValues });
-                        setCategoryError("");
+
+                        if (selectedValues.length > 3) {
+                          setCategoryError("You can select a maximum of 3 categories.");
+                          const trimmed = selected.slice(0, 3).map((item: any) => item.value);
+                          setListing({ ...listing, listingCategories: trimmed });
+                        } else {
+                          setListing({ ...listing, listingCategories: selectedValues });
+                          setCategoryError("");
+                        }
                       }}
                       isMulti
                       placeholder="Select categories..."
                       className="!rounded-[10px] text-sm"
+                      hideSelectedOptions={false}
+                      closeMenuOnSelect={false}
+                      components={{
+                        Option: CustomOption,
+                      }}
                     />
                     {categoryError && (
                       <p className="text-red-500 text-sm mt-1">{categoryError}</p>
@@ -524,48 +690,40 @@ const AddListingPage = (props: any) => {
                   </div>
                 </div>
                 <div className="listing__form-group">
-                  <label className="listing__label">
-                    Palate (Select up to 2 palates)
-                  </label>
-                  <div className="listing__input-group">
-                    <Select
-                      options={palateOptions}
-                      value={selectedPalates}
-                      onChange={handleChange}
-                      isMulti
-                      closeMenuOnSelect={false}
-                      isSearchable
-                      placeholder="Select palates..."
-                      className="!rounded-[10px] text-sm"
-                      components={{
-                        GroupHeading: CustomGroupHeading,
-                      }}
-                    />
-                    {palatesError && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {palatesError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="listing__form-group">
                   <label className="listing__label">Address</label>
-                  <div className="listing__input-group">
+                  <div className="listing__input-group relative">
                     <input
                       type="text"
                       name="address"
                       className="listing__input"
                       placeholder="Enter address"
                       value={listing.address}
-                      onChange={(e) => {
-                        setListing({ ...listing, address: e.target.value });
-                        setAddressError("");
-                      }}
+                      onChange={handleAddressInputChange}
+                      onFocus={() => listing.address.length >= 3 && setShowPredictions(true)}
+                      onBlur={() => setTimeout(() => setShowPredictions(false), 200)}
+                      ref={addressInputRef} 
                     />
                     {addressError && (
                       <p className="text-red-500 text-sm mt-1">
                         {addressError}
                       </p>
+                    )}
+                    {showPredictions && addressPredictions.length > 0 && (
+                      <ul className="absolute z-10 w-full bg-white border border-[#CACACA] rounded-xl mt-1 shadow-lg max-h-60 overflow-y-auto">
+                        {addressPredictions.map((prediction) => (
+                          <li
+                            key={prediction.place_id}
+                            className="p-3 cursor-pointer hover:bg-gray-100 flex items-center gap-2"
+                            onMouseDown={() => handlePredictionSelect(prediction)} // Use onMouseDown to prevent onBlur from hiding list
+                          >
+                            <CiLocationOn className="size-4 md:size-5 text-[#494D5D]" />
+                            <span>{prediction.description}</span>
+                          </li>
+                        ))}
+                        <li className="p-3 text-right text-xs text-gray-500">
+                          powered by Google
+                        </li>
+                      </ul>
                     )}
                   </div>
                   <div className="flex flex-nowrap gap-2 items-center">
@@ -665,7 +823,7 @@ const AddListingPage = (props: any) => {
                     type="button"
                     onClick={(e) => submitListing(e, "saveDraft")}
                   >
-                    {!isLoadingDraft && (
+                    {isLoadingDraft && (
                       <svg
                         className="animate-spin w-5 h-5 text-black inline-block mr-2"
                         viewBox="0 0 100 100"
@@ -845,7 +1003,7 @@ const AddListingPage = (props: any) => {
                 <button
                   type="button"
                   className="listing__button flex"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "draft")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "draft", false)}
                 >
                   {isLoading && (
                     <svg
@@ -869,10 +1027,10 @@ const AddListingPage = (props: any) => {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "pending")}
+                  onClick={(e) => submitReviewAndListing(e, "draft", "pending", true)}
                   className="underline flex h-fit text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
-                  {!isLoadingDraft && (
+                  {isLoadingDraft && (
                     <svg
                       className="animate-spin w-5 h-5 text-black inline-block mr-2"
                       viewBox="0 0 100 100"

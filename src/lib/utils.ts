@@ -6,7 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function stripTags(input: string): string {
-  return input.replace(/<[^>]*>?/gm, '');
+  const stripped = input.replace(/<[^>]*>?/gm, '');
+
+  const txt = document.createElement("textarea");
+  txt.innerHTML = stripped;
+  return txt.value;
 }
 
 export function formatDate(dateString: string | null | undefined): string {
@@ -23,3 +27,10 @@ export function formatDateT(dateString: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
+export function capitalizeWords(str: string): string {
+  return str
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
