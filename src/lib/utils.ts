@@ -6,7 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function stripTags(input: string): string {
-  return input.replace(/<[^>]*>?/gm, '');
+  const stripped = input.replace(/<[^>]*>?/gm, '');
+
+  const txt = document.createElement("textarea");
+  txt.innerHTML = stripped;
+  return txt.value;
 }
 
 export function formatDate(dateString: string | null | undefined): string {
