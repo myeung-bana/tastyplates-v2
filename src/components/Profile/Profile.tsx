@@ -65,7 +65,7 @@ const Profile = () => {
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [checkins, setCheckins] = useState<Restaurant[]>([]);
-  const [checkinsLoading, setCheckinsLoading] = useState(true);
+  const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
@@ -420,14 +420,22 @@ const Profile = () => {
       label: "Reviews",
       content: (
         <>
-          <Masonry
-            items={reviews}
-            render={ReviewCard}
-            columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12}
-            maxColumnWidth={304}
-            columnCount={getColumns()}
-            maxColumnCount={4}
-          />
+          {reviews.length > 0 ? (
+            <Masonry
+              items={reviews}
+              render={ReviewCard}
+              columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12}
+              maxColumnWidth={304}
+              columnCount={getColumns()}
+              maxColumnCount={4}
+            />
+          ) : (
+            !loading && (
+              <div className="col-span-full text-center text-gray-400 py-12">
+                No Reviews Yet.
+              </div>
+            )
+          )}
           <div
             ref={observerRef}
             className="flex justify-center text-center mt-6 min-h-[40px]"
@@ -463,15 +471,23 @@ const Profile = () => {
       label: "Listings",
       content: (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {restaurants.map((rest) => (
-            <RestaurantCard
-              key={rest.id}
-              restaurant={rest}
-              profileTablist="listings"
-            />
-          ))}
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+            {restaurants.length > 0 ? (
+              restaurants.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="listings"
+                />
+              ))
+            ) : (
+              !listingLoading && (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Listings Yet.
+                </div>
+              )
+            )}
+          </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
             {listingLoading && restaurants.length === 0 && (
               <>
@@ -496,7 +512,7 @@ const Profile = () => {
               </>
             )}
           </div>
-          </>
+        </>
       ),
     },
     {
@@ -505,18 +521,21 @@ const Profile = () => {
       content: (
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {wishlist.map((rest) => (
-              <RestaurantCard
-                key={rest.id}
-                restaurant={rest}
-                profileTablist="wishlists"
-                initialSavedStatus={true}
-              />
-            ))}
-            {wishlist.length === 0 && !wishlistLoading && (
-              <div className="col-span-full text-center text-gray-400 py-12">
-                No wishlisted restaurants yet.
-              </div>
+            {wishlist.length > 0 ? (
+              wishlist.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="wishlists"
+                  initialSavedStatus={true}
+                />
+              ))
+            ) : (
+              !wishlistLoading && (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Wishlisted Restaurants Yet.
+                </div>
+              )
             )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
@@ -561,9 +580,11 @@ const Profile = () => {
                   initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
                 />
               ))
-            ) : !checkinsLoading && hasFetchedCheckins ? (
-              <div className="col-span-full text-center py-8">No check-ins yet.</div>
-            ) : null}
+            ) : (
+              !checkinsLoading && hasFetchedCheckins && (
+                <div className="col-span-full text-center py-8">No Check-ins Yet.</div>
+              )
+            )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
             {checkinsLoading && !hasFetchedCheckins && (
@@ -792,11 +813,10 @@ const Profile = () => {
                 )}
               </span>{" "}
               <span
-                className={`${
-                  followersLoading || followers.length === 0
+                className={`${followersLoading || followers.length === 0
                     ? "cursor-default"
                     : "cursor-pointer"
-                } text-[10px] md:text-sm`}
+                  } text-[10px] md:text-sm`}
               >
                 Followers
               </span>
@@ -819,11 +839,10 @@ const Profile = () => {
                 )}
               </span>{" "}
               <span
-                className={`${
-                  followingLoading || following.length === 0
+                className={`${followingLoading || following.length === 0
                     ? "cursor-default"
                     : "cursor-pointer"
-                } text-[10px] md:text-sm`}
+                  } text-[10px] md:text-sm`}
               >
                 Following
               </span>
