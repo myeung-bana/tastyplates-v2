@@ -2,6 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { LoadScript } from '@react-google-maps/api';
 
 // Dynamically import the form component
 const AddListingPage = dynamic(() => import("./AddListing"), {
@@ -10,7 +11,13 @@ const AddListingPage = dynamic(() => import("./AddListing"), {
 });
 
 const AddListingWrapper = (props: any) => {
-  return <AddListingPage />;
+  return <LoadScript
+    googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+    libraries={['places']}
+  >
+
+    <AddListingPage />;
+  </LoadScript>
 };
 
 export default AddListingWrapper;
