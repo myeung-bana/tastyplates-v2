@@ -127,7 +127,6 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   // Pagination
   const paginatedReviews = sortedReviews.slice((currentPage - 1) * REVIEWS_PER_PAGE, currentPage * REVIEWS_PER_PAGE);
   const totalPages = Math.ceil(sortedReviews.length / REVIEWS_PER_PAGE);
-
   // Tab content
   const tabs = [
     {
@@ -155,7 +154,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                 <ReviewBlock
                   key={review.databaseId}
                   review={{
-                    id: review.databaseId,
+                    databaseId: review.databaseId,
+                    id: review.id,
                     authorId: review?.author?.node?.databaseId ?? "",
                     restaurantId: restaurantId.toString(),
                     user: review?.author?.node?.name ?? review?.author?.name ?? "Unknown",

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
@@ -28,6 +28,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
   isOpen,
   onClose,
+  initialPhotoIndex = 0,
 }) => {
   const { data: session } = useSession();
   const { getFollowState, setFollowState } = useFollowContext();
@@ -53,6 +54,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   );
   const authorUserId = data.userId;
   const defaultImage = "/images/default-image.png"
+  const sliderRef = useRef<any>(null);
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -425,6 +427,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      setActiveSlide(initialPhotoIndex);
+      if (sliderRef.current) {
+        sliderRef.current.slickGoTo(initialPhotoIndex);
+      }
+    }
+  }, [isOpen, initialPhotoIndex]);
+
   if (!isOpen) return null;
 
   return (
@@ -505,16 +516,16 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
               <div className="review-card__image-container bg-black overflow-hidden hidden md:block">
                 <Slider
+                  ref={sliderRef}
                   {...settings}
+                  initialSlide={initialPhotoIndex}
                   nextArrow={
                     <NextArrow length={data?.reviewImages?.length || 0} />
                   }
                   prevArrow={<PrevArrow />}
-                  beforeChange={(current: any) => {
-                    setActiveSlide(current + 1);
-                  }}
-                  // afterChange={(current: any) => {
-                  //   setActiveSlide(current);
+                  afterChange={(current: number) => setActiveSlide(current)}
+                  // beforeChange={(current: any) => {
+                  //   setActiveSlide(current + 1);
                   // }}
                   lazyLoad="progressive"
                 >
@@ -545,16 +556,16 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             <div>
               <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
                 <Slider
+                  ref={sliderRef}
                   {...settings}
+                  initialSlide={initialPhotoIndex}
                   nextArrow={
                     <NextArrow length={data?.reviewImages?.length || 0} />
                   }
                   prevArrow={<PrevArrow />}
-                  beforeChange={(current: any) => {
-                    setActiveSlide(current + 1);
-                  }}
-                  // afterChange={(current: any) => {
-                  //   setActiveSlide(current);
+                  afterChange={(current: number) => setActiveSlide(current)}
+                  // beforeChange={(current: any) => {
+                  //   setActiveSlide(current + 1);
                   // }}
                   lazyLoad="progressive"
                 >
