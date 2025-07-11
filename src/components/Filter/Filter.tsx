@@ -151,6 +151,9 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     setPrice(price === value ? "" : value);
   };
 
+  const palatesArray = Array.from(selectedPalates);
+  const cuisinesArray = Array.from(selectedCuisines);
+
   const resetFilter = () => {
     switch (filterType) {
       case "Cuisine":
@@ -170,13 +173,23 @@ const Filter = ({ onFilterChange }: FilterProps) => {
       default:
         break;
     }
-  };
-  const applyFilters = () => {
-    const palatesArray = Array.from(selectedPalates);
-    const cuisinesArray = Array.from(selectedCuisines);
 
     onFilterChange({
-      cuisine: cuisinesArray.length > 0 ? cuisinesArray : null,
+      cuisine: cuisinesArray, // Send empty array if no cuisines selected
+      price: price || null,
+      rating: rating > 0 ? rating : null,
+      badges: badge === "All" ? null : badge,
+      sortOption: sortOption === "None" ? null : sortOption,
+      palates: palatesArray, // Send empty array if no palates selected
+    });
+    
+  };
+
+  const applyFilters = () => {
+
+
+    onFilterChange({
+      cuisine: cuisinesArray,
       price: price || null,
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
