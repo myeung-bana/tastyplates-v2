@@ -1,12 +1,13 @@
+// ReviewCard.tsx
 import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
 import { capitalizeWords, stripTags } from "../lib/utils"
-// import '@fortawesome/fontawesome-free/css/all.min.css';
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
 import { palateFlagMap } from "@/utils/palateFlags";
+import Link from "next/link"; // Import Link
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -41,13 +42,27 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
 
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
-          <Image
-            src={data.userAvatar || "/profile-icon.svg"}
-            alt={data.author?.node?.name || "User"}
-            width={32}
-            height={32}
-            className="review-card__user-image"
-          />
+          {/* Make the user image clickable and link to their profile */}
+          {data.author?.node?.databaseId ? ( // Ensure databaseId exists for the author
+            <Link href={`/profile/${data.author.node.databaseId}`}>
+              <Image
+                src={data.userAvatar || "/profile-icon.svg"}
+                alt={data.author?.node?.name || "User"}
+                width={32}
+                height={32}
+                className="review-card__user-image cursor-pointer" // Add cursor-pointer for visual cue
+              />
+            </Link>
+          ) : (
+            <Image // Fallback if no databaseId
+              src={data.userAvatar || "/profile-icon.svg"}
+              alt={data.author?.node?.name || "User"}
+              width={32}
+              height={32}
+              className="review-card__user-image"
+            />
+          )}
+
           <div className="review-card__user-info">
             <h3 className="review-card__username line-clamp-1">
               {data.author?.name || "Unknown User"}

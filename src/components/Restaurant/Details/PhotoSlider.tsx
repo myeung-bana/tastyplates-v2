@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 
 export default function PhotoSlider({
   reviewPhotos,
+  onImageClick,
 }: {
   reviewPhotos: string[];
+  onImageClick?: (index: number) => void;
 }) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [width, setWidth] = useState(
@@ -163,7 +165,9 @@ export default function PhotoSlider({
                   paddingRight: 30,
                 }}
               >
-                <div className="">
+                <div               
+                className="hover:cursor-pointer"
+                onClick={() => onImageClick?.(index)}>
                   {
                     <Image
                       src={photo}

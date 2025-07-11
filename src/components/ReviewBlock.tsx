@@ -14,11 +14,14 @@ import { useSession } from "next-auth/react";
 import { formatDate, formatDateT, stripTags } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
+import ReviewDetailModal from "./ReviewDetailModal";
+import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 
 interface ReviewBlockProps {
   review: {
-    id: number;
-    authorId: string;
+    databaseId: number;
+    id: string;
+    authorId: number;
     restaurantId: string;
     user: string;
     rating: number;
@@ -34,6 +37,68 @@ interface ReviewBlockProps {
   };
 }
 
+const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDataProps => {
+  // const encodeRelayId = (type: string, id: number) => {
+  //   if (typeof window !== 'undefined' && window.btoa) {
+  //     return window.btoa(`${type}:${id}`);
+  //   } else if (typeof Buffer !== 'undefined') {
+  //     return Buffer.from(`${type}:${id}`).toString('base64');
+  //   }
+  //   return `${type}:${id}`;
+  // };
+
+  const reviewImages: ReviewedDataProps["reviewImages"] = review.images.map((src, index) => ({
+    databaseId: index,
+    id: `${review.id}-${index}`,
+    sourceUrl: src,
+  }));
+
+  return {
+    databaseId: review.databaseId,
+    id: review.id, // Use relay global ID
+    // id: encodeRelayId('comment', review.id), // Use relay global ID
+    reviewMainTitle: review.title || "",
+    commentLikes: String(review.commentLikes ?? 0),
+    userLiked: review.userLiked ?? false,
+    content: review.comment,
+    uri: "",
+    reviewStars: String(review.rating),
+    date: review.date,
+    reviewImages,
+    palates: review.palateNames?.join("|") ?? "",
+    userAvatar: review.userImage || "/profile-icon.svg",
+    author: {
+      name: review.user,
+      node: {
+        id: `user:${review.authorId}`,
+        databaseId: review.authorId,
+        name: review.user,
+        avatar: {
+          url: review.userImage || "/profile-icon.svg",
+        },
+      },
+    },
+    userId: review.authorId,
+    commentedOn: {
+      node: {
+        databaseId: parseInt(review.restaurantId),
+        title: "",
+        slug: "",
+        fieldMultiCheck90: "",
+        featuredImage: {
+          node: {
+            databaseId: "",
+            altText: "",
+            mediaItemUrl: "",
+            mimeType: "",
+            mediaType: "",
+          },
+        },
+      },
+    },
+  };
+};
+
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -41,6 +106,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [userLiked, setUserLiked] = useState(review.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(review.commentLikes ?? 0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   const tags = [
     { id: 1, name: "Must Revisit", icon: "/flag.svg" },
@@ -70,13 +137,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       if (userLiked) {
         // Already liked, so unlike
         response = await ReviewService.unlikeComment(
-          review.id,
+          review.databaseId,
           session.accessToken ?? ""
         );
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
-          review.id,
+          review.databaseId,
           session.accessToken ?? ""
         );
       }
@@ -181,7 +248,25 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             className="review-block__image"
           />
         ))} */}
-        <PhotoSlider reviewPhotos={review.images} />
+        {isModalOpen && (
+          <ReviewDetailModal
+            key={`modal-${selectedPhotoIndex}`}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedPhotoIndex(0);
+            }}
+            data={mapToReviewedDataProps(review)}
+            initialPhotoIndex={selectedPhotoIndex}
+          />
+        )}
+        <PhotoSlider
+          reviewPhotos={review.images}
+          onImageClick={(idx) => {
+            setSelectedPhotoIndex(idx);
+            setIsModalOpen(true);
+          }}
+        />
       </div>
       <div className="review-block__actions flex items-center relative text-center">
         <button
