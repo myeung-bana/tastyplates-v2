@@ -35,7 +35,7 @@ export function capitalizeWords(str: string): string {
     .join(' ');
 }
 
-//ex: PAGE(DASHBOARD, [":path*"], { status: true })
+//ex: PAGE(DASHBOARD, ["path", "list"], { status: true }) returns "/dashboard/path/list?status=true"
 export const PAGE = (
   basePath: string,
   subPaths: any[] = [],
