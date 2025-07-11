@@ -252,8 +252,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         >
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
-              <div className="restaurant-card__rating">
+              <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
+              <div className="restaurant-card__rating text-[1rem]">
                 {displayRating > 0 ? (
                   <>
                     <FaStar className="restaurant-card__icon -mt-1" />
@@ -270,7 +270,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 </div>
               </div>
 
-              <div className="restaurant-card__tags mt-1">
+              <div className="restaurant-card__tags mt-1 text-[0.9rem]">
                 {(() => {
                   const tags = [...cuisineNames];
                   if (restaurant.priceRange) tags.push(restaurant.priceRange);
