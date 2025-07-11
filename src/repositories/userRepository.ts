@@ -1,3 +1,6 @@
+import client from "@/app/graphql/client";
+import { GET_USER_BY_ID } from "@/app/graphql/User/userQueries";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
 export class UserRepository {
@@ -68,6 +71,18 @@ export class UserRepository {
             },
             true
         );
+    }
+
+    static async getUserById(
+        id: number | null,
+        accessToken?: string,
+    ) {
+        const { data } = await client.query({
+            query: GET_USER_BY_ID,
+            variables: { id },
+        });
+
+        return data.user;
     }
 
     static async updateUserFields<T>(

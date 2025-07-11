@@ -1,3 +1,4 @@
+// app/components/Profile.tsx (or wherever you place your reusable components)
 "use client";
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
@@ -32,8 +33,15 @@ interface Restaurant {
   ratingsCount?: number;
 }
 
-const Profile = () => {
-  const { data: session, status } = useSession(); // Add status from useSession
+
+interface ProfileProps {
+  targetUserId:number;
+}
+
+// Update the component signature to accept props
+const Profile = ({ targetUserId }: ProfileProps) => {
+  const { data: session, status } = useSession();
+
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [nameLoading, setNameLoading] = useState(true);
   const [aboutMeLoading, setAboutMeLoading] = useState(true);
@@ -59,8 +67,11 @@ const Profile = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const user = session?.user;
-  const targetUserId = user?.id;
+  
+  const isViewingOwnProfile = session?.user?.id === targetUserId;
+
+
+
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
@@ -94,7 +105,7 @@ const Profile = () => {
     }));
   };
 
-  const statuses = ["PUBLISH", "DRAFT"];
+  const statuses = isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"];
   const fetchRestaurants = async (
     first = 8,
     after: string | null = null,
@@ -123,7 +134,6 @@ const Profile = () => {
         if (!after) {
           return transformed;
         }
-        // Pagination: append unique restaurants only
         const all = [...prev, ...transformed];
         const uniqueMap = new Map(all.map((r) => [r.id, r]));
         return Array.from(uniqueMap.values());
@@ -139,22 +149,20 @@ const Profile = () => {
     }
   };
 
+  console.log("Session:", session, "Target User ID:", targetUserId, "Is Viewing Own Profile:", isViewingOwnProfile);
+
   useEffect(() => {
-    if (targetUserId) { // Only fetch if targetUserId is available
+    if (targetUserId) {
       fetchRestaurants(8, null, targetUserId);
     }
-  }, [targetUserId]); // Re-fetch when targetUserId changes
+    return () => {
+      setRestaurants([]);
+    };
+  }, [targetUserId]);
 
   useEffect(() => {
-    window.addEventListener("load", () => {
-      if (typeof window !== "undefined") {
-        handleResize();
-      }
-    });
-    window.addEventListener("resize", () => {
-      handleResize();
-    });
-
+    window.addEventListener("load", handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("load", handleResize);
@@ -165,14 +173,12 @@ const Profile = () => {
     setWidth(window.innerWidth);
   };
 
-  // Reset reviews when user changes or component unmounts
   useEffect(() => {
     setReviews([]);
     setEndCursor(null);
     setHasNextPage(true);
     isFirstLoad.current = true;
     return () => {
-      // Cleanup when component unmounts
       setReviews([]);
       setEndCursor(null);
       isFirstLoad.current = true;
@@ -180,14 +186,12 @@ const Profile = () => {
   }, [targetUserId]);
 
   useEffect(() => {
-    // Clear data immediately on tab/page change
     setReviews([]);
     if (status !== "loading" && targetUserId) {
-      loadMore(); // Only load when session is ready and we have the userId
+      loadMore();
     }
-  }, [status, targetUserId]); // Add dependencies
+  }, [status, targetUserId]);
 
-  // Setup Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -216,11 +220,10 @@ const Profile = () => {
       const { reviews: newReviews, pageInfo, userCommentCount } =
         await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
 
-      // Reset reviews array before setting new data
       if (isFirstLoad.current) {
-        setReviews([]); // Clear existing reviews
+        setReviews([]);
         setTimeout(() => {
-          setReviews(newReviews); // Set new reviews after a brief delay
+          setReviews(newReviews);
         }, 0);
       } else {
         const existingIds = new Set(reviews.map((review) => review.id));
@@ -243,7 +246,38 @@ const Profile = () => {
     }
   };
 
-  // Fetch following with cache (5 min TTL)
+  useEffect(() => {
+    const fetchPublicUserData = async () => {
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+      try {
+        const publicUser = await UserService.getUserById(targetUserId);
+        setUserData(publicUser);
+      } catch (error) {
+        console.error("Error fetching public user data:", error);
+        setUserData(null);
+      } finally {
+        setNameLoading(false);
+        setAboutMeLoading(false);
+        setPalatesLoading(false);
+      }
+    };
+
+    if (targetUserId) {
+      fetchPublicUserData();
+    } else {
+      // If targetUserId is not available (shouldn't happen if passed as prop)
+      // or if it's the logged-in user but no specific ID is given (e.g. for /profile)
+      // Then it means the component is rendered without a specific targetUserId
+      // This block might be less relevant if targetUserId is always passed
+      setUserData(null);
+      setNameLoading(false);
+      setAboutMeLoading(false);
+      setPalatesLoading(false);
+    }
+  }, [targetUserId]);
+
   const fetchFollowing = async (forceRefresh = false) => {
     setFollowingLoading(true);
     if (!session?.accessToken || !targetUserId) {
@@ -262,7 +296,7 @@ const Profile = () => {
             setFollowingLoading(false);
             return data;
           }
-        } catch {}
+        } catch { }
       }
     }
     try {
@@ -275,7 +309,6 @@ const Profile = () => {
     }
   };
 
-  // Fetch followers with cache (5 min TTL)
   const fetchFollowers = async (forceRefresh = false, followingList?: any[]) => {
     setFollowersLoading(true);
     if (!session?.accessToken || !targetUserId) {
@@ -294,7 +327,7 @@ const Profile = () => {
             setFollowersLoading(false);
             return data;
           }
-        } catch {}
+        } catch { }
       }
     }
     try {
@@ -311,21 +344,18 @@ const Profile = () => {
     }
   };
 
-  // Separate effect for user data loading states
-  useEffect(() => {
-    if (!session?.user) {
-      setNameLoading(true);
-      setAboutMeLoading(true);
-      setPalatesLoading(true);
-      return;
-    }
-    setUserData(session.user);
-    setNameLoading(false);
-    setAboutMeLoading(false);
-    setPalatesLoading(false);
-  }, [session?.user]);
-
-  // On mount or user change, load from cache or fetch
+  //   useEffect(() => {
+  //   if (!session?.user) {
+  //     setNameLoading(true);
+  //     setAboutMeLoading(true);
+  //     setPalatesLoading(true);
+  //     return;
+  //   }
+  //   setUserData(session.user);
+  //   setNameLoading(false);
+  //   setAboutMeLoading(false);
+  //   setPalatesLoading(false);
+  // }, [session?.user]);
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
     const loadFollowData = async () => {
@@ -344,7 +374,6 @@ const Profile = () => {
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
 
-  // Listen for follow/unfollow in other tabs and sync instantly
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'follow_sync') {
@@ -352,7 +381,6 @@ const Profile = () => {
           localStorage.removeItem(`following_${targetUserId}`);
           localStorage.removeItem(`followers_${targetUserId}`);
         }
-        // Always re-fetch from backend and update cache
         fetchFollowing(true);
         fetchFollowers(true);
       }
@@ -367,10 +395,8 @@ const Profile = () => {
     if (isNaN(userIdNum)) return;
     const success = await UserService.followUser(userIdNum, session.accessToken);
     if (success) {
-      // Invalidate caches
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -379,7 +405,6 @@ const Profile = () => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      // Notify other tabs (and ReviewDetailModal) to update
       localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
@@ -390,10 +415,8 @@ const Profile = () => {
     if (isNaN(userIdNum)) return;
     const success = await UserService.unfollowUser(userIdNum, session.accessToken);
     if (success) {
-      // Invalidate caches
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -402,7 +425,6 @@ const Profile = () => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      // Notify other tabs (and ReviewDetailModal) to update
       localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
@@ -413,7 +435,6 @@ const Profile = () => {
     return 2;
   };
 
-  // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [
     {
       id: "reviews",
@@ -618,6 +639,11 @@ const Profile = () => {
   useEffect(() => {
     const fetchWishlist = async () => {
       setWishlistLoading(true);
+      if (!isViewingOwnProfile) {
+        setWishlist([]);
+        setWishlistLoading(false);
+        return;
+      }
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/`,
@@ -653,12 +679,18 @@ const Profile = () => {
 
     if (session) fetchWishlist();
     else setWishlist([]);
-  }, [session]);
+  }, [session, isViewingOwnProfile]);
 
   useEffect(() => {
     let didCancel = false;
     const fetchCheckins = async () => {
       if (!hasFetchedCheckins) setCheckinsLoading(true);
+      if (!isViewingOwnProfile) {
+        setCheckins([]);
+        setCheckinsLoading(false);
+        setHasFetchedCheckins(true);
+        return;
+      }
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
@@ -680,7 +712,6 @@ const Profile = () => {
                 RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
               )
             );
-            // Only keep valid restaurant objects
             const validResults = results.filter(r => r && typeof r === "object" && r.id);
             const transformed = transformNodes(validResults);
             setCheckins(transformed);
@@ -702,14 +733,14 @@ const Profile = () => {
     return () => {
       didCancel = true;
     };
-  }, [session]);
+  }, [session, isViewingOwnProfile]);
 
   return (
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <Image
-            src={user?.image || "/profile-icon.svg"}
+            src={userData?.image ||  userData?.userProfile.profileImage.node.mediaItemUrl || "/images/default-avatar.png"}
             fill
             className="rounded-full object-cover"
             alt="profile"
@@ -744,7 +775,7 @@ const Profile = () => {
                             word.slice(1).toLowerCase()
                         )
                         .join(" ");
-                       const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                      const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
                       return (
                         <span
                           key={index}
@@ -766,14 +797,16 @@ const Profile = () => {
                 )}
               </div>
             </div>
-            <div className="sm:ml-auto">
-              <Link
-                href="/profile/edit"
-                className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-xs sm:text-sm whitespace-nowrap"
-              >
-                Edit Profile
-              </Link>
-            </div>
+            {isViewingOwnProfile && (
+              <div className="sm:ml-auto">
+                <Link
+                  href="/profile/edit"
+                  className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-xs sm:text-sm whitespace-nowrap"
+                >
+                  Edit Profile
+                </Link>
+              </div>
+            )}
           </div>
           <p className="text-[10px] md:text-sm">
             {aboutMeLoading ? (
@@ -814,8 +847,8 @@ const Profile = () => {
               </span>{" "}
               <span
                 className={`${followersLoading || followers.length === 0
-                    ? "cursor-default"
-                    : "cursor-pointer"
+                  ? "cursor-default"
+                  : "cursor-pointer"
                   } text-[10px] md:text-sm`}
               >
                 Followers
@@ -840,14 +873,33 @@ const Profile = () => {
               </span>{" "}
               <span
                 className={`${followingLoading || following.length === 0
-                    ? "cursor-default"
-                    : "cursor-pointer"
+                  ? "cursor-default"
+                  : "cursor-pointer"
                   } text-[10px] md:text-sm`}
               >
                 Following
               </span>
             </button>
           </div>
+          {!isViewingOwnProfile && userData?.databaseId && session?.accessToken && (
+            <div className="mt-4">
+              {following.some((f: any) => f.id === userData.databaseId) ? (
+                <button
+                  onClick={() => handleUnfollow(String(userData.databaseId))}
+                  className="py-2 px-4 rounded-[50px] border-[1.2px] border-red-500 text-red-500 font-semibold text-sm whitespace-nowrap"
+                >
+                  Unfollow
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleFollow(String(userData.databaseId))}
+                  className="py-2 px-4 rounded-[50px] bg-blue-500 text-white font-semibold text-sm whitespace-nowrap"
+                >
+                  Follow
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <FollowersModal
