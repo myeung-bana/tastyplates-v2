@@ -3,6 +3,7 @@ import { useState } from "react";
 import ReviewDetailModal from "@/components/ReviewDetailModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 
 interface PhotosProps {
   data: ReviewedDataProps;
@@ -12,33 +13,80 @@ interface PhotosProps {
 
 const Photos = ({ index, data, width }: PhotosProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const defaultImage = "/images/default-image.png"
+  const [currentImgIdx, setCurrentImgIdx] = useState(0);
+  const defaultImage = "/images/default-image.png";
 
-  const firstImageUrl =
+  const images =
     Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-      ? data.reviewImages[0].sourceUrl
-      : null;
-  const imageSrc = firstImageUrl || defaultImage;
+      ? data.reviewImages
+      : [{ sourceUrl: defaultImage }];
 
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImgIdx((prev) => (prev === 0 ? 0 : prev - 1));
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentImgIdx((prev) => (prev === images.length - 1 ? prev : prev + 1));
+  };
 
   return (
-    <div className="review-card" style={{ width: `${width}px` }}>
+    <div className="review-card relative overflow-hidden" style={{ width: `${width}px`, height: "180px" }}>
       <ReviewDetailModal
         data={data}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        initialPhotoIndex={currentImgIdx}
       />
 
-      <div className="review-card__image-container">
-        <Image
-          src={imageSrc}
-          alt="Review"
-          width={400}
-          height={400}
-          className="review-card__image !w-full !object-cover rounded-2xl max-h-[405px] hover:cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        />
+      {/* Prev button */}
+      {images.length > 1 && currentImgIdx > 0 && (
+        <button
+          onClick={handlePrev}
+          aria-label="Previous image"
+          className="absolute left-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform -translate-y-1/2 bg-white rounded-full flex items-center justify-center shadow"
+        >
+          <RxCaretLeft className="h-11 w-11 stroke-black" />
+        </button>
+      )}
+
+      {/* Sliding container */}
+      <div
+        className="flex transition-transform duration-500 ease-in-out"
+        style={{
+          transform: `translateX(-${currentImgIdx * width}px)`,
+          width: `${images.length * width}px`,
+        }}
+      >
+        {images.map((img: any, idx: number) => (
+          <div
+            key={img.id || `img-${idx}`}
+            className="flex-shrink-0"
+            style={{ width: `${width}px`, height: "180px" }}
+          >
+            <Image
+              src={img.sourceUrl || defaultImage}
+              alt={`Review image ${idx + 1}`}
+              width={width}
+              height={180}
+              className="review-card__image !object-cover rounded-2xl w-full h-full hover:cursor-pointer"
+              onClick={() => setIsModalOpen(true)}
+            />
+          </div>
+        ))}
       </div>
+
+      {/* Next button */}
+      {images.length > 1 && currentImgIdx < images.length - 1 && (
+        <button
+          onClick={handleNext}
+          aria-label="Next image"
+          className="absolute right-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform -translate-y-1/2 bg-white rounded-full flex items-center justify-center shadow"
+        >
+          <RxCaretRight className="h-11 w-11 stroke-black" />
+        </button>
+      )}
     </div>
   );
 };
