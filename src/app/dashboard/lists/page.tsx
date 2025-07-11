@@ -7,6 +7,8 @@ import Link from "next/link";
 import { restaurants } from "@/data/dummyRestaurants";
 import { FiPlus, FiEdit2, FiTrash2, FiMove } from "react-icons/fi";
 import "@/styles/pages/_lists.scss";
+import { PAGE } from "@/lib/utils";
+import { DASHBOARD_LISTS } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -88,7 +90,7 @@ const ListsPage = () => {
         {restaurantLists.map((list) => (
           <div key={list.id} className="list-section">
             <div className="list-header">
-              <Link href={`/dashboard/lists/${list.id}`}>
+              <Link href={PAGE(DASHBOARD_LISTS, [list.id])}>
                 <h2>{list.name}</h2>
               </Link>
               <div className="list-actions">

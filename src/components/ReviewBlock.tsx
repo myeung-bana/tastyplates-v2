@@ -16,6 +16,8 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { updateLikeFailed } from "@/constants/messages";
+import toast from "react-hot-toast";
 
 interface ReviewBlockProps {
   review: {
@@ -152,7 +154,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
-      alert('Error updating like');
+      toast.error(updateLikeFailed);
     } finally {
       setLoading(false);
     }

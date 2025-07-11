@@ -13,6 +13,8 @@ import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { PAGE } from "@/lib/utils";
+import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
 
 export interface Restaurant {
   id: string;
@@ -190,17 +192,17 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <a
-            href={`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`}
+            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})}
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /listing page
               if (pathname === "/listing" && clickedElement.dataset.role === "image") {
-                router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`); 
+                router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId]));
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`);
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
@@ -243,11 +245,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           )}
         </div>
         <a 
-        href={`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`}
+        href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})}
         onClick={async (e) => {
           e.preventDefault();
           if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(`/restaurants/${restaurant.slug}${palateParam ? `?ethnic=${encodeURIComponent(palateParam)}` : ""}`);
+          router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
         }}
         >
           <div className="restaurant-card__content">

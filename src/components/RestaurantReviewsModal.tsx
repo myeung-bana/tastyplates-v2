@@ -7,7 +7,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
-import { commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
+import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 
 interface Restaurant {
   id: string;
@@ -86,7 +86,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           : r
       ));
     } catch (e) {
-      toast.error("Failed to update like. Please try again.");
+      toast.error(updateLikeFailed);
     } finally {
       setLikeLoading((prev) => ({ ...prev, [review.id]: false }));
     }

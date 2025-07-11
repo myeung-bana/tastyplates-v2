@@ -6,6 +6,8 @@ import Spinner from "@/components/LoadingSpinner";
 import { UserService } from "@/services/userService";
 import { pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
+import { responseStatus } from "@/constants/response";
+import { HOME } from "@/constants/pages";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -13,15 +15,17 @@ const OnboardingTwoPage = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDoItLaterLoading, setIsDoItLaterLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
+  const REGISTRATION_KEY = 'registrationData';
+  const LOGIN_BACK_KEY = 'loginBackMessage';
 
   // Add effect to load saved data
   useEffect(() => {
-    const storedData = localStorage.getItem('registrationData');
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
     if (storedData) {
       const parsedData = JSON.parse(storedData);
       if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
@@ -64,7 +68,7 @@ const OnboardingTwoPage = () => {
     }
 
     // Get registration data from localStorage
-    const registrationData = JSON.parse(localStorage.getItem('registrationData') || '{}');
+    const registrationData = JSON.parse(localStorage.getItem(REGISTRATION_KEY) || '{}');
     const uniqueSignUpId = registrationData.id || Date.now().toString();
 
     // Combine with final profile data
@@ -77,14 +81,14 @@ const OnboardingTwoPage = () => {
 
     await UserService.registerUser(completeRegistration);
 
-    localStorage.removeItem('registrationData');
+    localStorage.removeItem(REGISTRATION_KEY);
     setMessage(registrationSuccess);
-    localStorage.setItem('loginBackMessage', pleaseLoginAgain);
-    setMessageType("success");
+    localStorage.setItem(LOGIN_BACK_KEY, pleaseLoginAgain);
+    setMessageType(responseStatus.success);
 
     setTimeout(() => {
       setIsLoading(false);
-      router.push("/");
+      router.push(HOME);
     }, 1500);
   }
 
@@ -100,7 +104,7 @@ const OnboardingTwoPage = () => {
       return;
     }
 
-    const storedData = localStorage.getItem('registrationData');
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
     const currentData = storedData ? JSON.parse(storedData) : {};
     const partialData = {
       ...currentData,
@@ -110,18 +114,18 @@ const OnboardingTwoPage = () => {
       lastStep: 'onboarding2'
     };
 
-    localStorage.setItem('loginBackMessage', unfinishedSaved);
-    localStorage.setItem('registrationData', JSON.stringify(partialData));
+    localStorage.setItem(LOGIN_BACK_KEY, unfinishedSaved);
+    localStorage.setItem(REGISTRATION_KEY, JSON.stringify(partialData));
     setTimeout(() => {
-      router.push("/");
+      router.push(HOME);
     }, 1000);
   };
 
   // Redirect if registrationData is missing
   useEffect(() => {
-    const storedData = localStorage.getItem('registrationData');
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
     if (!storedData) {
-      router.replace('/');
+      router.replace(HOME);
     }
   }, [router]);
 
@@ -253,7 +257,7 @@ const OnboardingTwoPage = () => {
             {/* Success/Error Message */}
             {message && (
               <div
-                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === "success"
+                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === responseStatus.success
                   ? "bg-green-100 text-green-700 border border-green-300"
                   : "bg-red-100 text-red-700 border border-red-300"
                   }`}

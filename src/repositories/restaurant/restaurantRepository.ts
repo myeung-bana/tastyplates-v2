@@ -173,7 +173,6 @@ export class RestaurantRepository {
                 const text = await response.text();
                 if (!text) {
                     // If the response is empty, assume success without JSON content
-                    console.log('Delete successful, but no content in response.');
                     return { success: true, deleted: id }; // Return a custom success object
                 }
                 // Try parsing as JSON
