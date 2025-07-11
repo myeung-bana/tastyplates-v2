@@ -63,7 +63,6 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   const handleLike = async (review: any) => {
     if (!session?.user) {
       setIsShowSignup(true);
-
       return;
     }
     setLikeLoading((prev) => ({ ...prev, [review.id]: true }));

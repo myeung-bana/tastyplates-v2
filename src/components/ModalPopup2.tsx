@@ -202,7 +202,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Always use the correct user id for the author (databaseId, integer)
     const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
-      toast.error("Author user ID is missing.");
+      toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);

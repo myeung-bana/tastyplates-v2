@@ -311,8 +311,6 @@ const AddListingPage = (props: any) => {
         const currentResId = Number(resIdFromUrl);
 
         if (currentResId > 0) {
-          console.log("Fetching draft details for ID:", currentResId);
-
           setIsLoading(true);
           try {
             const restaurantData = await RestaurantService.fetchRestaurantById(
@@ -320,7 +318,6 @@ const AddListingPage = (props: any) => {
               "DATABASE_ID"
             );
             localStorage.setItem('restID', currentResId.toString());
-            console.log("Fetched draft restaurant data:", restaurantData);
 
             if (restaurantData) {
               const initialSelectedPalates = restaurantData.palates?.nodes?.map((palate: any) => ({
@@ -362,8 +359,6 @@ const AddListingPage = (props: any) => {
     }
   }, [searchParams]);
 
-  console.log("Current restaurantDbId state:", currentRestaurantDbId);
-
   const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft", isSaveAndExit = false) => {
     e.preventDefault();
 
@@ -392,7 +387,6 @@ const AddListingPage = (props: any) => {
     }
     try {
       let finalRestaurantId = currentRestaurantDbId;
-      console.log("Restaurant ID for submission:", finalRestaurantId);
 
       if (finalRestaurantId === 0) {
         if (!validateStep1()) {
@@ -437,10 +431,6 @@ const AddListingPage = (props: any) => {
           palates: selectedPalates.map(p => p.label),
           status: listingStatus,
         };
-
-        console.log("Updating listing before review:", listingUpdateData);
-        console.log("Final restaurant ID for update:", finalRestaurantId);
-        console.log("Session token for update:", sess);
 
         await RestaurantService.updateRestaurantListing(finalRestaurantId, listingUpdateData, sess);
       }

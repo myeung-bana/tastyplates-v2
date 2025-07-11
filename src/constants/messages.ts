@@ -44,3 +44,5 @@ export const userUnfollowedFailed = "Failed to unfollow user. Please try again."
 export const authorIdMissing = "Author user ID is missing.";
 export const signInReview = "You must be signed in to like a review.";
 export const saveSettingsFailed = "Failed to save settings.";
+export const fetchLocationFailed = "Failed to fetch location data";
+export const geoLocationNotSupported = "Geolocation is not supported by your browser";

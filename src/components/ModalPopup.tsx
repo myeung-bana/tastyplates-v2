@@ -11,7 +11,6 @@ interface ModalProps {
 
 const ModalPopup = ({children, ...props}: ModalProps) => {
   const {modalIsOpen, afterOpenModal, closeModal} = props
-  console.log(props, 'props')
 
   return (
     <></>

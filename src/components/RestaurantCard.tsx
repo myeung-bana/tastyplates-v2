@@ -202,9 +202,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(
-                PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})
-              );
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">

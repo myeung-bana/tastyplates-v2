@@ -41,7 +41,6 @@ const ListingDraftPage = () => {
         try {
             setLoading(true);
             const data = await RestaurantService.fetchAllRestaurants("", 10, null, [], [], "", "PENDING", userId);
-            console.log("Fetched pending listings:", data);
             setPendingListings(data.nodes);
         } catch (err) {
             console.error("Failed to fetch pending listings:", err);

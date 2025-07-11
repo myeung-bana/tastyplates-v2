@@ -15,6 +15,7 @@ import { debounce } from "@/utils/debounce";
 import { RESTAURANTS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
 
 const Hero = () => {
   const router = useRouter();
@@ -59,7 +60,7 @@ const Hero = () => {
     setIsLoading(true);
 
     if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser");
+      toast.error(geoLocationNotSupported);
       setIsLoading(false);
       return;
     }
@@ -73,7 +74,7 @@ const Hero = () => {
           );
 
           if (!response.ok) {
-            throw new Error("Failed to fetch location data");
+            throw new Error(fetchLocationFailed);
           }
 
           const data = await response.json();
@@ -89,14 +90,14 @@ const Hero = () => {
           setLocation(address);
         } catch (error) {
           console.error("Error fetching location:", error);
-          toast.error("Unable to fetch your location");
+          toast.error(fetchLocationFailed);
         } finally {
           setIsLoading(false);
         }
       },
       (error) => {
         console.error("Error getting location:", error);
-        toast.error("Unable to get your location");
+        toast.error(fetchLocationFailed);
         setIsLoading(false);
       },
       {

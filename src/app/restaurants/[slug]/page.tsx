@@ -221,8 +221,6 @@ export default function RestaurantDetail() {
         setLoading(false);
       });
   }, [slug]);
-  // console.log('average palate', restaurant.palateStats?.[restaurant.palates[1].name]?.count)
-
 
   const searchRatingStats = restaurant?.searchPalateStats;
   const myPreferenceStats = restaurant?.palateStats?.find(
