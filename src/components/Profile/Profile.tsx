@@ -150,8 +150,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   };
 
-  console.log("Session:", session, "Target User ID:", targetUserId, "Is Viewing Own Profile:", isViewingOwnProfile);
-
   useEffect(() => {
     if (targetUserId) {
       fetchRestaurants(8, null, targetUserId);
