@@ -7,8 +7,8 @@ export class UserService {
             username: userData.username,
             email: userData.email,
             password: userData.password,
-            birthdate: userData.birthdate, 
-            gender: userData.gender, 
+            birthdate: userData.birthdate,
+            gender: userData.gender,
             custom_gender: userData.customGender,
             pronoun: userData.pronoun,
             palates: userData.palates,
@@ -27,7 +27,7 @@ export class UserService {
                 email: credentials.email,
                 password: credentials.password as string
             });
-            
+
             return response;
         } catch (error) {
             console.error('Login error:', error);
@@ -73,6 +73,15 @@ export class UserService {
         } catch (error) {
             console.error('Get user by ID error:', error);
             throw new Error('Failed to fetch user data');
+        }
+    }
+
+    static async getUserById(id: number |null) {
+        try {
+            return await UserRepository.getUserById(id);
+        } catch (error) {
+            console.error('Error fetching user by ID:', error);
+            throw new Error('Failed to fetch user by ID');
         }
     }
 
