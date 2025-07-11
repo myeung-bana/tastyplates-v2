@@ -18,6 +18,7 @@ import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
 import { useDebounce } from "use-debounce"; // Import useDebounce
 import Link from "next/link";
+import { LISTING_EXPLANATION } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -284,7 +285,7 @@ const ListingPage = () => {
                         No listings found for "{debouncedSearchTerm}". Try a different search!
                       </p>
                       <Link
-                        href="/listing/explanation"
+                        href={LISTING_EXPLANATION}
                         type="submit"
                         className="rounded-full    text-sm md:text-base text-black h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center"
                       >

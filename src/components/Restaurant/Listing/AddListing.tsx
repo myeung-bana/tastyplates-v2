@@ -19,6 +19,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce'; // Make sure you 
+import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 
 declare global {
   interface Window {
@@ -197,7 +198,7 @@ const AddListingPage = (props: any) => {
       setCurrentRestaurantDbId(newListingId);
 
       setIsSubmitted(true);
-      router.push("/listing");
+      router.push(LISTING);
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
       // Use a custom modal or toast for alerts instead of window.alert
@@ -459,7 +460,7 @@ const AddListingPage = (props: any) => {
       if (reviewMode === "draft") {
         // router.push("/listing/draft");
       } else {
-        router.push("/listing");
+        router.push(LISTING);
       }
 
       setReviewStars(0);
@@ -785,7 +786,7 @@ const AddListingPage = (props: any) => {
                   By submitting listing, you agree to TastyPlates’s'&nbsp;
                   <br></br>
                   <Link
-                    href="/writing-guidelines"
+                    href={WRITING_GUIDELINES}
                     className="underline"
                     target="_blank"
                   >
@@ -992,7 +993,7 @@ const AddListingPage = (props: any) => {
               <p className="text-xs md:text-sm text-[#31343F]">
                 By posting review, you agree to TastyPlates'&nbsp;
                 <Link
-                  href="/writing-guidelines"
+                  href={WRITING_GUIDELINES}
                   className="underline"
                   target="_blank"
                 >

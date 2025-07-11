@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
 import { maximumImage } from "@/constants/validation";
+import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 interface Restaurant {
   id: string;
   slug: string;
@@ -208,7 +209,7 @@ const ReviewSubmissionPage = () => {
         setIsSubmitted(true);
       } else if (mode === 'draft') {
         toast.success(savedAsDraft);
-        router.push('/listing');
+        router.push(LISTING);
       }
 
       // Reset form fields here:
@@ -371,7 +372,7 @@ const ReviewSubmissionPage = () => {
               <p className="text-xs md:text-sm text-[#31343F]">
                 By posting review, you agree to TastyPlates'&nbsp;
                 <Link
-                  href="/writing-guidelines"
+                  href={WRITING_GUIDELINES}
                   className="underline"
                   target="_blank"
                 >

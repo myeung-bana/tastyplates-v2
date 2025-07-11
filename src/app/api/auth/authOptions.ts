@@ -4,7 +4,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { UserRepository } from "@/repositories/userRepository";
 import { UserService } from '@/services/userService';
-import { googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
+import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
+import { responseStatusCode, sessionProvider, sessionType } from "@/constants/response";
+import { HOME, ONBOARDING_ONE } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
 
 const cookieObject = { path: '/', sameSite: 'lax' as const }
 
@@ -44,12 +47,12 @@ export const authOptions: AuthOptions = {
                             token: data.token,
                         };
                     }
-                    cookieStore.set('googleErrorType', 'login', cookieObject);
+                    cookieStore.set('googleErrorType', sessionType.login, cookieObject);
                     cookieStore.set('googleError', loginFailed, cookieObject);
                     return null;
                 } catch (error) {
                     console.error("Auth error:", error);
-                    cookieStore.set('googleErrorType', 'login', cookieObject);
+                    cookieStore.set('googleErrorType', sessionType.login, cookieObject);
                     cookieStore.set('googleError', String(error), cookieObject);
                     return null;
                 }
@@ -65,21 +68,21 @@ export const authOptions: AuthOptions = {
                 let cookieStore = await cookies();
                 type = cookieStore.get('auth_type')?.value || null;
 
-                if (account?.provider === "google") {
-                    if (type === "signup") {
+                if (account?.provider === sessionProvider.google) {
+                    if (type === sessionType.signup) {
                         // set the cookie to be use in the onboarding page
                         cookieStore.set('googleAuth', 'true', cookieObject);
                         cookieStore.set('email', user.email || '', cookieObject);
                         cookieStore.set('username', user.name || '', cookieObject);
 
                         const checkEmail = await UserService.checkEmailExists(user.email);
-                        if (checkEmail.status == 400 || checkEmail.exists) {
-                            cookieStore.set('googleErrorType', 'signup', cookieObject);
+                        if (checkEmail.status == responseStatusCode.badRequest || checkEmail.exists) {
+                            cookieStore.set('googleErrorType', sessionType.signup, cookieObject);
                             cookieStore.set('googleError', encodeURIComponent(checkEmail.message), cookieObject);
-                            return '/';
+                            return HOME;
                         }
 
-                        return '/onboarding';
+                        return ONBOARDING_ONE;
                     }
 
                     const response = await UserRepository.checkGoogleUser(user.email!) as {
@@ -89,23 +92,23 @@ export const authOptions: AuthOptions = {
                         id?: number;
                     };
                     
-                    if (response.status !== 200) {
+                    if (response.status !== responseStatusCode.success) {
                         const cookieStore = await cookies();
-                        cookieStore.set('googleErrorType', 'login', cookieObject);
+                        cookieStore.set('googleErrorType', sessionType.login, cookieObject);
                         cookieStore.set('googleError', encodeURIComponent(response.message || googleAuthenticationFailed), cookieObject);
-                        return '/';
+                        return HOME;
                     }
 
                     user.token = response.token;
                     user.userId = response.id;
                     user.birthdate = '';
-                    user.provider = 'google';
+                    user.provider = sessionProvider.google;
                     cookieStore.set('logInMessage', logInSuccessfull, cookieObject);
                     return true;
 
                 }
             } catch (error) {
-                return `/?error=Authentication failed`;
+                return PAGE(HOME, [], { error: authenticationFailed });
             }
 
             return true;
@@ -114,7 +117,7 @@ export const authOptions: AuthOptions = {
             if (user) {
                 token.user = {
                     ...user,
-                    provider: account?.provider || 'credentials',
+                    provider: account?.provider || sessionProvider.credentials,
                     userId: user.userId || user.id // Handle both Google and credentials cases
                 };
                 token.accessToken = user.token;
@@ -166,7 +169,7 @@ export const authOptions: AuthOptions = {
         },
     },
     pages: {
-        signIn: "/",
+        signIn: HOME,
     },
     session: {
         strategy: "jwt",

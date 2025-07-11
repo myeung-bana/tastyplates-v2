@@ -1,3 +1,4 @@
+import { LISTING_STEP_ONE } from "@/constants/pages"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -15,7 +16,7 @@ const ListingExplanation = () =>
                   manage its details.
                 </p>
                 <Link
-                  href="/listing/step-1"
+                  href={LISTING_STEP_ONE}
                   className="rounded-xl text-sm md:text-base text-[#FCFCFC] font-semibold w-fit py-2 px-4 md:px-6 md:py-3 text-center bg-[#E36B00]"
                 >
                   Acknowledge and Continue

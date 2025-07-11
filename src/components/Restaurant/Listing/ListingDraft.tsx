@@ -6,6 +6,8 @@ import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
 import { useSession } from "next-auth/react"
+import { sessionStatus } from "@/constants/response"
+import { LISTING_EXPLANATION } from "@/constants/pages"
 
 interface FetchedRestaurant {
     id: string;
@@ -31,7 +33,7 @@ const ListingDraftPage = () => {
     const userId = session?.user?.id || null;
     const getPendingListings = async () => {
 
-        if (status !== 'authenticated' || !userId) {
+        if (status !== sessionStatus.authenticated || !userId) {
             setLoading(false);
             return;
         }
@@ -63,7 +65,7 @@ const ListingDraftPage = () => {
         <div className="mt-20 mb-10 pt-10 px-3 md:px-6 xl:px-16">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-medium text-black">My Listing Draft</h1>
-                <Link href="/listing/explanation" className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
+                <Link href={LISTING_EXPLANATION} className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
             </div>
             <div className="restaurants__grid mt-8">
                 {loading && <p>Loading draft listings...</p>}
