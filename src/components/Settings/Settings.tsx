@@ -6,19 +6,12 @@ import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
 import { UserService } from "@/services/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
+import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
-
-const formatDateForInput = (dateString: string) => {
-  if (!dateString) return '';
-  // Handle both formats: 5/14/1996 or 2002-01-14
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '';
-
-  // Format as YYYY-MM-DD for input
-  return date.toISOString().split('T')[0];
-};
+import { emailExistCode } from "@/constants/response";
+import CustomDatePicker from "../CustomDatepicker";
+import { formatDateForInput } from "@/lib/utils";
 
 const formatDateForDisplay = (dateString: string) => {
   if (!dateString) return '';
@@ -180,10 +173,16 @@ const Settings = (props: any) => {
         updateData.password = passwordFields.new;
       }
 
-      await UserService.updateUserFields(
+      const response = await UserService.updateUserFields(
         updateData,
         session.accessToken
       );
+
+      if (response?.code == emailExistCode) {
+        setEmailError(response?.message || emailOccurredError);
+        setIsLoading(false);
+        return;
+      }
 
       // Update local cache
       const localKey = `userData_${session.user.email}`;
@@ -367,16 +366,13 @@ const Settings = (props: any) => {
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : editable == "birthdate" ? (
-                  <input
-                    type="date"
-                    name="birthdate"
-                    className="settings__input min-h-[48px]"
-                    value={setting.birthdate || ""}
-                    onChange={(e) =>
-                      setSetting({ ...setting, birthdate: e.target.value })
-                    }
-                    disabled={isLoading}
-                  />
+                  <CustomDatePicker
+                      className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
+                      value={setting.birthdate}
+                      onChange={(val) => setSetting({ ...setting, birthdate: val })}
+                      formatValue="MM/dd/yyyy"
+                      disabled={isLoading}
+                    />
                 ) : userData?.birthdate ? (
                   formatDateForDisplay(userData.birthdate)
                 ) : (
