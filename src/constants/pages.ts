@@ -1,0 +1,22 @@
+export const HOME = "/";
+export const LOGIN = "/login";
+export const REGISTER = "/register";
+export const ONBOARDING_ONE = "/onboarding";
+export const ONBOARDING_TWO = "/onboarding2";
+export const SETTINGS = "/settings";
+export const PROFILE = "/profile";
+export const PROFILE_EDIT = "/profile/edit";
+export const DASHBOARD = "/dashboard";
+export const DASHBOARD_LISTS = "/dashboard/lists";
+export const DASHBOARD_REVIEWS = "/dashboard/reviews";
+export const DASHBOARD_PROFILE = "/dashboard/profile";
+export const DASHBOARD_SETTINGS = "/dashboard/settings";
+export const RESTAURANTS = "/restaurants";
+export const ADD_REVIEW = "/add-review";
+export const LISTING = "/listing";
+export const LISTING_STEP_ONE = "/listing/step-1";
+export const LISTING_EXPLANATION = "/listing/explanation";
+export const HELP = "/help";
+export const WRITING_GUIDELINES = "/writing-guidelines";
+
+export const GOOGLE_MAPS = (lat: any, lng: any) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;

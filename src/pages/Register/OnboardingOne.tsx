@@ -26,6 +26,8 @@ import {
 } from "@/constants/messages";
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 import CustomDatePicker from "@/components/CustomDatepicker";
+import { HOME, ONBOARDING_TWO } from "@/constants/pages";
+import { formatDateForInput } from "@/lib/utils";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
@@ -42,7 +44,7 @@ const OnboardingOnePage = () => {
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const [selected, setSelected] = useState<Date>();
+  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
     setHasMounted(true); // Ensures code only runs after client-side mount
@@ -52,7 +54,7 @@ const OnboardingOnePage = () => {
   useEffect(() => {
     if (!hasMounted) return;
 
-    const storedData = localStorage.getItem('registrationData');
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
     const parsedData = storedData ? JSON.parse(storedData) : {};
 
     setBirthdate(parsedData.birthdate || "");
@@ -71,11 +73,11 @@ const OnboardingOnePage = () => {
   // Navigation protection effects
   useEffect(() => {
     if (!hasMounted) return;
-    let storedData = localStorage.getItem('registrationData');
+    let storedData = localStorage.getItem(REGISTRATION_KEY);
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
     const username = Cookies.get('username');
-
+    
     if (!storedData && googleAuth === 'true') {
       const registrationData = {
         username: username || "",
@@ -83,12 +85,12 @@ const OnboardingOnePage = () => {
         password: "",
         googleAuth: true
       };
-      localStorage.setItem('registrationData', JSON.stringify(registrationData));
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
       storedData = JSON.stringify(registrationData);
     }
 
     if (!storedData) {
-      router.replace('/');
+      router.replace(HOME);
     }
   }, [router, hasMounted]);
 
@@ -98,7 +100,7 @@ const OnboardingOnePage = () => {
 
     try {
       // Get stored data first
-      const storedDataStr = localStorage.getItem('registrationData');
+      const storedDataStr = localStorage.getItem(REGISTRATION_KEY);
       let existingData = {};
       
       // Safely parse the stored data
@@ -145,10 +147,7 @@ const OnboardingOnePage = () => {
       }
 
       if (birthdate) {
-        const dateObj = new Date(birthdate);
-        if (!isNaN(dateObj.getTime())) {
-          formattedBirthdate = dateObj.toISOString().split("T")[0];
-        }
+        formattedBirthdate = formatDateForInput(birthdate);
       }
 
       // Gender validation
@@ -202,9 +201,9 @@ const OnboardingOnePage = () => {
         }
       });
 
-      localStorage.setItem('registrationData', JSON.stringify(updatedData));
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(updatedData));
       setIsLoading(false);
-      router.push("/onboarding2");
+      router.push(ONBOARDING_TWO);
     } catch (error) {
       console.error('Error in form submission:', error);
       setIsLoading(false);

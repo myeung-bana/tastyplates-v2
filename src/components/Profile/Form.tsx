@@ -23,6 +23,8 @@ import {
   palateMaxLimit,
   palateRequired,
   profileImageSizeLimit,
+  profileImageTypeError,
+  profileUpdateFailed,
 } from "@/constants/messages";
 import { MdOutlineEdit } from "react-icons/md";
 import { PiCaretLeftBold } from "react-icons/pi";
@@ -30,6 +32,8 @@ import CustomModal from "../ui/Modal/Modal";
 import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
+import { PROFILE } from "@/constants/pages";
+import toast from "react-hot-toast";
 
 const FormContent = memo(({
   isSubmitted,
@@ -213,7 +217,7 @@ const FormContent = memo(({
           <button
             type="button"
             className="underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center"
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push(PROFILE)}
             disabled={isLoading}
           >
             Cancel
@@ -254,7 +258,7 @@ const Form = () => {
     if (!file) return;
 
     if (!checkImageType(file.name)) {
-      setProfileError("Profile image must be a valid image type");
+      setProfileError(profileImageTypeError);
       return;
     }
 
@@ -323,10 +327,10 @@ const Form = () => {
       });
 
       setIsSubmitted(true);
-      setTimeout(() => router.push("/profile"), 2000);
+      setTimeout(() => router.push(PROFILE), 2000);
     } catch (error) {
       console.error(error);
-      alert("Failed to update profile. Please try again.");
+      toast.error(profileUpdateFailed);
     } finally {
       setIsLoading(false);
     }

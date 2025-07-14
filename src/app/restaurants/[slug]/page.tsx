@@ -20,6 +20,8 @@ import { useRouter } from "next/navigation";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import CheckInRestaurantButton from "@/components/CheckInRestaurantButton";
+import { ADD_REVIEW } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
 
 type tParams = { slug: string };
 
@@ -219,8 +221,6 @@ export default function RestaurantDetail() {
         setLoading(false);
       });
   }, [slug]);
-  // console.log('average palate', restaurant.palateStats?.[restaurant.palates[1].name]?.count)
-
 
   const searchRatingStats = restaurant?.searchPalateStats;
   const myPreferenceStats = restaurant?.palateStats?.find(
@@ -272,7 +272,9 @@ export default function RestaurantDetail() {
       setIsShowSignup(true);
       return;
     }
-    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+    router.push(
+      PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId])
+    );
   }
 
   return (

@@ -189,7 +189,6 @@ const RestaurantPage = () => {
 
     try {
       await RestaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
-      console.log("Visited restaurant recorded.");
     } catch (error) {
       console.error("Failed to record visited restaurant:", error);
     }

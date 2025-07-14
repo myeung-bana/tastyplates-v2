@@ -21,7 +21,7 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { commentedSuccess, commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
+import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
@@ -134,7 +134,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
     if (!authorUserId) {
-      alert("Author user ID is missing.");
+      toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
@@ -153,7 +153,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       const result = await res.json();
       if (!res.ok || result?.result !== "followed") {
         console.error("Follow failed", result);
-        alert(result?.message || "Failed to follow user. Please try again.");
+        toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
       } else {
         setIsFollowing(true);
@@ -168,7 +168,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       }
     } catch (err) {
       console.error("Follow error", err);
-      alert("Failed to follow user. Please try again.");
+      toast.error(userFollowedFailed);
       setIsFollowing(false);
     } finally {
       setFollowLoading(false);
@@ -181,7 +181,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
     if (!authorUserId) {
-      alert("Author user ID is missing.");
+      toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
@@ -200,7 +200,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       const result = await res.json();
       if (!res.ok || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
-        alert(result?.message || "Failed to unfollow user. Please try again.");
+        toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);
       } else {
         setIsFollowing(false);
@@ -215,7 +215,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       }
     } catch (err) {
       console.error("Unfollow error", err);
-      alert("Failed to unfollow user. Please try again.");
+      toast.error(userUnfollowedFailed);
       setIsFollowing(true);
     } finally {
       setFollowLoading(false);
@@ -384,7 +384,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
-      alert("Error updating like");
+      toast.error(updateLikeFailed);
     } finally {
       setLoading(false);
     }

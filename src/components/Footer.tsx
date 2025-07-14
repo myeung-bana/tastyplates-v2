@@ -1,3 +1,4 @@
+import { HELP, HOME, RESTAURANTS } from "@/constants/pages";
 import Image from "next/image";
 
 interface Props {
@@ -6,13 +7,13 @@ interface Props {
 }
 const footerLinks = {
   company: [
-    { name: "Home", href: "/" },
-    { name: "Restaurant", href: "/restaurants" },
-    { name: "Add a Listing", href: "/" },
-    { name: "Write a Review", href: "/" },
+    { name: "Home", href: HOME },
+    { name: "Restaurant", href: RESTAURANTS },
+    { name: "Add a Listing", href: HOME },
+    { name: "Write a Review", href: HOME },
   ],
   support: [
-    { name: "Help Center", href: "/help" },
+    { name: "Help Center", href: HELP },
     // { name: "Safety Information", href: "/safety" },
     // { name: "Cancellation Options", href: "/cancellation" },
     // { name: "COVID-19 Response", href: "/covid" },

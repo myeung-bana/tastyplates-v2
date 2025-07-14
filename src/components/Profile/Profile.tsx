@@ -18,6 +18,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { palateFlagMap } from "@/utils/palateFlags";
+import { PROFILE_EDIT } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -148,8 +149,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setlistingLoading(false);
     }
   };
-
-  console.log("Session:", session, "Target User ID:", targetUserId, "Is Viewing Own Profile:", isViewingOwnProfile);
 
   useEffect(() => {
     if (targetUserId) {
@@ -800,7 +799,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             {isViewingOwnProfile && (
               <div className="sm:ml-auto">
                 <Link
-                  href="/profile/edit"
+                  href={PROFILE_EDIT}
                   className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-xs sm:text-sm whitespace-nowrap"
                 >
                   Edit Profile

@@ -19,6 +19,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce'; // Make sure you 
+import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 
 declare global {
   interface Window {
@@ -197,7 +198,7 @@ const AddListingPage = (props: any) => {
       setCurrentRestaurantDbId(newListingId);
 
       setIsSubmitted(true);
-      router.push("/listing");
+      router.push(LISTING);
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
       // Use a custom modal or toast for alerts instead of window.alert
@@ -310,8 +311,6 @@ const AddListingPage = (props: any) => {
         const currentResId = Number(resIdFromUrl);
 
         if (currentResId > 0) {
-          console.log("Fetching draft details for ID:", currentResId);
-
           setIsLoading(true);
           try {
             const restaurantData = await RestaurantService.fetchRestaurantById(
@@ -319,7 +318,6 @@ const AddListingPage = (props: any) => {
               "DATABASE_ID"
             );
             localStorage.setItem('restID', currentResId.toString());
-            console.log("Fetched draft restaurant data:", restaurantData);
 
             if (restaurantData) {
               const initialSelectedPalates = restaurantData.palates?.nodes?.map((palate: any) => ({
@@ -361,8 +359,6 @@ const AddListingPage = (props: any) => {
     }
   }, [searchParams]);
 
-  console.log("Current restaurantDbId state:", currentRestaurantDbId);
-
   const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft", isSaveAndExit = false) => {
     e.preventDefault();
 
@@ -391,7 +387,6 @@ const AddListingPage = (props: any) => {
     }
     try {
       let finalRestaurantId = currentRestaurantDbId;
-      console.log("Restaurant ID for submission:", finalRestaurantId);
 
       if (finalRestaurantId === 0) {
         if (!validateStep1()) {
@@ -437,10 +432,6 @@ const AddListingPage = (props: any) => {
           status: listingStatus,
         };
 
-        console.log("Updating listing before review:", listingUpdateData);
-        console.log("Final restaurant ID for update:", finalRestaurantId);
-        console.log("Session token for update:", sess);
-
         await RestaurantService.updateRestaurantListing(finalRestaurantId, listingUpdateData, sess);
       }
 
@@ -459,7 +450,7 @@ const AddListingPage = (props: any) => {
       if (reviewMode === "draft") {
         // router.push("/listing/draft");
       } else {
-        router.push("/listing");
+        router.push(LISTING);
       }
 
       setReviewStars(0);
@@ -785,7 +776,7 @@ const AddListingPage = (props: any) => {
                   By submitting listing, you agree to TastyPlates’s'&nbsp;
                   <br></br>
                   <Link
-                    href="/writing-guidelines"
+                    href={WRITING_GUIDELINES}
                     className="underline"
                     target="_blank"
                   >
@@ -992,7 +983,7 @@ const AddListingPage = (props: any) => {
               <p className="text-xs md:text-sm text-[#31343F]">
                 By posting review, you agree to TastyPlates'&nbsp;
                 <Link
-                  href="/writing-guidelines"
+                  href={WRITING_GUIDELINES}
                   className="underline"
                   target="_blank"
                 >
