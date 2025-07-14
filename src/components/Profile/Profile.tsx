@@ -341,18 +341,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   };
 
-  //   useEffect(() => {
-  //   if (!session?.user) {
-  //     setNameLoading(true);
-  //     setAboutMeLoading(true);
-  //     setPalatesLoading(true);
-  //     return;
-  //   }
-  //   setUserData(session.user);
-  //   setNameLoading(false);
-  //   setAboutMeLoading(false);
-  //   setPalatesLoading(false);
-  // }, [session?.user]);
+  useEffect(() => {
+    // Only set userData from session.user if viewing own profile
+    if (isViewingOwnProfile && session?.user) {
+      setUserData(session.user);
+      setNameLoading(false);
+      setAboutMeLoading(false);
+      setPalatesLoading(false);
+    }
+  }, [isViewingOwnProfile, session?.user]);
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
     const loadFollowData = async () => {
@@ -751,6 +748,27 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setPalatesLoading(true);
   }, [targetUserId]);
 
+  // Refetch user data on window focus for other profiles
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!isViewingOwnProfile && targetUserId) {
+        setNameLoading(true);
+        setAboutMeLoading(true);
+        setPalatesLoading(true);
+        UserService.getUserById(targetUserId)
+          .then((publicUser) => setUserData(publicUser))
+          .catch(() => setUserData(null))
+          .finally(() => {
+            setNameLoading(false);
+            setAboutMeLoading(false);
+            setPalatesLoading(false);
+          });
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isViewingOwnProfile, targetUserId]);
+
   return (
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
@@ -779,37 +797,42 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                     <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                   </>
                 ) : (
-                  userData?.palates
-                    ?.split(/[|,]\s*/)
-                    .map((palate: string, index: number) => {
-                      const capitalizedPalate = palate
-                        .trim()
-                        .split(" ")
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() +
-                            word.slice(1).toLowerCase()
-                        )
-                        .join(" ");
-                      const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
-                      return (
-                        <span
-                          key={index}
-                          className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
-                        >
-                          {flagSrc && (
-                            <img
-                              src={flagSrc}
-                              alt={`${capitalizedPalate} flag`}
-                              width={12}
-                              height={12}
-                              className="rounded-full"
-                            />
-                          )}
-                          {capitalizedPalate}
-                        </span>
-                      );
-                    })
+                  (userData?.userProfile?.palates || userData?.palates) ? (
+                    (userData.userProfile?.palates || userData.palates)
+                      .split(/[|,]\s*/)
+                      .filter((palate: string) => palate.trim().length > 0)
+                      .map((palate: string, index: number) => {
+                        const capitalizedPalate = palate
+                          .trim()
+                          .split(" ")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() +
+                              word.slice(1).toLowerCase()
+                          )
+                          .join(" ");
+                        const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                        return (
+                          <span
+                            key={index}
+                            className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
+                          >
+                            {flagSrc && (
+                              <img
+                                src={flagSrc}
+                                alt={`${capitalizedPalate} flag`}
+                                width={12}
+                                height={12}
+                                className="rounded-full"
+                              />
+                            )}
+                            {capitalizedPalate}
+                          </span>
+                        );
+                      })
+                  ) : (
+                    <span className="text-gray-400 text-xs">No palates set</span>
+                  )
                 )}
               </div>
             </div>
@@ -828,7 +851,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              userData?.about_me
+              userData?.userProfile?.aboutMe || userData?.about_me || <span className="text-gray-400">No bio set</span>
             )}
           </p>
           <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
