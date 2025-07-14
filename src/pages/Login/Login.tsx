@@ -10,6 +10,9 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { googleLoginFailed, loginFailed, unexpectedError } from "@/constants/messages";
+import { responseStatus, sessionProvider } from "@/constants/response";
+import { DASHBOARD, HOME } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -22,7 +25,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -33,7 +36,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
       } else {
         setMessage(decodeURIComponent(googleError));
       }
-      setMessageType("error");
+      setMessageType(responseStatus.error);
       removeAllCookies();
     }
   }, [router]);
@@ -44,22 +47,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn(sessionProvider.credentials, {
         email,
         password,
         redirect: true,
-        callbackUrl: '/'
+        callbackUrl: HOME
       });
 
       if (result?.error) {
         setMessage(loginFailed);
-        setMessageType("error");
+        setMessageType(responseStatus.error);
       } else if (result?.ok) {
-        router.push('/');
+        router.push(HOME);
       }
     } catch (error: any) {
       setMessage(error.message || unexpectedError);
-      setMessageType("error");
+      setMessageType(responseStatus.error);
     } finally {
       setIsLoading(false);
     }
@@ -67,20 +70,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
 
   const loginWithGoogle = async () => {
     try {
-        setMessage('');
-        removeAllCookies();
-        setIsLoading(true);
-        await signIn('google', {
-            redirect: true,
-            callbackUrl: '/'
-        });
+      setMessage('');
+      removeAllCookies();
+      setIsLoading(true);
+      await signIn(sessionProvider.google, {
+        redirect: true,
+        callbackUrl: HOME
+      });
     } catch (error: any) {
-        setMessage(googleLoginFailed);
-        setMessageType("error");
+      setMessage(googleLoginFailed);
+      setMessageType(responseStatus.error);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-};
+  };
 
   const toggleShowPassword = () => setShowPassword(!showPassword);
 
@@ -136,8 +139,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isLoading}
               className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
             >
@@ -161,9 +164,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
           </form>
           {message && (
             <div
-              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === "success"
-                  ? "bg-green-100 text-green-700 border border-green-300"
-                  : "bg-red-100 text-red-700 border border-red-300"
+              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
+                ? "bg-green-100 text-green-700 border border-green-300"
+                : "bg-red-100 text-red-700 border border-red-300"
                 }`}
               dangerouslySetInnerHTML={{ __html: message }}
             />

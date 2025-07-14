@@ -14,7 +14,6 @@ const CustomSelect = (props: any) => {
     if (props.onChange) {
       // Extract the value from the selected option
       const selectedValue = selectedOption.currentKey || selectedOption.target?.value;
-      console.log("Selected value:", selectedValue);
       props.onChange(selectedValue);
     }
   };

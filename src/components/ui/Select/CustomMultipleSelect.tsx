@@ -224,6 +224,19 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         setExpandedSections(newExpandedSections);
     };
 
+    const handleChildClick = (e: React.MouseEvent, childKey: Key) => {
+        e.stopPropagation();
+    
+        const newSelection = new Set(props.value || new Set<Key>());
+        if (newSelection.has(childKey)) {
+            newSelection.delete(childKey);
+        } else if (!isSelectionLimitReached()) {
+            newSelection.add(childKey);
+        }
+    
+        props.onChange?.(newSelection);
+    };
+
     return (
         <div className={`w-full relative ${props.baseClassName}`} ref={selectRef} translate="no">
             <div
@@ -286,17 +299,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                                 className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 
                                                     ${props.itemClassName} 
                                                     ${isSelectionLimitReached() && !props.value?.has(child.key) ? 'opacity-50 !cursor-default' : ''}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newSelection = new Set(props.value || new Set<Key>());
-                                                    if (newSelection.has(child.key)) {
-                                                        newSelection.delete(child.key);
-                                                        props.onChange?.(newSelection);
-                                                    } else if (!isSelectionLimitReached()) {
-                                                        newSelection.add(child.key);
-                                                        props.onChange?.(newSelection);
-                                                    }
-                                                }}
+                                                    onClick={(e) => handleChildClick(e, child.key)}
                                             >
                                                 <input
                                                     type="checkbox"

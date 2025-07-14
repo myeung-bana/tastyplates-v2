@@ -1,5 +1,6 @@
 "use client";
 
+import { DASHBOARD, DASHBOARD_LISTS, DASHBOARD_PROFILE, DASHBOARD_REVIEWS, DASHBOARD_SETTINGS } from "@/constants/pages";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,11 +16,11 @@ const DashboardSidebar = () => {
   const pathname = usePathname();
 
   const menuItems = [
-    { icon: FiHome, label: "Overview", href: "/dashboard" },
-    { icon: FiHeart, label: "Lists", href: "/dashboard/lists" },
-    { icon: FiMessageCircle, label: "Reviews", href: "/dashboard/reviews" },
-    { icon: FiMessageCircle, label: "Profile", href: "/dashboard/profile" },
-    { icon: FiSettings, label: "Settings", href: "/dashboard/settings" },
+    { icon: FiHome, label: "Overview", href: DASHBOARD },
+    { icon: FiHeart, label: "Lists", href: DASHBOARD_LISTS },
+    { icon: FiMessageCircle, label: "Reviews", href: DASHBOARD_REVIEWS },
+    { icon: FiMessageCircle, label: "Profile", href: DASHBOARD_PROFILE },
+    { icon: FiSettings, label: "Settings", href: DASHBOARD_SETTINGS },
   ];
 
   return (

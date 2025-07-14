@@ -8,6 +8,7 @@ import {
 import React, { useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { FiX, FiMapPin } from "react-icons/fi";
+import { GOOGLE_MAPS } from "@/constants/pages";
 
 type Props = {
     lat: number | null | undefined;
@@ -94,7 +95,7 @@ const RestaurantMap = ({ lat, lng, small = false }: Props) => {
 
                         <div className="p-4 border-t text-right">
                             <a
-                                href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
+                                href={GOOGLE_MAPS(lat, lng)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"

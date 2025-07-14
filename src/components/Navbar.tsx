@@ -19,9 +19,12 @@ import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { useSearchParams } from "next/navigation";
 import { logOutSuccessfull } from "@/constants/messages";
+import { sessionStatus } from "@/constants/response";
+import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
 
 const navigationItems = [
-  { name: "Restaurant", href: "/restaurants" },
+  { name: "Restaurant", href: RESTAURANTS },
   // { name: "Dashboard", href: "/dashboard" },
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];
@@ -59,7 +62,7 @@ export default function Navbar(props: any) {
     if (addressSearch) {
       params.set('address',(addressSearch));
     }
-    router.push(`/restaurants?${params.toString()}`);
+    router.push(PAGE(RESTAURANTS, [], params.toString()));
   };
 
   useEffect(() => {
@@ -171,7 +174,7 @@ export default function Navbar(props: any) {
                 </button>
               </div>
               <div className="navbar__brand">
-                <Link href="/" className="flex-shrink-0 flex items-center">
+                <Link href={HOME} className="flex-shrink-0 flex items-center">
                   <h1
                     className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                       }`}
@@ -241,7 +244,7 @@ export default function Navbar(props: any) {
               </div>
             )}
             <div className="navbar__auth">
-              {(status !== "authenticated" && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
+              {(status !== sessionStatus.authenticated && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
                 <Image
                   src={"/profile-icon.svg"}
                   alt={"Profile"}
@@ -249,7 +252,7 @@ export default function Navbar(props: any) {
                   height={44}
                   className="w-full h-full object-cover rounded-full"
                 />
-              </div> : (status !== "authenticated") ? (
+              </div> : (status !== sessionStatus.authenticated) ? (
                 <>
                   <button
                     onClick={() => {
@@ -290,10 +293,10 @@ export default function Navbar(props: any) {
                     }
                     content={
                       <div className={`bg-white flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href="/listing" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Write a Review
                         </Link>
-                        <Link href="/listing/explanation" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING_EXPLANATION} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Add a Listing
                         </Link>
                       </div>
@@ -304,8 +307,8 @@ export default function Navbar(props: any) {
                     trigger={
                       <div className="w-11 h-11 rounded-full overflow-hidden">
                         <Image
-                          src={session.user?.image || "/profile-icon.svg"}
-                          alt={session.user?.name || "Profile"}
+                          src={session?.user?.image || "/profile-icon.svg"}
+                          alt={session?.user?.name || "Profile"}
                           width={44}
                           height={44}
                           className="w-full h-full object-cover rounded-full"
@@ -314,10 +317,10 @@ export default function Navbar(props: any) {
                     }
                     content={
                       <div className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-gray-200">
-                        <Link href="/profile" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={PROFILE} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           My Profile
                         </Link>
-                        <Link href="/settings" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={SETTINGS} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Settings
                         </Link>
                         <div className="border-t border-gray-200 w-full" />
@@ -391,7 +394,7 @@ export default function Navbar(props: any) {
                   </button>
                 </div>
                 <div className="navbar__brand">
-                  <Link href="/" className="flex-shrink-0 flex items-center">
+                  <Link href={HOME} className="flex-shrink-0 flex items-center">
                     <h1 className="text-[#494D5D]">TastyPlates</h1>
                   </Link>
                 </div>
@@ -411,7 +414,7 @@ export default function Navbar(props: any) {
               </li>
               <li>
                 <div className="navbar__auth">
-                  {status !== "authenticated" ? (
+                  {status !== sessionStatus.authenticated ? (
                     <>
                       <button
                         onClick={() => setIsOpenSignin(true)}
@@ -445,13 +448,13 @@ export default function Navbar(props: any) {
                         content={
                           <div className="bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
                             <Link
-                              href="/listing"
+                              href={LISTING}
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Write a Review
                             </Link>
                             <Link
-                              href="/listing/explanation"
+                              href={LISTING_EXPLANATION}
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Add a Listing

@@ -12,6 +12,10 @@ import SelectOptions from "@/components/ui/Options/SelectOptions";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
+import { RESTAURANTS } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
 
 const Hero = () => {
   const router = useRouter();
@@ -56,7 +60,7 @@ const Hero = () => {
     setIsLoading(true);
 
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      toast.error(geoLocationNotSupported);
       setIsLoading(false);
       return;
     }
@@ -70,7 +74,7 @@ const Hero = () => {
           );
 
           if (!response.ok) {
-            throw new Error("Failed to fetch location data");
+            throw new Error(fetchLocationFailed);
           }
 
           const data = await response.json();
@@ -86,14 +90,14 @@ const Hero = () => {
           setLocation(address);
         } catch (error) {
           console.error("Error fetching location:", error);
-          alert("Unable to fetch your location");
+          toast.error(fetchLocationFailed);
         } finally {
           setIsLoading(false);
         }
       },
       (error) => {
         console.error("Error getting location:", error);
-        alert("Unable to get your location");
+        toast.error(fetchLocationFailed);
         setIsLoading(false);
       },
       {
@@ -127,7 +131,7 @@ const Hero = () => {
       if (location) queryParams.set("address", location);
     }
 
-    router.push(`/restaurants?${queryParams.toString()}`);
+    router.push(PAGE(RESTAURANTS, [], queryParams.toString()));
   };
 
   const searchByListingName = () => {

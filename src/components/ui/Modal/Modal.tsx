@@ -8,6 +8,7 @@ import {
 } from "@heroui/modal";
 import { MdClose } from "react-icons/md";
 import { useRouter } from "next/navigation";
+import { HOME } from "@/constants/pages";
 
 export default function CustomModal(props: any) {
   const {
@@ -75,7 +76,7 @@ export default function CustomModal(props: any) {
           <ModalFooter>
             {!hasFooter ? (
               <button
-                onClick={() => router.push("/")}
+                onClick={() => router.push(HOME)}
                 className={cn(
                   "bg-[#E36B00] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6"
                 )}
