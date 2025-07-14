@@ -95,7 +95,7 @@ export default function CustomDatePicker({
                             toYear={new Date().getFullYear()}
                             components={{
                                 DropdownNav: ({ children }) => (
-                                    <div className="flex gap-2 items-center justify-between mb-2">
+                                    <div className="flex gap-2 items-center justify-between">
                                         {children}
                                     </div>
                                 ),

@@ -27,6 +27,7 @@ import {
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 import CustomDatePicker from "@/components/CustomDatepicker";
 import { HOME, ONBOARDING_TWO } from "@/constants/pages";
+import { formatDateForInput } from "@/lib/utils";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
@@ -146,10 +147,7 @@ const OnboardingOnePage = () => {
       }
 
       if (birthdate) {
-        const dateObj = new Date(birthdate);
-        if (!isNaN(dateObj.getTime())) {
-          formattedBirthdate = dateObj.toISOString().split("T")[0];
-        }
+        formattedBirthdate = formatDateForInput(birthdate);
       }
 
       // Gender validation
