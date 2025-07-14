@@ -1,6 +1,6 @@
 // app/components/Profile.tsx (or wherever you place your reusable components)
 "use client";
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
@@ -68,10 +68,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  
+
   const isViewingOwnProfile = session?.user?.id === targetUserId;
-
-
 
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
@@ -733,6 +731,25 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       didCancel = true;
     };
   }, [session, isViewingOwnProfile]);
+
+  // Reset all relevant state when targetUserId changes
+  useEffect(() => {
+    setUserData(null);
+    setReviews([]);
+    setRestaurants([]);
+    setWishlist([]);
+    setCheckins([]);
+    setFollowers([]);
+    setFollowing([]);
+    setUserReviewCount(0);
+    setEndCursor(null);
+    setHasNextPage(true);
+    setHasFetchedCheckins(false);
+    setLoading(true);
+    setNameLoading(true);
+    setAboutMeLoading(true);
+    setPalatesLoading(true);
+  }, [targetUserId]);
 
   return (
     <>
