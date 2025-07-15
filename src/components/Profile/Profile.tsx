@@ -260,14 +260,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setPalatesLoading(false);
       }
     };
-
     if (targetUserId) {
       fetchPublicUserData();
     } else {
-      // If targetUserId is not available (shouldn't happen if passed as prop)
-      // or if it's the logged-in user but no specific ID is given (e.g. for /profile)
-      // Then it means the component is rendered without a specific targetUserId
-      // This block might be less relevant if targetUserId is always passed
       setUserData(null);
       setNameLoading(false);
       setAboutMeLoading(false);
@@ -293,7 +288,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             setFollowingLoading(false);
             return data;
           }
-        } catch { }
+        } catch (e) { /* ignore */ }
       }
     }
     try {
@@ -324,7 +319,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             setFollowersLoading(false);
             return data;
           }
-        } catch { }
+        } catch (e) { /* ignore */ }
       }
     }
     try {
@@ -367,7 +362,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
-
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'follow_sync') {
@@ -632,8 +626,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     },
   ];
 
+  const [hasFetchedWishlist, setHasFetchedWishlist] = useState(false);
   useEffect(() => {
     const fetchWishlist = async () => {
+      if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
       try {
         const res = await fetch(
@@ -659,6 +655,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           const transformed = transformNodes(validResults);
           setWishlist(transformed);
         }
+        setHasFetchedWishlist(true);
       } catch (e) {
         console.error("Error fetching wishlist:", e);
         setWishlist([]);
@@ -667,13 +664,17 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       }
     };
     if (session && targetUserId) fetchWishlist();
-    else setWishlist([]);
-  }, [session, targetUserId]);
+    else {
+      setWishlist([]);
+      setHasFetchedWishlist(false);
+    }
+  }, [session, targetUserId, hasFetchedWishlist]);
 
   useEffect(() => {
     let didCancel = false;
     const fetchCheckins = async () => {
-      if (!hasFetchedCheckins) setCheckinsLoading(true);
+      if (hasFetchedCheckins) return; // Only fetch if not already fetched
+      setCheckinsLoading(true);
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/?user_id=${targetUserId}`,
@@ -716,10 +717,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       didCancel = true;
     };
-  }, [session, targetUserId]);
+  }, [session, targetUserId, hasFetchedCheckins]);
 
   // Reset all relevant state when targetUserId changes
   useEffect(() => {
+    // Only reset state when targetUserId actually changes, not on window focus
     setUserData(null);
     setReviews([]);
     setRestaurants([]);
@@ -731,6 +733,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setEndCursor(null);
     setHasNextPage(true);
     setHasFetchedCheckins(false);
+    setHasFetchedWishlist(false);
     setLoading(true);
     setNameLoading(true);
     setAboutMeLoading(true);
@@ -957,14 +960,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           cursor: "w-full bg-[#31343F]",
           tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-xs sm:text-base font-semibold",
+            "group-data-[selected=true]:text-[#31343F] text-xs sm:text-base font-semibold",
         }}
         variant="underlined"
       >
         {(item) => (
           <Tab key={item.id} title={item.label}>
             <div className="bg-none rounded-none">
-              <div>{item.content}</div>
+              {item.content}
             </div>
           </Tab>
         )}
