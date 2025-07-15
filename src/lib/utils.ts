@@ -27,6 +27,36 @@ export function formatDateT(dateString: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
+export function formatDateForInput(dateString: string): string {
+  console.log("formatDateForInput called with:", dateString);
+  if (!dateString) return '';
+
+  let year: number, month: number, day: number;
+
+  if (dateString.includes('/')) {
+    // MM/DD/YYYY
+    const parts = dateString.split('/');
+    if (parts.length !== 3) return '';
+    [month, day, year] = parts.map(Number);
+  } else if (dateString.includes('-')) {
+    // YYYY-MM-DD
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return '';
+    [year, month, day] = parts.map(Number);
+  } else {
+    return '';
+  }
+
+  const localDate = new Date(year, month - 1, day);
+
+  // Format to YYYY-MM-DD
+  const yyyy = localDate.getFullYear();
+  const mm = String(localDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(localDate.getDate()).padStart(2, '0');
+
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export function capitalizeWords(str: string): string {
   return str
     .trim()

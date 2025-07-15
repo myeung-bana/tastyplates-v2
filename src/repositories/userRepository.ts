@@ -80,6 +80,7 @@ export class UserRepository {
         const { data } = await client.query({
             query: GET_USER_BY_ID,
             variables: { id },
+            fetchPolicy: "no-cache",
         });
 
         return data.user;
