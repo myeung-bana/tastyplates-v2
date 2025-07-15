@@ -597,7 +597,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               ))
             ) : (
               !checkinsLoading && hasFetchedCheckins && (
-                <div className="col-span-full text-center py-8">No Check-ins Yet.</div>
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Check-ins Yet.
+                </div>
               )
             )}
           </div>
@@ -633,14 +635,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   useEffect(() => {
     const fetchWishlist = async () => {
       setWishlistLoading(true);
-      if (!isViewingOwnProfile) {
-        setWishlist([]);
-        setWishlistLoading(false);
-        return;
-      }
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/`,
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/?user_id=${targetUserId}`,
           {
             headers: session?.accessToken
               ? { Authorization: `Bearer ${session.accessToken}` }
@@ -658,7 +655,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
-
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
           const transformed = transformNodes(validResults);
           setWishlist(transformed);
@@ -670,24 +666,17 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setWishlistLoading(false);
       }
     };
-
-    if (session) fetchWishlist();
+    if (session && targetUserId) fetchWishlist();
     else setWishlist([]);
-  }, [session, isViewingOwnProfile]);
+  }, [session, targetUserId]);
 
   useEffect(() => {
     let didCancel = false;
     const fetchCheckins = async () => {
       if (!hasFetchedCheckins) setCheckinsLoading(true);
-      if (!isViewingOwnProfile) {
-        setCheckins([]);
-        setCheckinsLoading(false);
-        setHasFetchedCheckins(true);
-        return;
-      }
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/?user_id=${targetUserId}`,
           {
             headers: session?.accessToken
               ? { Authorization: `Bearer ${session.accessToken}` }
@@ -718,7 +707,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         if (!didCancel) setCheckinsLoading(false);
       }
     };
-    if (session) {
+    if (session && targetUserId) {
       fetchCheckins();
     } else {
       setCheckins([]);
@@ -727,7 +716,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       didCancel = true;
     };
-  }, [session, isViewingOwnProfile]);
+  }, [session, targetUserId]);
 
   // Reset all relevant state when targetUserId changes
   useEffect(() => {
@@ -748,7 +737,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setPalatesLoading(true);
   }, [targetUserId]);
 
-  // Refetch user data on window focus for other profiles
+  // Refetch user data on window focus for other profiles (do NOT refetch wishlists/checkins)
   useEffect(() => {
     const handleFocus = () => {
       if (!isViewingOwnProfile && targetUserId) {
