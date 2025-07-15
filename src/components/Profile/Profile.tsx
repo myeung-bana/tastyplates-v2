@@ -740,26 +740,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setPalatesLoading(true);
   }, [targetUserId]);
 
-  // Refetch user data on window focus for other profiles (do NOT refetch wishlists/checkins)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (!isViewingOwnProfile && targetUserId) {
-        setNameLoading(true);
-        setAboutMeLoading(true);
-        setPalatesLoading(true);
-        UserService.getUserById(targetUserId)
-          .then((publicUser) => setUserData(publicUser))
-          .catch(() => setUserData(null))
-          .finally(() => {
-            setNameLoading(false);
-            setAboutMeLoading(false);
-            setPalatesLoading(false);
-          });
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isViewingOwnProfile, targetUserId]);
+  // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
 
   return (
     <>
