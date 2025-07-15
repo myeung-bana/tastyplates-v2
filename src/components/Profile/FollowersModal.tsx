@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
+import { palateFlagMap } from "@/utils/palateFlags";
 
 interface Follower {
   id: string;
@@ -67,9 +68,24 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{follower.name}</div>
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {follower.cuisines.map((cuisine) => (
-                    <span key={cuisine} className="bg-[#D56253] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]">{cuisine}</span>
-                  ))}
+                  {follower.cuisines.map((cuisine) => {
+                    const flagUrl = palateFlagMap[cuisine.toLowerCase()];
+                    return (
+                      <span
+                        key={cuisine}
+                        className="flex items-center gap-1 bg-[#1b1b1b] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]"
+                      >
+                        {flagUrl && (
+                          <img
+                            src={flagUrl}
+                            alt={`${cuisine} flag`}
+                            className="w-4 h-3 rounded object-cover"
+                          />
+                        )}
+                        {cuisine}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
               <button

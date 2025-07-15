@@ -311,7 +311,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                                     <img
                                                         src={child.flag}
                                                         alt={`${child.label} flag`}
-                                                        className="w-4 h-4 rounded-full"
+                                                        className="w-6 h-4 rounded-md"
                                                     />
                                                 )}
                                                 <span className="font-medium">{child.label}</span>

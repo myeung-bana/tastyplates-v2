@@ -786,7 +786,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                               alt={`${capitalizedPalate} flag`}
                               width={12}
                               height={12}
-                              className="rounded-full"
+                              className="w-6 h-4 rounded object-cover"
                             />
                           )}
                           {capitalizedPalate}
