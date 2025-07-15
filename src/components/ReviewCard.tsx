@@ -8,6 +8,7 @@ import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link"; // Import Link
+import { useSession } from "next-auth/react";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -17,6 +18,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
     ?.split("|")
     .map((s) => capitalizeWords(s.trim()))
     .filter((s) => s.length > 0);
+
+  const { data: session } = useSession();
 
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
@@ -43,14 +46,16 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile */}
-          {data.author?.node?.databaseId ? ( // Ensure databaseId exists for the author
-            <Link href={`/profile/${data.author.node.databaseId}`}>
+          {data.author?.node?.databaseId ? (
+            <Link
+              href={session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
+            >
               <Image
                 src={data.userAvatar || "/profile-icon.svg"}
                 alt={data.author?.node?.name || "User"}
                 width={32}
                 height={32}
-                className="review-card__user-image cursor-pointer" // Add cursor-pointer for visual cue
+                className="review-card__user-image cursor-pointer"
               />
             </Link>
           ) : (
