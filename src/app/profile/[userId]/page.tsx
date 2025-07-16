@@ -12,17 +12,6 @@ const UserProfilePage = () => {
 
     const { data: session } = useSession();
 
-    if (session?.user?.id && !isNaN(parsedUserId) && parsedUserId === session.user.id) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <p className="text-lg text-gray-600">Redirecting to your profile...</p>
-                <script>
-                    {`window.location.href = '/profile';`}
-                </script>
-            </div>
-        );
-    }
-
     if (isNaN(parsedUserId)) {
         return (
             <div className="flex justify-center items-center h-screen">
