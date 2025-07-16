@@ -747,7 +747,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <Image
-            src={userData?.image ||  userData?.userProfile.profileImage.node.mediaItemUrl || "/images/default-avatar.png"}
+            src={
+              userData?.image ||
+              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? "/profile-icon.svg")
+            }
             fill
             className="rounded-full object-cover"
             alt="profile"
