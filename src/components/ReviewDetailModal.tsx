@@ -34,6 +34,21 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const { getFollowState, setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
+  const [pendingShowSignup, setPendingShowSignup] = useState(false);
+  // Effect to show signup modal
+  useEffect(() => {
+    if (pendingShowSignup) {
+      setIsShowSignup(true);
+      setPendingShowSignup(false);
+    }
+  }, [pendingShowSignup]);
+
+  // Handler for profile image click (author or commenter)
+  const handleProfileClick = (userId: number) => {
+    if (!session?.user) {
+      setPendingShowSignup(true);
+    }
+  };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
@@ -448,13 +463,24 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             <div>
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
-                  <Image
-                    src={data.userAvatar || "/profile-icon.svg"}
-                    alt={data.author?.node?.name || "User"}
-                    width={32}
-                    height={32}
-                    className="review-card__user-image !size-8 md:!size-11"
-                  />
+                  {session?.user ? (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11"
+                    />
+                  ) : (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                      onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                    />
+                  )}
                   <div className="review-card__user-info">
                     <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
                       {data.author?.name || "Unknown User"}
@@ -597,19 +623,30 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
                     {data.author?.node?.databaseId ? (
-                      <Link
-                        href={session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
-                        passHref
-                      >
+                      session?.user ? (
+                        <Link
+                          href={String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
+                          passHref
+                        >
+                          <Image
+                            src={data.userAvatar || "/profile-icon.svg"}
+                            alt={data.author?.node?.name || "User"}
+                            width={32}
+                            height={32}
+                            className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                            style={{ cursor: "pointer" }}
+                          />
+                        </Link>
+                      ) : (
                         <Image
                           src={data.userAvatar || "/profile-icon.svg"}
                           alt={data.author?.node?.name || "User"}
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                          style={{ cursor: "pointer" }}
+                          onClick={() => handleProfileClick(data.author?.node?.databaseId)}
                         />
-                      </Link>
+                      )
                     ) : (
                       <Image
                         src={data.userAvatar || "/profile-icon.svg"}
@@ -736,18 +773,29 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               return (
                                 <div key={index} className="flex items-start gap-2 mb-4">
                                   {reply.author?.node?.databaseId ? (
-                                    <Link
-                                      href={session?.user?.id && String(session.user.id) === String(reply.author.node.databaseId) ? "/profile" : `/profile/${reply.author.node.databaseId}`}
-                                      passHref
-                                    >
+                                    session?.user ? (
+                                      <Link
+                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? "/profile" : `/profile/${reply.author.node.databaseId}`}
+                                        passHref
+                                      >
+                                        <Image
+                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                          alt={reply.author?.node?.name || "User"}
+                                          width={44}
+                                          height={44}
+                                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        />
+                                      </Link>
+                                    ) : (
                                       <Image
                                         src={reply.userAvatar || "/profile-icon.svg"}
                                         alt={reply.author?.node?.name || "User"}
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        onClick={() => handleProfileClick(reply.author.node.databaseId)}
                                       />
-                                    </Link>
+                                    )
                                   ) : (
                                     <Image
                                       src={reply.userAvatar || "/profile-icon.svg"}
