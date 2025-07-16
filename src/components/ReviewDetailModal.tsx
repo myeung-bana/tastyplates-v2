@@ -35,7 +35,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [pendingShowSignup, setPendingShowSignup] = useState(false);
-  // Effect to show signup modal after closing review modal
+  // Effect to show signup modal
   useEffect(() => {
     if (pendingShowSignup) {
       setIsShowSignup(true);
