@@ -8,15 +8,21 @@ import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link"; // Import Link
+import { useSession } from "next-auth/react";
+import SignupModal from "./SignupModal";
+import SigninModal from "./SigninModal";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
+  const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
   const defaultImage = "/images/default-image.png"
   const UserPalateNames = data?.palates
     ?.split("|")
     .map((s) => capitalizeWords(s.trim()))
     .filter((s) => s.length > 0);
+
+  const { data: session } = useSession();
 
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
@@ -25,6 +31,21 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+      {/* Auth modals */}
+      {showAuthModal === 'signup' && (
+        <SignupModal
+          isOpen={true}
+          onClose={() => setShowAuthModal(null)}
+          onOpenSignin={() => setShowAuthModal('signin')}
+        />
+      )}
+      {showAuthModal === 'signin' && (
+        <SigninModal
+          isOpen={true}
+          onClose={() => setShowAuthModal(null)}
+          onOpenSignup={() => setShowAuthModal('signup')}
+        />
+      )}
       <div className="review-card__image-container">
         <Image
           src={
@@ -42,17 +63,38 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
 
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
-          {/* Make the user image clickable and link to their profile */}
-          {data.author?.node?.databaseId ? ( // Ensure databaseId exists for the author
-            <Link href={`/profile/${data.author.node.databaseId}`}>
+          {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
+          {data.author?.node?.databaseId ? (
+            session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? (
+              <Link href="/profile">
+                <Image
+                  src={data.userAvatar || "/profile-icon.svg"}
+                  alt={data.author?.node?.name || "User"}
+                  width={32}
+                  height={32}
+                  className="review-card__user-image cursor-pointer"
+                />
+              </Link>
+            ) : session ? (
+              <Link href={`/profile/${data.author.node.databaseId}`}>
+                <Image
+                  src={data.userAvatar || "/profile-icon.svg"}
+                  alt={data.author?.node?.name || "User"}
+                  width={32}
+                  height={32}
+                  className="review-card__user-image cursor-pointer"
+                />
+              </Link>
+            ) : (
               <Image
                 src={data.userAvatar || "/profile-icon.svg"}
                 alt={data.author?.node?.name || "User"}
                 width={32}
                 height={32}
-                className="review-card__user-image cursor-pointer" // Add cursor-pointer for visual cue
+                className="review-card__user-image cursor-pointer"
+                onClick={() => setShowAuthModal('signup')}
               />
-            </Link>
+            )
           ) : (
             <Image // Fallback if no databaseId
               src={data.userAvatar || "/profile-icon.svg"}
