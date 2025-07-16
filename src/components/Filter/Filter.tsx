@@ -1,8 +1,4 @@
-// Filter.tsx
-// components/Filter/Filter.tsx
-import { GiRoundStar } from "react-icons/gi";
 import "@/styles/components/filter.scss";
-import { MdStar, MdStarOutline } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
 import { Key, useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
@@ -35,9 +31,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
-  const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
-  const [isRatingOpen, setIsRatingOpen] = useState<boolean>(false);
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
   const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
 
@@ -117,6 +111,18 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     setSelectedPalates(keys);
   };
 
+  const handleCuisineChange = (slug: string) => {
+    setSelectedCuisines((prevSelectedCuisines) => {
+      const newSelection = new Set(prevSelectedCuisines);
+      if (newSelection.has(slug)) {
+        newSelection.delete(slug);
+      } else {
+        newSelection.add(slug);
+      }
+      return newSelection;
+    });
+  };
+
   const onClickFilter = (type: string) => {
     setIsModalOpen(!isModalOpen);
     setFilterType(type.charAt(0).toUpperCase() + type.slice(1));
@@ -132,7 +138,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
         setSortOption(value);
         setIsSortOpen(false);
         break;
-      default: // For Cuisine
+      default:
         const newSelection = new Set(selectedCuisines);
         if (newSelection.has(value)) {
           newSelection.delete(value);
@@ -268,8 +274,8 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     trigger={
                       <button
                         onClick={() => setIsCuisineOpen(!isCuisineOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
-                        <span className="text-[#31343F] text-center font-semibold">
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative"> {/* Added relative, items-start, removed flex-wrap, justify-between */}
+                        <span className="text-[#31343F] text-start font-semibold flex-grow block"> {/* Added block */}
                           {selectedCuisines.size > 0
                             ? Array.from(selectedCuisines).map(slug => {
                               const cuisine = dbCuisines.find(c => c.slug === slug || c.name === slug);
@@ -277,15 +283,18 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                             }).join(", ")
                             : "Select Cuisine"}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
+                        <PiCaretDown className={`fill-[#494D5D] size-5 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2`} /> {/* Absolute positioning */}
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div
+                        className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div
                           onClick={() => setSelectedCuisines(new Set())}
                           className={`py-2 px-4 ${selectedCuisines.size === 0 ? "bg-[#F1F1F1]" : "bg-transparent"
-                            } text-sm md:text-lg font-semibold`}
+                            } text-sm md:text-lg font-semibold cursor-pointer`}
                         >
                           All
                         </div>
@@ -294,14 +303,19 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         ) : (
                           dbCuisines.map((item: { name: string, slug: string }, index: number) => (
                             <div
-                              onClick={() => selectFilter(item.slug || item.name)}
-                              className={`py-2 px-4 ${selectedCuisines.has(item.slug || item.name)
-                                ? "bg-[#F1F1F1]"
-                                : "bg-transparent"
-                                } text-sm md:text-lg font-semibold`}
                               key={index}
+                              className={`py-2 px-4 flex items-center gap-2 cursor-pointer hover:bg-gray-50`}
+                              onClick={() => handleCuisineChange(item.slug || item.name)}
                             >
-                              {item.name}
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                checked={selectedCuisines.has(item.slug || item.name)}
+                                readOnly
+                              />
+                              <label className="text-sm md:text-lg font-semibold">
+                                {item.name}
+                              </label>
                             </div>
                           ))
                         )}
@@ -323,16 +337,21 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     trigger={
                       <button
                         onClick={() => setIsPalateOpen(!isPalateOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]"
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative" // Added relative, items-start, removed flex-wrap, justify-between
                       >
-                        <span className="text-[#31343F] text-center font-semibold">
+                        <span className="text-[#31343F] text-start font-semibold flex-grow block"> {/* Added block */}
                           {selectedPalates.size > 0
-                            ? Array.from(selectedPalates).join(", ")
+                            ? Array.from(selectedPalates).map(slug => {
+                                const palate = dbPalates.find(p => p.key === slug);
+                                return palate ? palate.label : (
+                                  dbPalates.flatMap(p => p.children).find(c => c.key === slug)?.label || slug
+                                );
+                              }).join(", ")
                             : "Select your palate"}
                         </span>
                         <PiCaretDown
                           className={`fill-[#494D5D] size-5 ${isPalateOpen ? "rotate-180" : ""
-                            }`}
+                            } flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2`} // Absolute positioning
                         />
                       </button>
                     }

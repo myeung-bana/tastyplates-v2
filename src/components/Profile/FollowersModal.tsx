@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 interface Follower {
   id: string;
@@ -20,6 +22,7 @@ interface FollowersModalProps {
 const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, followers, onFollow, onUnfollow }) => {
   const [localFollowers, setLocalFollowers] = useState(followers);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
+  const { data: session } = useSession();
 
   React.useEffect(() => {
     setLocalFollowers(followers);
@@ -57,13 +60,25 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
         <div>
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
-              <Image
-                src={follower.image || "/profile-icon.svg"}
-                width={40}
-                height={40}
-                className="rounded-full bg-gray-200"
-                alt={follower.name}
-              />
+              {follower.id ? (
+                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? "/profile" : `/profile/${follower.id}`}>
+                  <Image
+                    src={follower.image || "/profile-icon.svg"}
+                    width={40}
+                    height={40}
+                    className="rounded-full bg-gray-200 cursor-pointer"
+                    alt={follower.name}
+                  />
+                </Link>
+              ) : (
+                <Image
+                  src={follower.image || "/profile-icon.svg"}
+                  width={40}
+                  height={40}
+                  className="rounded-full bg-gray-200"
+                  alt={follower.name}
+                />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{follower.name}</div>
                 <div className="flex gap-1 mt-1 flex-wrap">

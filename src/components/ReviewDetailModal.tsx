@@ -34,6 +34,21 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const { getFollowState, setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
+  const [pendingShowSignup, setPendingShowSignup] = useState(false);
+  // Effect to show signup modal
+  useEffect(() => {
+    if (pendingShowSignup) {
+      setIsShowSignup(true);
+      setPendingShowSignup(false);
+    }
+  }, [pendingShowSignup]);
+
+  // Handler for profile image click (author or commenter)
+  const handleProfileClick = (userId: number) => {
+    if (!session?.user) {
+      setPendingShowSignup(true);
+    }
+  };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
@@ -444,16 +459,28 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         header={<></>}
         content={
           <div className="flex flex-col md:grid grid-cols-1 grid-rows-2 md:grid-rows-1 sm:grid-cols-2 !h-full md:h-[530px] lg:h-[640px] w-full auto-rows-min">
+            {/* ================= AUTHOR SECTION ================= */}
             <div>
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
-                  <Image
-                    src={data.userAvatar || "/profile-icon.svg"}
-                    alt={data.author?.node?.name || "User"}
-                    width={32}
-                    height={32}
-                    className="review-card__user-image !size-8 md:!size-11"
-                  />
+                  {session?.user ? (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11"
+                    />
+                  ) : (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                      onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                    />
+                  )}
                   <div className="review-card__user-info">
                     <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
                       {data.author?.name || "Unknown User"}
@@ -595,13 +622,40 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
-                      alt={data.author?.node?.name || "User"}
-                      width={32}
-                      height={32}
-                      className="review-card__user-image !size-8 md:!size-11"
-                    />
+                    {data.author?.node?.databaseId ? (
+                      session?.user ? (
+                        <Link
+                          href={String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
+                          passHref
+                        >
+                          <Image
+                            src={data.userAvatar || "/profile-icon.svg"}
+                            alt={data.author?.node?.name || "User"}
+                            width={32}
+                            height={32}
+                            className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                            style={{ cursor: "pointer" }}
+                          />
+                        </Link>
+                      ) : (
+                        <Image
+                          src={data.userAvatar || "/profile-icon.svg"}
+                          alt={data.author?.node?.name || "User"}
+                          width={32}
+                          height={32}
+                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                          onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                        />
+                      )
+                    ) : (
+                      <Image
+                        src={data.userAvatar || "/profile-icon.svg"}
+                        alt={data.author?.node?.name || "User"}
+                        width={32}
+                        height={32}
+                        className="review-card__user-image !size-8 md:!size-11"
+                      />
+                    )}
                     <div className="review-card__user-info">
                       <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
                         {data.author?.name || "Unknown User"}
@@ -663,6 +717,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   />
                 </div>
                 <div className="pb-16 overflow-hidden md:mt-4">
+                  {/* ================= COMMENT SECTION ================= */}
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
@@ -716,47 +771,63 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 .filter((s: string) => s.length > 0);
 
                               return (
-                                <div
-                                  key={index}
-                                  className="reply flex items-start gap-3 mb-3 md:mb-4"
-                                >
-                                  <Image
-                                    src={
-                                      reply.userAvatar || "/profile-icon.svg"
-                                    }
-                                    alt={reply.author?.node?.name || "User"}
-                                    width={44}
-                                    height={44}
-                                    className="review-card__user-image !size-8 md:!size-11"
-                                  />
+                                <div key={index} className="flex items-start gap-2 mb-4">
+                                  {reply.author?.node?.databaseId ? (
+                                    session?.user ? (
+                                      <Link
+                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? "/profile" : `/profile/${reply.author.node.databaseId}`}
+                                        passHref
+                                      >
+                                        <Image
+                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                          alt={reply.author?.node?.name || "User"}
+                                          width={44}
+                                          height={44}
+                                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        />
+                                      </Link>
+                                    ) : (
+                                      <Image
+                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                        alt={reply.author?.node?.name || "User"}
+                                        width={44}
+                                        height={44}
+                                        className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        onClick={() => handleProfileClick(reply.author.node.databaseId)}
+                                      />
+                                    )
+                                  ) : (
+                                    <Image
+                                      src={reply.userAvatar || "/profile-icon.svg"}
+                                      alt={reply.author?.node?.name || "User"}
+                                      width={44}
+                                      height={44}
+                                      className="review-card__user-image !size-8 md:!size-11"
+                                    />
+                                  )}
                                   <div className="review-card__user-info">
                                     <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
-                                      {reply.author?.node?.name ||
-                                        "Unknown User"}
+                                      {reply.author?.node?.name || "Unknown User"}
                                     </h3>
-
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                      {UserPalateNames?.map(
-                                        (tag: string, tagIndex: number) => (
-                                          <span
-                                            key={tagIndex}
-                                            className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
-                                          >
-                                            {palateFlagMap[tag.toLowerCase()] && (
-                                              <Image
-                                                src={palateFlagMap[tag.toLowerCase()]}
-                                                alt={`${tag} flag`}
-                                                width={12}
-                                                height={12}
-                                                className="rounded-full"
-                                              />
-                                            )}
-                                            {tag}
-                                          </span>
-                                        )
-                                      )}
+                                      {reply?.palates?.split("|").map((tag: string, tagIndex: number) => (
+                                        <span
+                                          key={tagIndex}
+                                          className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                        >
+                                          {palateFlagMap[tag.toLowerCase()] && (
+                                            <Image
+                                              src={palateFlagMap[tag.toLowerCase()]}
+                                              alt={`${tag} flag`}
+                                              width={12}
+                                              height={12}
+                                              className="rounded-full"
+                                            />
+                                          )}
+                                          {tag}
+                                        </span>
+                                      ))}
                                     </div>
-
                                     <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
                                       {stripTags(reply.content || "") ||
                                         "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
