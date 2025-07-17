@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
+import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -84,9 +85,24 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{user.name}</div>
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {user.cuisines.map((cuisine) => (
-                    <span key={cuisine} className="bg-[#D56253] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]">{cuisine}</span>
-                  ))}
+                  {user.cuisines.map((cuisine) => {
+                    const flagUrl = palateFlagMap[cuisine.toLowerCase()];
+                    return (
+                      <span
+                        key={cuisine}
+                        className="flex items-center gap-1 bg-[#1b1b1b] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]"
+                      >
+                        {flagUrl && (
+                          <img
+                            src={flagUrl}
+                            alt={`${cuisine} flag`}
+                            className="w-4 h-3 rounded object-cover"
+                          />
+                        )}
+                        {cuisine}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
               <button

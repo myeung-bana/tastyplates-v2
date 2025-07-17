@@ -113,7 +113,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag !text-[10px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
@@ -121,7 +121,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                       alt={`${tag} flag`}
                       width={12}
                       height={12}
-                      className="rounded-full"
+                      className="w-6 h-4 rounded object-cover"
                     />
                   )}
                   {tag}

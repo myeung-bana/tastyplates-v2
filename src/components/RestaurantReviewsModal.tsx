@@ -156,13 +156,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         return (
                           <span
                             key={p.name + idx}
-                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-0.5 font-medium"
+                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-1 font-medium"
                           >
                             {palateFlagMap[lowerName] && (
                               <img
                                 src={palateFlagMap[lowerName]}
                                 alt={`${p.name} flag`}
-                                className="w-4 h-3 rounded-sm object-cover"
+                                className="w-6 h-4 rounded object-cover"
                               />
                             )}
                             {p.name}

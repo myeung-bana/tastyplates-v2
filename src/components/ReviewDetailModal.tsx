@@ -553,7 +553,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               alt={`${tag} flag`}
                               width={12}
                               height={12}
-                              className="rounded-full"
+                              className="w-6 h-4 rounded object-cover"
                             />
                           )}
                           {tag}
@@ -720,7 +720,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-white px-1 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -728,7 +728,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 alt={`${tag} flag`}
                                 width={12}
                                 height={12}
-                                className="rounded-full"
+                                className="w-6 h-4 rounded object-cover"
                               />
                             )}
                             {tag}
@@ -871,7 +871,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       {reply?.palates?.split("|").map((tag: string, tagIndex: number) => (
                                         <span
                                           key={tagIndex}
-                                          className="review-block__palate-tag !text-[8px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                          className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
                                         >
                                           {palateFlagMap[tag.toLowerCase()] && (
                                             <Image
@@ -879,7 +879,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                               alt={`${tag} flag`}
                                               width={12}
                                               height={12}
-                                              className="rounded-full"
+                                              className="w-6 h-4 rounded object-cover"
                                             />
                                           )}
                                           {tag}
