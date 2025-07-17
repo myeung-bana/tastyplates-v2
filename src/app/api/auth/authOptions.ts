@@ -19,6 +19,7 @@ export const authOptions: AuthOptions = {
             authorization: {
                 params: {
                     prompt: "select_account",
+                    hl: "en",
                 },
             },
         }),
@@ -170,6 +171,7 @@ export const authOptions: AuthOptions = {
     },
     pages: {
         signIn: HOME,
+        signOut: HOME, // suppress /api/auth/signout
     },
     session: {
         strategy: "jwt",
