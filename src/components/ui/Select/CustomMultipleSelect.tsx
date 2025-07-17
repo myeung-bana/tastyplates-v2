@@ -389,14 +389,14 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                                 <input
                                                     type="checkbox"
                                                     className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                                    checked={isChildLogicallySelected(child.key, item)} // Use logical check
-                                                    readOnly // Keep readOnly as the change is handled by onClick of the parent div
+                                                    checked={isChildLogicallySelected(child.key, item)}
+                                                    readOnly
                                                 />
                                                 {child.flag && (
                                                     <img
                                                         src={child.flag}
                                                         alt={`${child.label} flag`}
-                                                        className="w-4 h-4 rounded-full"
+                                                        className="w-6 h-4 rounded-md"
                                                     />
                                                 )}
                                                 <span className="font-medium">{child.label}</span>
