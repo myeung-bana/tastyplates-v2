@@ -21,7 +21,7 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
@@ -29,6 +29,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
   initialPhotoIndex = 0,
+  userLiked: userLikedProp,
+  likesCount: likesCountProp,
+  onLikeChange,
 }) => {
   const { data: session } = useSession();
   const { getFollowState, setFollowState } = useFollowContext();
@@ -60,7 +63,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
-  // const [userLikedComment, setUserComment] = useState(replies.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false);
   const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
@@ -107,6 +109,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
     }
   }, [isOpen, data]);
+
+  useEffect(() => {
+    if (isOpen && (typeof userLiked === 'boolean')) {
+      setUserLiked(userLiked);
+    }
+  }, [isOpen, userLiked]);
+
+  useEffect(() => {
+    if (isOpen && typeof likesCount === 'number') {
+      setLikesCount(likesCount);
+    }
+  }, [isOpen, likesCount]);
 
   useEffect(() => {
     // Fetch initial follow state when modal opens and author is available
@@ -354,19 +368,47 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         author: session?.user?.userId,
       };
 
-      await ReviewService.postReview(payload, session?.accessToken ?? "");
-      toast.success(commentedSuccess)
-      setCommentReply("");
-
-      const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
-      setReplies(updatedReplies);
-      setCooldown(5);
-    } catch (err) {
+      const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
+      if (res.status === 201) {
+        toast.success(commentedSuccess);
+        setCommentReply("");
+        const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
+        setReplies(updatedReplies);
+        setCooldown(5);
+      } else if (res.status === 409) {
+        toast.error(commentDuplicateError);
+      } else {
+        toast.error(errorOccurred);
+      }
+    } catch (err: any) {
       console.error("Failed to post reply", err);
-    } finally {
+      toast.error(errorOccurred);
+    }
+    finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveSlide(initialPhotoIndex);
+      if (sliderRef.current) {
+        sliderRef.current.slickGoTo(initialPhotoIndex);
+      }
+    }
+  }, [isOpen, initialPhotoIndex]);
+
+  useEffect(() => {
+    if (isOpen && typeof userLikedProp === 'boolean') {
+      setUserLiked(userLikedProp);
+    }
+  }, [isOpen, userLikedProp]);
+
+  useEffect(() => {
+    if (isOpen && typeof likesCountProp === 'number') {
+      setLikesCount(likesCountProp);
+    }
+  }, [isOpen, likesCountProp]);
 
   const toggleLike = async () => {
     if (loading) return;
@@ -385,18 +427,31 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
-        toast.success(commentUnlikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentUnlikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        toast.success(commentLikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentLikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
 
-      setUserLiked(response.userLiked);
-      setLikesCount(response.likesCount);
+      setUserLiked(response.data?.userLiked);
+      setLikesCount(response.data?.likesCount);
+      if (onLikeChange) {
+        onLikeChange(response.data?.userLiked, response.data?.likesCount);
+      }
     } catch (error) {
       console.error(error);
       toast.error(updateLikeFailed);
@@ -418,21 +473,31 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
     try {
-      let response;
+      let response: any;
       if (reply?.userLiked) {
         response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
-        toast.success(commentUnlikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentUnlikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
-        toast.success(commentLikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentLikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
       setReplies(prev =>
         prev.map(r =>
           (r.id === replyId || r.databaseId === dbId)
             ? {
               ...r,
-              userLiked: response.userLiked,
-              commentLikes: response.likesCount
+              userLiked: response.data?.userLiked,
+              commentLikes: response.data?.likesCount
             }
             : r
         )
@@ -441,15 +506,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setReplyLoading((prev) => ({ ...prev, [dbId]: false }));
     }
   };
-
-  useEffect(() => {
-    if (isOpen) {
-      setActiveSlide(initialPhotoIndex);
-      if (sliderRef.current) {
-        sliderRef.current.slickGoTo(initialPhotoIndex);
-      }
-    }
-  }, [isOpen, initialPhotoIndex]);
 
   if (!isOpen) return null;
 
@@ -683,22 +739,22 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                   {/* Hide follow button if user is the reviewer */}
                   {(!session?.user || (session?.user?.id !== (data.userId))) && (
-                      <button
-                        onClick={handleFollowClick}
-                        className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
-                        disabled={!!session?.user && (followLoading || !authorUserId)}
-                      >
-                        {followLoading ? (
-                          <span className="animate-pulse">
-                            {isFollowing ? "Unfollowing..." : "Following..."}
-                          </span>
-                        ) : isFollowing ? (
-                          "Following"
-                        ) : (
-                          "Follow"
-                        )}
-                      </button>
-                    )}
+                    <button
+                      onClick={handleFollowClick}
+                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
+                      disabled={!!session?.user && (followLoading || !authorUserId)}
+                    >
+                      {followLoading ? (
+                        <span className="animate-pulse">
+                          {isFollowing ? "Unfollowing..." : "Following..."}
+                        </span>
+                      ) : isFollowing ? (
+                        "Following"
+                      ) : (
+                        "Follow"
+                      )}
+                    </button>
+                  )}
                   <SignupModal
                     isOpen={isShowSignup}
                     onClose={() => setIsShowSignup(false)}
@@ -742,16 +798,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 className="size-4"
                                 alt="star rating"
                               />
+                            ) : half ? (
+                              <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
                             ) : (
-                              <Image
-                                src="/star.svg"
-                                key={i}
-                                width={16}
-                                height={16}
-                                className="size-4"
-                                alt="star rating"
-                              />
-                            );
+                                <Image
+                                  src="/star.svg"
+                                  key={i}
+                                  width={16}
+                                  height={16}
+                                  className="size-4"
+                                  alt="star rating"
+                                />
+                              );
                           })}
                           <span className="text-[#494D5D] text-[10px] md:text-sm">
                             &#8226;
