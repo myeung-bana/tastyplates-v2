@@ -46,3 +46,5 @@ export const signInReview = "You must be signed in to like a review.";
 export const saveSettingsFailed = "Failed to save settings.";
 export const fetchLocationFailed = "Failed to fetch location data";
 export const geoLocationNotSupported = "Geolocation is not supported by your browser";
+export const errorOccurred = "An Error occurred, Please try again later.";
+export const commentDuplicateError = "Duplicate comment detected, You've already said that!";

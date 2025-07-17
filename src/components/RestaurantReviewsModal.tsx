@@ -74,15 +74,25 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       const accessToken = session.accessToken || "";
       if (alreadyLiked) {
         response = await ReviewService.unlikeComment(commentId, accessToken);
-        toast.success(commentUnlikedSuccess);
+        if (response.status === 200) {
+          toast.success(commentUnlikedSuccess);
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         response = await ReviewService.likeComment(commentId, accessToken);
-        toast.success(commentLikedSuccess);
+        if (response.status === 200) {
+          toast.success(commentLikedSuccess);
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
       // Update the review in the reviews array with the new like state/count
       setReviews((prevReviews) => prevReviews.map((r) =>
         (r.id === review.id || r.databaseId === review.databaseId)
-          ? { ...r, userLiked: response.userLiked, commentLikes: response.likesCount }
+          ? { ...r, userLiked: response.data?.userLiked, commentLikes: response.data?.likesCount }
           : r
       ));
     } catch (e) {
@@ -146,13 +156,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         return (
                           <span
                             key={p.name + idx}
-                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-0.5 font-medium"
+                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-1 font-medium"
                           >
                             {palateFlagMap[lowerName] && (
                               <img
                                 src={palateFlagMap[lowerName]}
                                 alt={`${p.name} flag`}
-                                className="w-4 h-3 rounded-sm object-cover"
+                                className="w-6 h-4 rounded object-cover"
                               />
                             )}
                             {p.name}
