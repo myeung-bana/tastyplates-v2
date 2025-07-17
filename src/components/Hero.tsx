@@ -196,22 +196,21 @@ const Hero = () => {
     }
   };
 
-  const handlePalateChange = async (values: Set<Key>) => {
+  const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
     setLocation('');
     setListing('');
     setSelectedPalates(values);
 
-    // Get the labels for the currently selected keys from palateOptions
-    const selectedLabels = Array.from(values).map((value) => {
-      for (const category of palateOptions) {
-        const found = category.children?.find((child) => child.key === value);
-        if (found) return found.label;
+    if (selectedHeaderLabel) {
+      setCuisine(`What ${selectedHeaderLabel} like to eat?`);
+    } else if (values.size > 0) {
+      const selectedChildKey = Array.from(values)[0];
+      const selectedChild = palateOptions.flatMap(opt => opt.children || []).find(child => child.key === selectedChildKey);
+      if (selectedChild) {
+        setCuisine(`What ${selectedChild.label} like to eat?`);
+      } else {
+        setCuisine('');
       }
-      return null;
-    }).filter(Boolean) as string[];
-
-    if (selectedLabels.length > 0) {
-      setCuisine(`What ${selectedLabels.join(', ')} like to eat?`);
     } else {
       setCuisine('');
     }
@@ -225,7 +224,6 @@ const Hero = () => {
     const inputValue = e.target.value;
     setCuisine(inputValue);
 
-    // Clear selected palates when typing, as typing should not implicitly select
     setSelectedPalates(new Set<Key>());
   };
 
@@ -325,7 +323,7 @@ const Hero = () => {
                     </div>
                   </div>
                   <CustomMultipleSelect
-                    enableCheckboxHeader={false}
+                    enableCheckboxHeader={true}
                     enableSelectionDropdown={true}
                     hideTagRendering={true}
                     showModal={showSearchModal}
@@ -334,7 +332,7 @@ const Hero = () => {
                     items={palateOptions}
                     limitValueLength={1}
                     value={selectedPalates}
-                    onChange={handlePalateChange}
+                    onSelectionChangeWithHeader={handlePalateChange}
                     onClose={handleSearchModalClose}
                     placeholder="Search Cuisine"
                     dropDownClassName="!max-h-[350px]"
