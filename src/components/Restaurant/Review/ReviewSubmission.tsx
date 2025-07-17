@@ -17,7 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
+import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
 import { maximumImage } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 interface Restaurant {
@@ -204,12 +204,32 @@ const ReviewSubmissionPage = () => {
         mode,
       };
 
-      await ReviewService.postReview(reviewData, session?.accessToken ?? "");
+      const res = await ReviewService.postReview(reviewData, session?.accessToken ?? "");
       if (mode === 'publish') {
-        setIsSubmitted(true);
+        if (res.status === 201) {
+          setIsSubmitted(true);
+        } else if (res.status === 409) {
+          toast.error(commentDuplicateError);
+          setIsLoading(false);
+          return
+        } else {
+          toast.error(errorOccurred);
+          setIsLoading(false);
+          return;
+        }
       } else if (mode === 'draft') {
-        toast.success(savedAsDraft);
-        router.push(LISTING);
+        if (res.status === 201) {
+          toast.success(savedAsDraft);
+          router.push(LISTING);
+        } else if (res.status === 409) {
+          toast.error(commentDuplicateError);
+          setIsSavingAsDraft(false);
+          return;
+        } else {
+          toast.error(errorOccurred);
+          setIsSavingAsDraft(false);
+          return;
+        }
       }
 
       // Reset form fields here:

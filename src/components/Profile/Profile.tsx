@@ -1,6 +1,6 @@
 // app/components/Profile.tsx (or wherever you place your reusable components)
 "use client";
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
@@ -68,10 +68,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  
+
   const isViewingOwnProfile = session?.user?.id === targetUserId;
-
-
 
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
@@ -262,14 +260,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setPalatesLoading(false);
       }
     };
-
     if (targetUserId) {
       fetchPublicUserData();
     } else {
-      // If targetUserId is not available (shouldn't happen if passed as prop)
-      // or if it's the logged-in user but no specific ID is given (e.g. for /profile)
-      // Then it means the component is rendered without a specific targetUserId
-      // This block might be less relevant if targetUserId is always passed
       setUserData(null);
       setNameLoading(false);
       setAboutMeLoading(false);
@@ -295,7 +288,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             setFollowingLoading(false);
             return data;
           }
-        } catch { }
+        } catch (e) { /* ignore */ }
       }
     }
     try {
@@ -326,7 +319,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             setFollowersLoading(false);
             return data;
           }
-        } catch { }
+        } catch (e) { /* ignore */ }
       }
     }
     try {
@@ -343,18 +336,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   };
 
-  //   useEffect(() => {
-  //   if (!session?.user) {
-  //     setNameLoading(true);
-  //     setAboutMeLoading(true);
-  //     setPalatesLoading(true);
-  //     return;
-  //   }
-  //   setUserData(session.user);
-  //   setNameLoading(false);
-  //   setAboutMeLoading(false);
-  //   setPalatesLoading(false);
-  // }, [session?.user]);
+  useEffect(() => {
+    // Only set userData from session.user if viewing own profile
+    if (isViewingOwnProfile && session?.user) {
+      setUserData(session.user);
+      setNameLoading(false);
+      setAboutMeLoading(false);
+      setPalatesLoading(false);
+    }
+  }, [isViewingOwnProfile, session?.user]);
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
     const loadFollowData = async () => {
@@ -372,7 +362,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
-
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'follow_sync') {
@@ -602,7 +591,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               ))
             ) : (
               !checkinsLoading && hasFetchedCheckins && (
-                <div className="col-span-full text-center py-8">No Check-ins Yet.</div>
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Check-ins Yet.
+                </div>
               )
             )}
           </div>
@@ -635,17 +626,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     },
   ];
 
+  const [hasFetchedWishlist, setHasFetchedWishlist] = useState(false);
   useEffect(() => {
     const fetchWishlist = async () => {
+      if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
-      if (!isViewingOwnProfile) {
-        setWishlist([]);
-        setWishlistLoading(false);
-        return;
-      }
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/`,
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/?user_id=${targetUserId}`,
           {
             headers: session?.accessToken
               ? { Authorization: `Bearer ${session.accessToken}` }
@@ -663,11 +651,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
-
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
           const transformed = transformNodes(validResults);
           setWishlist(transformed);
         }
+        setHasFetchedWishlist(true);
       } catch (e) {
         console.error("Error fetching wishlist:", e);
         setWishlist([]);
@@ -675,24 +663,21 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setWishlistLoading(false);
       }
     };
-
-    if (session) fetchWishlist();
-    else setWishlist([]);
-  }, [session, isViewingOwnProfile]);
+    if (session && targetUserId) fetchWishlist();
+    else {
+      setWishlist([]);
+      setHasFetchedWishlist(false);
+    }
+  }, [session, targetUserId, hasFetchedWishlist]);
 
   useEffect(() => {
     let didCancel = false;
     const fetchCheckins = async () => {
-      if (!hasFetchedCheckins) setCheckinsLoading(true);
-      if (!isViewingOwnProfile) {
-        setCheckins([]);
-        setCheckinsLoading(false);
-        setHasFetchedCheckins(true);
-        return;
-      }
+      if (hasFetchedCheckins) return; // Only fetch if not already fetched
+      setCheckinsLoading(true);
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
+          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/?user_id=${targetUserId}`,
           {
             headers: session?.accessToken
               ? { Authorization: `Bearer ${session.accessToken}` }
@@ -723,7 +708,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         if (!didCancel) setCheckinsLoading(false);
       }
     };
-    if (session) {
+    if (session && targetUserId) {
       fetchCheckins();
     } else {
       setCheckins([]);
@@ -732,14 +717,40 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       didCancel = true;
     };
-  }, [session, isViewingOwnProfile]);
+  }, [session, targetUserId, hasFetchedCheckins]);
+
+  // Reset all relevant state when targetUserId changes
+  useEffect(() => {
+    // Only reset state when targetUserId actually changes, not on window focus
+    setUserData(null);
+    setReviews([]);
+    setRestaurants([]);
+    setWishlist([]);
+    setCheckins([]);
+    setFollowers([]);
+    setFollowing([]);
+    setUserReviewCount(0);
+    setEndCursor(null);
+    setHasNextPage(true);
+    setHasFetchedCheckins(false);
+    setHasFetchedWishlist(false);
+    setLoading(true);
+    setNameLoading(true);
+    setAboutMeLoading(true);
+    setPalatesLoading(true);
+  }, [targetUserId]);
+
+  // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
 
   return (
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <Image
-            src={userData?.image ||  userData?.userProfile.profileImage.node.mediaItemUrl || "/images/default-avatar.png"}
+            src={
+              userData?.image ||
+              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? "/profile-icon.svg")
+            }
             fill
             className="rounded-full object-cover"
             alt="profile"
@@ -762,37 +773,42 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                     <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                   </>
                 ) : (
-                  userData?.palates
-                    ?.split(/[|,]\s*/)
-                    .map((palate: string, index: number) => {
-                      const capitalizedPalate = palate
-                        .trim()
-                        .split(" ")
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() +
-                            word.slice(1).toLowerCase()
-                        )
-                        .join(" ");
-                      const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
-                      return (
-                        <span
-                          key={index}
-                          className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
-                        >
-                          {flagSrc && (
-                            <img
-                              src={flagSrc}
-                              alt={`${capitalizedPalate} flag`}
-                              width={12}
-                              height={12}
-                              className="w-6 h-4 rounded object-cover"
-                            />
-                          )}
-                          {capitalizedPalate}
-                        </span>
-                      );
-                    })
+                  (userData?.userProfile?.palates || userData?.palates) ? (
+                    (userData.userProfile?.palates || userData.palates)
+                      .split(/[|,]\s*/)
+                      .filter((palate: string) => palate.trim().length > 0)
+                      .map((palate: string, index: number) => {
+                        const capitalizedPalate = palate
+                          .trim()
+                          .split(" ")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() +
+                              word.slice(1).toLowerCase()
+                          )
+                          .join(" ");
+                        const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                        return (
+                          <span
+                            key={index}
+                            className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
+                          >
+                            {flagSrc && (
+                              <img
+                                src={flagSrc}
+                                alt={`${capitalizedPalate} flag`}
+                                width={12}
+                                height={12}
+                                className="w-6 h-4 rounded object-cover"
+                              />
+                            )}
+                            {capitalizedPalate}
+                          </span>
+                        );
+                      })
+                  ) : (
+                    <span className="text-gray-400 text-xs">No palates set</span>
+                  )
                 )}
               </div>
             </div>
@@ -811,7 +827,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              userData?.about_me
+              userData?.userProfile?.aboutMe || userData?.about_me || <span className="text-gray-400">No bio set</span>
             )}
           </p>
           <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
@@ -928,14 +944,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           cursor: "w-full bg-[#31343F]",
           tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-xs sm:text-base font-semibold",
+            "group-data-[selected=true]:text-[#31343F] text-xs sm:text-base font-semibold",
         }}
         variant="underlined"
       >
         {(item) => (
           <Tab key={item.id} title={item.label}>
             <div className="bg-none rounded-none">
-              <div>{item.content}</div>
+              {item.content}
             </div>
           </Tab>
         )}

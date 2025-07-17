@@ -21,7 +21,7 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
@@ -29,11 +29,29 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
   initialPhotoIndex = 0,
+  userLiked: userLikedProp,
+  likesCount: likesCountProp,
+  onLikeChange,
 }) => {
   const { data: session } = useSession();
   const { getFollowState, setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
+  const [pendingShowSignup, setPendingShowSignup] = useState(false);
+  // Effect to show signup modal
+  useEffect(() => {
+    if (pendingShowSignup) {
+      setIsShowSignup(true);
+      setPendingShowSignup(false);
+    }
+  }, [pendingShowSignup]);
+
+  // Handler for profile image click (author or commenter)
+  const handleProfileClick = (userId: number) => {
+    if (!session?.user) {
+      setPendingShowSignup(true);
+    }
+  };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
@@ -45,7 +63,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [userLiked, setUserLiked] = useState(data.userLiked ?? false);
-  // const [userLikedComment, setUserComment] = useState(replies.userLiked ?? false);
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false);
   const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
@@ -92,6 +109,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
     }
   }, [isOpen, data]);
+
+  useEffect(() => {
+    if (isOpen && (typeof userLiked === 'boolean')) {
+      setUserLiked(userLiked);
+    }
+  }, [isOpen, userLiked]);
+
+  useEffect(() => {
+    if (isOpen && typeof likesCount === 'number') {
+      setLikesCount(likesCount);
+    }
+  }, [isOpen, likesCount]);
 
   useEffect(() => {
     // Fetch initial follow state when modal opens and author is available
@@ -339,19 +368,47 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         author: session?.user?.userId,
       };
 
-      await ReviewService.postReview(payload, session?.accessToken ?? "");
-      toast.success(commentedSuccess)
-      setCommentReply("");
-
-      const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
-      setReplies(updatedReplies);
-      setCooldown(5);
-    } catch (err) {
+      const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
+      if (res.status === 201) {
+        toast.success(commentedSuccess);
+        setCommentReply("");
+        const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
+        setReplies(updatedReplies);
+        setCooldown(5);
+      } else if (res.status === 409) {
+        toast.error(commentDuplicateError);
+      } else {
+        toast.error(errorOccurred);
+      }
+    } catch (err: any) {
       console.error("Failed to post reply", err);
-    } finally {
+      toast.error(errorOccurred);
+    }
+    finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveSlide(initialPhotoIndex);
+      if (sliderRef.current) {
+        sliderRef.current.slickGoTo(initialPhotoIndex);
+      }
+    }
+  }, [isOpen, initialPhotoIndex]);
+
+  useEffect(() => {
+    if (isOpen && typeof userLikedProp === 'boolean') {
+      setUserLiked(userLikedProp);
+    }
+  }, [isOpen, userLikedProp]);
+
+  useEffect(() => {
+    if (isOpen && typeof likesCountProp === 'number') {
+      setLikesCount(likesCountProp);
+    }
+  }, [isOpen, likesCountProp]);
 
   const toggleLike = async () => {
     if (loading) return;
@@ -370,18 +427,31 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
-        toast.success(commentUnlikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentUnlikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        toast.success(commentLikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentLikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
 
-      setUserLiked(response.userLiked);
-      setLikesCount(response.likesCount);
+      setUserLiked(response.data?.userLiked);
+      setLikesCount(response.data?.likesCount);
+      if (onLikeChange) {
+        onLikeChange(response.data?.userLiked, response.data?.likesCount);
+      }
     } catch (error) {
       console.error(error);
       toast.error(updateLikeFailed);
@@ -403,21 +473,31 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
     try {
-      let response;
+      let response: any;
       if (reply?.userLiked) {
         response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
-        toast.success(commentUnlikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentUnlikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
-        toast.success(commentLikedSuccess)
+        if (response.data?.status === 200) {
+          toast.success(commentLikedSuccess)
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
       setReplies(prev =>
         prev.map(r =>
           (r.id === replyId || r.databaseId === dbId)
             ? {
               ...r,
-              userLiked: response.userLiked,
-              commentLikes: response.likesCount
+              userLiked: response.data?.userLiked,
+              commentLikes: response.data?.likesCount
             }
             : r
         )
@@ -427,15 +507,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      setActiveSlide(initialPhotoIndex);
-      if (sliderRef.current) {
-        sliderRef.current.slickGoTo(initialPhotoIndex);
-      }
-    }
-  }, [isOpen, initialPhotoIndex]);
-
   if (!isOpen) return null;
 
   return (
@@ -444,16 +515,28 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         header={<></>}
         content={
           <div className="flex flex-col md:grid grid-cols-1 grid-rows-2 md:grid-rows-1 sm:grid-cols-2 !h-full md:h-[530px] lg:h-[640px] w-full auto-rows-min">
+            {/* ================= AUTHOR SECTION ================= */}
             <div>
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
-                  <Image
-                    src={data.userAvatar || "/profile-icon.svg"}
-                    alt={data.author?.node?.name || "User"}
-                    width={32}
-                    height={32}
-                    className="review-card__user-image !size-8 md:!size-11"
-                  />
+                  {session?.user ? (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11"
+                    />
+                  ) : (
+                    <Image
+                      src={data.userAvatar || "/profile-icon.svg"}
+                      alt={data.author?.node?.name || "User"}
+                      width={32}
+                      height={32}
+                      className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                      onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                    />
+                  )}
                   <div className="review-card__user-info">
                     <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
                       {data.author?.name || "Unknown User"}
@@ -595,13 +678,40 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
-                      alt={data.author?.node?.name || "User"}
-                      width={32}
-                      height={32}
-                      className="review-card__user-image !size-8 md:!size-11"
-                    />
+                    {data.author?.node?.databaseId ? (
+                      session?.user ? (
+                        <Link
+                          href={String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
+                          passHref
+                        >
+                          <Image
+                            src={data.userAvatar || "/profile-icon.svg"}
+                            alt={data.author?.node?.name || "User"}
+                            width={32}
+                            height={32}
+                            className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                            style={{ cursor: "pointer" }}
+                          />
+                        </Link>
+                      ) : (
+                        <Image
+                          src={data.userAvatar || "/profile-icon.svg"}
+                          alt={data.author?.node?.name || "User"}
+                          width={32}
+                          height={32}
+                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                          onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                        />
+                      )
+                    ) : (
+                      <Image
+                        src={data.userAvatar || "/profile-icon.svg"}
+                        alt={data.author?.node?.name || "User"}
+                        width={32}
+                        height={32}
+                        className="review-card__user-image !size-8 md:!size-11"
+                      />
+                    )}
                     <div className="review-card__user-info">
                       <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
                         {data.author?.name || "Unknown User"}
@@ -629,22 +739,22 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                   {/* Hide follow button if user is the reviewer */}
                   {(!session?.user || (session?.user?.id !== (data.userId))) && (
-                      <button
-                        onClick={handleFollowClick}
-                        className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
-                        disabled={!!session?.user && (followLoading || !authorUserId)}
-                      >
-                        {followLoading ? (
-                          <span className="animate-pulse">
-                            {isFollowing ? "Unfollowing..." : "Following..."}
-                          </span>
-                        ) : isFollowing ? (
-                          "Following"
-                        ) : (
-                          "Follow"
-                        )}
-                      </button>
-                    )}
+                    <button
+                      onClick={handleFollowClick}
+                      className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center ${isFollowing ? 'bg-[#494D5D] text-white' : 'text-[#FCFCFC]'} disabled:opacity-50 disabled:pointer-events-none`}
+                      disabled={!!session?.user && (followLoading || !authorUserId)}
+                    >
+                      {followLoading ? (
+                        <span className="animate-pulse">
+                          {isFollowing ? "Unfollowing..." : "Following..."}
+                        </span>
+                      ) : isFollowing ? (
+                        "Following"
+                      ) : (
+                        "Follow"
+                      )}
+                    </button>
+                  )}
                   <SignupModal
                     isOpen={isShowSignup}
                     onClose={() => setIsShowSignup(false)}
@@ -663,6 +773,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   />
                 </div>
                 <div className="pb-16 overflow-hidden md:mt-4">
+                  {/* ================= COMMENT SECTION ================= */}
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
@@ -687,16 +798,18 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 className="size-4"
                                 alt="star rating"
                               />
+                            ) : half ? (
+                              <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
                             ) : (
-                              <Image
-                                src="/star.svg"
-                                key={i}
-                                width={16}
-                                height={16}
-                                className="size-4"
-                                alt="star rating"
-                              />
-                            );
+                                <Image
+                                  src="/star.svg"
+                                  key={i}
+                                  width={16}
+                                  height={16}
+                                  className="size-4"
+                                  alt="star rating"
+                                />
+                              );
                           })}
                           <span className="text-[#494D5D] text-[10px] md:text-sm">
                             &#8226;
@@ -716,47 +829,63 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 .filter((s: string) => s.length > 0);
 
                               return (
-                                <div
-                                  key={index}
-                                  className="reply flex items-start gap-3 mb-3 md:mb-4"
-                                >
-                                  <Image
-                                    src={
-                                      reply.userAvatar || "/profile-icon.svg"
-                                    }
-                                    alt={reply.author?.node?.name || "User"}
-                                    width={44}
-                                    height={44}
-                                    className="review-card__user-image !size-8 md:!size-11"
-                                  />
+                                <div key={index} className="flex items-start gap-2 mb-4">
+                                  {reply.author?.node?.databaseId ? (
+                                    session?.user ? (
+                                      <Link
+                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? "/profile" : `/profile/${reply.author.node.databaseId}`}
+                                        passHref
+                                      >
+                                        <Image
+                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                          alt={reply.author?.node?.name || "User"}
+                                          width={44}
+                                          height={44}
+                                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        />
+                                      </Link>
+                                    ) : (
+                                      <Image
+                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                        alt={reply.author?.node?.name || "User"}
+                                        width={44}
+                                        height={44}
+                                        className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        onClick={() => handleProfileClick(reply.author.node.databaseId)}
+                                      />
+                                    )
+                                  ) : (
+                                    <Image
+                                      src={reply.userAvatar || "/profile-icon.svg"}
+                                      alt={reply.author?.node?.name || "User"}
+                                      width={44}
+                                      height={44}
+                                      className="review-card__user-image !size-8 md:!size-11"
+                                    />
+                                  )}
                                   <div className="review-card__user-info">
                                     <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
-                                      {reply.author?.node?.name ||
-                                        "Unknown User"}
+                                      {reply.author?.node?.name || "Unknown User"}
                                     </h3>
-
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                      {UserPalateNames?.map(
-                                        (tag: string, tagIndex: number) => (
-                                          <span
-                                            key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-white px-1 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
-                                          >
-                                            {palateFlagMap[tag.toLowerCase()] && (
-                                              <Image
-                                                src={palateFlagMap[tag.toLowerCase()]}
-                                                alt={`${tag} flag`}
-                                                width={12}
-                                                height={12}
-                                                className="w-6 h-4 rounded object-cover"
-                                              />
-                                            )}
-                                            {tag}
-                                          </span>
-                                        )
-                                      )}
+                                      {reply?.palates?.split("|").map((tag: string, tagIndex: number) => (
+                                        <span
+                                          key={tagIndex}
+                                          className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                        >
+                                          {palateFlagMap[tag.toLowerCase()] && (
+                                            <Image
+                                              src={palateFlagMap[tag.toLowerCase()]}
+                                              alt={`${tag} flag`}
+                                              width={12}
+                                              height={12}
+                                              className="w-6 h-4 rounded object-cover"
+                                            />
+                                          )}
+                                          {tag}
+                                        </span>
+                                      ))}
                                     </div>
-
                                     <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
                                       {stripTags(reply.content || "") ||
                                         "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}

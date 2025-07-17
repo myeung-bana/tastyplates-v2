@@ -57,4 +57,7 @@ export interface ReviewModalProps {
   onClose: () => void;
   data: any;
   initialPhotoIndex?: number;
+  userLiked?: boolean;
+  likesCount?: number;
+  onLikeChange?: (userLiked: boolean, likesCount: number) => void;
 }

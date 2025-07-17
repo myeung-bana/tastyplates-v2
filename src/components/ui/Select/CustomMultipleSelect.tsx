@@ -1,3 +1,5 @@
+// CustomMultipleSelect.tsx
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { Key } from "@react-types/shared";
 import { FiChevronDown } from "react-icons/fi";
@@ -21,6 +23,7 @@ interface CustomMultipleSelectProps {
     placeholder?: string;
     value?: Set<Key>;
     onChange?: (keys: Set<Key>) => void;
+    onSelectionChangeWithHeader?: (selectedKeys: Set<Key>, selectedLabel: string | null) => void;
     className?: string;
     baseClassName?: string;
     dropDownClassName?: string;
@@ -84,7 +87,6 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                 const windowHeight = window.innerHeight;
                 const dropdownHeight = 320; // Approximate max height of dropdown
 
-                // If there's not enough space below, position above
                 if (selectRect.bottom + dropdownHeight > windowHeight) {
                     setDropdownPosition('top');
                 } else {
@@ -112,23 +114,35 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
     const getSelectedTags = (): SelectedTag[] => {
         const selectedKeys = Array.from(props.value || new Set());
-        return (selectedKeys as Key[]).map((key: Key) => {
-            for (const section of props.items) {
-                const child = section.children?.find(child => child.key === key);
-                if (child) {
-                    return { key: child.key, label: child.label };
-                }
+        if (selectedKeys.length === 0) return [];
+
+        const selectedKey = selectedKeys[0]; // Since limitValueLength is 1 now
+
+        // Check if it's a header key
+        const headerItem = props.items.find(item => item.key === selectedKey);
+        if (headerItem) {
+            // If header is selected, display header itself.
+            // If you want to show ALL children labels here when header is selected,
+            // you'd modify this part to map headerItem.children.
+            // For now, it just shows the header's label in the tag.
+            return [{ key: headerItem.key, label: headerItem.label }];
+        }
+
+        // Check if it's a child key
+        for (const section of props.items) {
+            const child = section.children?.find(child => child.key === selectedKey);
+            if (child) {
+                return [{ key: child.key, label: child.label }];
             }
-            return { key, label: String(key) };
-        });
+        }
+        return []; // Should not happen if value is correctly set
     };
 
     const handleRemoveTag = (tagKey: Key) => {
-        if (props.value) {
-            const newSelection = new Set<Key>(props.value);
-            newSelection.delete(tagKey);
-            props.onChange?.(newSelection);
-        }
+        // Since we're enforcing single selection, removing any tag means clearing all.
+        const newSelection = new Set<Key>();
+        props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, null);
     };
 
     const isSelectionLimitReached = () => {
@@ -179,7 +193,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
-        setShowDropdown(!showDropdown);  // Add this line
+        setShowDropdown(!showDropdown);
     };
 
     const getDropdownStyles = () => {
@@ -194,24 +208,38 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         toggleDropdown();
     };
 
-    const areAllChildrenSelected = (item: ItemInterface) => {
-        if (!item.children) return false;
-        return item.children.every(child => props.value?.has(child.key));
+    // Helper to check if a child is logically selected, considering if its header is selected
+    const isChildLogicallySelected = (childKey: Key, parentHeader: ItemInterface) => {
+        // If the header itself is selected, all its children are considered selected.
+        if (props.value?.has(parentHeader.key)) {
+            return true;
+        }
+        // Otherwise, check if the specific child is selected.
+        return props.value?.has(childKey) || false;
+    };
+
+    // Modified: Header checkbox now checks if its own key is selected
+    const isHeaderSelected = (item: ItemInterface) => {
+        return props.value?.has(item.key) || false;
     };
 
     const handleHeaderCheckboxChange = (item: ItemInterface) => {
-        if (!item.children) return;
-        const newSelection = new Set(props.value || new Set<Key>());
-        const allSelected = areAllChildrenSelected(item);
+        let newSelection = new Set<Key>();
+        let selectedLabel: string | null = null;
 
-        item.children.forEach(child => {
-            if (allSelected) {
-                newSelection.delete(child.key);
-            } else {
-                newSelection.add(child.key);
-            }
-        });
+        // Determine if the header should be selected or deselected
+        const headerIsCurrentlySelected = isHeaderSelected(item);
+
+        if (!headerIsCurrentlySelected) { // If header is not currently selected, select it
+            newSelection.add(item.key);
+            selectedLabel = item.label;
+            // No need to add children keys to newSelection, as we only pass the header key
+            // The display logic will infer that children are selected.
+        }
+        // If it's already selected, clicking will deselect it, leaving newSelection empty and selectedLabel null.
+
         props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, selectedLabel);
     };
 
     const toggleSection = (key: string) => {
@@ -224,17 +252,29 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         setExpandedSections(newExpandedSections);
     };
 
-    const handleChildClick = (e: React.MouseEvent, childKey: Key) => {
+    const handleChildClick = (e: React.MouseEvent, childKey: Key, childLabel: string, parentHeader: ItemInterface) => {
         e.stopPropagation();
-    
-        const newSelection = new Set(props.value || new Set<Key>());
-        if (newSelection.has(childKey)) {
-            newSelection.delete(childKey);
-        } else if (!isSelectionLimitReached()) {
-            newSelection.add(childKey);
+
+        let newSelection = new Set<Key>();
+        let selectedLabel: string | null = null;
+
+        const isCurrentlySelected = isChildLogicallySelected(childKey, parentHeader); // Use logical check
+
+        if (isCurrentlySelected) {
+            // If already selected (either directly or via header), deselect all.
+            // This assumes single-select model (limitValueLength = 1) where deselecting anything clears all.
+            newSelection = new Set<Key>();
+            selectedLabel = null;
+        } else {
+            // If not selected and limit allows, select this child.
+            if (!isSelectionLimitReached()) {
+                newSelection.add(childKey);
+                selectedLabel = childLabel;
+            }
         }
-    
+        
         props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, selectedLabel);
     };
 
     return (
@@ -276,12 +316,12 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                         <input
                                             type="checkbox"
                                             className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                            checked={areAllChildrenSelected(item)}
+                                            checked={isHeaderSelected(item)} // Checks if header's own key is selected
                                             onChange={(e) => {
                                                 e.stopPropagation();
                                                 handleHeaderCheckboxChange(item);
                                             }}
-                                            readOnly
+                                            readOnly // Keep readOnly as the change is handled by onClick of the parent div
                                         />
                                     )}
                                     <span className="font-semibold text-[#494D5D]">{item.label}</span>
@@ -296,16 +336,16 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                         {item.children?.map((child) => (
                                             <div
                                                 key={child.key}
-                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 
-                                                    ${props.itemClassName} 
-                                                    ${isSelectionLimitReached() && !props.value?.has(child.key) ? 'opacity-50 !cursor-default' : ''}`}
-                                                    onClick={(e) => handleChildClick(e, child.key)}
+                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50
+                                                    ${props.itemClassName}
+                                                    ${isSelectionLimitReached() && !isChildLogicallySelected(child.key, item) ? 'opacity-50 !cursor-default' : ''}`} // Adjust opacity based on logical selection
+                                                onClick={(e) => handleChildClick(e, child.key, child.label, item)} // Pass the parent header item
                                             >
                                                 <input
                                                     type="checkbox"
                                                     className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                                    checked={props.value?.has(child.key)}
-                                                    readOnly
+                                                    checked={isChildLogicallySelected(child.key, item)} // Use logical check
+                                                    readOnly // Keep readOnly as the change is handled by onClick of the parent div
                                                 />
                                                 {child.flag && (
                                                     <img

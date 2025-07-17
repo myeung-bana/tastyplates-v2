@@ -16,7 +16,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
-import { updateLikeFailed } from "@/constants/messages";
+import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 
 interface ReviewBlockProps {
@@ -142,16 +142,28 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           review.databaseId,
           session.accessToken ?? ""
         );
+        if (response.data?.status === 200) {
+          toast.success(commentUnlikedSuccess);
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         // Not liked yet, so like
         response = await ReviewService.likeComment(
           review.databaseId,
           session.accessToken ?? ""
         );
+        if (response.data?.status === 200) {
+          toast.success("Liked comment successfully!");
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
 
-      setUserLiked(response.userLiked);
-      setLikesCount(response.likesCount);
+      setUserLiked(response.data?.userLiked);
+      setLikesCount(response.data?.likesCount);
     } catch (error) {
       console.error(error);
       toast.error(updateLikeFailed);
@@ -260,6 +272,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             }}
             data={mapToReviewedDataProps(review)}
             initialPhotoIndex={selectedPhotoIndex}
+            userLiked={userLiked}
+            likesCount={likesCount}
+            onLikeChange={(liked, count) => {
+              setUserLiked(liked);
+              setLikesCount(count);
+            }}
           />
         )}
         <PhotoSlider

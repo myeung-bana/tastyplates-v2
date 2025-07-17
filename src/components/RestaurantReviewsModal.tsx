@@ -74,15 +74,25 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       const accessToken = session.accessToken || "";
       if (alreadyLiked) {
         response = await ReviewService.unlikeComment(commentId, accessToken);
-        toast.success(commentUnlikedSuccess);
+        if (response.status === 200) {
+          toast.success(commentUnlikedSuccess);
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       } else {
         response = await ReviewService.likeComment(commentId, accessToken);
-        toast.success(commentLikedSuccess);
+        if (response.status === 200) {
+          toast.success(commentLikedSuccess);
+        } else {
+          toast.error(updateLikeFailed);
+          return;
+        }
       }
       // Update the review in the reviews array with the new like state/count
       setReviews((prevReviews) => prevReviews.map((r) =>
         (r.id === review.id || r.databaseId === review.databaseId)
-          ? { ...r, userLiked: response.userLiked, commentLikes: response.likesCount }
+          ? { ...r, userLiked: response.data?.userLiked, commentLikes: response.data?.likesCount }
           : r
       ));
     } catch (e) {
