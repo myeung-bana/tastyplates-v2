@@ -295,6 +295,7 @@ const OnboardingOnePage = () => {
       onChange: handlePalateChange,
       items: palateOptions,
       disabled: isLoading,
+      limitValueLength: 2,
       className: "!min-h-[48px] !rounded-[10px] text-sm",
     },
   ];

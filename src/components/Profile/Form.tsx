@@ -336,11 +336,17 @@ const Form = () => {
     }
   };
 
+  const capitalizeFirstLetter = (string: string) => {
+    if (!string) return "";
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+  };
+
   useEffect(() => {
     if (session?.user?.palates) {
       const palates = session.user.palates
         .split(/[|,]/)
-        .map((p) => p.trim().toLowerCase());
+        .map((p) => p.trim())
+        .map((p) => capitalizeFirstLetter(p));
       setSelectedPalates(new Set(palates));
     }
 
@@ -356,7 +362,8 @@ const Form = () => {
         window.removeEventListener("resize", handleResize);
       };
     }
-  }, []);
+  }, [session?.user?.palates]);
+  console.log("Form component rendered", selectedPalates);
 
   return (
     <>
