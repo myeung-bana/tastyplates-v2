@@ -12,11 +12,20 @@ export class ReviewRepository {
       },
     });
 
+    let data = null;
+
     if (jsonResponse) {
-      return response.json();
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.error("Failed to parse JSON:", err);
+      }
     }
 
-    return response;
+    return {
+      status: response.status,
+      data,
+    };
   }
 
   static async getAllReviews(first = 16, after: string | null = null, accessToken?: string) {
@@ -47,7 +56,7 @@ export class ReviewRepository {
     return data?.comment?.replies?.nodes || [];
   }
 
-  static async createReview<T>(data: any, accessToken: string): Promise<T> {
+  static async createReview<T>(data: any, accessToken: string): Promise<{ status: number; data: T }> {
     return this.request('/wp-json/wp/v2/api/comments', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -55,7 +64,7 @@ export class ReviewRepository {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
       },
-    });
+    }, true);
   }
 
   static async getReviewDrafts(accessToken?: string): Promise<any> {
@@ -141,7 +150,7 @@ export class ReviewRepository {
           ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
         },
       },
-      // fetchPolicy: "no-cache",
+      fetchPolicy: "no-cache",
     });
 
     return {
