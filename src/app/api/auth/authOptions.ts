@@ -5,7 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { UserRepository } from "@/repositories/userRepository";
 import { UserService } from '@/services/userService';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
-import { responseStatusCode, sessionProvider, sessionType } from "@/constants/response";
+import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 
@@ -77,7 +77,7 @@ export const authOptions: AuthOptions = {
                         cookieStore.set('username', user.name || '', cookieObject);
 
                         const checkEmail = await UserService.checkEmailExists(user.email);
-                        if (checkEmail.status == responseStatusCode.badRequest || checkEmail.exists) {
+                        if (checkEmail.status == code.badRequest || checkEmail.exists) {
                             cookieStore.set('googleErrorType', sessionType.signup, cookieObject);
                             cookieStore.set('googleError', encodeURIComponent(checkEmail.message), cookieObject);
                             return HOME;
@@ -93,7 +93,7 @@ export const authOptions: AuthOptions = {
                         id?: number;
                     };
                     
-                    if (response.status !== responseStatusCode.success) {
+                    if (response.status !== code.success) {
                         const cookieStore = await cookies();
                         cookieStore.set('googleErrorType', sessionType.login, cookieObject);
                         cookieStore.set('googleError', encodeURIComponent(response.message || googleAuthenticationFailed), cookieObject);

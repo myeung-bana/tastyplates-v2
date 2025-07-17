@@ -1,7 +1,7 @@
 // ReviewCard.tsx
 import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
-import { capitalizeWords, stripTags } from "../lib/utils"
+import { capitalizeWords, PAGE, stripTags } from "../lib/utils"
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
@@ -11,6 +11,7 @@ import Link from "next/link"; // Import Link
 import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
+import { PROFILE } from "@/constants/pages";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -66,7 +67,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
           {data.author?.node?.databaseId ? (
             session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? (
-              <Link href="/profile">
+              <Link href={PROFILE}>
                 <Image
                   src={data.userAvatar || "/profile-icon.svg"}
                   alt={data.author?.node?.name || "User"}
@@ -76,7 +77,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 />
               </Link>
             ) : session ? (
-              <Link href={`/profile/${data.author.node.databaseId}`} prefetch={false}>
+              <Link href={PAGE(PROFILE, [data.author.node.databaseId])} prefetch={false}>
                 <Image
                   src={data.userAvatar || "/profile-icon.svg"}
                   alt={data.author?.node?.name || "User"}

@@ -8,6 +8,7 @@ import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
+import { responseStatusCode as code } from "@/constants/response";
 
 interface Restaurant {
   id: string;
@@ -74,7 +75,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       const accessToken = session.accessToken || "";
       if (alreadyLiked) {
         response = await ReviewService.unlikeComment(commentId, accessToken);
-        if (response.status === 200) {
+        if (response.status === code.success) {
           toast.success(commentUnlikedSuccess);
         } else {
           toast.error(updateLikeFailed);
@@ -82,7 +83,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
         }
       } else {
         response = await ReviewService.likeComment(commentId, accessToken);
-        if (response.status === 200) {
+        if (response.status === code.success) {
           toast.success(commentLikedSuccess);
         } else {
           toast.error(updateLikeFailed);

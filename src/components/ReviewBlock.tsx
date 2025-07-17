@@ -18,6 +18,7 @@ import ReviewDetailModal from "./ReviewDetailModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
+import { responseStatusCode as code } from "@/constants/response";
 
 interface ReviewBlockProps {
   review: {
@@ -142,7 +143,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success(commentUnlikedSuccess);
         } else {
           toast.error(updateLikeFailed);
@@ -154,7 +155,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success("Liked comment successfully!");
         } else {
           toast.error(updateLikeFailed);

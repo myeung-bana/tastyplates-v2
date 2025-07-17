@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
 import { maximumImage } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import { responseStatusCode as code } from "@/constants/response";
 interface Restaurant {
   id: string;
   slug: string;
@@ -206,9 +207,9 @@ const ReviewSubmissionPage = () => {
 
       const res = await ReviewService.postReview(reviewData, session?.accessToken ?? "");
       if (mode === 'publish') {
-        if (res.status === 201) {
+        if (res.status === code.created) {
           setIsSubmitted(true);
-        } else if (res.status === 409) {
+        } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsLoading(false);
           return
@@ -218,10 +219,10 @@ const ReviewSubmissionPage = () => {
           return;
         }
       } else if (mode === 'draft') {
-        if (res.status === 201) {
+        if (res.status === code.created) {
           toast.success(savedAsDraft);
           router.push(LISTING);
-        } else if (res.status === 409) {
+        } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
           return;
