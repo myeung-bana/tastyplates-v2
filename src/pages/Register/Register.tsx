@@ -12,7 +12,7 @@ import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { minimumPassword } from "@/constants/validation";
 import { emailOccurredError, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
-import { FIREBASE_ERRORS, responseStatusCode, sessionProvider, sessionType } from "@/constants/response";
+import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { ONBOARDING_ONE } from "@/constants/pages";
 
 interface RegisterPageProps {
@@ -48,7 +48,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   const checkEmailExists = async (email: string) => {
     const checkEmail = await UserService.checkEmailExists(email);
-    if (checkEmail.status == responseStatusCode.badRequest) {
+    if (checkEmail.status == code.badRequest) {
       setError(checkEmail.message);
       return false;
     }

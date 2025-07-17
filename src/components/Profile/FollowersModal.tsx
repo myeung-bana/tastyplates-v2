@@ -3,6 +3,8 @@ import Image from "next/image";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { PROFILE } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
 
 interface Follower {
   id: string;
@@ -62,7 +64,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               {follower.id ? (
-                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? "/profile" : `/profile/${follower.id}`}>
+                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : PAGE(PROFILE, [follower.id])}>
                   <Image
                     src={follower.image || "/profile-icon.svg"}
                     width={40}
