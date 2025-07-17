@@ -245,11 +245,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           )}
         </div>
         <a 
-        href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})}
+        href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
         onClick={async (e) => {
           e.preventDefault();
           if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
+          router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
         }}
         >
           <div className="restaurant-card__content">
@@ -272,7 +272,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 </div>
               </div>
 
-              <div className="restaurant-card__tags mt-1 text-[0.9rem]">
+              <div className ="restaurant-card__tags mt-1 text-[0.9rem]">
                 {(() => {
                   const tags = [...cuisineNames];
                   if (restaurant.priceRange) tags.push(restaurant.priceRange);
