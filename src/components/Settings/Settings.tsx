@@ -9,9 +9,17 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
-import { emailExistCode } from "@/constants/response";
+import { emailExistCode, sessionProvider as provider } from "@/constants/response";
 import CustomDatePicker from "../CustomDatepicker";
 import { formatDateForInput } from "@/lib/utils";
+
+enum Field {
+    None = "",
+    Birthdate = "birthdate",
+    Email = "email",
+    Language = "language",
+    Password = "password",
+}
 
 const formatDateForDisplay = (dateString: string) => {
   if (!dateString) return '';
@@ -29,7 +37,7 @@ const Settings = (props: any) => {
   const [setting, setSetting] = useState<any>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [editable, setEditable] = useState<string>("");
+  const [editable, setEditable] = useState<Field>(Field.None);
   const [passwordFields, setPasswordFields] = useState({
     current: "",
     new: "",
@@ -45,7 +53,7 @@ const Settings = (props: any) => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const isGoogleAuth = session?.user?.provider === 'google';
+  const isGoogleAuth = session?.user?.provider === provider.google;
 
   const validateBirthdate = (birthdate: string) => {
     if (!birthdate) return birthdateRequired;
@@ -72,7 +80,7 @@ const Settings = (props: any) => {
 
   const validatePasswords = () => {
     let errors = { current: "", new: "", confirm: "" };
-    if (editable === "password") {
+    if (editable === Field.Password) {
       // Current password: no frontend validation, backend only
       // New password: must be at least 5 characters
       if (!passwordFields.new || passwordFields.new.length < minimumPassword) {
@@ -110,7 +118,7 @@ const Settings = (props: any) => {
     let hasError = false;
 
     // Birthdate validation
-    if (editable === "birthdate") {
+    if (editable === Field.Birthdate) {
       const err = validateBirthdate(setting.birthdate);
       setBirthdateError(err);
       if (err) hasError = true;
@@ -119,7 +127,7 @@ const Settings = (props: any) => {
     }
 
     // Email validation
-    if (editable === "email") {
+    if (editable === Field.Email) {
       const err = validateEmail(setting.email);
       setEmailError(err);
       if (err) hasError = true;
@@ -128,7 +136,7 @@ const Settings = (props: any) => {
     }
 
     // Password validation with current password check
-    if (editable === "password") {
+    if (editable === Field.Password) {
       const errors = validatePasswords();
       if (errors.current || errors.new || errors.confirm) hasError = true;
 
@@ -160,16 +168,16 @@ const Settings = (props: any) => {
       const updateData: any = {};
 
       // Add fields based on what's being edited
-      if (editable === "birthdate") {
+      if (editable === Field.Birthdate) {
         updateData.birthdate = setting.birthdate;
       }
-      if (editable === "email") {
+      if (editable === Field.Email) {
         updateData.email = setting.email;
       }
-      if (editable === "language") {
+      if (editable === Field.Language) {
         updateData.language = setting.language;
       }
-      if (editable === "password") {
+      if (editable === Field.Password) {
         updateData.password = passwordFields.new;
       }
 
@@ -203,7 +211,7 @@ const Settings = (props: any) => {
       });
 
       setIsSubmitted(true);
-      setEditable("");
+      setEditable(Field.None);
       setPasswordFields({ current: "", new: "", confirm: "" });
 
       // Refetch user data to update the display
@@ -336,10 +344,10 @@ const Settings = (props: any) => {
           </h1>
           <form className="settings__form w-full pt-6 sm:pt-8" onSubmit={handleSave}>
             <div className="settings__form-group">
-              <label className={`settings__label ${editable != "" ? "settings__label__disabled" : ""}`}>
+              <label className={`settings__label ${editable != Field.None ? "settings__label__disabled" : ""}`}>
                 Username
               </label>
-              <div className={`settings__input-group ${editable != "" ? "settings__input-group__disabled" : ""}`}>
+              <div className={`settings__input-group ${editable != Field.None ? "settings__input-group__disabled" : ""}`}>
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : (
@@ -351,21 +359,21 @@ const Settings = (props: any) => {
 
             <div className="settings__form-group">
               <label
-                className={`settings__label ${editable != "" && editable != "birthdate"
+                className={`settings__label ${editable != Field.None && editable != Field.Birthdate
                   ? "settings__label__disabled"
                   : ""
                   }`}
               >
                 Birthdate
               </label>
-              <div className={`settings__input-group ${editable != "" && editable != "birthdate"
+              <div className={`settings__input-group ${editable != Field.None && editable != Field.Birthdate
                 ? "settings__input-group__disabled"
                 : ""
                 }`}
               >
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
-                ) : editable == "birthdate" ? (
+                ) : editable == Field.Birthdate ? (
                   <CustomDatePicker
                       className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
                       value={setting.birthdate}
@@ -379,18 +387,18 @@ const Settings = (props: any) => {
                   ""
                 )}
               </div>
-              {birthdateError && editable === "birthdate" && (
+              {birthdateError && editable === Field.Birthdate && (
                 <div className="text-xs text-red-600 mt-1">{birthdateError}</div>
               )}
-              {editable !== "birthdate" ? (
+              {editable !== Field.Birthdate ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != ""
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
                     ? "settings__input-group__disabled"
                     : "!text-[#494D5D]"
                     }`}
-                  onClick={() => setEditable("birthdate")}
-                  disabled={editable !== ""}
+                  onClick={() => setEditable(Field.Birthdate)}
+                  disabled={editable !== Field.None}
                 >
                   Edit
                 </button>
@@ -399,7 +407,7 @@ const Settings = (props: any) => {
                   <button
                     type="button"
                     className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
-                    onClick={() => setEditable("")}
+                    onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
@@ -415,7 +423,7 @@ const Settings = (props: any) => {
             </div>
             <div className="settings__form-group">
               <label
-                className={`settings__label ${editable != "" && editable != "email"
+                className={`settings__label ${editable != Field.None && editable != Field.Email
                   ? "settings__label__disabled"
                   : ""
                   } ${isGoogleAuth ? "opacity-50" : ""}`}
@@ -423,14 +431,14 @@ const Settings = (props: any) => {
                 Email
               </label>
               <div
-                className={`settings__input-group ${editable != "" && editable != "email"
+                className={`settings__input-group ${editable != Field.None && editable != Field.Email
                   ? "settings__input-group__disabled"
                   : ""
                   } ${isGoogleAuth ? "opacity-50" : ""}`}
               >
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-48"></div>
-                ) : editable == "email" ? (
+                ) : editable == Field.Email ? (
                   <input
                     type="text"
                     name="email"
@@ -443,17 +451,17 @@ const Settings = (props: any) => {
                   userData?.email || userData?.user_email || ""
                 )}
               </div>
-              {emailError && editable === "email" && (
+              {emailError && editable === Field.Email && (
                 <div className="text-xs text-red-600 mt-1">{emailError}</div>
               )}
               {!isGoogleAuth ? (
-                editable !== "email" ? (
+                editable !== Field.Email ? (
                   <button
                     type="button"
-                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != "" ? "settings__input-group__disabled" : "!text-[#494D5D]"
+                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None ? "settings__input-group__disabled" : "!text-[#494D5D]"
                       }`}
-                    onClick={() => setEditable("email")}
-                    disabled={editable !== ""}
+                    onClick={() => setEditable(Field.Email)}
+                    disabled={editable !== Field.None}
                   >
                     Edit
                   </button>
@@ -462,7 +470,7 @@ const Settings = (props: any) => {
                     <button
                       type="button"
                       className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
-                      onClick={() => setEditable("")}
+                      onClick={() => setEditable(Field.None)}
                     >
                       Cancel
                     </button>
@@ -476,15 +484,15 @@ const Settings = (props: any) => {
                   </>
                 )
               ) : (
-                editable !== "email" ? (
+                editable !== Field.Email ? (
                   <button
                     type="button"
-                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != "" || isGoogleAuth
+                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None || isGoogleAuth
                       ? "settings__input-group__disabled opacity-50"
                       : "!text-[#494D5D]"
                       }`}
-                    onClick={() => setEditable("email")}
-                    disabled={editable !== "" || isGoogleAuth}
+                    onClick={() => setEditable(Field.Email)}
+                    disabled={editable !== Field.None || isGoogleAuth}
                   >
                     Edit
                   </button>
@@ -493,7 +501,7 @@ const Settings = (props: any) => {
             </div>
             <div className="settings__form-group">
               <label
-                className={`settings__label ${editable != "" && editable != "language"
+                className={`settings__label ${editable != Field.None && editable != Field.Language
                   ? "settings__label__disabled"
                   : ""
                   }`}
@@ -501,14 +509,14 @@ const Settings = (props: any) => {
                 Language
               </label>
               <div
-                className={`settings__input-group ${editable != "" && editable != "language"
+                className={`settings__input-group ${editable != Field.None && editable != Field.Language
                   ? "settings__input-group__disabled"
                   : ""
                   }`}
               >
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
-                ) : editable == "language" ? (
+                ) : editable == Field.Language ? (
                   <CustomSelect
                     value={setting.language}
                     onChange={(val: string) =>
@@ -530,15 +538,15 @@ const Settings = (props: any) => {
                     : "English"
                 )}
               </div>
-              {editable !== "language" ? (
+              {editable !== Field.Language ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != ""
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
                     ? "settings__input-group__disabled"
                     : "!text-[#494D5D]"
                     }`}
-                  onClick={() => setEditable("language")}
-                  disabled={editable !== ""}
+                  onClick={() => setEditable(Field.Language)}
+                  disabled={editable !== Field.None}
                 >
                   Edit
                 </button>
@@ -547,7 +555,7 @@ const Settings = (props: any) => {
                   <button
                     type="button"
                     className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
-                    onClick={() => setEditable("")}
+                    onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
@@ -571,7 +579,7 @@ const Settings = (props: any) => {
             <div className="settings__form-group mt-4 sm:mt-6">
               <label
                 className={`settings__label text-gray-400 mb-2 ${isGoogleAuth ? "opacity-50" : ""
-                  } ${editable != "" && editable != "password"
+                  } ${editable != Field.None && editable != Field.Password
                     ? "settings__label__disabled"
                     : ""
                   }`}
@@ -580,13 +588,13 @@ const Settings = (props: any) => {
               </label>
               <div
                 className={
-                  `settings__input-group ${editable != "" && editable != "password"
+                  `settings__input-group ${editable != Field.None && editable != Field.Password
                     ? "settings__input-group__disabled"
                     : ""
                   } flex flex-col gap-2 ${isGoogleAuth ? "opacity-50" : ""}`
                 }
               >
-                {editable == "password" ? (
+                {editable == Field.Password ? (
                   <>
                     <div className="relative">
                       <label className="text-[#494D5D] mb-1 block font-semibold text-sm">Current Password</label>
@@ -667,12 +675,12 @@ const Settings = (props: any) => {
                   <></>
                 )}
               </div>
-              {editable !== "password" ? (
+              {editable !== Field.Password ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable !== "" || isGoogleAuth ? "settings__input-group__disabled" : "!text-[#494D5D]"}`}
-                  onClick={() => setEditable("password")}
-                  disabled={editable !== "" || isGoogleAuth}
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable !== Field.None || isGoogleAuth ? "settings__input-group__disabled" : "!text-[#494D5D]"}`}
+                  onClick={() => setEditable(Field.Password)}
+                  disabled={editable !== Field.None || isGoogleAuth}
                 >
                   Update
                 </button>
@@ -681,7 +689,7 @@ const Settings = (props: any) => {
                   <button
                     type="button"
                     className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
-                    onClick={() => setEditable("")}
+                    onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
