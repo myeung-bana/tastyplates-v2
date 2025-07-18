@@ -10,7 +10,7 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { googleLoginFailed, loginFailed, unexpectedError } from "@/constants/messages";
-import { responseStatus, sessionProvider } from "@/constants/response";
+import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { DASHBOARD, HOME } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
     setIsLoading(true);
 
     try {
-      const result = await signIn(sessionProvider.credentials, {
+      const result = await signIn(provider.credentials, {
         email,
         password,
         redirect: true,
@@ -73,7 +73,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
       setMessage('');
       removeAllCookies();
       setIsLoading(true);
-      await signIn(sessionProvider.google, {
+      await signIn(provider.google, {
         redirect: true,
         callbackUrl: HOME
       });

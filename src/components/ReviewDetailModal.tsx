@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { stripTags, formatDate } from "../lib/utils";
+import { stripTags, formatDate, PAGE } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -23,6 +23,8 @@ import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
 import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
+import { responseStatusCode as code } from "@/constants/response";
+import { PROFILE } from "@/constants/pages";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -369,13 +371,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       };
 
       const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
-      if (res.status === 201) {
+      if (res.status === code.created) {
         toast.success(commentedSuccess);
         setCommentReply("");
         const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
         setReplies(updatedReplies);
         setCooldown(5);
-      } else if (res.status === 409) {
+      } else if (res.status === code.conflict) {
         toast.error(commentDuplicateError);
       } else {
         toast.error(errorOccurred);
@@ -427,7 +429,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success(commentUnlikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -439,7 +441,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success(commentLikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -476,7 +478,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       let response: any;
       if (reply?.userLiked) {
         response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success(commentUnlikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -484,7 +486,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         }
       } else {
         response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
-        if (response.data?.status === 200) {
+        if (response.data?.status === code.success) {
           toast.success(commentLikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -681,7 +683,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     {data.author?.node?.databaseId ? (
                       session?.user ? (
                         <Link
-                          href={String(session.user.id) === String(data.author.node.databaseId) ? "/profile" : `/profile/${data.author.node.databaseId}`}
+                          href={String(session.user.id) === String(data.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [data.author.node.databaseId])}
                           passHref
                         >
                           <Image
@@ -833,7 +835,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                   {reply.author?.node?.databaseId ? (
                                     session?.user ? (
                                       <Link
-                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? "/profile" : `/profile/${reply.author.node.databaseId}`}
+                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [reply.author.node.databaseId])}
                                         passHref
                                       >
                                         <Image

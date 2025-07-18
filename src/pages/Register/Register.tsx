@@ -12,8 +12,8 @@ import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { minimumPassword } from "@/constants/validation";
 import { emailOccurredError, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
-import { FIREBASE_ERRORS, responseStatusCode, sessionProvider, sessionType } from "@/constants/response";
-import { ONBOARDING_ONE } from "@/constants/pages";
+import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
+import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -48,7 +48,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   const checkEmailExists = async (email: string) => {
     const checkEmail = await UserService.checkEmailExists(email);
-    if (checkEmail.status == responseStatusCode.badRequest) {
+    if (checkEmail.status == code.badRequest) {
       setError(checkEmail.message);
       return false;
     }
@@ -123,9 +123,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       // Set a cookie to indicate signup intent
       Cookies.set('auth_type', sessionType.signup, { path: '/', sameSite: 'lax' });
 
-      await signIn(sessionProvider.google, {
+      await signIn(provider.google, {
         redirect: false,
-        callbackUrl: '/',
+        callbackUrl: HOME,
       });
     } catch (error) {
       if (error instanceof FirebaseError) {

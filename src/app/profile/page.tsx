@@ -27,7 +27,7 @@ const ProfilePage = () => {
         {/* Pass the logged-in user's ID as targetUserId */}
         <Profile targetUserId={session.user.id} />
       </div>
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
 };

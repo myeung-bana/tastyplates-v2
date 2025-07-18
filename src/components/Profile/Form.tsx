@@ -341,6 +341,27 @@ const Form = () => {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
+  const formContent = (
+    <FormContent
+      isSubmitted={isSubmitted}
+      setIsSubmitted={setIsSubmitted}
+      isMobile={isMobile}
+      isLoading={isLoading}
+      profilePreview={profilePreview}
+      handleFileChange={handleFileChange}
+      profileError={profileError}
+      aboutMe={aboutMe}
+      handleTextAreaChange={handleTextAreaChange}
+      textareaRef={textareaRef}
+      palateError={palateError}
+      selectedPalates={selectedPalates}
+      handlePalateChange={handlePalateChange}
+      palateLimit={palateLimit}
+      submitReview={submitReview}
+      router={router}
+    />
+  );
+
   useEffect(() => {
     if (session?.user?.palates) {
       const palates = session.user.palates
@@ -363,32 +384,12 @@ const Form = () => {
       };
     }
   }, [session?.user?.palates]);
-  console.log("Form component rendered", selectedPalates);
 
   return (
     <>
       <CustomModal
         header={<></>}
-        content={
-          <FormContent
-            isSubmitted={isSubmitted}
-            setIsSubmitted={setIsSubmitted}
-            isMobile={isMobile}
-            isLoading={isLoading}
-            profilePreview={profilePreview}
-            handleFileChange={handleFileChange}
-            profileError={profileError}
-            aboutMe={aboutMe}
-            handleTextAreaChange={handleTextAreaChange}
-            textareaRef={textareaRef}
-            palateError={palateError}
-            selectedPalates={selectedPalates}
-            handlePalateChange={handlePalateChange}
-            palateLimit={palateLimit}
-            submitReview={submitReview}
-            router={router}
-          />
-        }
+        content={formContent}
         isOpen={isMobile}
         backdropClass="bg-white backdrop-opacity-100"
         baseClass="h-full md:h-3/4 !max-w-[1060px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
@@ -409,26 +410,7 @@ const Form = () => {
           </button>
         }
       />
-      <div className="font-inter mt-16 md:mt-20 hidden md:block">
-        <FormContent
-          isSubmitted={isSubmitted}
-          setIsSubmitted={setIsSubmitted}
-          isMobile={isMobile}
-          isLoading={isLoading}
-          profilePreview={profilePreview}
-          handleFileChange={handleFileChange}
-          profileError={profileError}
-          aboutMe={aboutMe}
-          handleTextAreaChange={handleTextAreaChange}
-          textareaRef={textareaRef}
-          palateError={palateError}
-          selectedPalates={selectedPalates}
-          handlePalateChange={handlePalateChange}
-          palateLimit={palateLimit}
-          submitReview={submitReview}
-          router={router}
-        />
-      </div>
+      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}</div>
     </>
   );
 };
