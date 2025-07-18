@@ -1,8 +1,8 @@
 import { UserRepository } from '@/repositories/userRepository';
-import { ILoginCredentials, IJWTResponse } from '@/interfaces/user';
+import { ILoginCredentials, IRegisterData, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user';
 
 export class UserService {
-    static async registerUser(userData: any): Promise<any> {
+    static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
         const formattedData = {
             username: userData.username,
             email: userData.email,
@@ -85,9 +85,9 @@ export class UserService {
         }
     }
 
-    static async updateUserFields(data: any, token?: any): Promise<any> {
+    static async updateUserFields(data: Partial<IUserUpdate>, token?: any): Promise<IUserUpdateResponse> {
         try {
-            const response = await UserRepository.updateUserFields<any>(data, token);
+            const response = await UserRepository.updateUserFields<IUserUpdateResponse>(data, token);
             return response;
         } catch (error) {
             console.error('Update user fields error:', error);

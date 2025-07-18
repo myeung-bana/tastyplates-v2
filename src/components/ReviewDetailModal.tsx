@@ -870,23 +870,26 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       {reply.author?.node?.name || "Unknown User"}
                                     </h3>
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                                      {reply?.palates?.split("|").map((tag: string, tagIndex: number) => (
-                                        <span
-                                          key={tagIndex}
-                                          className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
-                                        >
-                                          {palateFlagMap[tag.toLowerCase()] && (
-                                            <Image
-                                              src={palateFlagMap[tag.toLowerCase()]}
-                                              alt={`${tag} flag`}
-                                              width={12}
-                                              height={12}
-                                              className="w-6 h-4 rounded object-cover"
-                                            />
-                                          )}
-                                          {tag}
-                                        </span>
-                                      ))}
+                                      {reply?.palates?.split("|").map((rawTag: string, tagIndex: number) => {
+                                        const tag = rawTag.trim();
+                                        return (
+                                          <span
+                                            key={tagIndex}
+                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                          >
+                                            {palateFlagMap[tag.toLowerCase()] && (
+                                              <Image
+                                                src={palateFlagMap[tag.toLowerCase()]}
+                                                alt={`${tag} flag`}
+                                                width={12}
+                                                height={12}
+                                                className="w-6 h-4 rounded object-cover"
+                                              />
+                                            )}
+                                            {tag}
+                                          </span>
+                                        );
+                                      })}
                                     </div>
                                     <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
                                       {stripTags(reply.content || "") ||

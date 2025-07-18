@@ -34,6 +34,7 @@ import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
+import { IUserUpdate } from "@/interfaces/user";
 
 const FormContent = memo(({
   isSubmitted,
@@ -312,8 +313,8 @@ const Form = () => {
       if (formattedPalates) updateData.palates = formattedPalates;
 
       const res = await UserService.updateUserFields(
-        updateData,
-        session?.accessToken!
+        updateData as Partial<IUserUpdate>,
+        session?.accessToken
       );
 
       await update({

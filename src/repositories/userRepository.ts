@@ -1,5 +1,6 @@
 import client from "@/app/graphql/client";
 import { GET_USER_BY_ID } from "@/app/graphql/User/userQueries";
+import { IRegisterData, IUserUpdate, IUserUpdateResponse } from "@/interfaces/user";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -20,7 +21,7 @@ export class UserRepository {
         return response;
     }
 
-    static async registerUser<T>(data: any): Promise<T> {
+    static async registerUser<T>(data: Partial<IRegisterData>): Promise<T> {
         return this.request('/wp-json/wp/v2/api/users', {
             method: 'POST',
             body: JSON.stringify(data),
@@ -87,18 +88,9 @@ export class UserRepository {
     }
 
     static async updateUserFields<T>(
-        data: {
-            username?: string;
-            email?: string;
-            birthdate?: string;
-            language?: string;
-            password?: string;
-            palates?: string;
-            profile_image?: string;
-            about_me?: string;
-        },
+        data: Partial<IUserUpdate>,
         token: string
-    ): Promise<T> {
+    ): Promise<IUserUpdateResponse> {
         return this.request(
             `/wp-json/wp/v2/api/users/update-fields`,
             {
