@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Inactive } from "@/constants/messages";
+import { HOME } from "@/constants/pages";
 
 // const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 1 minute for testing
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
@@ -21,14 +22,14 @@ export default function InactivityLogout () {
 
     if (lastActive && now - lastActive > INACTIVITY_TIMEOUT) {
       localStorage.removeItem(LAST_ACTIVE_KEY);
-      signOut({ redirect: true, callbackUrl: '/' });
+      signOut({ redirect: true, callbackUrl: HOME });
       toast.error(Inactive);
       return;
     }
 
     const handleLogout = () => {
       localStorage.removeItem(LAST_ACTIVE_KEY);
-      signOut({ redirect: true, callbackUrl: '/' });
+      signOut({ redirect: true, callbackUrl: HOME });
       toast.error(Inactive);
     };
 

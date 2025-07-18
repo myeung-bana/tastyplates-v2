@@ -47,7 +47,7 @@ export default function Navbar(props: any) {
     localStorage.clear();
     localStorage.setItem('logOutMessage', logOutSuccessfull);
 
-    await signOut({ redirect: true, callbackUrl: '/' });
+    await signOut({ redirect: true, callbackUrl: HOME });
   };
 
   const changeNavBg = () => {
