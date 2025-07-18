@@ -8,6 +8,7 @@ import { pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
+import { IRegisterData } from "@/interfaces/user";
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -79,7 +80,7 @@ const OnboardingTwoPage = () => {
       aboutMe,
     };
 
-    await UserService.registerUser(completeRegistration);
+    await UserService.registerUser(completeRegistration as Partial<IRegisterData>);
 
     localStorage.removeItem(REGISTRATION_KEY);
     setMessage(registrationSuccess);
