@@ -77,14 +77,14 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
             </h2> */}
           <div className="restaurant-card__rating">
             {Array.from({ length: 5 }, (_, i) => {
-              const full = i < Math.floor(Number(reviewDraft.reviewStars));
-              const half = i < Math.ceil(Number(reviewDraft.reviewStars)) && i >= Math.floor(Number(reviewDraft.reviewStars));
+              const full = i + 1 <= Number(reviewDraft.reviewStars);
+              const half = !full && i + 0.5 <= Number(reviewDraft.reviewStars);
               return full ? (
-                <BsStarFill key={i} className="text-[#31343F]" />
+                <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
               ) : half ? (
-                <BsStarHalf key={i} className="text-[#31343F]" />
+                <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
               ) : (
-                <BsStar key={i} className="text-[#31343F]" />
+                <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
               );
             })}
           </div>
