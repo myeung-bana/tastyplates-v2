@@ -355,12 +355,18 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                             >
                                 <div
                                     className={`flex items-center gap-2 h-[48px] px-4 ${enableSelectionDropdown ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                                    onClick={() => enableSelectionDropdown && toggleSection(item.key)}
+                                    onClick={(e) => {
+                                        const target = e.target as HTMLElement;
+                                        // Prevent toggle if the click is on the checkbox
+                                        if (enableSelectionDropdown && !target.classList.contains('checkbox-no-toggle')) {
+                                            toggleSection(item.key);
+                                        }
+                                    }}
                                 >
                                     {enableCheckboxHeader && (
                                         <input
                                             type="checkbox"
-                                            className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                            className="form-checkbox h-4 w-4 text-[#E36B00] checkbox-no-toggle"
                                             checked={isHeaderSelected(item)} // Checks if header's own key is selected
                                             onChange={(e) => {
                                                 e.stopPropagation();
