@@ -77,7 +77,7 @@ export class ReviewRepository {
         },
       }, true);
 
-      return response;
+      return response.data || [];
     } catch (error) {
       console.error("Failed to fetch review drafts", error);
       throw new Error('Failed to fetch review drafts');

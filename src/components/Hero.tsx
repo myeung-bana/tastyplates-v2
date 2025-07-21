@@ -199,9 +199,18 @@ const Hero = () => {
   const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
     setLocation('');
     setListing('');
-    setSelectedPalates(values);
+    const childValues = new Set<Key>();
 
     if (selectedHeaderLabel) {
+      const matchedGroup = palateOptions.find(
+        (group) => group.label == selectedHeaderLabel
+      );
+  
+      if (matchedGroup && matchedGroup.children) {
+        matchedGroup.children.forEach((child) => {
+          childValues.add(child.key);
+        });
+      }
       setCuisine(`What ${selectedHeaderLabel} like to eat?`);
     } else if (values.size > 0) {
       const selectedChildKey = Array.from(values)[0];
@@ -215,7 +224,9 @@ const Hero = () => {
       setCuisine('');
     }
 
-    fetchPalatesDebouncedRef.current?.(values);
+    setSelectedPalates(values);
+    // if childValues size is 0, the header checkbox is not check
+    fetchPalatesDebouncedRef.current?.(childValues.size == 0 ? values : childValues);
   };
 
   const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,7 +301,7 @@ const Hero = () => {
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
-                     {cuisine.length > 0 ? "" : "What ______ like to eat?"}
+                      {cuisine.length > 0 ? "" : "What ______ like to eat?"}
                     </label>
                     <div className="relative w-full">
                       <input
