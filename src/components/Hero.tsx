@@ -301,7 +301,7 @@ const Hero = () => {
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
-                    {cuisine.length > 0 ? "" : "What ______ like to eat?"}
+                      {cuisine.length > 0 ? "" : "What ______ like to eat?"}
                     </label>
                     <div className="relative w-full">
                       <input
