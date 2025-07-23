@@ -15,6 +15,8 @@ import RestaurantReviewsModal from "./RestaurantReviewsModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { PAGE } from "@/lib/utils";
 import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
+import toast from "react-hot-toast";
+import { errorOccurred, favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 
 export interface Restaurant {
   id: string;
@@ -85,13 +87,22 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
         credentials: "include",
       });
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      if (res.status === 200) {
+        toast.success(savedToWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -137,13 +148,22 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
         credentials: "include",
       });
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      if (res.status == 200) {
+        toast.success(removedFromWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved); // Revert on error
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved); // Revert on error
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -152,7 +172,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const deleteModalContent = (
     <div className="text-center">
       <p className="text-sm text-[#494D5D]">
-        {restaurant.name} will be removed from this wishlist.
+        {restaurant.name} will be removed from your wishlist.
       </p>
       <div className="flex gap-4 mt-6">
         <button
@@ -175,6 +195,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     e.stopPropagation();
     if (!session) {
       setShowSignup(true);
+      return;
+    }
+    if (saved) {
+      setIsDeleteModalOpen(true);
       return;
     }
     handleToggle(e);
