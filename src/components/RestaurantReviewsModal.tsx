@@ -163,7 +163,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                               <img
                                 src={palateFlagMap[lowerName]}
                                 alt={`${p.name} flag`}
-                                className="w-6 h-4 rounded object-cover"
+                                className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
                             {p.name}
