@@ -233,17 +233,14 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         <div className="review-block__recognitions flex gap-2">
           {Array.isArray(review.recognitions) && review.recognitions.filter(tag => tag && tag.trim() !== '').length > 0 && (
             <div className="review-block__recognitions flex gap-2">
-              {review.recognitions
-                .filter(tag => tag && tag.trim() !== '')
-                .map((tag, index) => {
-                  const tagObj = tags.find(t => t.name === tag);
-                  return (
-                    <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
-                      {tagObj && <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />}
-                      {tag}
-                    </span>
-                  );
-                })}
+              {tags
+                .filter(tagObj => (review.recognitions ?? []).includes(tagObj.name))
+                .map((tagObj, index) => (
+                  <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
+                    <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />
+                    {tagObj.name}
+                  </span>
+                ))}
             </div>
           )}
         </div>
