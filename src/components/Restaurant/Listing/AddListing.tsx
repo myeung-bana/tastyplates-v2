@@ -581,7 +581,7 @@ const AddListingPage = (props: any) => {
           {step === 1 && (
             <>
               <form
-                className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+                className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-white"
                 onSubmit={(e) => e.preventDefault()}
               >
                 <div className="text-center">
