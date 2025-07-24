@@ -9,6 +9,7 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 interface Restaurant {
   id: string;
@@ -166,7 +167,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                                 className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
-                            {p.name}
+                            {capitalizeFirstLetter(p.name)}
                           </span>
                         );
                       })}

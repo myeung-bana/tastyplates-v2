@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { stripTags, formatDate, PAGE } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeFirstLetter } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -558,7 +558,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               className="w-[18px] h-[10px] rounded object-cover"
                             />
                           )}
-                          {tag}
+                          {capitalizeFirstLetter(tag)}
                         </span>
                       ))}
                     </div>
@@ -733,7 +733,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
-                            {tag}
+                            {capitalizeFirstLetter(tag)}
                           </span>
                         ))}
                       </div>
@@ -886,7 +886,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                                 className="w-[18px] h-[10px] rounded object-cover"
                                               />
                                             )}
-                                            {tag}
+                                            {capitalizeFirstLetter(tag)}
                                           </span>
                                         );
                                       })}

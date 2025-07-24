@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { formatDate, formatDateT, stripTags } from "@/lib/utils";
+import { capitalizeFirstLetter, formatDate, formatDateT, stripTags } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
@@ -205,7 +205,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                         className="w-[18px] h-[10px] rounded object-cover"
                       />
                     )}
-                    {tag}
+                    {capitalizeFirstLetter(tag)}
                   </span>
                 );
               })}

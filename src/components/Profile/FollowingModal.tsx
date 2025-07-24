@@ -4,7 +4,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
+import { capitalizeFirstLetter, PAGE } from "@/lib/utils";
 
 interface FollowingUser {
   id: string;
@@ -101,7 +101,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                             className="w-[18px] h-[10px] rounded object-cover"
                           />
                         )}
-                        {cuisine}
+                        {capitalizeFirstLetter(cuisine)}
                       </span>
                     );
                   })}
