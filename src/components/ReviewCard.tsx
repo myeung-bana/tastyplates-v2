@@ -1,7 +1,7 @@
 // ReviewCard.tsx
 import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
-import { capitalizeFirstLetter, capitalizeWords, PAGE, stripTags } from "../lib/utils"
+import { capitalizeWords, PAGE, stripTags } from "../lib/utils"
 import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
@@ -125,7 +125,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                       className="w-[18px] h-[10px] rounded object-cover"
                     />
                   )}
-                  {capitalizeFirstLetter(tag)}
+                  {tag}
                 </span>
               ))}
             </div>
