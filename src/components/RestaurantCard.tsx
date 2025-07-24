@@ -88,7 +88,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         credentials: "include",
       });
       if (res.status === 200) {
-        toast.success(savedToWishlistSuccess);
+        toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
@@ -149,7 +149,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         credentials: "include",
       });
       if (res.status == 200) {
-        toast.success(removedFromWishlistSuccess);
+        toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
@@ -172,7 +172,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const deleteModalContent = (
     <div className="text-center">
       <p className="text-sm text-[#494D5D]">
-        {restaurant.name} will be removed from your wishlist.
+        {restaurant.name} will be removed from this wishlist.
       </p>
       <div className="flex gap-4 mt-6">
         <button
@@ -195,10 +195,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     e.stopPropagation();
     if (!session) {
       setShowSignup(true);
-      return;
-    }
-    if (saved) {
-      setIsDeleteModalOpen(true);
       return;
     }
     handleToggle(e);
