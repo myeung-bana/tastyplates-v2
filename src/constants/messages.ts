@@ -25,6 +25,7 @@ export const logOutSuccessfull = "Logged out successfully";
 export const checkEmailTitle = "Error checking email:";
 export const unfinishedSaved = "Unfinished registration saved";
 export const requiredDescription = "Description is required.";
+export const requiredRating = "Rating is required.";
 export const maximumImageLimit = (max: number) => `You can Upload a maximum of ${max} images.`;
 export const savedAsDraft = "Review saved as draft!";
 export const deleteDraftError = "Failed to delete draft.";
