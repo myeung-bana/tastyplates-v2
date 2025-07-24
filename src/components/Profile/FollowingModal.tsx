@@ -98,7 +98,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                           <img
                             src={flagUrl}
                             alt={`${cuisine} flag`}
-                            className="w-4 h-3 rounded object-cover"
+                            className="w-[18px] h-[10px] rounded object-cover"
                           />
                         )}
                         {cuisine}

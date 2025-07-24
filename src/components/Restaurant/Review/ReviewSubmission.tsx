@@ -17,7 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
+import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
@@ -50,6 +50,7 @@ const ReviewSubmissionPage = () => {
   const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
   const [uploadedImageError, setUploadedImageError] = useState('');
+  const [ratingError, setRatingError] = useState('');
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<
     Omit<Restaurant, "id" | "reviews">
@@ -171,11 +172,19 @@ const ReviewSubmissionPage = () => {
 
   const handleRating = (rate: number) => {
     setReviewStars(rate);
+    setRatingError('');
   };
 
   const submitReview = async (e: FormEvent, mode: 'publish' | 'draft') => {
     e.preventDefault();
     let hasError = false;
+
+    if (review_stars === 0) {
+      setRatingError(requiredRating);
+      hasError = true;
+    } else {
+      setRatingError('');
+    }
 
     if (content.trim() === '') {
       setDescriptionError(requiredDescription);
@@ -285,9 +294,9 @@ const ReviewSubmissionPage = () => {
                   <span className="text-[10px] leading-3 md:text-base">
                     Rating should be solely based on taste of the food
                   </span>
-                  {/* {ratingError && (
+                  {ratingError && (
                     <p className="text-red-600 text-sm mt-1">{ratingError}</p>
-                  )} */}
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
