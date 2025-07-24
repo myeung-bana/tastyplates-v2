@@ -886,7 +886,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                                 className="w-[18px] h-[10px] rounded object-cover"
                                               />
                                             )}
-                                            {tag}
+                                            {capitalizeWords(tag)}
                                           </span>
                                         );
                                       })}
