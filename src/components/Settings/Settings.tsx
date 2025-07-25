@@ -9,7 +9,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
-import { emailExistCode, sessionProvider as provider } from "@/constants/response";
+import { emailExistCode, sessionProvider as provider, responseStatusCode as code } from "@/constants/response";
 import CustomDatePicker from "../CustomDatepicker";
 import { formatDateForInput } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ const Settings = (props: any) => {
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
       const response = await UserService.validatePassword(password, session?.accessToken);
-      return response.valid && response.status === 200;
+      return response.valid && response.status === code.success;
     } catch (error) {
       return false;
     }
