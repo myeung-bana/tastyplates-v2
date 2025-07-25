@@ -13,13 +13,12 @@ import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
-  const defaultImage = "/images/default-image.png"
   const UserPalateNames = data?.palates
     ?.split("|")
     .map((s) => capitalizeWords(s.trim()))
@@ -54,7 +53,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
             ? data.reviewImages[0].sourceUrl
-            : defaultImage
+            : DEFAULT_IMAGE
           }
           alt="Review"
           width={400}

@@ -9,7 +9,7 @@ export const FLAG = "/flag.svg";
 // Social icons
 export const PHONE = "/phone.svg";
 export const CASH = "/cash.svg";
-export const  HELMET = "/helmet.svg";
+export const HELMET = "/helmet.svg";
 export const FACEBOOK = "/facebook.svg";
 export const INSTAGRAM = "/instagram.svg";
 export const TWITTER = "/x.svg";

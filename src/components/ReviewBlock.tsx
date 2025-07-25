@@ -20,7 +20,7 @@ import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { DEFAULT_USER_ICON, STAR, STAR_FILLED } from "@/constants/images";
+import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
 
 interface ReviewBlockProps {
   review: {
@@ -71,7 +71,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     date: review.date,
     reviewImages,
     palates: review.palateNames?.join("|") ?? "",
-    userAvatar: review.userImage || "/profile-icon.svg",
+    userAvatar: review.userImage || DEFAULT_USER_ICON,
     author: {
       name: review.user,
       node: {
@@ -79,7 +79,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
         databaseId: review.authorId,
         name: review.user,
         avatar: {
-          url: review.userImage || "/profile-icon.svg",
+          url: review.userImage || DEFAULT_USER_ICON,
         },
       },
     },
@@ -115,10 +115,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   const tags = [
-    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
-    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
-    { id: 3, name: "Value for Money", icon: "/cash.svg" },
-    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+    { id: 1, name: "Must Revisit", icon: FLAG },
+    { id: 2, name: "Insta-Worthy", icon: PHONE },
+    { id: 3, name: "Value for Money", icon: CASH },
+    { id: 4, name: "Best Service", icon: HELMET },
   ];
 
   useEffect(() => {

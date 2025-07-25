@@ -36,6 +36,7 @@ import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { IUserUpdate } from "@/interfaces/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON } from "@/constants/images";
 
 const FormContent = memo(({
   isSubmitted,
@@ -240,7 +241,7 @@ const Form = () => {
   const [aboutMe, setAboutMe] = useState(session?.user?.about_me ?? "");
   const [profile, setProfile] = useState<any>(null);
   const [profilePreview, setProfilePreview] = useState(
-    session?.user?.image ?? "/profile-icon.svg"
+    session?.user?.image ?? DEFAULT_USER_ICON
   );
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState("");

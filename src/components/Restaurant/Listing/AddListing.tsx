@@ -21,6 +21,7 @@ import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce';
 import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 
 declare global {
   interface Window {
@@ -277,10 +278,10 @@ const AddListingPage = (props: any) => {
   }, []);
 
   const tags = [
-    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
-    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
-    { id: 3, name: "Value for Money", icon: "/cash.svg" },
-    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+    { id: 1, name: "Must Revisit", icon: FLAG },
+    { id: 2, name: "Insta-Worthy", icon: PHONE },
+    { id: 3, name: "Value for Money", icon: CASH },
+    { id: 4, name: "Best Service", icon: HELMET },
   ];
 
   const prices = [

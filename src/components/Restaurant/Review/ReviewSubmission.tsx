@@ -21,6 +21,7 @@ import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescri
 import { maximumImage } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 interface Restaurant {
   id: string;
   slug: string;
@@ -92,22 +93,22 @@ const ReviewSubmissionPage = () => {
     {
       id: 1,
       name: "Must Revisit",
-      icon: "/flag.svg",
+      icon: FLAG,
     },
     {
       id: 2,
       name: "Insta-Worthy",
-      icon: "/phone.svg",
+      icon: PHONE,
     },
     {
       id: 3,
       name: "Value for Money",
-      icon: "/cash.svg",
+      icon: CASH,
     },
     {
       id: 4,
       name: "Best Service",
-      icon: "/helmet.svg",
+      icon: HELMET,
     },
   ];
 

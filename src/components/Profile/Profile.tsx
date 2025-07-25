@@ -21,7 +21,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import { PROFILE_EDIT } from "@/constants/pages";
 import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
-import { DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -86,7 +86,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/default-image.png",
+        item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:

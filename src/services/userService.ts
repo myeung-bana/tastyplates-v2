@@ -1,5 +1,6 @@
 import { UserRepository } from '@/repositories/userRepository';
 import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user';
+import { DEFAULT_USER_ICON } from '@/constants/images';
 
 export class UserService {
     static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
@@ -122,7 +123,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: true,
             })) : [];
         } catch (error) {
@@ -138,7 +139,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: followingList.some(f => f.id === user.id),
             })) : [];
         } catch (error) {

@@ -25,7 +25,7 @@ import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
-import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
+import { CASH, DEFAULT_IMAGE, FLAG, HELMET, PHONE } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
 
 type tParams = { slug: string };
@@ -201,7 +201,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || "/images/default-image.png",
+          image: data.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
           palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",

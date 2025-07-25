@@ -11,7 +11,7 @@ import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFai
 import { responseStatusCode as code } from "@/constants/response";
 import { capitalizeWords } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -140,7 +140,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.map((review: any) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
-            const userAvatar = review.userAvatar || "/profile-icon.svg";
+            const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
             const palatesArr = review.palates
               ? review.palates
                 .split("|")
