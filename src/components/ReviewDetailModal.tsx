@@ -683,10 +683,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
-                    {data.author?.node?.databaseId ? (
+                    {(data.author?.node?.id || data.id) ? (
                       session?.user ? (
                         <Link
-                          href={String(session.user.id) === String(data.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [data.author.node.databaseId])}
+                          href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
                           passHref
                         >
                           <FallbackImage
@@ -706,7 +706,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                          onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                          onClick={() => handleProfileClick(data.author?.node?.id)}
                           type={FallbackImageType.Icon}
                         />
                       )
@@ -838,10 +838,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
                               return (
                                 <div key={index} className="flex items-start gap-2 mb-4">
-                                  {reply.author?.node?.databaseId ? (
+                                  {reply.author?.node?.id ? (
                                     session?.user ? (
                                       <Link
-                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [reply.author.node.databaseId])}
+                                        href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                         passHref
                                       >
                                         <FallbackImage
@@ -860,7 +860,33 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                                        onClick={() => handleProfileClick(reply.author.node.databaseId)}
+                                        onClick={() => handleProfileClick(reply.author.node.id)}
+                                        type={FallbackImageType.Icon}
+                                      />
+                                    )
+                                  ) : reply.id ? (
+                                    session?.user ? (
+                                      <Link
+                                        href={String(session.user.id) === String(reply.id) ? PROFILE : PAGE(PROFILE, [reply.id])}
+                                        passHref
+                                      >
+                                        <FallbackImage
+                                          src={reply.userAvatar || DEFAULT_USER_ICON}
+                                          alt={reply.author?.node?.name || "User"}
+                                          width={44}
+                                          height={44}
+                                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                          type={FallbackImageType.Icon}
+                                        />
+                                      </Link>
+                                    ) : (
+                                      <FallbackImage
+                                        src={reply.userAvatar || DEFAULT_USER_ICON}
+                                        alt={reply.author?.node?.name || "User"}
+                                        width={44}
+                                        height={44}
+                                        className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        onClick={() => handleProfileClick(reply.id)}
                                         type={FallbackImageType.Icon}
                                       />
                                     )

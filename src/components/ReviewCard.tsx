@@ -67,8 +67,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
-          {data.author?.node?.databaseId ? (
-            session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? (
+          {(data.author?.node?.id || data.id) ? (
+            session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
               <Link href={PROFILE}>
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
@@ -80,7 +80,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 />
               </Link>
             ) : session ? (
-              <Link href={PAGE(PROFILE, [data.author.node.databaseId])} prefetch={false}>
+              <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
