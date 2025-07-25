@@ -19,7 +19,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce'; // Make sure you 
-import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 
 declare global {
   interface Window {
@@ -198,7 +198,9 @@ const AddListingPage = (props: any) => {
       setCurrentRestaurantDbId(newListingId);
 
       setIsSubmitted(true);
-      router.push(LISTING);
+      if (action === "saveDraft") {
+        router.push(LISTING_DRAFT);
+      }
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
       // Use a custom modal or toast for alerts instead of window.alert
@@ -447,8 +449,9 @@ const AddListingPage = (props: any) => {
       await ReviewService.postReview(reviewData, sess);
 
       setIsSubmitted(true);
-      if (reviewMode === "draft") {
-        // router.push("/listing/draft");
+      if (listingStatus === "pending") {
+        router.push(LISTING_DRAFT);
+      } else if (reviewMode === "draft") {
       } else {
         router.push(LISTING);
       }
