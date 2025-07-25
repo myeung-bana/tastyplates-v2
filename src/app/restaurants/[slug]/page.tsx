@@ -22,6 +22,8 @@ import SigninModal from "@/components/SigninModal";
 import CheckInRestaurantButton from "@/components/CheckInRestaurantButton";
 import { ADD_REVIEW } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 
 type tParams = { slug: string };
 
@@ -97,14 +99,23 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
         body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
         credentials: "include",
       });
+      if (res.status === 200) {
+        toast.success(action === "save" ? savedToWishlistSuccess : removedFromWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
       if (!res.ok) throw new Error("Failed to update favorite status");
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -187,7 +198,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+          image: data.featuredImage?.node.sourceUrl || "/images/default-image.png",
           palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",

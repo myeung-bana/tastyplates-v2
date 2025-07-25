@@ -40,7 +40,7 @@ const ListsDetailPage = () => {
       id: item.id,
       slug: item.slug,
       name: item.title,
-      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      image: item.featuredImage?.node.sourceUrl || "/images/default-image.png",
       rating: 4.5,
       databaseId: item.databaseId || 0, // Default to 0 if not present
       cuisineNames: item.palates || [],

@@ -19,7 +19,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce'; // Make sure you 
-import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 
 declare global {
   interface Window {
@@ -198,7 +198,9 @@ const AddListingPage = (props: any) => {
       setCurrentRestaurantDbId(newListingId);
 
       setIsSubmitted(true);
-      router.push(LISTING);
+      if (action === "saveDraft") {
+        router.push(LISTING_DRAFT);
+      }
     } catch (err: any) {
       console.error("Error submitting listing as draft:", err);
       // Use a custom modal or toast for alerts instead of window.alert
@@ -447,8 +449,9 @@ const AddListingPage = (props: any) => {
       await ReviewService.postReview(reviewData, sess);
 
       setIsSubmitted(true);
-      if (reviewMode === "draft") {
-        // router.push("/listing/draft");
+      if (listingStatus === "pending") {
+        router.push(LISTING_DRAFT);
+      } else if (reviewMode === "draft") {
       } else {
         router.push(LISTING);
       }
@@ -581,7 +584,7 @@ const AddListingPage = (props: any) => {
           {step === 1 && (
             <>
               <form
-                className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
+                className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-white"
                 onSubmit={(e) => e.preventDefault()}
               >
                 <div className="text-center">
@@ -870,7 +873,7 @@ const AddListingPage = (props: any) => {
                 </div>
               </div>
               <div className="listing__form-group">
-                <label className="listing__label">Title</label>
+                <label className="listing__label">Listing Name</label>
                 <div className="listing__input-group">
                   <textarea
                     name="reviewTitle"

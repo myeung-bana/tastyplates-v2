@@ -65,8 +65,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
-          {data.author?.node?.databaseId ? (
-            session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? (
+          {(data.author?.node?.id || data.id) ? (
+            session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
               <Link href={PROFILE}>
                 <Image
                   src={data.userAvatar || "/profile-icon.svg"}
@@ -77,7 +77,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 />
               </Link>
             ) : session ? (
-              <Link href={PAGE(PROFILE, [data.author.node.databaseId])} prefetch={false}>
+              <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
                 <Image
                   src={data.userAvatar || "/profile-icon.svg"}
                   alt={data.author?.node?.name || "User"}
@@ -97,7 +97,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               />
             )
           ) : (
-            <Image // Fallback if no databaseId
+            <Image // Fallback if no databaseId or userId
               src={data.userAvatar || "/profile-icon.svg"}
               alt={data.author?.node?.name || "User"}
               width={32}
@@ -120,9 +120,9 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                     <Image
                       src={palateFlagMap[tag.toLowerCase()]}
                       alt={`${tag} flag`}
-                      width={12}
-                      height={12}
-                      className="w-6 h-4 rounded object-cover"
+                      width={18}
+                      height={10}
+                      className="w-[18px] h-[10px] rounded object-cover"
                     />
                   )}
                   {tag}

@@ -15,12 +15,12 @@ const ListingExplanation = () =>
                   listing, you can claim ownership to gain full control and
                   manage its details.
                 </p>
-                <Link
+                <a
                   href={LISTING_STEP_ONE}
                   className="rounded-xl text-sm md:text-base text-[#FCFCFC] font-semibold w-fit py-2 px-4 md:px-6 md:py-3 text-center bg-[#E36B00]"
                 >
                   Acknowledge and Continue
-                </Link>
+                </a>
               </div>
               <Image src="/images/Iisting-backdrop-sp.png" width={757} height={546} className="w-full h-[546px] md:hidden" alt="backdrop image" />
         </div>

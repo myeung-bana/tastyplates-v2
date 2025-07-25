@@ -4,7 +4,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
+import { capitalizeWords, PAGE } from "@/lib/utils";
 
 interface Follower {
   id: string;
@@ -96,10 +96,10 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                           <img
                             src={flagUrl}
                             alt={`${cuisine} flag`}
-                            className="w-4 h-3 rounded object-cover"
+                            className="w-[18px] h-[10px] rounded object-cover"
                           />
                         )}
-                        {cuisine}
+                        {capitalizeWords(cuisine)}
                       </span>
                     );
                   })}

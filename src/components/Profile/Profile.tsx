@@ -84,7 +84,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || "/images/default-image.png",
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:
@@ -276,25 +276,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setFollowingLoading(false);
       return [];
     }
-    const cacheKey = `following_${targetUserId}`;
-    let followingList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowing(data);
-            setFollowingLoading(false);
-            return data;
-          }
-        } catch (e) { /* ignore */ }
-      }
-    }
     try {
-      followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followingList, timestamp: Date.now() }));
       return followingList;
     } finally {
       setFollowingLoading(false);
@@ -307,29 +291,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setFollowersLoading(false);
       return [];
     }
-    const cacheKey = `followers_${targetUserId}`;
-    let followersList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowers(data);
-            setFollowersLoading(false);
-            return data;
-          }
-        } catch (e) { /* ignore */ }
-      }
-    }
     try {
-      followersList = await UserService.getFollowersList(
+      const followersList = await UserService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
       );
       setFollowers(followersList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followersList, timestamp: Date.now() }));
       return followersList;
     } finally {
       setFollowersLoading(false);
@@ -363,18 +331,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'follow_sync') {
-        if (targetUserId) {
-          localStorage.removeItem(`following_${targetUserId}`);
-          localStorage.removeItem(`followers_${targetUserId}`);
-        }
-        fetchFollowing(true);
-        fetchFollowers(true);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // No cache sync needed, always fetch fresh
   }, [targetUserId]);
 
   const handleFollow = async (id: string) => {
@@ -797,9 +754,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                               <img
                                 src={flagSrc}
                                 alt={`${capitalizedPalate} flag`}
-                                width={12}
-                                height={12}
-                                className="w-6 h-4 rounded object-cover"
+                                width={18}
+                                height={10}
+                                className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
                             {capitalizedPalate}

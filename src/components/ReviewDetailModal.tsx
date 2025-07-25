@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { stripTags, formatDate, PAGE } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeWords } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -343,7 +343,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const UserPalateNames = data?.palates
     ?.split("|")
-    .map((s: any) => s.trim())
+    .map((s: any) => capitalizeWords(s.trim()))
     .filter((s: any) => s.length > 0);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -553,9 +553,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             <Image
                               src={palateFlagMap[tag.toLowerCase()]}
                               alt={`${tag} flag`}
-                              width={12}
-                              height={12}
-                              className="w-6 h-4 rounded object-cover"
+                              width={18}
+                              height={10}
+                              className="w-[18px] h-[10px] rounded object-cover"
                             />
                           )}
                           {tag}
@@ -680,10 +680,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
-                    {data.author?.node?.databaseId ? (
+                    {(data.author?.node?.id || data.id) ? (
                       session?.user ? (
                         <Link
-                          href={String(session.user.id) === String(data.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [data.author.node.databaseId])}
+                          href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
                           passHref
                         >
                           <Image
@@ -702,7 +702,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                          onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                          onClick={() => handleProfileClick(data.author?.node?.id)}
                         />
                       )
                     ) : (
@@ -728,9 +728,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               <Image
                                 src={palateFlagMap[tag.toLowerCase()]}
                                 alt={`${tag} flag`}
-                                width={12}
-                                height={12}
-                                className="w-6 h-4 rounded object-cover"
+                                width={18}
+                                height={10}
+                                className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
                             {tag}
@@ -832,10 +832,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
                               return (
                                 <div key={index} className="flex items-start gap-2 mb-4">
-                                  {reply.author?.node?.databaseId ? (
+                                  {reply.author?.node?.id ? (
                                     session?.user ? (
                                       <Link
-                                        href={String(session.user.id) === String(reply.author.node.databaseId) ? PROFILE : PAGE(PROFILE, [reply.author.node.databaseId])}
+                                        href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                         passHref
                                       >
                                         <Image
@@ -853,7 +853,31 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                                        onClick={() => handleProfileClick(reply.author.node.databaseId)}
+                                        onClick={() => handleProfileClick(reply.author.node.id)}
+                                      />
+                                    )
+                                  ) : reply.id ? (
+                                    session?.user ? (
+                                      <Link
+                                        href={String(session.user.id) === String(reply.id) ? PROFILE : PAGE(PROFILE, [reply.id])}
+                                        passHref
+                                      >
+                                        <Image
+                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                          alt={reply.author?.node?.name || "User"}
+                                          width={44}
+                                          height={44}
+                                          className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        />
+                                      </Link>
+                                    ) : (
+                                      <Image
+                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                        alt={reply.author?.node?.name || "User"}
+                                        width={44}
+                                        height={44}
+                                        className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                        onClick={() => handleProfileClick(reply.id)}
                                       />
                                     )
                                   ) : (
@@ -881,12 +905,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                               <Image
                                                 src={palateFlagMap[tag.toLowerCase()]}
                                                 alt={`${tag} flag`}
-                                                width={12}
-                                                height={12}
-                                                className="w-6 h-4 rounded object-cover"
+                                                width={18}
+                                                height={10}
+                                                className="w-[18px] h-[10px] rounded object-cover"
                                               />
                                             )}
-                                            {tag}
+                                            {capitalizeWords(tag)}
                                           </span>
                                         );
                                       })}
