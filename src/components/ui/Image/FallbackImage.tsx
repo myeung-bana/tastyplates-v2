@@ -27,34 +27,35 @@ export default function FallbackImage({
     ...rest
 }: FallbackImageProps) {
     const fallbackSrc = FALLBACK_IMAGE_MAP[type];
-    const isErrored = useRef(false); // avoid infinite fallback loop
-
-    const initialSrc =
-        typeof src === "string" && src.length > 0
-            ? src
-            : fallbackSrc;
-
-    const [imgSrc, setImgSrc] = useState(initialSrc);
+    const [imgSrc, setImgSrc] = useState<string>(fallbackSrc);
+    const isErrored = useRef(false);
 
     useEffect(() => {
-        if (!isErrored.current && typeof src === "string") {
-            setImgSrc(src);
-        }
-    }, [src]);
-
-    const handleError = () => {
-        if (!isErrored.current && imgSrc !== fallbackSrc) {
-            isErrored.current = true;
+        // When src changes, reset to fallback first to give visual feedback
+        if (typeof src === "string" && src.length > 0) {
+            const img = new window.Image();
+            img.src = src;
+            img.onload = () => {
+                if (!isErrored.current) {
+                    setImgSrc(src);
+                }
+            };
+        } else {
             setImgSrc(fallbackSrc);
         }
-    };
+    }, [src, fallbackSrc]);
 
     return (
         <Image
             {...rest}
             src={imgSrc}
             alt={alt}
-            onError={handleError}
+            onError={() => {
+                if (!isErrored.current) {
+                    isErrored.current = true;
+                    setImgSrc(fallbackSrc);
+                }
+            }}
         />
     );
 }
