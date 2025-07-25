@@ -198,7 +198,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+          image: data.featuredImage?.node.sourceUrl || "/images/default-image.png",
           palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",

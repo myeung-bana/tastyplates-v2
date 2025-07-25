@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Image from "next/image";
 import { IoMdClose } from "react-icons/io";
-import Photo from "../../../../public/images/Photos-Review-12.png";
+import Photo from "../../../../public/images/default-image.png";
 import { useSession } from 'next-auth/react';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import ReviewModal from "@/components/ui/Modal/ReviewModal"; 

@@ -4,7 +4,7 @@ import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
-import Photo from "../../public/images/Photos-Review-12.png";
+import Photo from "../../public/images/default-image.png";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";

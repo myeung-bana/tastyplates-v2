@@ -84,7 +84,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || "/images/default-image.png",
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:
