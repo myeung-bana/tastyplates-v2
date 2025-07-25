@@ -9,6 +9,7 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
+import { capitalizeWords } from "@/lib/utils";
 
 interface Restaurant {
   id: string;
@@ -138,7 +139,12 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
             const userAvatar = review.userAvatar || "/profile-icon.svg";
-            const palatesArr = review.palates ? review.palates.split("|").map((s: string) => ({ name: s.trim() })).filter((s: any) => s.name) : [];
+            const palatesArr = review.palates
+              ? review.palates
+                .split("|")
+                .map((s: string) => ({ name: capitalizeWords(s.trim()) }))
+                .filter((s: any) => s.name)
+              : [];
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
