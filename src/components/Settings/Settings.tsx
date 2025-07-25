@@ -257,7 +257,7 @@ const Settings = (props: any) => {
           ...prev,
           email: data.user_email || "",
           language: data.language || "en",
-          birthdate: formatDateForInput(data.birthdate)
+          birthdate: formatDateForInput(data.birthdate as string)
         }));
         if (typeof window !== "undefined") {
           localStorage.setItem(localKey, JSON.stringify(data));

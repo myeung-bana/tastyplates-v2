@@ -1,15 +1,22 @@
-import { AuthOptions, User } from "next-auth";
+import { AuthOptions } from "next-auth";
 import { cookies } from "next/headers";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { UserRepository } from "@/repositories/userRepository";
 import { UserService } from '@/services/userService';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
 import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 
-const cookieObject = { path: '/', sameSite: 'lax' as const }
+const cookieConfig = { path: '/', sameSite: 'lax' as const }
+
+const setCookies = async (entries: Record<string, string>) => {
+    const cookieStore = await cookies();
+    Object.entries(entries).forEach(([key, value]) =>
+        cookieStore.set(key, value, cookieConfig)
+    );
+    return cookieStore;
+};
 
 export const authOptions: AuthOptions = {
     providers: [
@@ -32,29 +39,53 @@ export const authOptions: AuthOptions = {
             async authorize(credentials) {
                 if (!credentials) return null;
                 const cookieStore = await cookies();
+                const email = credentials?.email;
+                const password = credentials?.password;
+                const googleAuth = cookieStore.get("googleAuth")?.value == "true";
                 try {
-                    const data = await UserService.login({
-                        email: credentials.email,
-                        password: credentials.password
-                    });
-
-                    if (data.token) {
-                        cookieStore.set('logInMessage', logInSuccessfull, cookieObject);
+                    // Handle google-register auto login
+                    if (!password && googleAuth) {
+                        const res = await UserService.handleGoogleAuth(email);
+                        if (res.status == code.success) {
+                            await setCookies({ logInMessage: logInSuccessfull });
+                            return {
+                                id: String(res.id) ?? "",
+                                userId: res.id ?? 0,
+                                name: email,
+                                email,
+                                token: res.token,
+                            };
+                        } else {
+                            await setCookies({
+                                googleErrorType: sessionType.login,
+                                googleError: encodeURIComponent(res.message || googleAuthenticationFailed),
+                            });
+                            return null;
+                        }
+                    }
+                    const res = await UserService.login({ email, password });
+                    if (res.token) {
+                        await setCookies({ logInMessage: logInSuccessfull });
                         return {
-                            id: data.id ?? "",
-                            userId: data.id ?? 0,
-                            name: data.user_display_name,
-                            email: data.user_email,
-                            token: data.token,
+                            id: String(res.id) ?? "",
+                            userId: res.id ?? 0,
+                            name: res.user_display_name,
+                            email: res.user_email,
+                            token: res.token,
                         };
                     }
-                    cookieStore.set('googleErrorType', sessionType.login, cookieObject);
-                    cookieStore.set('googleError', loginFailed, cookieObject);
+
+                    await setCookies({
+                        googleErrorType: sessionType.login,
+                        googleError: loginFailed,
+                    });
                     return null;
                 } catch (error) {
                     console.error("Auth error:", error);
-                    cookieStore.set('googleErrorType', sessionType.login, cookieObject);
-                    cookieStore.set('googleError', String(error), cookieObject);
+                    await setCookies({
+                        googleErrorType: sessionType.login,
+                        googleError: String(error),
+                    });
                     return null;
                 }
             },
@@ -70,33 +101,34 @@ export const authOptions: AuthOptions = {
                 type = cookieStore.get('auth_type')?.value || null;
 
                 if (account?.provider === sessionProvider.google) {
+                    const { email = "", name = "" } = user;
+
                     if (type === sessionType.signup) {
                         // set the cookie to be use in the onboarding page
-                        cookieStore.set('googleAuth', 'true', cookieObject);
-                        cookieStore.set('email', user.email || '', cookieObject);
-                        cookieStore.set('username', user.name || '', cookieObject);
+                        await setCookies({
+                            googleAuth: "true",
+                            email,
+                            username: name,
+                        });
 
-                        const checkEmail = await UserService.checkEmailExists(user.email);
-                        if (checkEmail.status == code.badRequest || checkEmail.exists) {
-                            cookieStore.set('googleErrorType', sessionType.signup, cookieObject);
-                            cookieStore.set('googleError', encodeURIComponent(checkEmail.message), cookieObject);
+                        const { status, exists, message } = await UserService.checkEmailExists(email);
+                        if (status === code.badRequest || exists) {
+                            await setCookies({
+                                googleErrorType: sessionType.signup,
+                                googleError: encodeURIComponent(message),
+                            });
                             return HOME;
                         }
 
                         return ONBOARDING_ONE;
                     }
 
-                    const response = await UserRepository.checkGoogleUser(user.email!) as {
-                        status: number;
-                        message?: string;
-                        token?: string;
-                        id?: number;
-                    };
-                    
+                    const response = await UserService.handleGoogleAuth(user.email);
                     if (response.status !== code.success) {
-                        const cookieStore = await cookies();
-                        cookieStore.set('googleErrorType', sessionType.login, cookieObject);
-                        cookieStore.set('googleError', encodeURIComponent(response.message || googleAuthenticationFailed), cookieObject);
+                        await setCookies({
+                            googleErrorType: sessionType.login,
+                            googleError: encodeURIComponent(response.message || googleAuthenticationFailed),
+                        });
                         return HOME;
                     }
 
@@ -104,9 +136,8 @@ export const authOptions: AuthOptions = {
                     user.userId = response.id;
                     user.birthdate = '';
                     user.provider = sessionProvider.google;
-                    cookieStore.set('logInMessage', logInSuccessfull, cookieObject);
+                    await setCookies({ logInMessage: logInSuccessfull });
                     return true;
-
                 }
             } catch (error) {
                 return PAGE(HOME, [], { error: authenticationFailed });
@@ -123,7 +154,6 @@ export const authOptions: AuthOptions = {
                 };
                 token.accessToken = user.token;
 
-                // Fetch and attach profile_image to user
                 if (user.email && token.accessToken) {
                     try {
                         const userData = await UserService.getCurrentUser(token.accessToken as string);

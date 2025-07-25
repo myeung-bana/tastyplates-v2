@@ -5,6 +5,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import { PiCaretCircleLeft, PiCaretCircleRight } from "react-icons/pi";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import { useEffect, useState } from "react";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
 
 export default function PhotoSlider({
   reviewPhotos,
@@ -169,7 +170,7 @@ export default function PhotoSlider({
                 className="hover:cursor-pointer"
                 onClick={() => onImageClick?.(index)}>
                   {
-                    <Image
+                    <FallbackImage
                       src={photo}
                       alt={`review photo ${index}`}
                       className="h-full w-full rounded-[10px] object-cover review-block__image"

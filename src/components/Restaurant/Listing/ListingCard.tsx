@@ -9,6 +9,8 @@ import { useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { formatDateT, stripTags } from "@/lib/utils";
 import { BsStarFill, BsStarHalf, BsStar } from 'react-icons/bs';
+import FallbackImage from "@/components/ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 
 export interface ReviewDraft {
   author: number;
@@ -39,7 +41,6 @@ interface ListingCardProps {
 }
 
 const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
-  const defaultImage = "/images/default-image.png"
   // const reviewsCount = getRestaurantReviewsCount(restaurant.id);
   // const getCuisineNames = (cuisineIds: string[]) => {
   //   return cuisineIds
@@ -53,8 +54,8 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
   return (
     <div className="relative overflow-hidden rounded-md">
       <div className="restaurant-card__image relative">
-        <Image
-          src={reviewDraft.reviewImages?.[0]?.sourceUrl || defaultImage}
+        <FallbackImage
+          src={reviewDraft.reviewImages?.[0]?.sourceUrl || DEFAULT_IMAGE}
           alt="Review Draft"
           width={304}
           height={228}
@@ -80,11 +81,11 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
               const full = i + 1 <= Number(reviewDraft.reviewStars);
               const half = !full && i + 0.5 <= Number(reviewDraft.reviewStars);
               return full ? (
-                <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
               ) : half ? (
-                <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
               ) : (
-                <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
               );
             })}
           </div>

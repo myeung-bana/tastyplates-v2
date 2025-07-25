@@ -5,6 +5,7 @@ import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
+import { ARROW_WARM_UP, STAR } from "@/constants/images";
 
 interface FilterProps {
   onFilterChange: (filters: {
@@ -236,7 +237,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             >
               <span className="filter__label">{badge !== "" ? badge : "Badges"}</span>
               <img
-                src="/images/arrow_warm_up.svg"
+                src={ARROW_WARM_UP}
                 className="size-4 sm:size-5"
                 alt="arrow up"
               />
@@ -248,7 +249,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               onClick={() => onClickFilter("rating")}
               className="filter__options"
             >
-              <img src="/star.svg" className="size-4 sm:size-5" alt="star" />
+              <img src={STAR} className="size-4 sm:size-5" alt="star" />
               <span className="filter__label">{rating > 0 ? 'Over ' + rating : "Rating"}</span>
             </button>
           </div>

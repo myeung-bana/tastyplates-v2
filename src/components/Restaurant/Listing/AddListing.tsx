@@ -20,6 +20,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
 import debounce from 'lodash.debounce'; // Make sure you 
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
 
 declare global {
   interface Window {
@@ -938,7 +939,7 @@ const AddListingPage = (props: any) => {
                       >
                         <MdClose className="size-3 md:size-4" />
                       </button>
-                      <Image
+                      <FallbackImage
                         src={item}
                         alt={`Uploaded image ${index}`}
                         className="rounded-2xl object-cover"

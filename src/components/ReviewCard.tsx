@@ -12,6 +12,8 @@ import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -48,7 +50,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
         />
       )}
       <div className="review-card__image-container">
-        <Image
+        <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
             ? data.reviewImages[0].sourceUrl
@@ -68,41 +70,45 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           {data.author?.node?.databaseId ? (
             session?.user?.id && String(session.user.id) === String(data.author.node.databaseId) ? (
               <Link href={PROFILE}>
-                <Image
-                  src={data.userAvatar || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                 />
               </Link>
             ) : session ? (
               <Link href={PAGE(PROFILE, [data.author.node.databaseId])} prefetch={false}>
-                <Image
-                  src={data.userAvatar || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                 />
               </Link>
             ) : (
-              <Image
-                src={data.userAvatar || "/profile-icon.svg"}
+              <FallbackImage
+                src={data.userAvatar || DEFAULT_USER_ICON}
                 alt={data.author?.node?.name || "User"}
                 width={32}
                 height={32}
                 className="review-card__user-image cursor-pointer"
                 onClick={() => setShowAuthModal('signup')}
+                type={FallbackImageType.Icon}
               />
             )
           ) : (
-            <Image // Fallback if no databaseId
-              src={data.userAvatar || "/profile-icon.svg"}
+            <FallbackImage
+              src={data.userAvatar || DEFAULT_USER_ICON}
               alt={data.author?.node?.name || "User"}
               width={32}
               height={32}
               className="review-card__user-image"
+              type={FallbackImageType.Icon}
             />
           )}
 
@@ -133,7 +139,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           <div className="rate-container ml-auto">
               <div className="review-detail-meta">
                 <span className="ratings">
-                  <Image src="/star-filled.svg" width={16} height={16} className="size-3 md:size-4" alt="star icon" />
+                  <Image src={STAR_FILLED} width={16} height={16} className="size-3 md:size-4" alt="star icon" />
                   <i className="rating-counter">
                     {data.reviewStars}
                   </i>

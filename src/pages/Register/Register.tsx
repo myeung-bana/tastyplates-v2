@@ -107,7 +107,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       setError(emailOccurredError);
       return;
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -138,7 +138,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         setError(unexpectedError);
       }
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 

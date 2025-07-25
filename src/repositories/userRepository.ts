@@ -1,6 +1,6 @@
 import client from "@/app/graphql/client";
 import { GET_USER_BY_ID } from "@/app/graphql/User/userQueries";
-import { IRegisterData, IUserUpdate, IUserUpdateResponse } from "@/interfaces/user";
+import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, IJWTResponse, IRegisterData, IUserUpdate, IUserUpdateResponse } from "@/interfaces/user";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -28,7 +28,7 @@ export class UserRepository {
         });
     }
 
-    static async login<T>(credentials: { email: string; password: string }): Promise<T> {
+    static async login(credentials: { email: string; password: string }): Promise<IJWTResponse> {
         return this.request('/wp-json/jwt-auth/v1/token', {
             method: 'POST',
             body: JSON.stringify({
@@ -38,7 +38,7 @@ export class UserRepository {
         }, true);
     }
 
-    static async checkGoogleUser<T>(email: string): Promise<T> {
+    static async checkGoogleUser(email: string): Promise<CheckGoogleUserResponse> {
         return this.request('/wp-json/wp/v2/api/users/google-check', {
             method: 'POST',
             body: JSON.stringify({ email }),
@@ -54,14 +54,14 @@ export class UserRepository {
         }, true);
     }
 
-    static async checkUsernameExists<T>(username: string): Promise<T> {
+    static async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
         return this.request('/wp-json/wp/v2/api/users/check-username', {
             method: 'POST',
             body: JSON.stringify({ username })
         }, true);
     }
 
-    static async getCurrentUser<T>(token?: string): Promise<T> {
+    static async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         return this.request(
             '/wp-json/wp/v2/api/users/current',
             {

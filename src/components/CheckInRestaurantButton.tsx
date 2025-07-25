@@ -6,6 +6,7 @@ import SigninModal from "@/components/SigninModal";
 import toast from "react-hot-toast";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { checkInStatusError, checkInRestaurantSuccess, uncheckInRestaurantSuccess } from "@/constants/messages";
+import { responseStatusCode as code } from "@/constants/response";
 
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session } = useSession();
@@ -60,7 +61,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
         credentials: "include",
       });
-      if (res.status == 200) {
+      if (res.status == code.success) {
         toast.success(checkedIn ? uncheckInRestaurantSuccess : checkInRestaurantSuccess);
         const data = await res.json();
         setCheckedIn(data.status === "checkedin");

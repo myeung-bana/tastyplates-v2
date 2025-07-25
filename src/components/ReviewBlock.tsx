@@ -19,6 +19,8 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON, STAR, STAR_FILLED } from "@/constants/images";
 
 interface ReviewBlockProps {
   review: {
@@ -177,12 +179,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     <div className="review-block px-4 py-4">
       <div className="review-block__header">
         <div className="review-block__user">
-          <Image
-            src={review?.userImage || "/profile-icon.svg"} // Fallback image if author is not found
+          <FallbackImage
+            src={review?.userImage || DEFAULT_USER_ICON} // Fallback image if author is not found
             alt={review?.user || "User"} // Fallback name if author is not found
             width={40}
             height={40}
             className="review-block__user-image size-6 md:size-10"
+            type={FallbackImageType.Icon}
           />
           <div className="review-block__user-info">
             <h3 className="review-block__username">
@@ -217,9 +220,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             const full = i + 1 <= review.rating;
             const half = !full && i + 0.5 <= review.rating;
             return full ? (
-              <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
             ) : (
-              <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
             );
           })}
           {/* {[...Array(review.rating)].map((i, index) =>
