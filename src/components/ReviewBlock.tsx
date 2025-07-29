@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { capitalizeWords, formatDate, formatDateT, stripTags } from "@/lib/utils";
+import { capitalizeWords, formatDate, formatDateT, stripTags, truncateText } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
+import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -134,6 +135,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [likesCount, setLikesCount] = useState(review.commentLikes ?? 0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [expandedTitle, setExpandedTitle] = useState(false);
+  const [expandedComment, setExpandedComment] = useState(false);
 
   const tags = [
     { id: 1, name: "Must Revisit", icon: FLAG },
@@ -327,8 +330,40 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs md:text-base font-medium mb-2">{stripTags(review?.title || "") ?? ""}</h3>
-        <p className="review-block__text">{stripTags(review.comment || "") || ""}</p>
+        <h3 className="text-xs font-semibold md:text-base mb-2">
+          {stripTags(review?.title || "").length > reviewTitleDisplayLimit ? (
+            <>
+              {expandedTitle
+                ? capitalizeWords(stripTags(review?.title || ""))
+                : capitalizeWords(truncateText(stripTags(review?.title || ""), reviewTitleDisplayLimit)) + "…"} {" "}
+              <button
+                className="text-xs hover:underline inline font-bold"
+                onClick={() => setExpandedTitle(!expandedTitle)}
+              >
+                {expandedTitle ? "[Show Less]" : "[See More]"}
+              </button>
+            </>
+          ) : (
+            stripTags(review?.title || "")
+          )}
+        </h3>
+        <p className="review-block__text">
+          {stripTags(review?.comment || "").length > reviewDescriptionDisplayLimit ? (
+            <>
+              {expandedComment
+                ? capitalizeWords(stripTags(review?.comment || ""))
+                : capitalizeWords(truncateText(stripTags(review?.comment || ""), reviewDescriptionDisplayLimit)) + "…"} {" "}
+              <button
+                className="text-xs hover:underline inline font-bold"
+                onClick={() => setExpandedComment(!expandedComment)}
+              >
+                {expandedComment ? "[Show Less]" : "[See More]"}
+              </button>
+            </>
+          ) : (
+            capitalizeWords(stripTags(review?.comment || ""))
+          )}
+        </p>
       </div>
       <div className="">
         {" "}

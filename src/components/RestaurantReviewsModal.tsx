@@ -9,9 +9,10 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
-import { capitalizeWords } from "@/lib/utils";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { capitalizeWords, truncateText } from "@/lib/utils";
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 
 interface Restaurant {
   id: string;
@@ -41,6 +42,8 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   const [likesCount, setLikesCount] = useState<{ [key: string]: number }>({});
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
+  const [expandedTitles, setExpandedTitles] = useState<{ [id: string]: boolean }>({});
+  const [expandedContents, setExpandedContents] = useState<{ [id: string]: boolean }>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -104,6 +107,14 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     } finally {
       setLikeLoading((prev) => ({ ...prev, [review.id]: false }));
     }
+  };
+
+  const toggleTitle = (id: string) => {
+    setExpandedTitles(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleContent = (id: string) => {
+    setExpandedContents(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   if (!isOpen) return null;
@@ -255,10 +266,47 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                   <span className="mx-2">·</span>
                   <span>{new Date(review.date).toLocaleDateString()}</span>
                 </div>
-                {reviewTitle && (
+                {/* {reviewTitle && (
                   <div className="font-semibold mt-2 text-[#31343F]">{reviewTitle}</div>
+                )} */}
+                {reviewTitle && (
+                  <div className="text-sm font-semibold mt-2 text-[#31343F]">
+                    {expandedTitles[review.id]
+                      ? capitalizeWords(reviewTitle)
+                      : capitalizeWords(truncateText(reviewTitle, reviewTitleDisplayLimit)) + "… "}
+                    {" "}
+                    {reviewTitle.length > reviewTitleDisplayLimit && (
+                      <button
+                        className="hover:underline font-bold"
+                        onClick={() => toggleTitle(review.id)}
+                      >
+                        {expandedTitles[review.id] ? " [Show Less]" : "[See More]"}
+                      </button>
+                    )}
+                  </div>
                 )}
-                <div className="text-[#31343F] mt-1" dangerouslySetInnerHTML={{ __html: review.content }} />
+                <div className="text-[#31343F] mt-1 leading-[1.5]">
+                  {review.content.length > reviewDescriptionDisplayLimit ? (
+                    <>
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: expandedContents[review.id]
+                            ? capitalizeWords(review.content)
+                            : capitalizeWords(truncateText(review.content, reviewDescriptionDisplayLimit)) + "…",
+                        }}
+                      />
+                      <button
+                        className="text-xs hover:underline inline font-bold"
+                        onClick={() => toggleContent(review.id)}
+                      >
+                        {expandedContents[review.id] ? "[Show Less]" : "[See More]"}
+                      </button>
+                    </>
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: capitalizeWords(review.content) }} />
+                  )}
+                </div>
+                {/* <div className="text-[#31343F] mt-1" dangerouslySetInnerHTML={{ __html: review.content }} /> */}
                 <div className="flex items-center gap-2 text-sm text-[#494D5D] mt-2">
                   <button
                     onClick={() => handleLike(review)}

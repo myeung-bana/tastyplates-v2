@@ -170,8 +170,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               </div>
           </div>
         </div>
-        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || ""}</p>
-        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{stripTags(data.content || "") || ""}</p>
+        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
+        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>
