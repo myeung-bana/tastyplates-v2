@@ -6,6 +6,16 @@ import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE } from "@/lib/utils";
 
+// Helper for relay global ID
+const encodeRelayId = (type: string, id: string) => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(`${type}:${id}`);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(`${type}:${id}`).toString('base64');
+  }
+  return `${type}:${id}`;
+};
+
 interface Follower {
   id: string;
   name: string;
@@ -64,7 +74,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               {follower.id ? (
-                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : PAGE(PROFILE, [follower.id])}>
+                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', follower.id)])}>
                   <Image
                     src={follower.image || "/profile-icon.svg"}
                     width={40}
@@ -83,7 +93,13 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                 />
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{follower.name}</div>
+                {follower.id ? (
+                  <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', follower.id)])}>
+                    <div className="font-semibold truncate cursor-pointer">{follower.name}</div>
+                  </Link>
+                ) : (
+                  <div className="font-semibold truncate">{follower.name}</div>
+                )}
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {follower.cuisines.map((cuisine) => {
                     const flagUrl = palateFlagMap[cuisine.toLowerCase()];
