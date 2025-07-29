@@ -116,7 +116,6 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      // Prioritize selectedPalates for the 'ethnic' parameter
       if (selectedPalates.size > 0) {
         const selectedSlugs = Array.from(selectedPalates).map(key => key.toString());
         queryParams.set("ethnic", selectedSlugs.join(','));
