@@ -19,6 +19,8 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -90,7 +92,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     date: review.date,
     reviewImages,
     palates: review.palateNames?.join("|") ?? "",
-    userAvatar: review.userImage || "/profile-icon.svg",
+    userAvatar: review.userImage || DEFAULT_USER_ICON,
     author: {
       name: review.user,
       node: {
@@ -98,7 +100,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
         databaseId: review.authorId,
         name: review.user,
         avatar: {
-          url: review.userImage || "/profile-icon.svg",
+          url: review.userImage || DEFAULT_USER_ICON,
         },
       },
     },
@@ -134,10 +136,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   const tags = [
-    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
-    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
-    { id: 3, name: "Value for Money", icon: "/cash.svg" },
-    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+    { id: 1, name: "Must Revisit", icon: FLAG },
+    { id: 2, name: "Insta-Worthy", icon: PHONE },
+    { id: 3, name: "Value for Money", icon: CASH },
+    { id: 4, name: "Best Service", icon: HELMET },
   ];
 
   useEffect(() => {
@@ -230,12 +232,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
               />
             )
           ) : (
-            <Image
-              src={review?.userImage || "/profile-icon.svg"}
+            <FallbackImage
+              src={review?.userImage || DEFAULT_USER_ICON}
               alt={review?.user || "User"}
               width={40}
               height={40}
               className="review-block__user-image size-6 md:size-10"
+            type={FallbackImageType.Icon}
             />
           )}
           <div className="review-block__user-info">
@@ -295,9 +298,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             const full = i + 1 <= review.rating;
             const half = !full && i + 0.5 <= review.rating;
             return full ? (
-              <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
             ) : (
-              <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
             );
           })}
           {/* {[...Array(review.rating)].map((i, index) =>

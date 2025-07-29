@@ -19,6 +19,9 @@ import { UserService } from "@/services/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { PROFILE_EDIT } from "@/constants/pages";
+import toast from "react-hot-toast";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -36,7 +39,7 @@ interface Restaurant {
 
 
 interface ProfileProps {
-  targetUserId:number;
+  targetUserId: number;
 }
 
 // Update the component signature to accept props
@@ -68,15 +71,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-
-  const isViewingOwnProfile = session?.user?.id === targetUserId;
-
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [checkins, setCheckins] = useState<Restaurant[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
+  const isViewingOwnProfile = session?.user?.id === targetUserId;
+  const WELCOME_KEY = 'welcomeMessage';
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -84,7 +86,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/default-image.png",
+        item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:
@@ -158,6 +160,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   }, [targetUserId]);
 
   useEffect(() => {
+    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
+    if (welcomeMessage) {
+      toast.success(welcomeMessage, {
+        duration: 3000, // 3 seconds
+      });
+      localStorage.removeItem(WELCOME_KEY);
+    }
+
     window.addEventListener("load", handleResize);
     window.addEventListener("resize", handleResize);
     return () => {
@@ -703,14 +713,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
-          <Image
+          <FallbackImage
             src={
               userData?.image ||
-              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? "/profile-icon.svg")
+              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? DEFAULT_USER_ICON)
             }
             fill
             className="rounded-full object-cover"
             alt="profile"
+            type={FallbackImageType.Avatar}
           />
         </div>
         <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">

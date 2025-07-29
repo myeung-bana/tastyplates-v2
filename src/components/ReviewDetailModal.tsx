@@ -25,6 +25,8 @@ import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedS
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -72,7 +74,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     typeof window !== "undefined" ? window.innerWidth : 0
   );
   const authorUserId = data.userId;
-  const defaultImage = "/images/default-image.png"
   const sliderRef = useRef<any>(null);
 
   useEffect(() => {
@@ -522,21 +523,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
                   {session?.user ? (
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
+                    <FallbackImage
+                      src={data.userAvatar || DEFAULT_USER_ICON}
                       alt={data.author?.node?.name || "User"}
                       width={32}
                       height={32}
                       className="review-card__user-image !size-8 md:!size-11"
+                      type={FallbackImageType.Icon}
                     />
                   ) : (
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
+                    <FallbackImage
+                      src={data.userAvatar || DEFAULT_USER_ICON}
                       alt={data.author?.node?.name || "User"}
                       width={32}
                       height={32}
                       className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                       onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                      type={FallbackImageType.Icon}
                     />
                   )}
                   <div className="review-card__user-info">
@@ -617,7 +620,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
-                      <Image
+                      <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
                         alt="Review"
@@ -628,7 +631,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src={defaultImage}
+                      src={DEFAULT_IMAGE}
                       alt="Default"
                       width={400}
                       height={400}
@@ -657,7 +660,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
-                      <Image
+                      <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
                         alt="Review"
@@ -668,7 +671,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                      src={DEFAULT_IMAGE}
                       alt="Default"
                       width={400}
                       height={400}
@@ -686,32 +689,35 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
                           passHref
                         >
-                          <Image
-                            src={data.userAvatar || "/profile-icon.svg"}
+                          <FallbackImage
+                            src={data.userAvatar || DEFAULT_USER_ICON}
                             alt={data.author?.node?.name || "User"}
                             width={32}
                             height={32}
                             className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                             style={{ cursor: "pointer" }}
+                            type={FallbackImageType.Icon}
                           />
                         </Link>
                       ) : (
-                        <Image
-                          src={data.userAvatar || "/profile-icon.svg"}
+                        <FallbackImage
+                          src={data.userAvatar || DEFAULT_USER_ICON}
                           alt={data.author?.node?.name || "User"}
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                           onClick={() => handleProfileClick(data.author?.node?.id)}
+                          type={FallbackImageType.Icon}
                         />
                       )
                     ) : (
-                      <Image
-                        src={data.userAvatar || "/profile-icon.svg"}
+                      <FallbackImage
+                        src={data.userAvatar || DEFAULT_USER_ICON}
                         alt={data.author?.node?.name || "User"}
                         width={32}
                         height={32}
                         className="review-card__user-image !size-8 md:!size-11"
+                        type={FallbackImageType.Icon}
                       />
                     )}
                     <div className="review-card__user-info">
@@ -807,7 +813,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             const half = !full && i + 0.5 <= data.reviewStars;
                             return full ? (
                               <Image
-                                src="/star-filled.svg"
+                                src={STAR_FILLED}
                                 key={i}
                                 width={16}
                                 height={16}
@@ -815,10 +821,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 alt="star rating"
                               />
                             ) : half ? (
-                              <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                              <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
                             ) : (
                                 <Image
-                                  src="/star.svg"
+                                  src={STAR}
                                   key={i}
                                   width={16}
                                   height={16}
@@ -852,22 +858,24 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                         passHref
                                       >
-                                        <Image
-                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                        <FallbackImage
+                                          src={reply.userAvatar || DEFAULT_USER_ICON}
                                           alt={reply.author?.node?.name || "User"}
                                           width={44}
                                           height={44}
                                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                          type={FallbackImageType.Icon}
                                         />
                                       </Link>
                                     ) : (
-                                      <Image
-                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                      <FallbackImage
+                                        src={reply.userAvatar || DEFAULT_USER_ICON}
                                         alt={reply.author?.node?.name || "User"}
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                                         onClick={() => handleProfileClick(reply.author.node.id)}
+                                        type={FallbackImageType.Icon}
                                       />
                                     )
                                   ) : reply.id ? (
@@ -876,31 +884,34 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         href={String(session.user.id) === String(reply.id) ? PROFILE : PAGE(PROFILE, [reply.id])}
                                         passHref
                                       >
-                                        <Image
-                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                        <FallbackImage
+                                          src={reply.userAvatar || DEFAULT_USER_ICON}
                                           alt={reply.author?.node?.name || "User"}
                                           width={44}
                                           height={44}
                                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                          type={FallbackImageType.Icon}
                                         />
                                       </Link>
                                     ) : (
-                                      <Image
-                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                      <FallbackImage
+                                        src={reply.userAvatar || DEFAULT_USER_ICON}
                                         alt={reply.author?.node?.name || "User"}
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                                         onClick={() => handleProfileClick(reply.id)}
+                                        type={FallbackImageType.Icon}
                                       />
                                     )
                                   ) : (
-                                    <Image
-                                      src={reply.userAvatar || "/profile-icon.svg"}
+                                    <FallbackImage
+                                      src={reply.userAvatar || DEFAULT_USER_ICON}
                                       alt={reply.author?.node?.name || "User"}
                                       width={44}
                                       height={44}
                                       className="review-card__user-image !size-8 md:!size-11"
+                                      type={FallbackImageType.Icon}
                                     />
                                   )}
                                   <div className="review-card__user-info">

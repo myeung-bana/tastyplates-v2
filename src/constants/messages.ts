@@ -55,3 +55,4 @@ export const checkInRestaurantSuccess = "You have checked in to this restaurant!
 export const uncheckInRestaurantSuccess = "You have removed this restaurant from your checked in!";
 export const favoriteStatusError = "Failed to update favorite status. Please try again.";
 export const checkInStatusError = "Failed to update check-in status. Please try again.";
+export const welcomeProfile = "Welcome to your profile!";

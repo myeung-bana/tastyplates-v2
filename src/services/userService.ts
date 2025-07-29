@@ -1,5 +1,6 @@
 import { UserRepository } from '@/repositories/userRepository';
-import { ILoginCredentials, IRegisterData, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user';
+import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user';
+import { DEFAULT_USER_ICON } from '@/constants/images';
 
 export class UserService {
     static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
@@ -21,9 +22,9 @@ export class UserService {
         await UserRepository.registerUser<any>(formattedData);
     }
 
-    static async login(credentials: ILoginCredentials): Promise<any> {
+    static async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
         try {
-            const response = await UserRepository.login<any>({
+            const response = await UserRepository.login({
                 email: credentials.email,
                 password: credentials.password as string
             });
@@ -35,10 +36,10 @@ export class UserService {
         }
     }
 
-    static async handleGoogleAuth(email: string): Promise<any> {
+    static async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
         try {
             // First check if user exists
-            const checkResponse = await UserRepository.checkGoogleUser<any>(email);
+            const checkResponse = await UserRepository.checkGoogleUser(email);
             return checkResponse;
         } catch (error) {
             console.error('Google auth error:', error);
@@ -56,9 +57,9 @@ export class UserService {
         }
     }
 
-    static async checkUsernameExists(username: string): Promise<any> {
+    static async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
         try {
-            const response = await UserRepository.checkUsernameExists<any>(username);
+            const response = await UserRepository.checkUsernameExists(username);
             return response;
         } catch (error) {
             console.error('Check username error:', error);
@@ -66,9 +67,9 @@ export class UserService {
         }
     }
 
-    static async getCurrentUser(token?: string): Promise<any> {
+    static async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         try {
-            const response = await UserRepository.getCurrentUser<any>(token);
+            const response = await UserRepository.getCurrentUser(token);
             return response;
         } catch (error) {
             console.error('Get user by ID error:', error);
@@ -122,7 +123,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: true,
             })) : [];
         } catch (error) {
@@ -138,7 +139,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: followingList.some(f => f.id === user.id),
             })) : [];
         } catch (error) {

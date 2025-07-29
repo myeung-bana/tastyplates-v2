@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE } from "@/lib/utils";
 import { ca } from "date-fns/locale";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON } from "@/constants/images";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: string) => {
@@ -78,21 +80,23 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
             <div key={user.id} className="flex items-center gap-3 px-6 py-3">
               {user.id ? (
                 <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', user.id)])}>
-                  <Image
-                    src={user.image || "/profile-icon.svg"}
+                  <FallbackImage
+                    src={user.image || DEFAULT_USER_ICON}
                     width={40}
                     height={40}
                     className="rounded-full bg-gray-200 cursor-pointer"
                     alt={user.name}
+                    type={FallbackImageType.Icon}
                   />
                 </Link>
               ) : (
-                <Image
-                  src={user.image || "/profile-icon.svg"}
+                <FallbackImage
+                  src={user.image || DEFAULT_USER_ICON}
                   width={40}
                   height={40}
                   className="rounded-full bg-gray-200"
                   alt={user.name}
+                  type={FallbackImageType.Icon}
                 />
               )}
               <div className="flex-1 min-w-0">

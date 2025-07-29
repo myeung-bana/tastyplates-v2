@@ -4,6 +4,8 @@ import ReviewDetailModal from "@/components/ReviewDetailModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
+import { DEFAULT_IMAGE } from "@/constants/images";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
 
 interface PhotosProps {
   data: ReviewedDataProps;
@@ -17,7 +19,6 @@ interface PhotosProps {
 
 const Photos = ({ index, data, width, image }: PhotosProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const defaultImage = "/images/default-image.png";
 
   return (
     <div className="review-card relative overflow-hidden" style={{ height: "180px" }}>
@@ -27,8 +28,8 @@ const Photos = ({ index, data, width, image }: PhotosProps) => {
         onClose={() => setIsModalOpen(false)}
         initialPhotoIndex={index}
       />
-      <Image
-        src={image.sourceUrl || defaultImage}
+      <FallbackImage
+        src={image.sourceUrl || DEFAULT_IMAGE}
         alt={'Review image'}
         fill
         className="review-card__image !object-cover rounded-2xl w-full h-full hover:cursor-pointer"

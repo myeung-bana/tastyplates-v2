@@ -1,3 +1,4 @@
+import { LISTING_BACKDROP_SP } from "@/constants/images"
 import { LISTING_STEP_ONE } from "@/constants/pages"
 import Image from "next/image"
 import Link from "next/link"
@@ -22,7 +23,7 @@ const ListingExplanation = () =>
                   Acknowledge and Continue
                 </a>
               </div>
-              <Image src="/images/Iisting-backdrop-sp.png" width={757} height={546} className="w-full h-[546px] md:hidden" alt="backdrop image" />
+              <Image src={LISTING_BACKDROP_SP} width={757} height={546} className="w-full h-[546px] md:hidden" alt="backdrop image" />
         </div>
 </div>
 
