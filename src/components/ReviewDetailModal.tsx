@@ -721,9 +721,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       />
                     )}
                     <div className="review-card__user-info">
-                      <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                        {data.author?.name || "Unknown User"}
-                      </h3>
+                      {session?.user ? (
+                        <Link
+                          href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                          passHref
+                        >
+                          <span className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline">
+                            {data.author?.name || "Unknown User"}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span
+                          className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline"
+                          onClick={() => handleProfileClick(data.author?.node?.id)}
+                        >
+                          {data.author?.name || "Unknown User"}
+                        </span>
+                      )}
                       <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
@@ -902,7 +916,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                   )}
                                   <div className="review-card__user-info">
                                     <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
-                                      {reply.author?.node?.name || "Unknown User"}
+                                      {session?.user ? (
+                                        <Link
+                                          href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
+                                          passHref
+                                        >
+                                          <span className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
+                                            {reply.author?.node?.name || "Unknown User"}
+                                          </span>
+                                        </Link>
+                                      ) : (
+                                        <span
+                                          className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline"
+                                          onClick={() => handleProfileClick(reply.author?.node?.id)}
+                                        >
+                                          {reply.author?.node?.name || "Unknown User"}
+                                        </span>
+                                      )}
                                     </h3>
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                                       {reply?.palates?.split("|").map((rawTag: string, tagIndex: number) => {

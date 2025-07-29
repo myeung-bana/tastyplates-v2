@@ -112,9 +112,33 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           )}
 
           <div className="review-card__user-info">
-            <h3 className="review-card__username line-clamp-1">
-              {data.author?.name || "Unknown User"}
-            </h3>
+            {/* Make username clickable and handle auth logic */}
+            {(data.author?.node?.id || data.id) ? (
+              session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
+                <Link href={PROFILE}>
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                    {data.author?.name || "Unknown User"}
+                  </h3>
+                </Link>
+              ) : session ? (
+                <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                    {data.author?.name || "Unknown User"}
+                  </h3>
+                </Link>
+              ) : (
+                <h3
+                  className="review-card__username line-clamp-1 cursor-pointer"
+                  onClick={() => setShowAuthModal('signup')}
+                >
+                  {data.author?.name || "Unknown User"}
+                </h3>
+              )
+            ) : (
+              <h3 className="review-card__username line-clamp-1">
+                {data.author?.name || "Unknown User"}
+              </h3>
+            )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {UserPalateNames?.map((tag, index) => (
                 <span

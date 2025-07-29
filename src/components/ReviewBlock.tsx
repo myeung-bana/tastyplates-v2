@@ -22,6 +22,16 @@ import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
 
+// Helper for relay global ID
+const encodeRelayId = (type: string, id: number) => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(`${type}:${id}`);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(`${type}:${id}`).toString('base64');
+  }
+  return `${type}:${id}`;
+};
+
 interface ReviewBlockProps {
   review: {
     databaseId: number;
@@ -58,10 +68,21 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     sourceUrl: src,
   }));
 
+  // Encode relay global ID for user
+  const encodeRelayId = (type: string, id: number) => {
+    if (typeof window !== 'undefined' && window.btoa) {
+      return window.btoa(`${type}:${id}`);
+    } else if (typeof Buffer !== 'undefined') {
+      return Buffer.from(`${type}:${id}`).toString('base64');
+    }
+    return `${type}:${id}`;
+  };
+
+  const userRelayId = encodeRelayId('user', review.authorId);
+
   return {
     databaseId: review.databaseId,
-    id: review.id, // Use relay global ID
-    // id: encodeRelayId('comment', review.id), // Use relay global ID
+    id: review.id, // Use relay global ID for comment if needed
     reviewMainTitle: review.title || "",
     commentLikes: String(review.commentLikes ?? 0),
     userLiked: review.userLiked ?? false,
@@ -75,7 +96,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     author: {
       name: review.user,
       node: {
-        id: `user:${review.authorId}`,
+        id: userRelayId,
         databaseId: review.authorId,
         name: review.user,
         avatar: {
@@ -179,18 +200,75 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     <div className="review-block px-4 py-4">
       <div className="review-block__header">
         <div className="review-block__user">
-          <FallbackImage
-            src={review?.userImage || DEFAULT_USER_ICON} // Fallback image if author is not found
-            alt={review?.user || "User"} // Fallback name if author is not found
-            width={40}
-            height={40}
-            className="review-block__user-image size-6 md:size-10"
+          {(review.authorId) ? (
+            session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+              <a href="/profile">
+                <Image
+                  src={review?.userImage || "/profile-icon.svg"}
+                  alt={review?.user || "User"}
+                  width={40}
+                  height={40}
+                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                />
+              </a>
+            ) : session ? (
+              <a href={"/profile/" + encodeRelayId('user', review.authorId)}>
+                <Image
+                  src={review?.userImage || "/profile-icon.svg"}
+                  alt={review?.user || "User"}
+                  width={40}
+                  height={40}
+                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                />
+              </a>
+            ) : (
+              <Image
+                src={review?.userImage || "/profile-icon.svg"}
+                alt={review?.user || "User"}
+                width={40}
+                height={40}
+                className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                onClick={() => setIsShowSignup(true)}
+              />
+            )
+          ) : (
+            <FallbackImage
+              src={review?.userImage || DEFAULT_USER_ICON}
+              alt={review?.user || "User"}
+              width={40}
+              height={40}
+              className="review-block__user-image size-6 md:size-10"
             type={FallbackImageType.Icon}
-          />
+            />
+          )}
           <div className="review-block__user-info">
-            <h3 className="review-block__username">
-              {review?.user || "Unknown User"}
-            </h3>
+            {/* Make username clickable and handle auth logic */}
+            {(review.authorId) ? (
+              session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+                <a href="/profile">
+                  <h3 className="review-block__username cursor-pointer">
+                    {review?.user || "Unknown User"}
+                  </h3>
+                </a>
+              ) : session ? (
+                <a href={"/profile/" + encodeRelayId('user', review.authorId)}>
+                  <h3 className="review-block__username cursor-pointer">
+                    {review?.user || "Unknown User"}
+                  </h3>
+                </a>
+              ) : (
+                <h3
+                  className="review-block__username cursor-pointer"
+                  onClick={() => setIsShowSignup(true)}
+                >
+                  {review?.user || "Unknown User"}
+                </h3>
+              )
+            ) : (
+              <h3 className="review-block__username">
+                {review?.user || "Unknown User"}
+              </h3>
+            )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {review.palateNames?.map((tag, index) => {
                 const flagSrc = palateFlagMap[tag.toLowerCase()];

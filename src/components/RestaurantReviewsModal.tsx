@@ -150,16 +150,74 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <FallbackImage
-                    src={userAvatar}
-                    alt={review.author?.name || "User"}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
+                  {(review.author?.node?.id || review.userId) ? (
+                    session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                      <a href={"/profile"}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : session ? (
+                      <a href={"/profile/" + (review.author?.node?.id || review.userId)}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : (
+                      <Image
+                        src={userAvatar}
+                        alt={review.author?.name || "User"}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover cursor-pointer"
+                        onClick={() => setIsShowSignup(true)}
+                      />
+                    )
+                  ) : (
+                    <FallbackImage
+                      src={userAvatar}
+                      alt={review.author?.name || "User"}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
                     type={FallbackImageType.Icon}
-                  />
+                    />
+                  )}
                   <div>
-                    <div className="font-semibold text-[#31343F]">{review.author?.name || "Unknown User"}</div>
+                    {(review.author?.node?.id || review.userId) ? (
+                      session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                        <a href="/profile">
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : session ? (
+                        <a href={"/profile/" + (review.author?.node?.id || review.userId)}>
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : (
+                        <div
+                          className="font-semibold text-[#31343F] cursor-pointer"
+                          onClick={() => setIsShowSignup(true)}
+                        >
+                          {review.author?.name || "Unknown User"}
+                        </div>
+                      )
+                    ) : (
+                      <div className="font-semibold text-[#31343F]">
+                        {review.author?.name || "Unknown User"}
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-1 flex-wrap">
                       {palatesArr.map((p: any, idx: number) => {
                         const lowerName = p.name.toLowerCase();

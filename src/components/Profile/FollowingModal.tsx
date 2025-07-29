@@ -9,6 +9,16 @@ import { ca } from "date-fns/locale";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 
+// Helper for relay global ID
+const encodeRelayId = (type: string, id: string) => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(`${type}:${id}`);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(`${type}:${id}`).toString('base64');
+  }
+  return `${type}:${id}`;
+};
+
 interface FollowingUser {
   id: string;
   name: string;
@@ -69,7 +79,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
           {localFollowing.map((user) => (
             <div key={user.id} className="flex items-center gap-3 px-6 py-3">
               {user.id ? (
-                <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [user.id])}>
+                <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', user.id)])}>
                   <FallbackImage
                     src={user.image || DEFAULT_USER_ICON}
                     width={40}
@@ -90,7 +100,13 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                 />
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{user.name}</div>
+                {user.id ? (
+                  <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', user.id)])}>
+                    <div className="font-semibold truncate cursor-pointer">{user.name}</div>
+                  </Link>
+                ) : (
+                  <div className="font-semibold truncate">{user.name}</div>
+                )}
                 <div className="flex gap-1 mt-1 flex-wrap">
                   {user.cuisines.map((cuisine) => {
                     const flagUrl = palateFlagMap[cuisine.toLowerCase()];
