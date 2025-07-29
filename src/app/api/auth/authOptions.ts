@@ -169,6 +169,9 @@ export const authOptions: AuthOptions = {
                             if (userData.about_me) {
                                 (token.user as any).about_me = userData.about_me;
                             }
+                            if (userData.display_name) {
+                                (token.user as any).name = userData.display_name;
+                            }
                         }
                     } catch {
                         // ignore error, fallback to existing data
