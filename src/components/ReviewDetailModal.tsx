@@ -720,17 +720,17 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
                           passHref
                         >
-                          <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline">
+                          <span className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline">
                             {data.author?.name || "Unknown User"}
-                          </h3>
+                          </span>
                         </Link>
                       ) : (
-                        <h3
+                        <span
                           className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline"
                           onClick={() => handleProfileClick(data.author?.node?.id)}
                         >
                           {data.author?.name || "Unknown User"}
-                        </h3>
+                        </span>
                       )}
                       <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                         {UserPalateNames?.map((tag: any, index: number) => (
@@ -910,17 +910,17 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                           href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                           passHref
                                         >
-                                          <h3 className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
+                                          <span className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
                                             {reply.author?.node?.name || "Unknown User"}
-                                          </h3>
+                                          </span>
                                         </Link>
                                       ) : (
-                                        <h3
+                                        <span
                                           className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline"
                                           onClick={() => handleProfileClick(reply.author?.node?.id)}
                                         >
                                           {reply.author?.node?.name || "Unknown User"}
-                                        </h3>
+                                        </span>
                                       )}
                                     </h3>
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
