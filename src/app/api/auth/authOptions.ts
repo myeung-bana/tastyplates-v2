@@ -123,17 +123,17 @@ export const authOptions: AuthOptions = {
                         return ONBOARDING_ONE;
                     }
 
-                    const response = await UserService.handleGoogleAuth(user.email);
-                    if (response.status !== code.success) {
+                    const res = await UserService.handleGoogleAuth(user.email);
+                    if (res.status !== code.success) {
                         await setCookies({
                             googleErrorType: sessionType.login,
-                            googleError: encodeURIComponent(response.message || googleAuthenticationFailed),
+                            googleError: encodeURIComponent(res.message || googleAuthenticationFailed),
                         });
                         return HOME;
                     }
 
-                    user.token = response.token;
-                    user.userId = response.id;
+                    user.token = res.token;
+                    user.userId = res.id;
                     user.birthdate = '';
                     user.provider = sessionProvider.google;
                     await setCookies({ logInMessage: logInSuccessfull });
