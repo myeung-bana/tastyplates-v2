@@ -88,3 +88,8 @@ export const PAGE = (
 
   return query ? `${path}?${query}` : path;
 };
+
+export const capitalizeFirstLetter = (string: string) => {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+};
