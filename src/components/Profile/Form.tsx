@@ -35,6 +35,8 @@ import "@/styles/pages/_add-listing.scss";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { IUserUpdate } from "@/interfaces/user";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON } from "@/constants/images";
 
 const FormContent = memo(({
   isSubmitted,
@@ -117,13 +119,14 @@ const FormContent = memo(({
                 disabled={isLoading}
               />
               <div className="relative">
-                <Image
+                <FallbackImage
                   src={profilePreview}
                   width={120}
                   height={120}
                   className="rounded-full size-20 md:size-[120px] object-cover"
                   alt="profile"
                   unoptimized
+                  type={FallbackImageType.Avatar}
                 />
                 <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] bg-white text-center">
                   <MdOutlineEdit className="size-4 md:size-5" />
@@ -238,7 +241,7 @@ const Form = () => {
   const [aboutMe, setAboutMe] = useState(session?.user?.about_me ?? "");
   const [profile, setProfile] = useState<any>(null);
   const [profilePreview, setProfilePreview] = useState(
-    session?.user?.image ?? "/profile-icon.svg"
+    session?.user?.image ?? DEFAULT_USER_ICON
   );
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState("");

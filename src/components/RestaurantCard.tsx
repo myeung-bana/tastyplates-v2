@@ -17,6 +17,8 @@ import { PAGE } from "@/lib/utils";
 import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { errorOccurred, favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
+import FallbackImage from "./ui/Image/FallbackImage";
+import { responseStatusCode as code } from "@/constants/response";
 
 export interface Restaurant {
   id: string;
@@ -87,7 +89,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
         credentials: "include",
       });
-      if (res.status === 200) {
+      if (res.status === code.success) {
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
@@ -148,7 +150,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
         credentials: "include",
       });
-      if (res.status == 200) {
+      if (res.status == code.success) {
         toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
@@ -229,7 +231,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
                 Pending for Approval
               </div>
             )}
-            <Image
+            <FallbackImage
               data-role="image"
               src={restaurant.image}
               alt={restaurant.name}

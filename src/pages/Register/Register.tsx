@@ -138,7 +138,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         setError(unexpectedError);
       }
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 

@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import { capitalizeWords } from "@/lib/utils";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -138,7 +140,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.map((review: any) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
-            const userAvatar = review.userAvatar || "/profile-icon.svg";
+            const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
             const palatesArr = review.palates
               ? review.palates
                 .split("|")
@@ -148,12 +150,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <Image
+                  <FallbackImage
                     src={userAvatar}
                     alt={review.author?.name || "User"}
                     width={40}
                     height={40}
                     className="rounded-full object-cover"
+                    type={FallbackImageType.Icon}
                   />
                   <div>
                     <div className="font-semibold text-[#31343F]">{review.author?.name || "Unknown User"}</div>
@@ -184,11 +187,11 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     const full = i + 1 <= reviewStars;
                     const half = !full && i + 0.5 <= reviewStars;
                     return full ? (
-                      <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     ) : half ? (
-                      <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                      <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
                     ) : (
-                      <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     );
                   })}
                   <span className="mx-2">·</span>

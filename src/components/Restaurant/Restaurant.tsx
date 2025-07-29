@@ -10,6 +10,7 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -80,7 +81,7 @@ const RestaurantPage = () => {
     id: item.id,
     slug: item.slug,
     name: item.title,
-    image: item.featuredImage?.node.sourceUrl || "/images/default-image.png",
+    image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
     rating: item.averageRating,
     databaseId: item.databaseId || 0,
     palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],

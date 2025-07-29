@@ -8,6 +8,7 @@ import Pagination from "./Pagination";
 import ReviewBlock from "./ReviewBlock";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/userService';
+import { DEFAULT_USER_ICON } from "@/constants/images";
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
   // Session and user state
@@ -180,7 +181,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                     title: review.reviewMainTitle,
                     comment: review.content ?? "",
                     images: review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
-                    userImage: review?.userAvatar ?? "/profile-icon.svg",
+                    userImage: review?.userAvatar ?? DEFAULT_USER_ICON,
                     recognitions: Array.isArray(review.recognitions) ? review.recognitions : [],
                     palateNames: typeof review.palates === "string"
                       ? review.palates.split("|").map((p: string) => p.trim()).filter(Boolean)
