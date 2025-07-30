@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { capitalizeWords, formatDate, formatDateT, stripTags, truncateText } from "@/lib/utils";
+import { capitalizeWords, formatDate, formatDateT, PAGE, stripTags, truncateText } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
@@ -22,6 +22,7 @@ import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { PROFILE } from "@/constants/pages";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -205,9 +206,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         <div className="review-block__user">
           {(review.authorId) ? (
             session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
-              <a href="/profile">
+              <a href={PROFILE}>
                 <Image
-                  src={review?.userImage || "/profile-icon.svg"}
+                  src={review?.userImage || DEFAULT_USER_ICON}
                   alt={review?.user || "User"}
                   width={40}
                   height={40}
@@ -215,9 +216,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 />
               </a>
             ) : session ? (
-              <a href={"/profile/" + encodeRelayId('user', review.authorId)}>
+              <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
                 <Image
-                  src={review?.userImage || "/profile-icon.svg"}
+                  src={review?.userImage || DEFAULT_USER_ICON}
                   alt={review?.user || "User"}
                   width={40}
                   height={40}
@@ -226,7 +227,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
               </a>
             ) : (
               <Image
-                src={review?.userImage || "/profile-icon.svg"}
+                src={review?.userImage || DEFAULT_USER_ICON}
                 alt={review?.user || "User"}
                 width={40}
                 height={40}
@@ -248,13 +249,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             {/* Make username clickable and handle auth logic */}
             {(review.authorId) ? (
               session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
-                <a href="/profile">
+                <a href={PROFILE}>
                   <h3 className="review-block__username cursor-pointer">
                     {review?.user || "Unknown User"}
                   </h3>
                 </a>
               ) : session ? (
-                <a href={"/profile/" + encodeRelayId('user', review.authorId)}>
+                <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
                   <h3 className="review-block__username cursor-pointer">
                     {review?.user || "Unknown User"}
                   </h3>

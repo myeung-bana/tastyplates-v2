@@ -126,7 +126,7 @@ const FormContent = memo(({
                   className="rounded-full size-20 md:size-[120px] object-cover"
                   alt="profile"
                   unoptimized
-                  type={FallbackImageType.Avatar}
+                  type={FallbackImageType.Icon}
                 />
                 <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] bg-white text-center">
                   <MdOutlineEdit className="size-4 md:size-5" />

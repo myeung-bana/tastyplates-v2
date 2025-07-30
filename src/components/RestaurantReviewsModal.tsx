@@ -9,10 +9,11 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
-import { capitalizeWords, truncateText } from "@/lib/utils";
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { capitalizeWords, PAGE, truncateText } from "@/lib/utils";
+import { PROFILE } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -163,7 +164,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                 <div className="flex items-center gap-3 mb-2">
                   {(review.author?.node?.id || review.userId) ? (
                     session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
-                      <a href={"/profile"}>
+                      <a href={PROFILE}>
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
@@ -173,7 +174,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         />
                       </a>
                     ) : session ? (
-                      <a href={"/profile/" + (review.author?.node?.id || review.userId)}>
+                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
@@ -205,13 +206,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                   <div>
                     {(review.author?.node?.id || review.userId) ? (
                       session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
-                        <a href="/profile">
+                        <a href={PROFILE}>
                           <div className="font-semibold text-[#31343F] cursor-pointer">
                             {review.author?.name || "Unknown User"}
                           </div>
                         </a>
                       ) : session ? (
-                        <a href={"/profile/" + (review.author?.node?.id || review.userId)}>
+                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
                           <div className="font-semibold text-[#31343F] cursor-pointer">
                             {review.author?.name || "Unknown User"}
                           </div>
