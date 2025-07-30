@@ -22,6 +22,9 @@ import debounce from 'lodash.debounce';
 import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
+import { reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { set } from "date-fns";
+import { maximumReviewDescription, maximumReviewTitle } from "@/constants/messages";
 
 declare global {
   interface Window {
@@ -81,6 +84,7 @@ const AddListingPage = (props: any) => {
   const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
   const [addressPredictions, setAddressPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState<boolean>(false);
+  const [reviewTitleError, setReviewTitleError] = useState('');
 
   useEffect(() => {
     const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -378,8 +382,18 @@ const AddListingPage = (props: any) => {
     if (content.trim() === "") {
       setDescriptionError("Description is required.");
       hasError = true;
+    } else if (content.length > reviewDescriptionLimit) {
+      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+      hasError = true;
     } else {
       setDescriptionError("");
+    }
+
+    if (reviewMainTitle.length > reviewTitleLimit) {
+      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+      hasError = true;
+    } else {
+      setReviewTitleError("");
     }
 
     if (hasError) return;
@@ -875,16 +889,24 @@ const AddListingPage = (props: any) => {
                 </div>
               </div>
               <div className="listing__form-group">
-                <label className="listing__label">Listing Name</label>
+                <label className="listing__label">Title</label>
                 <div className="listing__input-group">
                   <textarea
                     name="reviewTitle"
                     className="listing__input resize-vertical"
                     placeholder="Title of your review"
                     value={reviewMainTitle}
-                    onChange={(e) => setReviewMainTitle(e.target.value)}
+                    onChange={(e) => {
+                      setReviewMainTitle(e.target.value);
+                      setReviewTitleError("");
+                    }}
                     rows={2}
                   ></textarea>
+                  {reviewTitleError && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {reviewTitleError}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="listing__form-group">
@@ -961,7 +983,7 @@ const AddListingPage = (props: any) => {
                     <div
                       key={tag.id}
                       className={`listing-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${selectedrecognition.includes(tag.name)
-                        ? "bg-[#F1F1F1]"
+                        ? "bg-[#cac9c9]"
                         : "bg-transparent"
                         }`}
                       onClick={() => handleChangeRecognition(tag.name)}
