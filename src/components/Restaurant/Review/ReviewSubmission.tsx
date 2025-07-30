@@ -17,8 +17,8 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
-import { maximumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
@@ -186,6 +186,16 @@ const ReviewSubmissionPage = () => {
       hasError = true;
     } else {
       setRatingError('');
+    }
+
+    if (selectedFiles.length < minimumImage) {
+      setUploadedImageError(minimumImageLimit(minimumImage));
+      hasError = true;
+    } else if (selectedFiles.length > maximumImage) {
+      setUploadedImageError(maximumImageLimit(maximumImage));
+      hasError = true;
+    } else {
+      setUploadedImageError('');
     }
 
     if (content.trim() === '') {
