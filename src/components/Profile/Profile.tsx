@@ -759,7 +759,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                         return (
                           <span
                             key={index}
-                            className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
+                            className="bg-[#f1f1f1] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
                           >
                             {flagSrc && (
                               <img

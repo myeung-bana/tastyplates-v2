@@ -143,7 +143,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag !text-[10px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag !text-[10px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image

@@ -279,7 +279,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 return (
                   <span
                     key={index}
-                    className="review-block__palate-tag flex items-center gap-1"
+                    className="review-block__palate-tag text-[#31343f] bg-[#f1f1f1] flex items-center gap-1"
                   >
                     {flagSrc && (
                       <img
