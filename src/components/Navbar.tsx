@@ -22,6 +22,8 @@ import { logOutSuccessfull } from "@/constants/messages";
 import { sessionStatus } from "@/constants/response";
 import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
+import { DEFAULT_USER_ICON } from "@/constants/images";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 
 const navigationItems = [
   { name: "Restaurant", href: RESTAURANTS },
@@ -41,11 +43,15 @@ export default function Navbar(props: any) {
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
   const searchParams = useSearchParams();
+  const LOGIN_BACK_KEY = 'loginBackMessage';
+  const LOGIN_KEY = 'logInMessage';
+  const LOGOUT_KEY = 'logOutMessage';
+  const WELCOME_KEY = 'welcomeMessage';
 
   const handleLogout = async () => {
     removeAllCookies();
     localStorage.clear();
-    localStorage.setItem('logOutMessage', logOutSuccessfull);
+    localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
 
     await signOut({ redirect: true, callbackUrl: HOME });
   };
@@ -77,22 +83,23 @@ export default function Navbar(props: any) {
     const address = searchParams ? searchParams.get("address") : null;
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
-
-
   
   useEffect(() => {
-    const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
-    const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
-    const googleMessage = Cookies.get('logInMessage') ?? "";
+    const loginMessage = localStorage?.getItem(LOGIN_BACK_KEY) ?? "";
+    const logOutMessage = localStorage?.getItem(LOGOUT_KEY) ?? "";
+    const googleMessage = Cookies.get(LOGIN_KEY) ?? "";
+    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
 
-    if (loginMessage || logOutMessage || googleMessage) {
-      toast.success(loginMessage || logOutMessage || googleMessage, {
-        duration: 3000, // 3 seconds
-      });
+    if ((loginMessage || logOutMessage || googleMessage)) {
+      if (!welcomeMessage) {
+        toast.success(loginMessage || logOutMessage || googleMessage, {
+          duration: 3000, // 3 seconds
+        });  
+      }
 
-      removeAllCookies(['logInMessage']);
-      localStorage.removeItem('loginBackMessage');
-      localStorage.removeItem('logOutMessage');
+      removeAllCookies([LOGIN_KEY]);
+      localStorage.removeItem(LOGIN_BACK_KEY);
+      localStorage.removeItem(LOGOUT_KEY);
     }
 
     window.addEventListener("scroll", changeNavBg);
@@ -247,7 +254,7 @@ export default function Navbar(props: any) {
             <div className="navbar__auth">
               {(status !== sessionStatus.authenticated && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
                 <Image
-                  src={"/profile-icon.svg"}
+                  src={DEFAULT_USER_ICON}
                   alt={"Profile"}
                   width={44}
                   height={44}
@@ -307,12 +314,13 @@ export default function Navbar(props: any) {
                     align="bottom-end"
                     trigger={
                       <div className="w-11 h-11 rounded-full overflow-hidden">
-                        <Image
-                          src={session?.user?.image || "/profile-icon.svg"}
+                        <FallbackImage
+                          src={session?.user?.image || DEFAULT_USER_ICON}
                           alt={session?.user?.name || "Profile"}
                           width={44}
                           height={44}
                           className="w-full h-full object-cover rounded-full"
+                          type={FallbackImageType.Icon}
                         />
                       </div>
                     }

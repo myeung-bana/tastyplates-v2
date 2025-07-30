@@ -1,3 +1,4 @@
+import { FACEBOOK, INSTAGRAM, TWITTER } from "@/constants/images";
 import { HELP, HOME, RESTAURANTS } from "@/constants/pages";
 import Image from "next/image";
 
@@ -49,7 +50,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Facebook</span>
                   <Image
-                    src='/facebook.svg'
+                    src={FACEBOOK}
                     className="h-6 w-6"
                     width={24}
                     height={24}
@@ -59,7 +60,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Instagram</span>
                   <Image
-                    src='/instagram.svg'
+                    src={INSTAGRAM}
                     className="h-6 w-6"
                     width={24}
                     height={24}
@@ -69,7 +70,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Twitter</span>
                   <Image
-                    src='/x.svg'
+                    src={TWITTER}
                     className="h-6 w-6"
                     width={24}
                     height={24}

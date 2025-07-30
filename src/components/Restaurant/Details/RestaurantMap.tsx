@@ -93,12 +93,12 @@ const RestaurantMap = ({ lat, lng, small = false }: Props) => {
                             </GoogleMap>
                         </div>
 
-                        <div className="p-4 border-t text-right">
+                        <div className="p-4 text-right">
                             <a
                                 href={GOOGLE_MAPS(lat, lng)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
+                                className="inline-block bg-[#E36B00] !rounded-[1vw] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-lg"
                             >
                                 Get Directions
                             </a>

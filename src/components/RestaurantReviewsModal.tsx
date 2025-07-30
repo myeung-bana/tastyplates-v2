@@ -9,6 +9,10 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
+import { capitalizeWords, PAGE } from "@/lib/utils";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { PROFILE } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -137,20 +141,84 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.map((review: any) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
-            const userAvatar = review.userAvatar || "/profile-icon.svg";
-            const palatesArr = review.palates ? review.palates.split("|").map((s: string) => ({ name: s.trim() })).filter((s: any) => s.name) : [];
+            const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
+            const palatesArr = review.palates
+              ? review.palates
+                .split("|")
+                .map((s: string) => ({ name: capitalizeWords(s.trim()) }))
+                .filter((s: any) => s.name)
+              : [];
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <Image
-                    src={userAvatar}
-                    alt={review.author?.name || "User"}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                  />
+                  {(review.author?.node?.id || review.userId) ? (
+                    session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                      <a href={PROFILE}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : session ? (
+                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : (
+                      <Image
+                        src={userAvatar}
+                        alt={review.author?.name || "User"}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover cursor-pointer"
+                        onClick={() => setIsShowSignup(true)}
+                      />
+                    )
+                  ) : (
+                    <FallbackImage
+                      src={userAvatar}
+                      alt={review.author?.name || "User"}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
+                    type={FallbackImageType.Icon}
+                    />
+                  )}
                   <div>
-                    <div className="font-semibold text-[#31343F]">{review.author?.name || "Unknown User"}</div>
+                    {(review.author?.node?.id || review.userId) ? (
+                      session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                        <a href={PROFILE}>
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : session ? (
+                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : (
+                        <div
+                          className="font-semibold text-[#31343F] cursor-pointer"
+                          onClick={() => setIsShowSignup(true)}
+                        >
+                          {review.author?.name || "Unknown User"}
+                        </div>
+                      )
+                    ) : (
+                      <div className="font-semibold text-[#31343F]">
+                        {review.author?.name || "Unknown User"}
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-1 flex-wrap">
                       {palatesArr.map((p: any, idx: number) => {
                         const lowerName = p.name.toLowerCase();
@@ -163,7 +231,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                               <img
                                 src={palateFlagMap[lowerName]}
                                 alt={`${p.name} flag`}
-                                className="w-6 h-4 rounded object-cover"
+                                className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
                             {p.name}
@@ -178,11 +246,11 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     const full = i + 1 <= reviewStars;
                     const half = !full && i + 0.5 <= reviewStars;
                     return full ? (
-                      <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     ) : half ? (
-                      <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                      <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
                     ) : (
-                      <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     );
                   })}
                   <span className="mx-2">·</span>

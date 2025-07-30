@@ -172,7 +172,7 @@ const OnboardingOnePage = () => {
       try {
         const response = await UserService.checkUsernameExists(name);
         if (response.exists) {
-          setUsernameError(response.message);
+          setUsernameError(response.message as string);
           setIsLoading(false);
           return;
         }
@@ -369,7 +369,7 @@ const OnboardingOnePage = () => {
             })}
             <button
               type="submit"
-              className="auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto"
+              className={`auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto ${isLoading ? 'pointer-events-none' : ''}`}
               disabled={isLoading}
             >
               {isLoading ? "Loading..." : "Save and Continue"}

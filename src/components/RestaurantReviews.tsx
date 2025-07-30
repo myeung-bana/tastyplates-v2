@@ -8,6 +8,7 @@ import Pagination from "./Pagination";
 import ReviewBlock from "./ReviewBlock";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/userService';
+import { DEFAULT_USER_ICON } from "@/constants/images";
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
   // Session and user state
@@ -36,6 +37,22 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     { value: "highest", label: "Highest Rated" },
     { value: "lowest", label: "Lowest Rated" },
   ];
+  const PHOTOS_PER_PAGE = 18;
+  // Flattened photo items from allReviews
+  const allPhotoItems = allReviews.flatMap((review) => {
+    if (!review.reviewImages || review.reviewImages.length === 0) return [];
+    return review.reviewImages.map((img: any, imgIndex: number) => ({
+      image: img,
+      review,
+      imageIndex: imgIndex,
+    }));
+  });
+  // Paginated photo items
+  const paginatedPhotoItems = allPhotoItems.slice(
+    (currentPage - 1) * PHOTOS_PER_PAGE,
+    currentPage * PHOTOS_PER_PAGE
+  );
+  const totalPhotoPages = Math.ceil(allPhotoItems.length / PHOTOS_PER_PAGE);
 
   // Fetch all reviews for the restaurant (all pages)
   const fetchAllReviews = async () => {
@@ -164,7 +181,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                     title: review.reviewMainTitle,
                     comment: review.content ?? "",
                     images: review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
-                    userImage: review?.userAvatar ?? "/profile-icon.svg",
+                    userImage: review?.userAvatar ?? DEFAULT_USER_ICON,
                     recognitions: Array.isArray(review.recognitions) ? review.recognitions : [],
                     palateNames: typeof review.palates === "string"
                       ? review.palates.split("|").map((p: string) => p.trim()).filter(Boolean)
@@ -192,30 +209,37 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
       content: (
         <>
           {loading ? (
-            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className="review-card__image-container"
-                  style={{ width: "304px", height: "400px" }}
-                >
-                  <div className="bg-gray-300 animate-pulse rounded-2xl w-full h-full" />
-                </div>
+                  className="bg-gray-300 animate-pulse rounded-2xl w-full"
+                  style={{ height: "180px" }}
+                />
               ))}
             </div>
           ) : (
             <>
               <Masonry
-                items={allReviews}
-                render={Photos}
+                key={`photo-page-${currentPage}`} // <-- Forces reset on page change
+                items={paginatedPhotoItems}
+                render={({ data }) => (
+                  <Photos
+                    key={data.image.id || `${data.review.databaseId}-${data.imageIndex}`}
+                    data={data.review}
+                    image={data.image}
+                    index={data.imageIndex}
+                    width={304}
+                  />
+                )}
                 columnGutter={32}
                 columnWidth={304}
                 maxColumnCount={4}
               />
-              {allReviews.length > 0 && (
+              {totalPhotoPages > 1 && (
                 <Pagination
                   currentPage={currentPage}
-                  hasNextPage={currentPage < Math.ceil(allReviews.length / 20)}
+                  hasNextPage={currentPage < totalPhotoPages}
                   onPageChange={(page) => setCurrentPage(page)}
                 />
               )}
@@ -223,8 +247,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
           )}
         </>
       ),
-    },
-  ];
+    }
+   ];
 
   // Render
   return (

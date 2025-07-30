@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { formatDate, formatDateT, stripTags } from "@/lib/utils";
+import { capitalizeWords, formatDate, formatDateT, PAGE, stripTags } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
@@ -19,6 +19,19 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
+import { PROFILE } from "@/constants/pages";
+
+// Helper for relay global ID
+const encodeRelayId = (type: string, id: number) => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(`${type}:${id}`);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(`${type}:${id}`).toString('base64');
+  }
+  return `${type}:${id}`;
+};
 
 interface ReviewBlockProps {
   review: {
@@ -56,10 +69,21 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     sourceUrl: src,
   }));
 
+  // Encode relay global ID for user
+  const encodeRelayId = (type: string, id: number) => {
+    if (typeof window !== 'undefined' && window.btoa) {
+      return window.btoa(`${type}:${id}`);
+    } else if (typeof Buffer !== 'undefined') {
+      return Buffer.from(`${type}:${id}`).toString('base64');
+    }
+    return `${type}:${id}`;
+  };
+
+  const userRelayId = encodeRelayId('user', review.authorId);
+
   return {
     databaseId: review.databaseId,
-    id: review.id, // Use relay global ID
-    // id: encodeRelayId('comment', review.id), // Use relay global ID
+    id: review.id, // Use relay global ID for comment if needed
     reviewMainTitle: review.title || "",
     commentLikes: String(review.commentLikes ?? 0),
     userLiked: review.userLiked ?? false,
@@ -69,15 +93,15 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     date: review.date,
     reviewImages,
     palates: review.palateNames?.join("|") ?? "",
-    userAvatar: review.userImage || "/profile-icon.svg",
+    userAvatar: review.userImage || DEFAULT_USER_ICON,
     author: {
       name: review.user,
       node: {
-        id: `user:${review.authorId}`,
+        id: userRelayId,
         databaseId: review.authorId,
         name: review.user,
         avatar: {
-          url: review.userImage || "/profile-icon.svg",
+          url: review.userImage || DEFAULT_USER_ICON,
         },
       },
     },
@@ -113,10 +137,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   const tags = [
-    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
-    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
-    { id: 3, name: "Value for Money", icon: "/cash.svg" },
-    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+    { id: 1, name: "Must Revisit", icon: FLAG },
+    { id: 2, name: "Insta-Worthy", icon: PHONE },
+    { id: 3, name: "Value for Money", icon: CASH },
+    { id: 4, name: "Best Service", icon: HELMET },
   ];
 
   useEffect(() => {
@@ -177,17 +201,75 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     <div className="review-block px-4 py-4">
       <div className="review-block__header">
         <div className="review-block__user">
-          <Image
-            src={review?.userImage || "/profile-icon.svg"} // Fallback image if author is not found
-            alt={review?.user || "User"} // Fallback name if author is not found
-            width={40}
-            height={40}
-            className="review-block__user-image size-6 md:size-10"
-          />
+          {(review.authorId) ? (
+            session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+              <a href={PROFILE}>
+                <Image
+                  src={review?.userImage || DEFAULT_USER_ICON}
+                  alt={review?.user || "User"}
+                  width={40}
+                  height={40}
+                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                />
+              </a>
+            ) : session ? (
+              <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
+                <Image
+                  src={review?.userImage || DEFAULT_USER_ICON}
+                  alt={review?.user || "User"}
+                  width={40}
+                  height={40}
+                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                />
+              </a>
+            ) : (
+              <Image
+                src={review?.userImage || DEFAULT_USER_ICON}
+                alt={review?.user || "User"}
+                width={40}
+                height={40}
+                className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                onClick={() => setIsShowSignup(true)}
+              />
+            )
+          ) : (
+            <FallbackImage
+              src={review?.userImage || DEFAULT_USER_ICON}
+              alt={review?.user || "User"}
+              width={40}
+              height={40}
+              className="review-block__user-image size-6 md:size-10"
+            type={FallbackImageType.Icon}
+            />
+          )}
           <div className="review-block__user-info">
-            <h3 className="review-block__username">
-              {review?.user || "Unknown User"}
-            </h3>
+            {/* Make username clickable and handle auth logic */}
+            {(review.authorId) ? (
+              session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+                <a href={PROFILE}>
+                  <h3 className="review-block__username cursor-pointer">
+                    {review?.user || "Unknown User"}
+                  </h3>
+                </a>
+              ) : session ? (
+                <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
+                  <h3 className="review-block__username cursor-pointer">
+                    {review?.user || "Unknown User"}
+                  </h3>
+                </a>
+              ) : (
+                <h3
+                  className="review-block__username cursor-pointer"
+                  onClick={() => setIsShowSignup(true)}
+                >
+                  {review?.user || "Unknown User"}
+                </h3>
+              )
+            ) : (
+              <h3 className="review-block__username">
+                {review?.user || "Unknown User"}
+              </h3>
+            )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {review.palateNames?.map((tag, index) => {
                 const flagSrc = palateFlagMap[tag.toLowerCase()];
@@ -200,12 +282,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                       <img
                         src={flagSrc}
                         alt={`${tag} flag`}
-                        width={12}
-                        height={12}
-                        className="w-6 h-4 rounded object-cover"
+                        width={18}
+                        height={10}
+                        className="w-[18px] h-[10px] rounded object-cover"
                       />
                     )}
-                    {tag}
+                    {capitalizeWords(tag)}
                   </span>
                 );
               })}
@@ -217,9 +299,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             const full = i + 1 <= review.rating;
             const half = !full && i + 0.5 <= review.rating;
             return full ? (
-              <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
             ) : (
-              <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+              <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
             );
           })}
           {/* {[...Array(review.rating)].map((i, index) =>
@@ -233,17 +315,14 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         <div className="review-block__recognitions flex gap-2">
           {Array.isArray(review.recognitions) && review.recognitions.filter(tag => tag && tag.trim() !== '').length > 0 && (
             <div className="review-block__recognitions flex gap-2">
-              {review.recognitions
-                .filter(tag => tag && tag.trim() !== '')
-                .map((tag, index) => {
-                  const tagObj = tags.find(t => t.name === tag);
-                  return (
-                    <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
-                      {tagObj && <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />}
-                      {tag}
-                    </span>
-                  );
-                })}
+              {tags
+                .filter(tagObj => (review.recognitions ?? []).includes(tagObj.name))
+                .map((tagObj, index) => (
+                  <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
+                    <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />
+                    {tagObj.name}
+                  </span>
+                ))}
             </div>
           )}
         </div>

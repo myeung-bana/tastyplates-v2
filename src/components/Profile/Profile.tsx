@@ -19,6 +19,9 @@ import { UserService } from "@/services/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { PROFILE_EDIT } from "@/constants/pages";
+import toast from "react-hot-toast";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -36,7 +39,7 @@ interface Restaurant {
 
 
 interface ProfileProps {
-  targetUserId:number;
+  targetUserId: number;
 }
 
 // Update the component signature to accept props
@@ -68,15 +71,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-
-  const isViewingOwnProfile = session?.user?.id === targetUserId;
-
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [checkins, setCheckins] = useState<Restaurant[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
+  const isViewingOwnProfile = session?.user?.id === targetUserId;
+  const WELCOME_KEY = 'welcomeMessage';
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -84,7 +86,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:
@@ -158,6 +160,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   }, [targetUserId]);
 
   useEffect(() => {
+    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
+    if (welcomeMessage) {
+      toast.success(welcomeMessage, {
+        duration: 3000, // 3 seconds
+      });
+      localStorage.removeItem(WELCOME_KEY);
+    }
+
     window.addEventListener("load", handleResize);
     window.addEventListener("resize", handleResize);
     return () => {
@@ -260,7 +270,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setPalatesLoading(false);
       }
     };
-    if (targetUserId) {
+    if (targetUserId && !isViewingOwnProfile) {
       fetchPublicUserData();
     } else {
       setUserData(null);
@@ -276,25 +286,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setFollowingLoading(false);
       return [];
     }
-    const cacheKey = `following_${targetUserId}`;
-    let followingList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowing(data);
-            setFollowingLoading(false);
-            return data;
-          }
-        } catch (e) { /* ignore */ }
-      }
-    }
     try {
-      followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followingList, timestamp: Date.now() }));
       return followingList;
     } finally {
       setFollowingLoading(false);
@@ -307,29 +301,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setFollowersLoading(false);
       return [];
     }
-    const cacheKey = `followers_${targetUserId}`;
-    let followersList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowers(data);
-            setFollowersLoading(false);
-            return data;
-          }
-        } catch (e) { /* ignore */ }
-      }
-    }
     try {
-      followersList = await UserService.getFollowersList(
+      const followersList = await UserService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
       );
       setFollowers(followersList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followersList, timestamp: Date.now() }));
       return followersList;
     } finally {
       setFollowersLoading(false);
@@ -363,18 +341,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'follow_sync') {
-        if (targetUserId) {
-          localStorage.removeItem(`following_${targetUserId}`);
-          localStorage.removeItem(`followers_${targetUserId}`);
-        }
-        fetchFollowing(true);
-        fetchFollowers(true);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // No cache sync needed, always fetch fresh
   }, [targetUserId]);
 
   const handleFollow = async (id: string) => {
@@ -722,22 +689,24 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   // Reset all relevant state when targetUserId changes
   useEffect(() => {
     // Only reset state when targetUserId actually changes, not on window focus
-    setUserData(null);
-    setReviews([]);
-    setRestaurants([]);
-    setWishlist([]);
-    setCheckins([]);
-    setFollowers([]);
-    setFollowing([]);
-    setUserReviewCount(0);
-    setEndCursor(null);
-    setHasNextPage(true);
-    setHasFetchedCheckins(false);
-    setHasFetchedWishlist(false);
-    setLoading(true);
-    setNameLoading(true);
-    setAboutMeLoading(true);
-    setPalatesLoading(true);
+    if (!isViewingOwnProfile) {
+      setUserData(null);
+      setReviews([]);
+      setRestaurants([]);
+      setWishlist([]);
+      setCheckins([]);
+      setFollowers([]);
+      setFollowing([]);
+      setUserReviewCount(0);
+      setEndCursor(null);
+      setHasNextPage(true);
+      setHasFetchedCheckins(false);
+      setHasFetchedWishlist(false);
+      setLoading(true);
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+    }
   }, [targetUserId]);
 
   // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
@@ -746,14 +715,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
-          <Image
+          <FallbackImage
             src={
               userData?.image ||
-              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? "/profile-icon.svg")
+              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? DEFAULT_USER_ICON)
             }
             fill
             className="rounded-full object-cover"
             alt="profile"
+            type={FallbackImageType.Icon}
           />
         </div>
         <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">
@@ -797,9 +767,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                               <img
                                 src={flagSrc}
                                 alt={`${capitalizedPalate} flag`}
-                                width={12}
-                                height={12}
-                                className="w-6 h-4 rounded object-cover"
+                                width={18}
+                                height={10}
+                                className="w-[18px] h-[10px] rounded object-cover"
                               />
                             )}
                             {capitalizedPalate}

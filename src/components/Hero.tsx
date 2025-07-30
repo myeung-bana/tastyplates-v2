@@ -16,6 +16,7 @@ import { RESTAURANTS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
+import { HERO_BG, HERO_BG_SP } from "@/constants/images";
 
 const Hero = () => {
   const router = useRouter();
@@ -115,7 +116,6 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      // Prioritize selectedPalates for the 'ethnic' parameter
       if (selectedPalates.size > 0) {
         const selectedSlugs = Array.from(selectedPalates).map(key => key.toString());
         queryParams.set("ethnic", selectedSlugs.join(','));
@@ -267,14 +267,14 @@ const Hero = () => {
       <div className="hero__container mx-auto">
         <div className="hero__content mx-auto">
           <img
-            src="/images/hero-bg.png"
+            src={HERO_BG}
             width={1980}
             height={538}
             className="absolute inset-0 w-full -z-10 h-[538px] object-cover hidden sm:block"
             alt="Hero background"
           />
           <img
-            src="/images/hero-bg-sp.png"
+            src={HERO_BG_SP}
             width={640}
             height={466}
             className="absolute inset-0 w-full h-[466px] -z-10 object-left-top object-cover sm:hidden"
