@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
+import "@/styles/pages/_restaurant-details.scss";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -114,7 +115,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag !text-[10px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
@@ -130,7 +131,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               ))}
             </div>
           </div>
-          <div className="rate-container ml-auto">
+          <div className="rate-container ml-auto inline-flex shrink-0">
               <div className="review-detail-meta">
                 <span className="ratings">
                   <Image src="/star-filled.svg" width={16} height={16} className="size-3 md:size-4" alt="star icon" />

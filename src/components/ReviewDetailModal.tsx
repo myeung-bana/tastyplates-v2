@@ -875,7 +875,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
@@ -891,7 +891,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
+                                    <p className="review-card__text w-full text-[10px] md:text-xs font-normal mt-1 text-[#494D5D] leading-[1.5]">
                                       {stripTags(reply.content || "") ||
                                         "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
                                     </p>

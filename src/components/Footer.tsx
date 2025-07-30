@@ -32,7 +32,7 @@ export default function Footer({
 }: Props) {
   return (
     <footer className="bg-[#F1F1F1] text-[#31343F]">
-      <div className={`${isShowLinks ? 'pt-12' : ''} w-[92%] mx-auto`}>
+      <div className={`${isShowLinks ? 'pt-12' : ''} max-w-[82rem] px-4 xl:px-0 mx-auto`}>
         {/* Main footer content */}
         {isShowLinks && (
           <div className="flex flex-col sm:flex-row flex-wrap justify-start items-start gap-6 sm:gap-8 md:gap-[122px]">

@@ -211,12 +211,14 @@ const Hero = () => {
           childValues.add(child.key);
         });
       }
-      setCuisine(`What ${selectedHeaderLabel} like to eat?`);
+      // setCuisine(`What ${selectedHeaderLabel} like to eat?`);
+      setCuisine(selectedHeaderLabel)
     } else if (values.size > 0) {
       const selectedChildKey = Array.from(values)[0];
       const selectedChild = palateOptions.flatMap(opt => opt.children || []).find(child => child.key === selectedChildKey);
       if (selectedChild) {
-        setCuisine(`What ${selectedChild.label} like to eat?`);
+        // setCuisine(`What ${selectedChild.label} like to eat?`);
+        setCuisine(selectedChild.label)
       } else {
         setCuisine('');
       }
@@ -301,7 +303,8 @@ const Hero = () => {
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
                     <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
-                      {cuisine.length > 0 ? "" : "What ______ like to eat?"}
+                      {/* {cuisine.length > 0 ? "" : "What ______ like to eat?"} */}
+                      Which cuisine tempts you today?
                     </label>
                     <div className="relative w-full">
                       <input
