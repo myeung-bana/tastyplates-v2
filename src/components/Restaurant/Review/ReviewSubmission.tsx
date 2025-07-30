@@ -17,7 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
@@ -223,6 +223,10 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateError);
           setIsLoading(false);
           return
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsLoading(false);
+          return;
         } else {
           toast.error(errorOccurred);
           setIsLoading(false);
@@ -232,6 +236,10 @@ const ReviewSubmissionPage = () => {
         if (res.status === code.created) {
           toast.success(savedAsDraft);
           router.push(LISTING);
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsSavingAsDraft(false);
+          return;
         } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
