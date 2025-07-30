@@ -96,7 +96,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 width={32}
                 height={32}
                 className="review-card__user-image cursor-pointer"
-                onClick={() => setShowAuthModal('signup')}
+                onClick={() => setShowAuthModal('signin')}
                 type={FallbackImageType.Icon}
               />
             )
@@ -129,7 +129,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               ) : (
                 <h3
                   className="review-card__username line-clamp-1 cursor-pointer"
-                  onClick={() => setShowAuthModal('signup')}
+                  onClick={() => setShowAuthModal('signin')}
                 >
                   {data.author?.name || "Unknown User"}
                 </h3>

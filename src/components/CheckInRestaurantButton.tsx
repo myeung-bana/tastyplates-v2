@@ -87,7 +87,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaMapMarkerAlt />
           <span className="underline">Check-In</span>
