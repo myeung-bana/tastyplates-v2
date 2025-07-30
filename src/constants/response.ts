@@ -25,6 +25,7 @@ export const responseStatusCode = {
     forbidden: 403,
     notFound: 404,
     conflict: 409,
+    duplicate_week: 422,
     internalServerError: 500,
 }
 
