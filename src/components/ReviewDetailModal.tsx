@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { stripTags, formatDate, PAGE, capitalizeWords } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -21,12 +21,13 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -42,6 +43,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [pendingShowSignup, setPendingShowSignup] = useState(false);
+  const [showFullTitle, setShowFullTitle] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState<{ [replyId: string]: boolean }>({});
   // Effect to show signup modal
   useEffect(() => {
     if (pendingShowSignup) {
@@ -55,6 +59,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (!session?.user) {
       setPendingShowSignup(true);
     }
+  };
+  const toggleReplyContent = (replyId: string) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [replyId]: !prev[replyId],
+    }));
   };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -357,6 +367,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     if (!session?.user) {
       setIsShowSignup(true);
+      return;
+    }
+
+    if (commentReply.length > reviewDescriptionLimit) {
+      toast.error(maximumReviewDescription(reviewDescriptionLimit));
       return;
     }
 
@@ -799,13 +814,41 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
-                        <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
-                          {stripTags(data.reviewMainTitle || "") ||
-                            ""}
+                        <p className="text-sm font-semibold w-[450px]">
+                          {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
+                            <>
+                              {showFullTitle
+                                ? capitalizeWords(stripTags(data.reviewMainTitle || "")) + " "
+                                : capitalizeWords(truncateText(stripTags(data.reviewMainTitle || ""), reviewTitleDisplayLimit)) + "… "}
+                              <button
+                                className="text-xs hover:underline inline font-bold"
+                                onClick={() => setShowFullTitle(!showFullTitle)}
+                              >
+                                {showFullTitle ? "[Show Less]" : "[See More]"}
+                              </button>
+                            </>
+                          ) : (
+                            capitalizeWords(stripTags(data.reviewMainTitle || ""))
+                          )}
                         </p>
-                        <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
-                          {stripTags(data.content || "") ||
-                            ""}
+
+                        <p className="review-card__text w-full mt-2 text-sm font-normal">
+                          {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
+                            <>
+                              {showFullContent
+                                ? capitalizeWords(stripTags(data.content || ""))
+                                : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                              {" "}
+                              <button
+                                className="text-xs hover:underline inline font-bold"
+                                onClick={() => setShowFullContent(!showFullContent)}
+                              >
+                                {showFullContent ? "[Show Less]" : "[See More]"}
+                              </button>
+                            </>
+                          ) : (
+                            capitalizeWords(stripTags(data.content || ""))
+                          )}
                         </p>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
@@ -841,7 +884,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           </span>
                         </div>
                         {replies.length > 0 && (
-                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[460px] overflow-y-auto">
+                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[380px] overflow-y-auto">
                             {replies.map((reply, index) => {
                               const replyUserLiked = reply.userLiked ?? false;
                               const replyUserLikedCounts = reply.commentLikes ?? 0;
@@ -956,9 +999,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text w-full text-[10px] md:text-xs font-normal mt-1 text-[#494D5D] leading-[1.5]">
-                                      {stripTags(reply.content || "") ||
-                                        "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                                    <p className="review-card__text text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                      {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
+                                        <>
+                                          {expandedReplies[reply.id]
+                                            ? capitalizeWords(stripTags(reply.content || ""))
+                                            : capitalizeWords(truncateText(stripTags(reply.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                                          {" "}
+                                          <button
+                                            className="text-xs hover:underline inline font-bold"
+                                            onClick={() => toggleReplyContent(reply.id)}
+                                          >
+                                            {expandedReplies[reply.id] ? "[Show Less]" : "[See More]"}
+                                          </button>
+                                        </>
+                                      ) : (
+                                        capitalizeWords(stripTags(reply.content || ""))
+                                      )}
                                     </p>
                                     <div className="flex items-center relative text-center">
                                       <button

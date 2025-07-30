@@ -223,7 +223,7 @@ const RestaurantPage = () => {
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-2 top-2 text-sm text-gray-500 hover:text-black"
+                className="absolute right-2 top-2 md:top-4 text-sm text-gray-500 hover:text-black"
               >
                 ✕
               </button>
