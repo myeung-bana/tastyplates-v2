@@ -325,27 +325,27 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     )}
                   </button>
                   <span>{review.commentLikes ?? 0}</span>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                      setIsShowSignup(false);
-                      setIsShowSignin(true);
-                    }}
-                  />
-                  <SigninModal
-                    isOpen={isShowSignin}
-                    onClose={() => setIsShowSignin(false)}
-                    onOpenSignup={() => {
-                      setIsShowSignin(false);
-                      setIsShowSignup(true);
-                    }}
-                  />
                 </div>
               </div>
             );
           })}
         </div>
+        <SignupModal
+          isOpen={isShowSignup}
+          onClose={() => setIsShowSignup(false)}
+          onOpenSignin={() => {
+            setIsShowSignup(false);
+            setIsShowSignin(true);
+          }}
+        />
+        <SigninModal
+          isOpen={isShowSignin}
+          onClose={() => setIsShowSignin(false)}
+          onOpenSignup={() => {
+            setIsShowSignin(false);
+            setIsShowSignup(true);
+          }}
+        />
       </div>
       <style jsx global>{`
         .animate-slide-in-right {
