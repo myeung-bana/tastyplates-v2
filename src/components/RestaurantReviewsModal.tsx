@@ -9,7 +9,11 @@ import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
-import { capitalizeWords } from "@/lib/utils";
+import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { capitalizeWords, PAGE, truncateText } from "@/lib/utils";
+import { PROFILE } from "@/constants/pages";
 
 interface Restaurant {
   id: string;
@@ -39,6 +43,8 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   const [likesCount, setLikesCount] = useState<{ [key: string]: number }>({});
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
+  const [expandedTitles, setExpandedTitles] = useState<{ [id: string]: boolean }>({});
+  const [expandedContents, setExpandedContents] = useState<{ [id: string]: boolean }>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -64,7 +70,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
 
   const handleLike = async (review: any) => {
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     setLikeLoading((prev) => ({ ...prev, [review.id]: true }));
@@ -104,6 +110,14 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     }
   };
 
+  const toggleTitle = (id: string) => {
+    setExpandedTitles(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleContent = (id: string) => {
+    setExpandedContents(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -138,7 +152,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.map((review: any) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
-            const userAvatar = review.userAvatar || "/profile-icon.svg";
+            const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
             const palatesArr = review.palates
               ? review.palates
                 .split("|")
@@ -148,22 +162,81 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
             return (
               <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <Image
-                    src={userAvatar}
-                    alt={review.author?.name || "User"}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                  />
+                  {(review.author?.node?.id || review.userId) ? (
+                    session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                      <a href={PROFILE}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : session ? (
+                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                        <Image
+                          src={userAvatar}
+                          alt={review.author?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover cursor-pointer"
+                        />
+                      </a>
+                    ) : (
+                      <Image
+                        src={userAvatar}
+                        alt={review.author?.name || "User"}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover cursor-pointer"
+                        onClick={() => setIsShowSignin(true)}
+                      />
+                    )
+                  ) : (
+                    <FallbackImage
+                      src={userAvatar}
+                      alt={review.author?.name || "User"}
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover"
+                    type={FallbackImageType.Icon}
+                    />
+                  )}
                   <div>
-                    <div className="font-semibold text-[#31343F]">{review.author?.name || "Unknown User"}</div>
+                    {(review.author?.node?.id || review.userId) ? (
+                      session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
+                        <a href={PROFILE}>
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : session ? (
+                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                            {review.author?.name || "Unknown User"}
+                          </div>
+                        </a>
+                      ) : (
+                        <div
+                          className="font-semibold text-[#31343F] cursor-pointer"
+                          onClick={() => setIsShowSignin(true)}
+                        >
+                          {review.author?.name || "Unknown User"}
+                        </div>
+                      )
+                    ) : (
+                      <div className="font-semibold text-[#31343F]">
+                        {review.author?.name || "Unknown User"}
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-1 flex-wrap">
                       {palatesArr.map((p: any, idx: number) => {
                         const lowerName = p.name.toLowerCase();
                         return (
                           <span
                             key={p.name + idx}
-                            className="flex items-center gap-1 bg-[#1b1b1b] text-xs text-[#FDF0EF] rounded-full px-2 py-1 font-medium"
+                            className="flex items-center gap-1 bg-[#f1f1f1] text-xs text-[#31343f] rounded-full px-2 py-1 font-medium"
                           >
                             {palateFlagMap[lowerName] && (
                               <img
@@ -184,20 +257,57 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     const full = i + 1 <= reviewStars;
                     const half = !full && i + 0.5 <= reviewStars;
                     return full ? (
-                      <Image src="/star-filled.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     ) : half ? (
-                      <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                      <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
                     ) : (
-                      <Image src="/star.svg" key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
                     );
                   })}
                   <span className="mx-2">·</span>
                   <span>{new Date(review.date).toLocaleDateString()}</span>
                 </div>
-                {reviewTitle && (
+                {/* {reviewTitle && (
                   <div className="font-semibold mt-2 text-[#31343F]">{reviewTitle}</div>
+                )} */}
+                {reviewTitle && (
+                  <div className="text-sm font-semibold mt-2 text-[#31343F]">
+                    {expandedTitles[review.id]
+                      ? capitalizeWords(reviewTitle)
+                      : capitalizeWords(truncateText(reviewTitle, reviewTitleDisplayLimit)) + "… "}
+                    {" "}
+                    {reviewTitle.length > reviewTitleDisplayLimit && (
+                      <button
+                        className="hover:underline font-bold"
+                        onClick={() => toggleTitle(review.id)}
+                      >
+                        {expandedTitles[review.id] ? " [Show Less]" : "[See More]"}
+                      </button>
+                    )}
+                  </div>
                 )}
-                <div className="text-[#31343F] mt-1" dangerouslySetInnerHTML={{ __html: review.content }} />
+                <div className="text-[#31343F] mt-1 leading-[1.5]">
+                  {review.content.length > reviewDescriptionDisplayLimit ? (
+                    <>
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: expandedContents[review.id]
+                            ? capitalizeWords(review.content)
+                            : capitalizeWords(truncateText(review.content, reviewDescriptionDisplayLimit)) + "…",
+                        }}
+                      />
+                      <button
+                        className="text-xs hover:underline inline font-bold"
+                        onClick={() => toggleContent(review.id)}
+                      >
+                        {expandedContents[review.id] ? "[Show Less]" : "[See More]"}
+                      </button>
+                    </>
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: capitalizeWords(review.content) }} />
+                  )}
+                </div>
+                {/* <div className="text-[#31343F] mt-1" dangerouslySetInnerHTML={{ __html: review.content }} /> */}
                 <div className="flex items-center gap-2 text-sm text-[#494D5D] mt-2">
                   <button
                     onClick={() => handleLike(review)}
@@ -215,27 +325,27 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     )}
                   </button>
                   <span>{review.commentLikes ?? 0}</span>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                      setIsShowSignup(false);
-                      setIsShowSignin(true);
-                    }}
-                  />
-                  <SigninModal
-                    isOpen={isShowSignin}
-                    onClose={() => setIsShowSignin(false)}
-                    onOpenSignup={() => {
-                      setIsShowSignin(false);
-                      setIsShowSignup(true);
-                    }}
-                  />
                 </div>
               </div>
             );
           })}
         </div>
+        <SignupModal
+          isOpen={isShowSignup}
+          onClose={() => setIsShowSignup(false)}
+          onOpenSignin={() => {
+            setIsShowSignup(false);
+            setIsShowSignin(true);
+          }}
+        />
+        <SigninModal
+          isOpen={isShowSignin}
+          onClose={() => setIsShowSignin(false)}
+          onOpenSignup={() => {
+            setIsShowSignin(false);
+            setIsShowSignup(true);
+          }}
+        />
       </div>
       <style jsx global>{`
         .animate-slide-in-right {

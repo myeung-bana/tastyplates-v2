@@ -13,6 +13,11 @@ export function stripTags(input: string): string {
   return txt.value;
 }
 
+export function truncateText(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return text.slice(0, limit).trim();
+}
+
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '';
   const [datePart] = dateString.split(' ');
@@ -87,4 +92,9 @@ export const PAGE = (
   ).toString();
 
   return query ? `${path}?${query}` : path;
+};
+
+export const capitalizeFirstLetter = (string: string) => {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 };

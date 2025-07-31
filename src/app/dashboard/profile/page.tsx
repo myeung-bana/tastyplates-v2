@@ -7,6 +7,8 @@ import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
 import Image from "next/image";
 import "@/styles/pages/_profile.scss";
+import FallbackImage, { FallbackImageType } from "@/components/ui/Image/FallbackImage";
+import { DEFAULT_USER_IMAGE } from "@/constants/images";
 
 interface UserProfile {
   name: string;
@@ -81,12 +83,13 @@ const ProfilePage = () => {
         <div className="profile-info-container">
           <div className="profile-image-section">
             <div className="profile-image-wrapper">
-              <Image
-                src={profile.image || "/images/default-user-profile.jpg"}
+              <FallbackImage
+                src={profile.image || DEFAULT_USER_IMAGE}
                 alt="Profile"
                 width={150}
                 height={150}
                 className="profile-image"
+                type={FallbackImageType.Avatar}
               />
               {isEditing && (
                 <label className="image-upload-button">

@@ -12,12 +12,13 @@ import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
-  const defaultImage = "/images/default-image.png"
   const UserPalateNames = data?.palates
     ?.split("|")
     .map((s) => capitalizeWords(s.trim()))
@@ -48,11 +49,11 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
         />
       )}
       <div className="review-card__image-container">
-        <Image
+        <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
             ? data.reviewImages[0].sourceUrl
-            : defaultImage
+            : DEFAULT_IMAGE
           }
           alt="Review"
           width={400}
@@ -68,53 +69,81 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           {(data.author?.node?.id || data.id) ? (
             session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
               <Link href={PROFILE}>
-                <Image
-                  src={data.userAvatar || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                 />
               </Link>
             ) : session ? (
               <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
-                <Image
-                  src={data.userAvatar || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                 />
               </Link>
             ) : (
-              <Image
-                src={data.userAvatar || "/profile-icon.svg"}
+              <FallbackImage
+                src={data.userAvatar || DEFAULT_USER_ICON}
                 alt={data.author?.node?.name || "User"}
                 width={32}
                 height={32}
                 className="review-card__user-image cursor-pointer"
-                onClick={() => setShowAuthModal('signup')}
+                onClick={() => setShowAuthModal('signin')}
+                type={FallbackImageType.Icon}
               />
             )
           ) : (
-            <Image // Fallback if no databaseId or userId
-              src={data.userAvatar || "/profile-icon.svg"}
+            <FallbackImage
+              src={data.userAvatar || DEFAULT_USER_ICON}
               alt={data.author?.node?.name || "User"}
               width={32}
               height={32}
               className="review-card__user-image"
+              type={FallbackImageType.Icon}
             />
           )}
 
           <div className="review-card__user-info">
-            <h3 className="review-card__username line-clamp-1">
-              {data.author?.name || "Unknown User"}
-            </h3>
+            {/* Make username clickable and handle auth logic */}
+            {(data.author?.node?.id || data.id) ? (
+              session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
+                <Link href={PROFILE}>
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                    {data.author?.name || "Unknown User"}
+                  </h3>
+                </Link>
+              ) : session ? (
+                <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                    {data.author?.name || "Unknown User"}
+                  </h3>
+                </Link>
+              ) : (
+                <h3
+                  className="review-card__username line-clamp-1 cursor-pointer"
+                  onClick={() => setShowAuthModal('signin')}
+                >
+                  {data.author?.name || "Unknown User"}
+                </h3>
+              )
+            ) : (
+              <h3 className="review-card__username line-clamp-1">
+                {data.author?.name || "Unknown User"}
+              </h3>
+            )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag !text-[10px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag !text-[10px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
@@ -133,7 +162,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
           <div className="rate-container ml-auto">
               <div className="review-detail-meta">
                 <span className="ratings">
-                  <Image src="/star-filled.svg" width={16} height={16} className="size-3 md:size-4" alt="star icon" />
+                  <Image src={STAR_FILLED} width={16} height={16} className="size-3 md:size-4" alt="star icon" />
                   <i className="rating-counter">
                     {data.reviewStars}
                   </i>
@@ -141,8 +170,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               </div>
           </div>
         </div>
-        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{stripTags(data.reviewMainTitle || "") || ""}</p>
-        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{stripTags(data.content || "") || ""}</p>
+        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
+        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>

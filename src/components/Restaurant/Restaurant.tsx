@@ -10,6 +10,7 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -33,10 +34,8 @@ const RestaurantPage = () => {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
   const [searchAddress, setSearchAddress] = useState("");
   const [searchEthnic, setSearchEthnic] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -45,6 +44,9 @@ const RestaurantPage = () => {
   const isFirstLoad = useRef(true);
   const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
   const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
+  const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
+  const [searchTerm, setSearchTerm] = useState(initialListingFromUrl);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const [filters, setFilters] = useState({
     cuisine: null as string[] | null,
@@ -58,7 +60,7 @@ const RestaurantPage = () => {
   useEffect(() => {
     setSearchAddress(initialAddressFromUrl);
     setSearchEthnic(initialEthnicFromUrl);
-  }, [initialAddressFromUrl, initialEthnicFromUrl]);
+  }, [initialListingFromUrl, initialAddressFromUrl, initialEthnicFromUrl]);
   useEffect(() => {
     const currentSearchParams = new URLSearchParams(searchParams?.toString());
     let shouldUpdateUrl = false;
@@ -67,8 +69,6 @@ const RestaurantPage = () => {
       setSearchEthnic(initialEthnicFromUrl);
       shouldUpdateUrl = true;
     }
-    // if (currentSearchParams.has("address")) {
-    // }
 
     if (shouldUpdateUrl) {
       const newPathname = window.location.pathname;
@@ -81,7 +81,7 @@ const RestaurantPage = () => {
     id: item.id,
     slug: item.slug,
     name: item.title,
-    image: item.featuredImage?.node.sourceUrl || "/images/default-image.png",
+    image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
     rating: item.averageRating,
     databaseId: item.databaseId || 0,
     palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
@@ -92,6 +92,17 @@ const RestaurantPage = () => {
     streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || item.listingStreet || "",
     ratingsCount: item.ratingsCount ?? 0,
   });
+
+  useEffect(() => {
+    if (initialListingFromUrl) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("listing");
+
+      const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+      router.replace(newUrl);
+    }
+  }, [initialListingFromUrl, router]);
+
 
   const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);

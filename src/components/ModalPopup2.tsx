@@ -20,6 +20,8 @@ import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import toast from "react-hot-toast";
 import { authorIdMissing, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -296,7 +298,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             >
               {Array.isArray(data?.reviewImages) && data.reviewImages.length > 0 ? (
                 data.reviewImages.map((image: any, index: number) => (
-                  <Image
+                  <FallbackImage
                     key={index}
                     src={image?.sourceUrl}
                     alt="Review"
@@ -307,7 +309,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 ))
               ) : (
                 <Image
-                  src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                  src={DEFAULT_IMAGE}
                   alt="Default"
                   width={400}
                   height={400}
@@ -319,12 +321,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           <div className="review-card__content !m-2 sm:!m-0 !pb-10">
             <div className="flex justify-between pr-10 items-center">
               <div className="review-card__user">
-                <Image
-                  src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.author?.node?.avatar?.url || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image !rounded-2xl"
+                  type={FallbackImageType.Icon}
                 />
                 <div className="review-card__user-info">
                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
@@ -345,7 +348,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <button
                 onClick={() => {
                   if (!session?.accessToken) {
-                    setIsShowSignup(true);
+                    setIsShowSignin(true);
                   } else if (isFollowing) {
                     handleUnfollowAuthor();
                   } else {
@@ -412,12 +415,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
                           return (
                             <div key={index} className="reply flex items-start gap-3 mb-3">
-                              <Image
-                                src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
+                              <FallbackImage
+                                src={reply.author?.node?.avatar?.url || DEFAULT_USER_ICON}
                                 alt={reply.author?.node?.name || "User"}
                                 width={28}
                                 height={28}
                                 className="rounded-full"
+                                type={FallbackImageType.Icon}
                               />
                               <div className="review-card__user-info">
                                 <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">

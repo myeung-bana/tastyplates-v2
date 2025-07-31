@@ -24,6 +24,9 @@ import { ADD_REVIEW } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
+import { CASH, DEFAULT_IMAGE, FLAG, HELMET, PHONE } from "@/constants/images";
+import { responseStatusCode as code } from "@/constants/response";
 
 type tParams = { slug: string };
 
@@ -99,7 +102,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
         body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
         credentials: "include",
       });
-      if (res.status === 200) {
+      if (res.status === code.success) {
         toast.success(action === "save" ? savedToWishlistSuccess : removedFromWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
@@ -126,7 +129,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaRegHeart />
           <span className="underline">Save</span>
@@ -198,7 +201,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || "/images/default-image.png",
+          image: data.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
           palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
@@ -280,7 +283,7 @@ export default function RestaurantDetail() {
 
   const addReview = () => {
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     router.push(
@@ -318,14 +321,6 @@ export default function RestaurantDetail() {
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                      setIsShowSignup(false);
-                      setIsShowSignin(true);
-                    }}
-                  />
                   <SigninModal
                     isOpen={isShowSignin}
                     onClose={() => setIsShowSignin(false)}
@@ -334,12 +329,20 @@ export default function RestaurantDetail() {
                       setIsShowSignup(true);
                     }}
                   />
+                  <SignupModal
+                    isOpen={isShowSignup}
+                    onClose={() => setIsShowSignup(false)}
+                    onOpenSignin={() => {
+                      setIsShowSignup(true);
+                      setIsShowSignin(false);
+                    }}
+                  />
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
               </div>
               <div className="flex flex-row gap-6">
                 <div className="md:rounded-l-3xl relative restaurant-detail__hero w-2/3">
-                  <Image
+                  <FallbackImage
                     src={restaurant.image}
                     alt={restaurant.name}
                     fill
@@ -452,7 +455,7 @@ export default function RestaurantDetail() {
                     <div className="flex items-center w-full">
                       <div className="rating-column w-full border-r border-[#CACACA]">
                         <Image
-                          src="/flag.svg"
+                          src={FLAG}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -469,7 +472,7 @@ export default function RestaurantDetail() {
                       {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
                       <div className="rating-column w-full lg:border-r border-[#CACACA]">
                         <Image
-                          src="/phone.svg"
+                          src={PHONE}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -487,7 +490,7 @@ export default function RestaurantDetail() {
                     <div className="flex items-center w-full">
                       <div className="rating-column w-full border-r border-[#CACACA]">
                         <Image
-                          src="/cash.svg"
+                          src={CASH}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -504,7 +507,7 @@ export default function RestaurantDetail() {
                       {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
                       <div className="rating-column w-full">
                         <Image
-                          src="/helmet.svg"
+                          src={HELMET}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"

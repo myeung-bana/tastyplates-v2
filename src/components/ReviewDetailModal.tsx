@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
-import { stripTags, formatDate, PAGE, capitalizeWords } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
 import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -21,10 +21,13 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -39,20 +42,29 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const { getFollowState, setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
-  const [pendingShowSignup, setPendingShowSignup] = useState(false);
-  // Effect to show signup modal
+  const [pendingShowSignin, setPendingShowSignin] = useState(false);
+  const [showFullTitle, setShowFullTitle] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState<{ [replyId: string]: boolean }>({});
+  // Effect to show signin modal
   useEffect(() => {
-    if (pendingShowSignup) {
-      setIsShowSignup(true);
-      setPendingShowSignup(false);
+    if (pendingShowSignin) {
+      setIsShowSignin(true);
+      setPendingShowSignin(false);
     }
-  }, [pendingShowSignup]);
+  }, [pendingShowSignin]);
 
   // Handler for profile image click (author or commenter)
   const handleProfileClick = (userId: number) => {
     if (!session?.user) {
-      setPendingShowSignup(true);
+      setPendingShowSignin(true);
     }
+  };
+  const toggleReplyContent = (replyId: string) => {
+    setExpandedReplies(prev => ({
+      ...prev,
+      [replyId]: !prev[replyId],
+    }));
   };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -72,7 +84,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     typeof window !== "undefined" ? window.innerWidth : 0
   );
   const authorUserId = data.userId;
-  const defaultImage = "/images/default-image.png"
   const sliderRef = useRef<any>(null);
 
   useEffect(() => {
@@ -161,7 +172,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleFollowAuthor = async () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (!authorUserId) {
@@ -208,7 +219,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleUnfollowAuthor = async () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (!authorUserId) {
@@ -255,7 +266,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleFollowClick = () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (isFollowing) {
@@ -355,7 +366,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (!commentReply.trim() || isLoading || cooldown > 0) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
+      return;
+    }
+
+    if (commentReply.length > reviewDescriptionLimit) {
+      toast.error(maximumReviewDescription(reviewDescriptionLimit));
       return;
     }
 
@@ -416,7 +432,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (loading) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
 
@@ -470,7 +486,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (replyLoading[dbId]) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
@@ -522,21 +538,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <div className="justify-between px-3 py-2 pr-16 items-center flex md:hidden h-[60px] md:h-fit">
                 <div className="review-card__user">
                   {session?.user ? (
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
+                    <FallbackImage
+                      src={data.userAvatar || DEFAULT_USER_ICON}
                       alt={data.author?.node?.name || "User"}
                       width={32}
                       height={32}
                       className="review-card__user-image !size-8 md:!size-11"
+                      type={FallbackImageType.Icon}
                     />
                   ) : (
-                    <Image
-                      src={data.userAvatar || "/profile-icon.svg"}
+                    <FallbackImage
+                      src={data.userAvatar || DEFAULT_USER_ICON}
                       alt={data.author?.node?.name || "User"}
                       width={32}
                       height={32}
                       className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                       onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                      type={FallbackImageType.Icon}
                     />
                   )}
                   <div className="review-card__user-info">
@@ -547,7 +565,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                          className="review-block__palate-tag !text-[8px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
@@ -617,7 +635,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
-                      <Image
+                      <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
                         alt="Review"
@@ -628,7 +646,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src={defaultImage}
+                      src={DEFAULT_IMAGE}
                       alt="Default"
                       width={400}
                       height={400}
@@ -657,7 +675,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
                     data.reviewImages.map((image: any, index: number) => (
-                      <Image
+                      <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
                         alt="Review"
@@ -668,7 +686,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                     ))
                   ) : (
                     <Image
-                      src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                      src={DEFAULT_IMAGE}
                       alt="Default"
                       width={400}
                       height={400}
@@ -686,43 +704,60 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
                           passHref
                         >
-                          <Image
-                            src={data.userAvatar || "/profile-icon.svg"}
+                          <FallbackImage
+                            src={data.userAvatar || DEFAULT_USER_ICON}
                             alt={data.author?.node?.name || "User"}
                             width={32}
                             height={32}
                             className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                             style={{ cursor: "pointer" }}
+                            type={FallbackImageType.Icon}
                           />
                         </Link>
                       ) : (
-                        <Image
-                          src={data.userAvatar || "/profile-icon.svg"}
+                        <FallbackImage
+                          src={data.userAvatar || DEFAULT_USER_ICON}
                           alt={data.author?.node?.name || "User"}
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                           onClick={() => handleProfileClick(data.author?.node?.id)}
+                          type={FallbackImageType.Icon}
                         />
                       )
                     ) : (
-                      <Image
-                        src={data.userAvatar || "/profile-icon.svg"}
+                      <FallbackImage
+                        src={data.userAvatar || DEFAULT_USER_ICON}
                         alt={data.author?.node?.name || "User"}
                         width={32}
                         height={32}
                         className="review-card__user-image !size-8 md:!size-11"
+                        type={FallbackImageType.Icon}
                       />
                     )}
                     <div className="review-card__user-info">
-                      <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                        {data.author?.name || "Unknown User"}
-                      </h3>
+                      {session?.user ? (
+                        <Link
+                          href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                          passHref
+                        >
+                          <span className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline">
+                            {data.author?.name || "Unknown User"}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span
+                          className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline"
+                          onClick={() => handleProfileClick(data.author?.node?.id)}
+                        >
+                          {data.author?.name || "Unknown User"}
+                        </span>
+                      )}
                       <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-white px-1 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-[#31343f] px-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -779,13 +814,41 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
-                        <p className="text-sm font-semibold w-[304px] line-clamp-2 md:line-clamp-3">
-                          {stripTags(data.reviewMainTitle || "") ||
-                            ""}
+                        <p className="text-sm font-semibold w-[450px]">
+                          {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
+                            <>
+                              {showFullTitle
+                                ? capitalizeWords(stripTags(data.reviewMainTitle || "")) + " "
+                                : capitalizeWords(truncateText(stripTags(data.reviewMainTitle || ""), reviewTitleDisplayLimit)) + "… "}
+                              <button
+                                className="text-xs hover:underline inline font-bold"
+                                onClick={() => setShowFullTitle(!showFullTitle)}
+                              >
+                                {showFullTitle ? "[Show Less]" : "[See More]"}
+                              </button>
+                            </>
+                          ) : (
+                            capitalizeWords(stripTags(data.reviewMainTitle || ""))
+                          )}
                         </p>
-                        <p className="review-card__text w-full mt-2 text-sm font-normal line-clamp-3 md:line-clamp-4">
-                          {stripTags(data.content || "") ||
-                            ""}
+
+                        <p className="review-card__text w-full mt-2 text-sm font-normal">
+                          {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
+                            <>
+                              {showFullContent
+                                ? capitalizeWords(stripTags(data.content || ""))
+                                : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                              {" "}
+                              <button
+                                className="text-xs hover:underline inline font-bold"
+                                onClick={() => setShowFullContent(!showFullContent)}
+                              >
+                                {showFullContent ? "[Show Less]" : "[See More]"}
+                              </button>
+                            </>
+                          ) : (
+                            capitalizeWords(stripTags(data.content || ""))
+                          )}
                         </p>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
@@ -793,7 +856,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             const half = !full && i + 0.5 <= data.reviewStars;
                             return full ? (
                               <Image
-                                src="/star-filled.svg"
+                                src={STAR_FILLED}
                                 key={i}
                                 width={16}
                                 height={16}
@@ -801,10 +864,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 alt="star rating"
                               />
                             ) : half ? (
-                              <Image src="/star-half.svg" key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                              <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
                             ) : (
                                 <Image
-                                  src="/star.svg"
+                                  src={STAR}
                                   key={i}
                                   width={16}
                                   height={16}
@@ -821,7 +884,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           </span>
                         </div>
                         {replies.length > 0 && (
-                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[460px] overflow-y-auto">
+                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[380px] overflow-y-auto">
                             {replies.map((reply, index) => {
                               const replyUserLiked = reply.userLiked ?? false;
                               const replyUserLikedCounts = reply.commentLikes ?? 0;
@@ -838,22 +901,24 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                         passHref
                                       >
-                                        <Image
-                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                        <FallbackImage
+                                          src={reply.userAvatar || DEFAULT_USER_ICON}
                                           alt={reply.author?.node?.name || "User"}
                                           width={44}
                                           height={44}
                                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                          type={FallbackImageType.Icon}
                                         />
                                       </Link>
                                     ) : (
-                                      <Image
-                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                      <FallbackImage
+                                        src={reply.userAvatar || DEFAULT_USER_ICON}
                                         alt={reply.author?.node?.name || "User"}
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                                         onClick={() => handleProfileClick(reply.author.node.id)}
+                                        type={FallbackImageType.Icon}
                                       />
                                     )
                                   ) : reply.id ? (
@@ -862,36 +927,55 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         href={String(session.user.id) === String(reply.id) ? PROFILE : PAGE(PROFILE, [reply.id])}
                                         passHref
                                       >
-                                        <Image
-                                          src={reply.userAvatar || "/profile-icon.svg"}
+                                        <FallbackImage
+                                          src={reply.userAvatar || DEFAULT_USER_ICON}
                                           alt={reply.author?.node?.name || "User"}
                                           width={44}
                                           height={44}
                                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
+                                          type={FallbackImageType.Icon}
                                         />
                                       </Link>
                                     ) : (
-                                      <Image
-                                        src={reply.userAvatar || "/profile-icon.svg"}
+                                      <FallbackImage
+                                        src={reply.userAvatar || DEFAULT_USER_ICON}
                                         alt={reply.author?.node?.name || "User"}
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
                                         onClick={() => handleProfileClick(reply.id)}
+                                        type={FallbackImageType.Icon}
                                       />
                                     )
                                   ) : (
-                                    <Image
-                                      src={reply.userAvatar || "/profile-icon.svg"}
+                                    <FallbackImage
+                                      src={reply.userAvatar || DEFAULT_USER_ICON}
                                       alt={reply.author?.node?.name || "User"}
                                       width={44}
                                       height={44}
                                       className="review-card__user-image !size-8 md:!size-11"
+                                      type={FallbackImageType.Icon}
                                     />
                                   )}
                                   <div className="review-card__user-info">
                                     <h3 className="review-card__username !text-xs md:!text-base !font-semibold">
-                                      {reply.author?.node?.name || "Unknown User"}
+                                      {session?.user ? (
+                                        <Link
+                                          href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
+                                          passHref
+                                        >
+                                          <span className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
+                                            {reply.author?.node?.name || "Unknown User"}
+                                          </span>
+                                        </Link>
+                                      ) : (
+                                        <span
+                                          className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline"
+                                          onClick={() => handleProfileClick(reply.author?.node?.id)}
+                                        >
+                                          {reply.author?.node?.name || "Unknown User"}
+                                        </span>
+                                      )}
                                     </h3>
                                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                                       {reply?.palates?.split("|").map((rawTag: string, tagIndex: number) => {
@@ -899,7 +983,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-[#31343f] px-2 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
@@ -915,9 +999,23 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text w-full text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5]">
-                                      {stripTags(reply.content || "") ||
-                                        "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                                    <p className="review-card__text text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                      {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
+                                        <>
+                                          {expandedReplies[reply.id]
+                                            ? capitalizeWords(stripTags(reply.content || ""))
+                                            : capitalizeWords(truncateText(stripTags(reply.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                                          {" "}
+                                          <button
+                                            className="text-xs hover:underline inline font-bold"
+                                            onClick={() => toggleReplyContent(reply.id)}
+                                          >
+                                            {expandedReplies[reply.id] ? "[Show Less]" : "[See More]"}
+                                          </button>
+                                        </>
+                                      ) : (
+                                        capitalizeWords(stripTags(reply.content || ""))
+                                      )}
                                     </p>
                                     <div className="flex items-center relative text-center">
                                       <button

@@ -5,10 +5,11 @@ export interface ILoginCredentials {
 }
 
 export interface IJWTResponse {
-    token: string;
-    user_email: string;
-    user_nicename: string;
-    user_display_name: string;
+    id?: number;
+    token?: string;
+    user_email?: string;
+    user_nicename?: string;
+    user_display_name?: string;
 }
 
 export interface IRegisterData {
@@ -48,4 +49,30 @@ export interface IUserUpdateResponse {
     message: string;
     status: number;
     code?: any;
+}
+
+export interface CheckGoogleUserResponse {
+    status: number;
+    message?: string;
+    token?: string;
+    id?: number;
+}
+
+export interface CurrentUserResponse {
+    id?: number;
+    ID?: number;
+    user_login?: string;
+    user_email: string;
+    display_name?: string;
+    profile_image?: string;
+    birthdate?: string;
+    language?: string;
+    palates?: string;
+    about_me?: string;
+}
+
+export interface CheckEmailExistResponse {
+    exists: boolean;
+    status: number;
+    message?: string;
 }

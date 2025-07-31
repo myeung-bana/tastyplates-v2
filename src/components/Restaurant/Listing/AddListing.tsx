@@ -18,8 +18,13 @@ import Select, { components } from "react-select";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import CustomOption from "@/components/ui/Select/CustomOption";
-import debounce from 'lodash.debounce'; // Make sure you 
+import debounce from 'lodash.debounce';
 import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { set } from "date-fns";
+import { maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit } from "@/constants/messages";
 
 declare global {
   interface Window {
@@ -79,6 +84,7 @@ const AddListingPage = (props: any) => {
   const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
   const [addressPredictions, setAddressPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState<boolean>(false);
+  const [reviewTitleError, setReviewTitleError] = useState('');
 
   useEffect(() => {
     const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -276,10 +282,10 @@ const AddListingPage = (props: any) => {
   }, []);
 
   const tags = [
-    { id: 1, name: "Must Revisit", icon: "/flag.svg" },
-    { id: 2, name: "Insta-Worthy", icon: "/phone.svg" },
-    { id: 3, name: "Value for Money", icon: "/cash.svg" },
-    { id: 4, name: "Best Service", icon: "/helmet.svg" },
+    { id: 1, name: "Must Revisit", icon: FLAG },
+    { id: 2, name: "Insta-Worthy", icon: PHONE },
+    { id: 3, name: "Value for Money", icon: CASH },
+    { id: 4, name: "Best Service", icon: HELMET },
   ];
 
   const prices = [
@@ -373,11 +379,31 @@ const AddListingPage = (props: any) => {
       setRatingError("");
     }
 
+    if (selectedFiles.length < minimumImage) {
+      setUploadedImageError(minimumImageLimit(minimumImage));
+      hasError = true;
+    } else if (selectedFiles.length > maximumImage) {
+      setUploadedImageError(maximumImageLimit(maximumImage));
+      hasError = true;
+    } else {
+      setUploadedImageError("");
+    }
+
     if (content.trim() === "") {
       setDescriptionError("Description is required.");
       hasError = true;
+    } else if (content.length > reviewDescriptionLimit) {
+      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+      hasError = true;
     } else {
       setDescriptionError("");
+    }
+
+    if (reviewMainTitle.length > reviewTitleLimit) {
+      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+      hasError = true;
+    } else {
+      setReviewTitleError("");
     }
 
     if (hasError) return;
@@ -475,9 +501,8 @@ const AddListingPage = (props: any) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      const maxFiles = 6;
-      if (selectedFiles.length + files.length > maxFiles) {
-        setUploadedImageError(`You can upload a maximum of ${maxFiles} photos in total.`);
+      if (selectedFiles.length + files.length > maximumImage) {
+        setUploadedImageError(maximumImageLimit(maximumImage));
         event.target.value = '';
         return;
       } else {
@@ -873,16 +898,24 @@ const AddListingPage = (props: any) => {
                 </div>
               </div>
               <div className="listing__form-group">
-                <label className="listing__label">Listing Name</label>
+                <label className="listing__label">Title</label>
                 <div className="listing__input-group">
                   <textarea
                     name="reviewTitle"
                     className="listing__input resize-vertical"
                     placeholder="Title of your review"
                     value={reviewMainTitle}
-                    onChange={(e) => setReviewMainTitle(e.target.value)}
+                    onChange={(e) => {
+                      setReviewMainTitle(e.target.value);
+                      setReviewTitleError("");
+                    }}
                     rows={2}
                   ></textarea>
+                  {reviewTitleError && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {reviewTitleError}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="listing__form-group">
@@ -941,7 +974,7 @@ const AddListingPage = (props: any) => {
                       >
                         <MdClose className="size-3 md:size-4" />
                       </button>
-                      <Image
+                      <FallbackImage
                         src={item}
                         alt={`Uploaded image ${index}`}
                         className="rounded-2xl object-cover"
@@ -959,7 +992,7 @@ const AddListingPage = (props: any) => {
                     <div
                       key={tag.id}
                       className={`listing-checkbox-item flex items-center gap-2 !w-fit !rounded-[50px] !px-4 !py-2 border-[1.5px] border-[#494D5D] ${selectedrecognition.includes(tag.name)
-                        ? "bg-[#F1F1F1]"
+                        ? "bg-[#cac9c9]"
                         : "bg-transparent"
                         }`}
                       onClick={() => handleChangeRecognition(tag.name)}

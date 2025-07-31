@@ -17,10 +17,11 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, errorOccurred, maximumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
-import { maximumImage } from "@/constants/validation";
+import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 interface Restaurant {
   id: string;
   slug: string;
@@ -49,6 +50,7 @@ const ReviewSubmissionPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
+  const [reviewTitleError, setReviewTitleError] = useState('');
   const [uploadedImageError, setUploadedImageError] = useState('');
   const [ratingError, setRatingError] = useState('');
   const router = useRouter();
@@ -92,22 +94,22 @@ const ReviewSubmissionPage = () => {
     {
       id: 1,
       name: "Must Revisit",
-      icon: "/flag.svg",
+      icon: FLAG,
     },
     {
       id: 2,
       name: "Insta-Worthy",
-      icon: "/phone.svg",
+      icon: PHONE,
     },
     {
       id: 3,
       name: "Value for Money",
-      icon: "/cash.svg",
+      icon: CASH,
     },
     {
       id: 4,
       name: "Best Service",
-      icon: "/helmet.svg",
+      icon: HELMET,
     },
   ];
 
@@ -186,11 +188,31 @@ const ReviewSubmissionPage = () => {
       setRatingError('');
     }
 
+    if (selectedFiles.length < minimumImage) {
+      setUploadedImageError(minimumImageLimit(minimumImage));
+      hasError = true;
+    } else if (selectedFiles.length > maximumImage) {
+      setUploadedImageError(maximumImageLimit(maximumImage));
+      hasError = true;
+    } else {
+      setUploadedImageError('');
+    }
+
     if (content.trim() === '') {
       setDescriptionError(requiredDescription);
       hasError = true;
+    } else if (content.length > reviewDescriptionLimit) {
+      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+      hasError = true;
     } else {
       setDescriptionError('');
+    }
+
+    if (review_main_title.length > reviewTitleLimit) {
+      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+      hasError = true;
+    } else {
+      setReviewTitleError('');
     }
 
     if (hasError) return;
@@ -222,6 +244,10 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateError);
           setIsLoading(false);
           return
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsLoading(false);
+          return;
         } else {
           toast.error(errorOccurred);
           setIsLoading(false);
@@ -231,6 +257,10 @@ const ReviewSubmissionPage = () => {
         if (res.status === code.created) {
           toast.success(savedAsDraft);
           router.push(LISTING);
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsSavingAsDraft(false);
+          return;
         } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
@@ -307,9 +337,17 @@ const ReviewSubmissionPage = () => {
                     className="submitRestaurants__input resize-vertical"
                     placeholder="Title of your review"
                     value={review_main_title}
-                    onChange={(e) => setReviewMainTitle(e.target.value)}
+                    onChange={(e) => {
+                      setReviewMainTitle(e.target.value);
+                      if (e.target.value.trim() !== '') {
+                        setReviewTitleError('');
+                      }
+                    }}
                     rows={2}
                   ></textarea>
+                  {reviewTitleError && (
+                    <p className="text-red-600 text-sm mt-1">{reviewTitleError}</p>
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">

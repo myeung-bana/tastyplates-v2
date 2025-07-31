@@ -9,6 +9,7 @@ import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import toast from 'react-hot-toast';
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import { formatDateT } from '@/lib/utils';
+import FallbackImage from '@/components/ui/Image/FallbackImage';
 
 interface FetchedRestaurant {
     id: string;
@@ -68,7 +69,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     return (
         <div className="noline">
             <div className="restaurant-card__image !rounded-sm relative">
-                <Image
+                <FallbackImage
                     src={imageUrl}
                     alt="Review Draft"
                     width={304}
