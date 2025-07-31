@@ -22,9 +22,9 @@ import debounce from 'lodash.debounce';
 import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
-import { reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
 import { set } from "date-fns";
-import { maximumReviewDescription, maximumReviewTitle } from "@/constants/messages";
+import { maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit } from "@/constants/messages";
 
 declare global {
   interface Window {
@@ -379,6 +379,16 @@ const AddListingPage = (props: any) => {
       setRatingError("");
     }
 
+    if (selectedFiles.length < minimumImage) {
+      setUploadedImageError(minimumImageLimit(minimumImage));
+      hasError = true;
+    } else if (selectedFiles.length > maximumImage) {
+      setUploadedImageError(maximumImageLimit(maximumImage));
+      hasError = true;
+    } else {
+      setUploadedImageError("");
+    }
+
     if (content.trim() === "") {
       setDescriptionError("Description is required.");
       hasError = true;
@@ -491,9 +501,8 @@ const AddListingPage = (props: any) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      const maxFiles = 6;
-      if (selectedFiles.length + files.length > maxFiles) {
-        setUploadedImageError(`You can upload a maximum of ${maxFiles} photos in total.`);
+      if (selectedFiles.length + files.length > maximumImage) {
+        setUploadedImageError(maximumImageLimit(maximumImage));
         event.target.value = '';
         return;
       } else {
