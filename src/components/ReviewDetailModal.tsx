@@ -370,8 +370,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
 
-    if (commentReply.length > reviewDescriptionLimit) {
-      toast.error(maximumReviewDescription(reviewDescriptionLimit));
+    if (commentReply.length > reviewDescriptionDisplayLimit) {
+      toast.error(maximumReviewDescription(reviewDescriptionDisplayLimit));
       return;
     }
 
