@@ -18,6 +18,8 @@ import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
 import { useDebounce } from "use-debounce"; // Import useDebounce
 import Link from "next/link";
+import { LISTING_EXPLANATION } from "@/constants/pages";
+import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -54,7 +56,7 @@ const ListingPage = () => {
       databaseId: item.databaseId || 0, // Default to 0 if not present
       slug: item.slug,
       name: item.title,
-      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
       rating: item.averageRating || "", // Default to 0 if not present
       cuisineNames: item.palates || [],
       countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
@@ -284,7 +286,7 @@ const ListingPage = () => {
                         No listings found for "{debouncedSearchTerm}". Try a different search!
                       </p>
                       <Link
-                        href="/listing/explanation"
+                        href={LISTING_EXPLANATION}
                         type="submit"
                         className="rounded-full    text-sm md:text-base text-black h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center"
                       >

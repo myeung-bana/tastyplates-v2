@@ -25,6 +25,9 @@ import {
   palateRequired,
 } from "@/constants/messages";
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
+import CustomDatePicker from "@/components/CustomDatepicker";
+import { HOME, ONBOARDING_TWO } from "@/constants/pages";
+import { formatDateForInput } from "@/lib/utils";
 
 const OnboardingOnePage = () => {
   const router = useRouter();
@@ -41,6 +44,7 @@ const OnboardingOnePage = () => {
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
     setHasMounted(true); // Ensures code only runs after client-side mount
@@ -50,7 +54,7 @@ const OnboardingOnePage = () => {
   useEffect(() => {
     if (!hasMounted) return;
 
-    const storedData = localStorage.getItem('registrationData');
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
     const parsedData = storedData ? JSON.parse(storedData) : {};
 
     setBirthdate(parsedData.birthdate || "");
@@ -69,11 +73,11 @@ const OnboardingOnePage = () => {
   // Navigation protection effects
   useEffect(() => {
     if (!hasMounted) return;
-    let storedData = localStorage.getItem('registrationData');
+    let storedData = localStorage.getItem(REGISTRATION_KEY);
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
     const username = Cookies.get('username');
-
+    
     if (!storedData && googleAuth === 'true') {
       const registrationData = {
         username: username || "",
@@ -81,12 +85,12 @@ const OnboardingOnePage = () => {
         password: "",
         googleAuth: true
       };
-      localStorage.setItem('registrationData', JSON.stringify(registrationData));
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
       storedData = JSON.stringify(registrationData);
     }
 
     if (!storedData) {
-      router.replace('/');
+      router.replace(HOME);
     }
   }, [router, hasMounted]);
 
@@ -96,7 +100,7 @@ const OnboardingOnePage = () => {
 
     try {
       // Get stored data first
-      const storedDataStr = localStorage.getItem('registrationData');
+      const storedDataStr = localStorage.getItem(REGISTRATION_KEY);
       let existingData = {};
       
       // Safely parse the stored data
@@ -143,10 +147,7 @@ const OnboardingOnePage = () => {
       }
 
       if (birthdate) {
-        const dateObj = new Date(birthdate);
-        if (!isNaN(dateObj.getTime())) {
-          formattedBirthdate = dateObj.toISOString().split("T")[0];
-        }
+        formattedBirthdate = formatDateForInput(birthdate);
       }
 
       // Gender validation
@@ -171,7 +172,7 @@ const OnboardingOnePage = () => {
       try {
         const response = await UserService.checkUsernameExists(name);
         if (response.exists) {
-          setUsernameError(response.message);
+          setUsernameError(response.message as string);
           setIsLoading(false);
           return;
         }
@@ -200,9 +201,9 @@ const OnboardingOnePage = () => {
         }
       });
 
-      localStorage.setItem('registrationData', JSON.stringify(updatedData));
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(updatedData));
       setIsLoading(false);
-      router.push("/onboarding2");
+      router.push(ONBOARDING_TWO);
     } catch (error) {
       console.error('Error in form submission:', error);
       setIsLoading(false);
@@ -239,7 +240,7 @@ const OnboardingOnePage = () => {
       type: "date",
       placeholder: "DD/MM/YYYY",
       value: birthdate,
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setBirthdate(e.target.value),
+      onChange: (val: string) => setBirthdate(val),
       disabled: isLoading,
       className: "relative !h-[48px]",
     },
@@ -294,6 +295,7 @@ const OnboardingOnePage = () => {
       onChange: handlePalateChange,
       items: palateOptions,
       disabled: isLoading,
+      limitValueLength: 2,
       className: "!min-h-[48px] !rounded-[10px] text-sm",
     },
   ];
@@ -325,21 +327,14 @@ const OnboardingOnePage = () => {
                   </label>
                   <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
                     {field.type === "date" ? (
-                      <div className="relative">
-                        <input
-                          type={field.type}
+                        <CustomDatePicker
                           id={field.label?.toLowerCase()}
-                          className={`auth__input text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
+                          className={`!w-full text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
                           value={field.value}
                           onChange={field.onChange}
+                          formatValue="MM/dd/yyyy"
                           disabled={field.disabled}
                         />
-                        {!field.value && (
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none !text-sm">
-                            DD/MM/YYYY
-                          </span>
-                        )}
-                      </div>
                     ) : field.type === "select" ? (
                       <CustomSelect {...field} />
                     ) : field.type === "multiple-select" ? (
@@ -374,7 +369,7 @@ const OnboardingOnePage = () => {
             })}
             <button
               type="submit"
-              className="auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto"
+              className={`auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto ${isLoading ? 'pointer-events-none' : ''}`}
               disabled={isLoading}
             >
               {isLoading ? "Loading..." : "Save and Continue"}

@@ -11,7 +11,9 @@ import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { minimumPassword } from "@/constants/validation";
-import { emailOccurredError, passwordLimit, passwordsNotMatch } from "@/constants/messages";
+import { emailOccurredError, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
+import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
+import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -29,9 +31,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
+  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
-    const registrationData = localStorage.getItem('registrationData');
+    const registrationData = localStorage.getItem(REGISTRATION_KEY);
     if (registrationData && JSON.parse(registrationData).isPartialRegistration) {
       setShowContinueModal(true);
     }
@@ -45,7 +48,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   const checkEmailExists = async (email: string) => {
     const checkEmail = await UserService.checkEmailExists(email);
-    if (checkEmail.status == 400) {
+    if (checkEmail.status == code.badRequest) {
       setError(checkEmail.message);
       return false;
     }
@@ -78,7 +81,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    localStorage.removeItem('registrationData');
+    localStorage.removeItem(REGISTRATION_KEY);
 
     // Password validation
     if (!validatePasswords()) {
@@ -94,12 +97,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       }
 
       // Save basic info to localStorage
-      localStorage.setItem('registrationData', JSON.stringify({
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify({
         email,
         password
       }));
 
-      router.push('/onboarding');
+      router.push(ONBOARDING_ONE);
     } catch (error) {
       setError(emailOccurredError);
       return;
@@ -115,27 +118,27 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     try {
       setError("");
       setIsLoading(true);
-      localStorage.removeItem('registrationData');
+      localStorage.removeItem(REGISTRATION_KEY);
       removeAllCookies();
       // Set a cookie to indicate signup intent
-      Cookies.set('auth_type', 'signup', { path: '/', sameSite: 'lax' });
+      Cookies.set('auth_type', sessionType.signup, { path: '/', sameSite: 'lax' });
 
-      await signIn('google', {
+      await signIn(provider.google, {
         redirect: false,
-        callbackUrl: '/',
+        callbackUrl: HOME,
       });
     } catch (error) {
       if (error instanceof FirebaseError) {
-        if (error.code === 'auth/cancelled-popup-request') {
+        if (error.code === FIREBASE_ERRORS.CANCELLED_POPUP_REQUEST) {
           setIsLoading(false);
           return;
         }
         setError(error.message);
       } else {
-        setError("An unexpected error occurred");
+        setError(unexpectedError);
       }
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -153,14 +156,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button
-                  onClick={() => router.push('/onboarding')}
+                  onClick={() => router.push(ONBOARDING_ONE)}
                   className="bg-[#E36B00] hover:bg-[#d36400] text-white px-6 py-2 rounded-xl text-sm"
                 >
                   Continue Registration
                 </button>
                 <button
                   onClick={() => {
-                    localStorage.removeItem('registrationData');
+                    localStorage.removeItem(REGISTRATION_KEY);
                     setShowContinueModal(false);
                   }}
                   className="text-gray-700 hover:text-gray-900 underline text-sm"

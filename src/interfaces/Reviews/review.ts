@@ -1,6 +1,6 @@
 export interface ReviewedDataProps {
-  databasedId: number;
-  id: number;
+  databaseId: number;
+  id: string;
   reviewMainTitle: string;
   commentLikes: string;
   userLiked: boolean;
@@ -12,7 +12,7 @@ export interface ReviewedDataProps {
     databaseId: number;
     id: string;
     sourceUrl: string;
-  }
+  }[];
   palates: string;
   userAvatar?: string;
   author: {
@@ -26,6 +26,7 @@ export interface ReviewedDataProps {
       }
     }
   }
+  userId: number;
   commentedOn: {
     node: {
       databaseId: number;
@@ -55,4 +56,8 @@ export interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: any;
+  initialPhotoIndex?: number;
+  userLiked?: boolean;
+  likesCount?: number;
+  onLikeChange?: (userLiked: boolean, likesCount: number) => void;
 }

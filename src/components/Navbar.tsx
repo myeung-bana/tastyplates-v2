@@ -19,16 +19,21 @@ import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { useSearchParams } from "next/navigation";
 import { logOutSuccessfull } from "@/constants/messages";
+import { sessionStatus } from "@/constants/response";
+import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
+import { DEFAULT_USER_ICON } from "@/constants/images";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 
 const navigationItems = [
-  { name: "Restaurant", href: "/restaurants" },
+  { name: "Restaurant", href: RESTAURANTS },
   // { name: "Dashboard", href: "/dashboard" },
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];
 
 export default function Navbar(props: any) {
   const { data: session, status } = useSession();
-  const [palateSearch, setPalateSearch] = useState("");
+  const [ethnicSearch, setEthnicSearch] = useState("");
   const [addressSearch, setAddressSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
@@ -38,13 +43,17 @@ export default function Navbar(props: any) {
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [navBg, setNavBg] = useState(false);
   const searchParams = useSearchParams();
+  const LOGIN_BACK_KEY = 'loginBackMessage';
+  const LOGIN_KEY = 'logInMessage';
+  const LOGOUT_KEY = 'logOutMessage';
+  const WELCOME_KEY = 'welcomeMessage';
 
   const handleLogout = async () => {
     removeAllCookies();
     localStorage.clear();
-    localStorage.setItem('logOutMessage', logOutSuccessfull);
+    localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
 
-    await signOut({ redirect: true, callbackUrl: '/' });
+    await signOut({ redirect: true, callbackUrl: HOME });
   };
 
   const changeNavBg = () => {
@@ -53,45 +62,44 @@ export default function Navbar(props: any) {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (palateSearch) {
-      params.set('palates', encodeURIComponent(palateSearch));
+    if (ethnicSearch) {
+      params.set('ethnic', encodeURIComponent(ethnicSearch));
     }
     if (addressSearch) {
-      params.set('address', encodeURIComponent(addressSearch));
+      params.set('address',(addressSearch));
     }
-    router.push(`/restaurants?${params.toString()}`);
+    router.push(PAGE(RESTAURANTS, [], params.toString()));
   };
 
   useEffect(() => {
-    const palates = searchParams ? searchParams.get("palates") : null;
-    if (palates) {
-      const capitalized = palates.split(",").map((item) => item.trim().split("-").map(
-        (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-      ).join("-")
-      ).join(", ");
-      setPalateSearch(capitalized);
-    }
+    const ethnic = searchParams ? searchParams.get("ethnic") : null;
+    if (ethnic) {
+      setEthnicSearch(decodeURIComponent(ethnic));
+    } 
+    // else {
+    //   setEthnicSearch("");
+    // }
 
-     const address = searchParams ? searchParams.get("address") : null;
-    // Decode address from URL before setting state
+    const address = searchParams ? searchParams.get("address") : null;
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
-
-
   
   useEffect(() => {
-    const loginMessage = localStorage?.getItem('loginBackMessage') ?? "";
-    const logOutMessage = localStorage?.getItem('logOutMessage') ?? "";
-    const googleMessage = Cookies.get('logInMessage') ?? "";
+    const loginMessage = localStorage?.getItem(LOGIN_BACK_KEY) ?? "";
+    const logOutMessage = localStorage?.getItem(LOGOUT_KEY) ?? "";
+    const googleMessage = Cookies.get(LOGIN_KEY) ?? "";
+    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
 
-    if (loginMessage || logOutMessage || googleMessage) {
-      toast.success(loginMessage || logOutMessage || googleMessage, {
-        duration: 3000, // 3 seconds
-      });
+    if ((loginMessage || logOutMessage || googleMessage)) {
+      if (!welcomeMessage) {
+        toast.success(loginMessage || logOutMessage || googleMessage, {
+          duration: 3000, // 3 seconds
+        });  
+      }
 
-      removeAllCookies(['logInMessage']);
-      localStorage.removeItem('loginBackMessage');
-      localStorage.removeItem('logOutMessage');
+      removeAllCookies([LOGIN_KEY]);
+      localStorage.removeItem(LOGIN_BACK_KEY);
+      localStorage.removeItem(LOGOUT_KEY);
     }
 
     window.addEventListener("scroll", changeNavBg);
@@ -173,7 +181,7 @@ export default function Navbar(props: any) {
                 </button>
               </div>
               <div className="navbar__brand">
-                <Link href="/" className="flex-shrink-0 flex items-center">
+                <Link href={HOME} className="flex-shrink-0 flex items-center">
                   <h1
                     className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                       }`}
@@ -199,14 +207,12 @@ export default function Navbar(props: any) {
               <div className="hidden md:block">
                 <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
                   <div className="hero__search-restaurant !bg-transparent">
-                    {/* <FiSearch className="hero__search-icon" /> */}
-                    {/* <label htmlFor="myEthnic">My Ethnic</label><br /> */}
                     <input
                       type="text"
                       placeholder="Search Ethnic"
                       className="hero__search-input"
-                      value={palateSearch}
-                      onChange={(e) => setPalateSearch(e.target.value)}
+                      value={ethnicSearch}
+                      onChange={(e) => setEthnicSearch(e.target.value)}
                     />
                   </div>
                   <div className="hero__search-divider"></div>
@@ -245,15 +251,15 @@ export default function Navbar(props: any) {
               </div>
             )}
             <div className="navbar__auth">
-              {(status !== "authenticated" && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
+              {(status !== sessionStatus.authenticated && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
                 <Image
-                  src={"/profile-icon.svg"}
+                  src={DEFAULT_USER_ICON}
                   alt={"Profile"}
                   width={44}
                   height={44}
                   className="w-full h-full object-cover rounded-full"
                 />
-              </div> : (status !== "authenticated") ? (
+              </div> : (status !== sessionStatus.authenticated) ? (
                 <>
                   <button
                     onClick={() => {
@@ -294,10 +300,10 @@ export default function Navbar(props: any) {
                     }
                     content={
                       <div className={`bg-white flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href="/listing" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Write a Review
                         </Link>
-                        <Link href="/listing/explanation" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING_EXPLANATION} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Add a Listing
                         </Link>
                       </div>
@@ -307,21 +313,22 @@ export default function Navbar(props: any) {
                     align="bottom-end"
                     trigger={
                       <div className="w-11 h-11 rounded-full overflow-hidden">
-                        <Image
-                          src={session.user?.image || "/profile-icon.svg"}
-                          alt={session.user?.name || "Profile"}
+                        <FallbackImage
+                          src={session?.user?.image || DEFAULT_USER_ICON}
+                          alt={session?.user?.name || "Profile"}
                           width={44}
                           height={44}
                           className="w-full h-full object-cover rounded-full"
+                          type={FallbackImageType.Icon}
                         />
                       </div>
                     }
                     content={
                       <div className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-gray-200">
-                        <Link href="/profile" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={PROFILE} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           My Profile
                         </Link>
-                        <Link href="/settings" className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={SETTINGS} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
                           Settings
                         </Link>
                         <div className="border-t border-gray-200 w-full" />
@@ -346,8 +353,8 @@ export default function Navbar(props: any) {
                     type="text"
                     placeholder="Start Your Search"
                     className="hero__search-input text-center"
-                    value={palateSearch} // Ensure mobile search also uses palateSearch
-                    onChange={(e) => setPalateSearch(e.target.value)}
+                    value={ethnicSearch}
+                    onChange={(e) => setEthnicSearch(e.target.value)}
                   />
                 </div>
                 <button
@@ -395,7 +402,7 @@ export default function Navbar(props: any) {
                   </button>
                 </div>
                 <div className="navbar__brand">
-                  <Link href="/" className="flex-shrink-0 flex items-center">
+                  <Link href={HOME} className="flex-shrink-0 flex items-center">
                     <h1 className="text-[#494D5D]">TastyPlates</h1>
                   </Link>
                 </div>
@@ -415,7 +422,7 @@ export default function Navbar(props: any) {
               </li>
               <li>
                 <div className="navbar__auth">
-                  {status !== "authenticated" ? (
+                  {status !== sessionStatus.authenticated ? (
                     <>
                       <button
                         onClick={() => setIsOpenSignin(true)}
@@ -449,13 +456,13 @@ export default function Navbar(props: any) {
                         content={
                           <div className="bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
                             <Link
-                              href="/listing"
+                              href={LISTING}
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Write a Review
                             </Link>
                             <Link
-                              href="/listing/explanation"
+                              href={LISTING_EXPLANATION}
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Add a Listing

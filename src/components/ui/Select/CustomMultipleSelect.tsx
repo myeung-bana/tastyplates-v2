@@ -1,3 +1,5 @@
+// CustomMultipleSelect.tsx
+"use client";
 import { useState, useEffect, useRef } from "react";
 import { Key } from "@react-types/shared";
 import { FiChevronDown } from "react-icons/fi";
@@ -5,11 +7,13 @@ import { FiChevronDown } from "react-icons/fi";
 interface ItemChild {
     key: string;
     label: string;
+    flag?: string;
 }
 
 interface ItemInterface {
     key: string;
     label: string;
+    flag?: string;
     children?: ItemChild[];
 }
 
@@ -19,6 +23,7 @@ interface CustomMultipleSelectProps {
     placeholder?: string;
     value?: Set<Key>;
     onChange?: (keys: Set<Key>) => void;
+    onSelectionChangeWithHeader?: (selectedKeys: Set<Key>, selectedLabel: string | null) => void;
     className?: string;
     baseClassName?: string;
     dropDownClassName?: string;
@@ -30,11 +35,13 @@ interface CustomMultipleSelectProps {
     hideTagRendering?: boolean;
     showModal?: boolean;
     onClose?: () => void;
+    limitValueLength?: number;
 }
 
 interface SelectedTag {
     key: Key;
     label: string;
+    flag?: string;
 }
 
 const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
@@ -49,6 +56,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     const enableCheckboxHeader = props.enableCheckboxHeader || false;
     const enableSelectionDropdown = props.enableSelectionDropdown || false;
     const hideTagRendering = props.hideTagRendering || false;
+    const selectionLimit = props.limitValueLength ?? Infinity;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -74,19 +82,27 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
     }, [props.showModal]);
 
     useEffect(() => {
-        if (isOpen && selectRef.current) {
-            const selectRect = selectRef.current.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-            const dropdownHeight = 320; // Approximate max height of dropdown
+        const autoPositionDropdown = () => {
+            if (selectRef.current) {
+                const selectRect = selectRef.current.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                const dropdownHeight = 320; // Approximate max height of dropdown
 
-            // If there's not enough space below, position above
-            if (selectRect.bottom + dropdownHeight > windowHeight) {
-                setDropdownPosition('top');
-            } else {
-                setDropdownPosition('bottom');
+                if (selectRect.bottom + dropdownHeight > windowHeight) {
+                    setDropdownPosition('top');
+                } else {
+                    setDropdownPosition('bottom');
+                }
             }
         }
-    }, [isOpen]);
+
+        autoPositionDropdown();
+
+        window.addEventListener('resize', autoPositionDropdown);
+        return () => {
+            window.removeEventListener('resize', autoPositionDropdown);
+        }
+    }, []);
 
     const filteredItems = props.items
         .map((section) => ({
@@ -98,35 +114,68 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         .filter((section) => section.children && section.children.length > 0);
 
     const getSelectedTags = (): SelectedTag[] => {
+        const selectedKeys = Array.from(props.value || new Set());
         const tags: SelectedTag[] = [];
-        props.items.forEach(section => {
-            section.children?.forEach(child => {
-                if (props.value?.has(child.key)) {
-                    tags.push({ key: child.key, label: child.label });
+
+        for (const selectedKey of selectedKeys) {
+            const headerItem = props.items.find(item => item.key === selectedKey);
+            if (headerItem) {
+                tags.push({ key: headerItem.key, label: headerItem.label, flag: headerItem.flag });
+                continue; 
+            }
+            for (const section of props.items) {
+                const child = section.children?.find(c => c.key === selectedKey);
+                if (child) {
+                    tags.push({ key: child.key, label: child.label, flag: child.flag });
+                    break;
                 }
-            });
-        });
+            }
+        }
         return tags;
     };
 
     const handleRemoveTag = (tagKey: Key) => {
-        if (props.value) {
-            const newSelection = new Set<Key>(props.value);
-            newSelection.delete(tagKey);
-            props.onChange?.(newSelection);
+        const newSelection = new Set(props.value);
+        newSelection.delete(tagKey);
+
+        let selectedLabel: string | null = null;
+        if (newSelection.size > 0) {
+            const firstKey = newSelection.values().next().value;
+            for (const item of props.items) {
+                if (item.key === firstKey) {
+                    selectedLabel = item.label;
+                    break;
+                }
+                if (item.children) {
+                    const child = item.children.find(c => c.key === firstKey);
+                    if (child) {
+                        selectedLabel = child.label;
+                        break;
+                    }
+                }
+            }
         }
+
+        props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, selectedLabel);
+    };
+
+    const isSelectionLimitReached = () => {
+        return (props.value?.size || 0) >= selectionLimit;
     };
 
     const renderTags = () => {
         const tags = getSelectedTags();
 
-        if (!hideDropdownLabel && tags.length == 0) {
+        if (!hideDropdownLabel && tags.length === 0) {
             return <span className="text-gray-400">{props.placeholder}</span>;
         }
 
+        const displayTags = selectionLimit !== Infinity ? tags.slice(0, selectionLimit) : tags;
+
         return (
             <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                {tags.map(tag => (
+                {displayTags.map(tag => (
                     <div
                         key={tag.key}
                         className="flex items-center gap-2 px-2 py-1 bg-[#F1F1F1] rounded-[50px] text-sm group"
@@ -157,7 +206,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
     const toggleDropdown = () => {
         setIsOpen(!isOpen);
-        setShowDropdown(!showDropdown);  // Add this line
+        setShowDropdown(!showDropdown);
     };
 
     const getDropdownStyles = () => {
@@ -172,24 +221,51 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         toggleDropdown();
     };
 
-    const areAllChildrenSelected = (item: ItemInterface) => {
-        if (!item.children) return false;
-        return item.children.every(child => props.value?.has(child.key));
+    // Helper to check if a child is logically selected, considering if its header is selected
+    const isChildLogicallySelected = (childKey: Key, parentHeader: ItemInterface) => {
+        // A child is logically selected if its specific key is in the set
+        // OR if its parent header's key is in the set (implying all children are selected visually).
+        return props.value?.has(childKey) || props.value?.has(parentHeader.key) || false;
+    };
+
+    // Header checkbox `checked` state
+    const isHeaderSelected = (item: ItemInterface) => {
+        return props.value?.has(item.key) || false;
     };
 
     const handleHeaderCheckboxChange = (item: ItemInterface) => {
-        if (!item.children) return;
-        const newSelection = new Set(props.value || new Set<Key>());
-        const allSelected = areAllChildrenSelected(item);
+        const currentSelection = new Set(props.value);
+        let newSelection = new Set(currentSelection); // Start with current selection
+        let selectedLabel: string | null = null;
 
-        item.children.forEach(child => {
-            if (allSelected) {
-                newSelection.delete(child.key);
-            } else {
-                newSelection.add(child.key);
+        const headerIsCurrentlySelected = currentSelection.has(item.key);
+
+        if (headerIsCurrentlySelected) {
+            // If header is currently selected, deselect it.
+            newSelection.delete(item.key);
+        } else {
+            // If header is not currently selected, attempt to select it.
+            // Only add if there's space.
+            if (newSelection.size < selectionLimit) {
+                newSelection.add(item.key);
             }
-        });
+        }
+
+        // Determine selectedLabel for callback
+        if (newSelection.size > 0) {
+            const firstKey = newSelection.values().next().value;
+            const item = props.items.find(i => i.key === firstKey || i.children?.some(c => c.key === firstKey));
+            if (item) {
+                if (item.key === firstKey) { selectedLabel = item.label; }
+                else { selectedLabel = item.children?.find(c => c.key === firstKey)?.label || null; }
+            }
+        } else {
+            selectedLabel = null;
+        }
+
         props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, selectedLabel);
+        // Do NOT automatically close dropdown here, user might want to select another item if limit allows.
     };
 
     const toggleSection = (key: string) => {
@@ -200,6 +276,50 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
             newExpandedSections.add(key);
         }
         setExpandedSections(newExpandedSections);
+    };
+
+    const handleChildClick = (e: React.MouseEvent, childKey: Key, childLabel: string, parentHeader: ItemInterface) => {
+        e.stopPropagation();
+
+        const currentSelection = new Set(props.value);
+        let newSelection = new Set(currentSelection);
+        let selectedLabel: string | null = null;
+
+        const isCurrentlyLogicallySelected = isChildLogicallySelected(childKey, parentHeader);
+
+        if (isCurrentlyLogicallySelected) {
+            // If child is currently selected (either directly or via header):
+            if (newSelection.has(parentHeader.key)) {
+                // If it was selected because its header was in the Set, deselect the header.
+                newSelection.delete(parentHeader.key);
+            }
+            if (newSelection.has(childKey)) {
+                // If the child's own key was in the Set, deselect it.
+                newSelection.delete(childKey);
+            }
+        } else {
+            // If child is NOT logically selected, try to select it.
+            if (newSelection.size < selectionLimit) {
+                newSelection.add(childKey);
+            } else {
+                // If limit reached, do nothing. User can't select more.
+            }
+        }
+
+        // Determine selectedLabel for callback
+        if (newSelection.size > 0) {
+            const firstKey = newSelection.values().next().value;
+            const item = props.items.find(i => i.key === firstKey || i.children?.some(c => c.key === firstKey));
+            if (item) {
+                if (item.key === firstKey) { selectedLabel = item.label; }
+                else { selectedLabel = item.children?.find(c => c.key === firstKey)?.label || null; }
+            }
+        } else {
+            selectedLabel = null;
+        }
+
+        props.onChange?.(newSelection);
+        props.onSelectionChangeWithHeader?.(newSelection, selectedLabel);
     };
 
     return (
@@ -235,18 +355,24 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                             >
                                 <div
                                     className={`flex items-center gap-2 h-[48px] px-4 ${enableSelectionDropdown ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                                    onClick={() => enableSelectionDropdown && toggleSection(item.key)}
+                                    onClick={(e) => {
+                                        const target = e.target as HTMLElement;
+                                        // Prevent toggle if the click is on the checkbox
+                                        if (enableSelectionDropdown && !target.classList.contains('checkbox-no-toggle')) {
+                                            toggleSection(item.key);
+                                        }
+                                    }}
                                 >
                                     {enableCheckboxHeader && (
                                         <input
                                             type="checkbox"
-                                            className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                            checked={areAllChildrenSelected(item)}
+                                            className="form-checkbox h-4 w-4 text-[#E36B00] checkbox-no-toggle"
+                                            checked={isHeaderSelected(item)} // Checks if header's own key is selected
                                             onChange={(e) => {
                                                 e.stopPropagation();
                                                 handleHeaderCheckboxChange(item);
                                             }}
-                                            readOnly
+                                            readOnly // Keep readOnly as the change is handled by onClick of the parent div
                                         />
                                     )}
                                     <span className="font-semibold text-[#494D5D]">{item.label}</span>
@@ -261,24 +387,24 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                         {item.children?.map((child) => (
                                             <div
                                                 key={child.key}
-                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50 ${props.itemClassName}`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newSelection = new Set(props.value || new Set<Key>());
-                                                    if (newSelection.has(child.key)) {
-                                                        newSelection.delete(child.key);
-                                                    } else {
-                                                        newSelection.add(child.key);
-                                                    }
-                                                    props.onChange?.(newSelection);
-                                                }}
+                                                className={`flex items-center gap-2 h-[40px] px-6 cursor-pointer hover:bg-gray-50
+                                                    ${props.itemClassName}
+                                                    ${isSelectionLimitReached() && !isChildLogicallySelected(child.key, item) ? 'opacity-50 !cursor-default' : ''}`} // Adjust opacity based on logical selection
+                                                onClick={(e) => handleChildClick(e, child.key, child.label, item)} // Pass the parent header item
                                             >
                                                 <input
                                                     type="checkbox"
                                                     className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                                    checked={props.value?.has(child.key)}
+                                                    checked={isChildLogicallySelected(child.key, item)}
                                                     readOnly
                                                 />
+                                                {child.flag && (
+                                                    <img
+                                                        src={child.flag}
+                                                        alt={`${child.label} flag`}
+                                                        className="w-6 h-4 rounded-md"
+                                                    />
+                                                )}
                                                 <span className="font-medium">{child.label}</span>
                                             </div>
                                         ))}

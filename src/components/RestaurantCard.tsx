@@ -4,8 +4,8 @@ import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
-import Photo from "../../public/images/Photos-Review-12.png";
-import { usePathname, useRouter } from "next/navigation";
+import Photo from "../../public/images/default-image.png";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
@@ -13,6 +13,12 @@ import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { PAGE } from "@/lib/utils";
+import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
+import toast from "react-hot-toast";
+import { errorOccurred, favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
+import FallbackImage from "./ui/Image/FallbackImage";
+import { responseStatusCode as code } from "@/constants/response";
 
 export interface Restaurant {
   id: string;
@@ -45,12 +51,14 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [showSignin, setShowSignin] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
   const hasFetched = useRef(false);
+  const palateParam = searchParams?.get("ethnic");
 
   useEffect(() => {
     setSaved(initialSavedStatus ?? false);
@@ -62,7 +70,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       return;
     }
     setLoading(true);
@@ -81,13 +89,22 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
         credentials: "include",
       });
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      if (res.status === code.success) {
+        toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -113,7 +130,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const handleConfirmDelete = async () => {
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       setIsDeleteModalOpen(false);
       return;
     }
@@ -133,13 +150,22 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
         credentials: "include",
       });
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      if (res.status == code.success) {
+        toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved); // Revert on error
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved); // Revert on error
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -170,7 +196,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       return;
     }
     handleToggle(e);
@@ -188,24 +214,24 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <a
-            href={`/restaurants/${restaurant.slug}`}
+            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})}
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /listing page
               if (pathname === "/listing" && clickedElement.dataset.role === "image") {
-                router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`); 
+                router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId]));
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(`/restaurants/${restaurant.slug}`);
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
                 Pending for Approval
               </div>
             )}
-            <Image
+            <FallbackImage
               data-role="image"
               src={restaurant.image}
               alt={restaurant.name}
@@ -241,17 +267,17 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           )}
         </div>
         <a 
-        href={`/restaurants/${restaurant.slug}`} 
+        href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
         onClick={async (e) => {
           e.preventDefault();
           if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(`/restaurants/${restaurant.slug}`);
+          router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
         }}
         >
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name truncate w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
-              <div className="restaurant-card__rating">
+              <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
+              <div className="restaurant-card__rating text-[1rem]">
                 {displayRating > 0 ? (
                   <>
                     <FaStar className="restaurant-card__icon -mt-1" />
@@ -264,11 +290,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
               <div className="restaurant-card__info w-full">
                 <div className="restaurant-card__location">
-                  <span className="block w-full text-[10px] md:text-base mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
+                  <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
                 </div>
               </div>
 
-              <div className="restaurant-card__tags mt-1">
+              <div className ="restaurant-card__tags mt-1 text-[0.9rem]">
                 {(() => {
                   const tags = [...cuisineNames];
                   if (restaurant.priceRange) tags.push(restaurant.priceRange);

@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import toast from "react-hot-toast";
+import CustomModal from "@/components/ui/Modal/Modal";
+import { checkInStatusError, checkInRestaurantSuccess, uncheckInRestaurantSuccess } from "@/constants/messages";
+import { responseStatusCode as code } from "@/constants/response";
 
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session } = useSession();
@@ -12,6 +16,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
   const [error, setError] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
+  const [showUncheckModal, setShowUncheckModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,14 +61,22 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to update check-in status");
-      const data = await res.json();
-      setCheckedIn(data.status === "checkedin");
-      window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: data.status === "checkedin" } }));
+      if (res.status == code.success) {
+        toast.success(checkedIn ? uncheckInRestaurantSuccess : checkInRestaurantSuccess);
+        const data = await res.json();
+        setCheckedIn(data.status === "checkedin");
+        window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: data.status === "checkedin" } }));
+      } else {
+        toast.error(checkInStatusError);
+        setCheckedIn(prevCheckedIn);
+        window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
+      }
+      if (!res.ok) throw new Error(checkInStatusError);
     } catch (err) {
+      toast.error(checkInStatusError);
       setCheckedIn(prevCheckedIn);
       window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
-      setError("Could not update check-in status");
+      setError(checkInStatusError);
     } finally {
       setLoading(false);
     }
@@ -74,7 +87,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaMapMarkerAlt />
           <span className="underline">Check-In</span>

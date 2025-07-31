@@ -3,42 +3,38 @@ import { useState } from "react";
 import ReviewDetailModal from "@/components/ReviewDetailModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
+import { DEFAULT_IMAGE } from "@/constants/images";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
 
 interface PhotosProps {
   data: ReviewedDataProps;
   index: number;
   width: number;
+  image: {
+    sourceUrl: string;
+    id?: string | number;
+  };
 }
 
-const Photos = ({ index, data, width }: PhotosProps) => {
+const Photos = ({ index, data, width, image }: PhotosProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const defaultImage = "/images/default-image.png"
-
-  const firstImageUrl =
-    Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-      ? data.reviewImages[0].sourceUrl
-      : null;
-  const imageSrc = firstImageUrl || defaultImage;
-
 
   return (
-    <div className="review-card" style={{ width: `${width}px` }}>
+    <div className="review-card relative overflow-hidden" style={{ height: "180px" }}>
       <ReviewDetailModal
         data={data}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        initialPhotoIndex={index}
       />
-
-      <div className="review-card__image-container">
-        <Image
-          src={imageSrc}
-          alt="Review"
-          width={400}
-          height={400}
-          className="review-card__image !w-full !object-cover rounded-2xl max-h-[405px] hover:cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        />
-      </div>
+      <FallbackImage
+        src={image.sourceUrl || DEFAULT_IMAGE}
+        alt={'Review image'}
+        fill
+        className="review-card__image !object-cover rounded-2xl w-full h-full hover:cursor-pointer"
+        onClick={() => setIsModalOpen(true)}
+      />
     </div>
   );
 };

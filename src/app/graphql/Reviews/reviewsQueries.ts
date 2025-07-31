@@ -31,10 +31,11 @@ export const GET_ALL_RECENT_REVIEWS = gql`
               ... on User {
               id
               databaseId
-        		  name
+              name
+              nicename
               avatar {
-            	  url
-          	  }  
+                url
+              }  
             }
           }
         }
@@ -68,7 +69,22 @@ export const GET_ALL_RECENT_REVIEWS = gql`
 export const GET_COMMENT_REPLIES = gql`
 query GetCommentWithReplies($id: ID!) {
   comment(id: $id) {
-      replies {
+    id
+    databaseId
+    author {
+      node {
+        id
+        databaseId
+        name
+          ... on User {
+            nicename
+          }
+        avatar {
+          url
+        }
+      }
+    }
+    replies {
       nodes {
         id
         databaseId
@@ -82,6 +98,9 @@ query GetCommentWithReplies($id: ID!) {
             id
             databaseId
             name
+            ... on User {
+              nicename
+            }
             avatar {
               url
             }
@@ -119,6 +138,7 @@ export const GET_USER_REVIEWS = gql`
           id
           sourceUrl
         }
+        palates
         userAvatar
         author {
           name
@@ -227,10 +247,10 @@ comments(
               ... on User {
               id
               databaseId
-        		  name
+              name
               avatar {
-            	  url
-          	  }  
+                url
+              }  
             }
           }
         }

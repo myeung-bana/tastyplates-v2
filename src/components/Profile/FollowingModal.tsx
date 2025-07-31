@@ -1,5 +1,23 @@
 import React, { useState } from "react";
 import Image from "next/image";
+import { palateFlagMap } from "@/utils/palateFlags";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { PROFILE } from "@/constants/pages";
+import { capitalizeWords, PAGE } from "@/lib/utils";
+import { ca } from "date-fns/locale";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_USER_ICON } from "@/constants/images";
+
+// Helper for relay global ID
+const encodeRelayId = (type: string, id: string) => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    return window.btoa(`${type}:${id}`);
+  } else if (typeof Buffer !== 'undefined') {
+    return Buffer.from(`${type}:${id}`).toString('base64');
+  }
+  return `${type}:${id}`;
+};
 
 interface FollowingUser {
   id: string;
@@ -20,6 +38,7 @@ interface FollowingModalProps {
 const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, following, onUnfollow, onFollow }) => {
   const [localFollowing, setLocalFollowing] = useState(following);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
+  const { data: session } = useSession();
 
   React.useEffect(() => {
     if (open) {
@@ -59,19 +78,54 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
         <div>
           {localFollowing.map((user) => (
             <div key={user.id} className="flex items-center gap-3 px-6 py-3">
-              <Image
-                src={user.image || "/profile-icon.svg"}
-                width={40}
-                height={40}
-                className="rounded-full bg-gray-200"
-                alt={user.name}
-              />
+              {user.id ? (
+                <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', user.id)])}>
+                  <FallbackImage
+                    src={user.image || DEFAULT_USER_ICON}
+                    width={40}
+                    height={40}
+                    className="rounded-full bg-gray-200 cursor-pointer"
+                    alt={user.name}
+                    type={FallbackImageType.Icon}
+                  />
+                </Link>
+              ) : (
+                <FallbackImage
+                  src={user.image || DEFAULT_USER_ICON}
+                  width={40}
+                  height={40}
+                  className="rounded-full bg-gray-200"
+                  alt={user.name}
+                  type={FallbackImageType.Icon}
+                />
+              )}
               <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{user.name}</div>
+                {user.id ? (
+                  <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : PAGE(PROFILE, [encodeRelayId('user', user.id)])}>
+                    <div className="font-semibold truncate cursor-pointer">{user.name}</div>
+                  </Link>
+                ) : (
+                  <div className="font-semibold truncate">{user.name}</div>
+                )}
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {user.cuisines.map((cuisine) => (
-                    <span key={cuisine} className="bg-[#D56253] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]">{cuisine}</span>
-                  ))}
+                  {user.cuisines.map((cuisine) => {
+                    const flagUrl = palateFlagMap[cuisine.toLowerCase()];
+                    return (
+                      <span
+                        key={cuisine}
+                        className="flex items-center gap-1 bg-[#f1f1f1] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#31343f]"
+                      >
+                        {flagUrl && (
+                          <img
+                            src={flagUrl}
+                            alt={`${cuisine} flag`}
+                            className="w-[18px] h-[10px] rounded object-cover"
+                          />
+                        )}
+                        {capitalizeWords(cuisine)}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
               <button

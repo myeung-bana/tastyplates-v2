@@ -47,100 +47,100 @@ export const pronounOptions = [
 ];
 
 export const palateOptions = [
-    {
-        key: "east-asian",
-        label: "East Asian",
-        children: [
-            { key: "japanese", label: "Japanese" },
-            { key: "korean", label: "Korean" },
-            { key: "chinese", label: "Chinese" },
-            { key: "taiwanese", label: "Taiwanese" },
-        ],
-    },
-    {
-        key: "south-asian",
-        label: "South Asian",
-        children: [
-            { key: "nepalese", label: "Nepalese" },
-            { key: "bangladesh", label: "Bangladesh" },
-            { key: "sri-lankan", label: "Sri Lankan" },
-            { key: "maldivian", label: "Maldivian" },
-            { key: "indian", label: "Indian" },
-            { key: "pakistani", label: "Pakistani" },
-        ],
-    },
-    {
-        key: "south-east-asian",
-        label: "South East Asian",
-        children: [
-            { key: "malaysian", label: "Malaysian" },
-            { key: "filipino", label: "Filipino" },
-            { key: "singaporean", label: "Singaporean" },
-            { key: "indonesian", label: "Indonesian" },
-        ],
-    },
-    {
-        key: "middle-eastern",
-        label: "Middle Eastern",
-        children: [
-            { key: "armenian", label: "Armenian" },
-            { key: "east-arabian", label: "East Arabian" },
-            { key: "lebanese", label: "Lebanese" },
-            { key: "caucasian", label: "Caucasian" },
-            { key: "iranian", label: "Iranian" },
-            { key: "turkish", label: "Turkish" },
-        ],
-    },
-    {
-        key: "african",
-        label: "African",
-        children: [
-            { key: "angolan", label: "Angolan" },
-            { key: "congolese", label: "Congolese" },
-            { key: "ethiopian", label: "Ethiopian" },
-            { key: "kenyan", label: "Kenyan" },
-            { key: "zimbabwean", label: "Zimbabwean" },
-            { key: "egyptian", label: "Egyptian" },
-            { key: "algerian", label: "Algerian" },
-            { key: "ghanaian", label: "Ghanaian" },
-            { key: "nigerian", label: "Nigerian" },
-        ],
-    },
-    {
-        key: "north-american",
-        label: "North American",
-        children: [
-            { key: "canadian", label: "Canadian" },
-            { key: "mexican", label: "Mexican" },
-            { key: "american", label: "American" },
-        ],
-    },
-    {
-        key: "european",
-        label: "European",
-        children: [
-            { key: "british", label: "British" },
-            { key: "spanish", label: "Spanish" },
-            { key: "italian", label: "Italian" },
-            { key: "french", label: "French" },
-            { key: "german", label: "German" },
-            { key: "russian", label: "Russian" },
-            { key: "danish", label: "Danish" },
-            { key: "finnish", label: "Finnish" },
-            { key: "swedish", label: "Swedish" },
-            { key: "romanian", label: "Romanian" },
-            { key: "greek", label: "Greek" },
-            { key: "portuguese", label: "Portuguese" },
-        ],
-    },
-    {
-        key: "oceanic",
-        label: "Oceanic",
-        children: [
-            { key: "australian", label: "Australian" },
-            { key: "polynesian", label: "Polynesian" },
-        ],
-    },
+  {
+    key: "East Asian",
+    label: "East Asian",
+    children: [
+      { key: "Japanese", label: "Japanese", flag: "https://flagcdn.com/jp.svg" },
+      { key: "Korean", label: "Korean", flag: "https://flagcdn.com/kr.svg" },
+      { key: "Chinese", label: "Chinese", flag: "https://flagcdn.com/cn.svg" },
+      { key: "Taiwanese", label: "Taiwanese", flag: "https://flagcdn.com/tw.svg" },
+    ],
+  },
+  {
+    key: "South Asian",
+    label: "South Asian",
+    children: [
+      { key: "Nepalese", label: "Nepalese", flag: "https://flagcdn.com/np.svg" },
+      { key: "Bangladesh", label: "Bangladesh", flag: "https://flagcdn.com/bd.svg" },
+      { key: "Sri-lankan", label: "Sri Lankan", flag: "https://flagcdn.com/lk.svg" },
+      { key: "Maldivian", label: "Maldivian", flag: "https://flagcdn.com/mv.svg" },
+      { key: "Indian", label: "Indian", flag: "https://flagcdn.com/in.svg" },
+      { key: "Pakistani", label: "Pakistani", flag: "https://flagcdn.com/pk.svg" },
+    ],
+  },
+  {
+    key: "South East Asian",
+    label: "South East Asian",
+    children: [
+      { key: "Malaysian", label: "Malaysian", flag: "https://flagcdn.com/my.svg" },
+      { key: "Filipino", label: "Filipino", flag: "https://flagcdn.com/ph.svg" },
+      { key: "Singaporean", label: "Singaporean", flag: "https://flagcdn.com/sg.svg" },
+      { key: "Indonesian", label: "Indonesian", flag: "https://flagcdn.com/id.svg" },
+    ],
+  },
+  {
+    key: "Middle Eastern",
+    label: "Middle Eastern",
+    children: [
+      { key: "Armenian", label: "Armenian", flag: "https://flagcdn.com/am.svg" },
+      { key: "East Arabian", label: "East Arabian", flag: "https://flagcdn.com/sa.svg" }, // Saudi Arabia
+      { key: "Lebanese", label: "Lebanese", flag: "https://flagcdn.com/lb.svg" },
+      { key: "Caucasian", label: "Caucasian", flag: "https://flagcdn.com/ge.svg" }, // Georgia
+      { key: "Iranian", label: "Iranian", flag: "https://flagcdn.com/ir.svg" },
+      { key: "Turkish", label: "Turkish", flag: "https://flagcdn.com/tr.svg" },
+    ],
+  },
+  {
+    key: "African",
+    label: "African",
+    children: [
+      { key: "Angolan", label: "Angolan", flag: "https://flagcdn.com/ao.svg" },
+      { key: "Congolese", label: "Congolese", flag: "https://flagcdn.com/cd.svg" },
+      { key: "Ethiopian", label: "Ethiopian", flag: "https://flagcdn.com/et.svg" },
+      { key: "Kenyan", label: "Kenyan", flag: "https://flagcdn.com/ke.svg" },
+      { key: "Zimbabwean", label: "Zimbabwean", flag: "https://flagcdn.com/zw.svg" },
+      { key: "Egyptian", label: "Egyptian", flag: "https://flagcdn.com/eg.svg" },
+      { key: "Algerian", label: "Algerian", flag: "https://flagcdn.com/dz.svg" },
+      { key: "Ghanaian", label: "Ghanaian", flag: "https://flagcdn.com/gh.svg" },
+      { key: "Nigerian", label: "Nigerian", flag: "https://flagcdn.com/ng.svg" },
+    ],
+  },
+  {
+    key: "North American",
+    label: "North American",
+    children: [
+      { key: "Canadian", label: "Canadian", flag: "https://flagcdn.com/ca.svg" },
+      { key: "Mexican", label: "Mexican", flag: "https://flagcdn.com/mx.svg" },
+      { key: "American", label: "American", flag: "https://flagcdn.com/us.svg" },
+    ],
+  },
+  {
+    key: "European",
+    label: "European",
+    children: [
+      { key: "British", label: "British", flag: "https://flagcdn.com/gb.svg" },
+      { key: "Spanish", label: "Spanish", flag: "https://flagcdn.com/es.svg" },
+      { key: "Italian", label: "Italian", flag: "https://flagcdn.com/it.svg" },
+      { key: "French", label: "French", flag: "https://flagcdn.com/fr.svg" },
+      { key: "German", label: "German", flag: "https://flagcdn.com/de.svg" },
+      { key: "Russian", label: "Russian", flag: "https://flagcdn.com/ru.svg" },
+      { key: "Danish", label: "Danish", flag: "https://flagcdn.com/dk.svg" },
+      { key: "Finnish", label: "Finnish", flag: "https://flagcdn.com/fi.svg" },
+      { key: "Swedish", label: "Swedish", flag: "https://flagcdn.com/se.svg" },
+      { key: "Romanian", label: "Romanian", flag: "https://flagcdn.com/ro.svg" },
+      { key: "Greek", label: "Greek", flag: "https://flagcdn.com/gr.svg" },
+      { key: "Portuguese", label: "Portuguese", flag: "https://flagcdn.com/pt.svg" },
+    ],
+  },
+  {
+    key: "Oceanic",
+    label: "Oceanic",
+    children: [
+      { key: "Australian", label: "Australian", flag: "https://flagcdn.com/au.svg" },
+      { key: "Polynesian", label: "Polynesian", flag: "https://flagcdn.com/ck.svg" }, // Cook Islands as general Polynesia flag
+    ],
+  },
 ];
 
 export const languageOptions = [
