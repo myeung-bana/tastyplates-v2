@@ -34,7 +34,7 @@ import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { IUserUpdate } from "@/interfaces/user";
+import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 

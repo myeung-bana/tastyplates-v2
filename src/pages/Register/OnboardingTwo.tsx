@@ -8,7 +8,7 @@ import { errorOccurred, pleaseLoginAgain, profileImageSizeLimit, registrationSuc
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME, PROFILE } from "@/constants/pages";
-import { IRegisterData } from "@/interfaces/user";
+import { IRegisterData } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";

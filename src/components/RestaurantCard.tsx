@@ -80,15 +80,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-        },
-        body: JSON.stringify({ restaurant_slug: restaurant.slug, action }),
-        credentials: "include",
-      });
+      const res: Response = await RestaurantService.createFavoriteListing(
+        { restaurant_slug: restaurant.slug, action },
+        session?.accessToken, // can be undefined
+        false // do not return JSON response
+      );
+      
       if (res.status === code.success) {
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
@@ -141,15 +138,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-        },
-        body: JSON.stringify({ restaurant_slug: restaurant.slug, action: "unsave" }),
-        credentials: "include",
-      });
+      const res: Response = await RestaurantService.createFavoriteListing(
+        { restaurant_slug: restaurant.slug, action: "unsave" },
+        session?.accessToken, // can be undefined
+        false // do not return JSON response
+      );
+
       if (res.status == code.success) {
         toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();

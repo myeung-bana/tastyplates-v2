@@ -28,6 +28,7 @@ import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { UserService } from "@/services/userService";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -149,18 +150,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     (async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.accessToken}`,
-            },
-            body: JSON.stringify({ user_id: authorUserId }),
-          }
-        );
-        const result = await res.json();
+        const result = await UserService.isFollowingUser(authorUserId, session.accessToken);
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
@@ -181,19 +171,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({ user_id: authorUserId }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok || result?.result !== "followed") {
+      const result = await UserService.followUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
@@ -228,19 +207,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({ user_id: authorUserId }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok || result?.result !== "unfollowed") {
+      const result = await UserService.unfollowUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);

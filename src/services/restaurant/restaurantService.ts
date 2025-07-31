@@ -1,4 +1,5 @@
 // services/restaurant/restaurantService.ts
+import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepository } from "@/repositories/restaurant/restaurantRepository";
 
 export const RestaurantService = {
@@ -93,6 +94,43 @@ export const RestaurantService = {
         } catch (error) {
             console.error('Error fetching pending restaurants:', error);
             throw new Error('Failed to fetch pending restaurants');
+        }
+    },
+
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.createFavoriteListing(data, accessToken, jsonResponse);
+        }
+        catch (error) {
+            console.error('Error creating favorite listing:', error);
+            throw new Error('Failed to create favorite listing');
+        }
+    },
+
+    async fetchFavoritingListing(userId: number, accessToken?: string) {
+        try {
+            return await RestaurantRepository.getFavoriteListing(userId, accessToken);
+        } catch (error) {
+            console.error('Error fetching favoriting list:', error);
+            throw new Error('Failed to fetch favoriting list');
+        }
+    },
+
+    async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.getCheckInRestaurant(userId, accessToken, jsonResponse);
+        } catch (error) {
+            console.error('Error fetching check-in restaurant:', error);
+            throw new Error('Failed to fetch check-in restaurant');
+        }
+    },
+
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.createCheckIn(data, accessToken, jsonResponse);
+        } catch (error) {
+            console.error('Error creating check-in:', error);
+            throw new Error('Failed to create check-in');
         }
     },
 

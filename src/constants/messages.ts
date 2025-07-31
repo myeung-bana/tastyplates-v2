@@ -30,7 +30,7 @@ export const maximumReviewDescription = (max: number) => `Review description mus
 export const maximumCommentReplies = (max: number) => `Comment must be ${max} characters or less.`;
 export const requiredRating = "Rating is required.";
 export const minimumImageLimit = (min: number) => `You must upload at least ${min} image.`;
-export const maximumImageLimit = (max: number) => `You can Upload a maximum of ${max} images.`;
+export const maximumImageLimit = (max: number) => `You can upload a maximum of ${max} images.`;
 export const savedAsDraft = "Review saved as draft!";
 export const deleteDraftError = "Failed to delete draft.";
 export const deleteDraftSuccess = "Draft deleted successfully!";
