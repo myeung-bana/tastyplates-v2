@@ -70,7 +70,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       return;
     }
     setLoading(true);
@@ -130,7 +130,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const handleConfirmDelete = async () => {
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       setIsDeleteModalOpen(false);
       return;
     }
@@ -196,7 +196,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!session) {
-      setShowSignup(true);
+      setShowSignin(true);
       return;
     }
     handleToggle(e);

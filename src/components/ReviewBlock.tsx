@@ -157,7 +157,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     if (loading) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
 
@@ -232,7 +232,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 width={40}
                 height={40}
                 className="review-block__user-image size-6 md:size-10 cursor-pointer"
-                onClick={() => setIsShowSignup(true)}
+                onClick={() => setIsShowSignin(true)}
               />
             )
           ) : (
@@ -263,7 +263,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
               ) : (
                 <h3
                   className="review-block__username cursor-pointer"
-                  onClick={() => setIsShowSignup(true)}
+                  onClick={() => setIsShowSignin(true)}
                 >
                   {review?.user || "Unknown User"}
                 </h3>
@@ -279,7 +279,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 return (
                   <span
                     key={index}
-                    className="review-block__palate-tag flex items-center gap-1"
+                    className="review-block__palate-tag text-[#31343f] bg-[#f1f1f1] flex items-center gap-1"
                   >
                     {flagSrc && (
                       <img

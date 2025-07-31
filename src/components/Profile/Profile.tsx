@@ -270,7 +270,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setPalatesLoading(false);
       }
     };
-    if (targetUserId) {
+    if (targetUserId && !isViewingOwnProfile) {
       fetchPublicUserData();
     } else {
       setUserData(null);
@@ -689,22 +689,24 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   // Reset all relevant state when targetUserId changes
   useEffect(() => {
     // Only reset state when targetUserId actually changes, not on window focus
-    setUserData(null);
-    setReviews([]);
-    setRestaurants([]);
-    setWishlist([]);
-    setCheckins([]);
-    setFollowers([]);
-    setFollowing([]);
-    setUserReviewCount(0);
-    setEndCursor(null);
-    setHasNextPage(true);
-    setHasFetchedCheckins(false);
-    setHasFetchedWishlist(false);
-    setLoading(true);
-    setNameLoading(true);
-    setAboutMeLoading(true);
-    setPalatesLoading(true);
+    if (!isViewingOwnProfile) {
+      setUserData(null);
+      setReviews([]);
+      setRestaurants([]);
+      setWishlist([]);
+      setCheckins([]);
+      setFollowers([]);
+      setFollowing([]);
+      setUserReviewCount(0);
+      setEndCursor(null);
+      setHasNextPage(true);
+      setHasFetchedCheckins(false);
+      setHasFetchedWishlist(false);
+      setLoading(true);
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+    }
   }, [targetUserId]);
 
   // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
@@ -759,7 +761,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                         return (
                           <span
                             key={index}
-                            className="bg-[#1b1b1b] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00] flex items-center gap-1"
+                            className="bg-[#f1f1f1] py-1 px-2 rounded-[50px] text-xs font-medium text-[#31343f] flex items-center gap-1"
                           >
                             {flagSrc && (
                               <img

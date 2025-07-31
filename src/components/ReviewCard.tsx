@@ -1,8 +1,11 @@
 // ReviewCard.tsx
 import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
-import { capitalizeWords, PAGE, stripTags } from "../lib/utils"
-import { ReviewedDataProps, ReviewCardProps } from "@/interfaces/Reviews/review";
+import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
+import {
+  ReviewedDataProps,
+  ReviewCardProps,
+} from "@/interfaces/Reviews/review";
 import { useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
@@ -12,12 +15,17 @@ import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
+import "@/styles/pages/_restaurant-details.scss";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
+import {
+  DEFAULT_IMAGE,
+  DEFAULT_USER_ICON,
+  STAR_FILLED,
+} from "@/constants/images";
 
 const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>()
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>();
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
   const UserPalateNames = data?.palates
     ?.split("|")
@@ -34,26 +42,26 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
         onClose={() => setIsModalOpen(false)}
       />
       {/* Auth modals */}
-      {showAuthModal === 'signup' && (
+      {showAuthModal === "signup" && (
         <SignupModal
           isOpen={true}
           onClose={() => setShowAuthModal(null)}
-          onOpenSignin={() => setShowAuthModal('signin')}
+          onOpenSignin={() => setShowAuthModal("signin")}
         />
       )}
-      {showAuthModal === 'signin' && (
+      {showAuthModal === "signin" && (
         <SigninModal
           isOpen={true}
           onClose={() => setShowAuthModal(null)}
-          onOpenSignup={() => setShowAuthModal('signup')}
+          onOpenSignup={() => setShowAuthModal("signup")}
         />
       )}
       <div className="review-card__image-container">
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-            ? data.reviewImages[0].sourceUrl
-            : DEFAULT_IMAGE
+              ? data.reviewImages[0].sourceUrl
+              : DEFAULT_IMAGE
           }
           alt="Review"
           width={400}
@@ -66,8 +74,10 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
-          {(data.author?.node?.id || data.id) ? (
-            session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
+          {data.author?.node?.id || data.id ? (
+            session?.user?.id &&
+            String(session.user.id) ===
+              String(data.author?.node?.id || data.id) ? (
               <Link href={PROFILE}>
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
@@ -79,7 +89,10 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 />
               </Link>
             ) : session ? (
-              <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
+              <Link
+                href={PAGE(PROFILE, [data.author?.node?.id || data.id])}
+                prefetch={false}
+              >
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
@@ -96,7 +109,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 width={32}
                 height={32}
                 className="review-card__user-image cursor-pointer"
-                onClick={() => setShowAuthModal('signup')}
+                onClick={() => setShowAuthModal('signin')}
                 type={FallbackImageType.Icon}
               />
             )
@@ -113,15 +126,20 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
 
           <div className="review-card__user-info">
             {/* Make username clickable and handle auth logic */}
-            {(data.author?.node?.id || data.id) ? (
-              session?.user?.id && String(session.user.id) === String(data.author?.node?.id || data.id) ? (
+            {data.author?.node?.id || data.id ? (
+              session?.user?.id &&
+              String(session.user.id) ===
+                String(data.author?.node?.id || data.id) ? (
                 <Link href={PROFILE}>
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">
                     {data.author?.name || "Unknown User"}
                   </h3>
                 </Link>
               ) : session ? (
-                <Link href={PAGE(PROFILE, [data.author?.node?.id || data.id])} prefetch={false}>
+                <Link
+                  href={PAGE(PROFILE, [data.author?.node?.id || data.id])}
+                  prefetch={false}
+                >
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">
                     {data.author?.name || "Unknown User"}
                   </h3>
@@ -129,7 +147,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               ) : (
                 <h3
                   className="review-card__username line-clamp-1 cursor-pointer"
-                  onClick={() => setShowAuthModal('signup')}
+                  onClick={() => setShowAuthModal('signin')}
                 >
                   {data.author?.name || "Unknown User"}
                 </h3>
@@ -143,7 +161,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag !text-[10px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag !text-[10px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
@@ -159,15 +177,19 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               ))}
             </div>
           </div>
-          <div className="rate-container ml-auto">
-              <div className="review-detail-meta">
-                <span className="ratings">
-                  <Image src={STAR_FILLED} width={16} height={16} className="size-3 md:size-4" alt="star icon" />
-                  <i className="rating-counter">
-                    {data.reviewStars}
-                  </i>
-                </span>
-              </div>
+          <div className="rate-container ml-auto inline-flex shrink-0">
+            <div className="review-detail-meta">
+              <span className="ratings">
+                <Image
+                  src={STAR_FILLED}
+                  width={16}
+                  height={16}
+                  className="size-3 md:size-4"
+                  alt="star icon"
+                />
+                <i className="rating-counter">{data.reviewStars}</i>
+              </span>
+            </div>
           </div>
         </div>
         <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>

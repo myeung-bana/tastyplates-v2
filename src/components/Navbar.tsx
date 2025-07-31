@@ -182,12 +182,13 @@ export default function Navbar(props: any) {
               </div>
               <div className="navbar__brand">
                 <Link href={HOME} className="flex-shrink-0 flex items-center">
-                  <h1
-                    className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
-                      }`}
-                  >
-                    TastyPlates
-                  </h1>
+                  <Image
+                    src={`${isLandingPage ? !navBg ? "/TastyPlates_Logo_White.svg" : "/TastyPlates_Logo_Black.svg" : "/TastyPlates_Logo_Colour.svg"}`}
+                    className="h-6 md:h-8 w-auto object-contain"
+                    height={32}
+                    width={184}
+                    alt="TastyPlates Logo"
+                  />
                 </Link>
               </div>
               <div className="navbar__menu justify-start">

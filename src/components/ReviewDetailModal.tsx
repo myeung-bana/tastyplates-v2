@@ -42,22 +42,22 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const { getFollowState, setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
-  const [pendingShowSignup, setPendingShowSignup] = useState(false);
+  const [pendingShowSignin, setPendingShowSignin] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<{ [replyId: string]: boolean }>({});
-  // Effect to show signup modal
+  // Effect to show signin modal
   useEffect(() => {
-    if (pendingShowSignup) {
-      setIsShowSignup(true);
-      setPendingShowSignup(false);
+    if (pendingShowSignin) {
+      setIsShowSignin(true);
+      setPendingShowSignin(false);
     }
-  }, [pendingShowSignup]);
+  }, [pendingShowSignin]);
 
   // Handler for profile image click (author or commenter)
   const handleProfileClick = (userId: number) => {
     if (!session?.user) {
-      setPendingShowSignup(true);
+      setPendingShowSignin(true);
     }
   };
   const toggleReplyContent = (replyId: string) => {
@@ -172,7 +172,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleFollowAuthor = async () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (!authorUserId) {
@@ -219,7 +219,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleUnfollowAuthor = async () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (!authorUserId) {
@@ -266,7 +266,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleFollowClick = () => {
     if (!session?.accessToken) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     if (isFollowing) {
@@ -366,7 +366,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (!commentReply.trim() || isLoading || cooldown > 0) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
 
@@ -432,7 +432,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (loading) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
 
@@ -486,7 +486,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (replyLoading[dbId]) return;
 
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
@@ -565,7 +565,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                          className="review-block__palate-tag !text-[8px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
@@ -757,7 +757,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-white px-1 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-[#31343f] px-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -983,7 +983,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-[#31343f] px-2 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
