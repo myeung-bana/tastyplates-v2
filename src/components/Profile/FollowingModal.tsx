@@ -113,7 +113,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                     return (
                       <span
                         key={cuisine}
-                        className="flex items-center gap-1 bg-[#1b1b1b] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#FDF0EF]"
+                        className="flex items-center gap-1 bg-[#f1f1f1] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#31343f]"
                       >
                         {flagUrl && (
                           <img

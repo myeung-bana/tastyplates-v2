@@ -565,7 +565,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                          className="review-block__palate-tag !text-[8px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
@@ -757,7 +757,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-white px-1 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-[#31343f] px-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -983,7 +983,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-white px-2 font-medium !rounded-[50px] bg-[#000000] flex items-center gap-1"
+                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-[#31343f] px-2 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
