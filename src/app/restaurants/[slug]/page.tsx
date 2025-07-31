@@ -193,7 +193,7 @@ export default function RestaurantDetail() {
 
   useEffect(() => {
     if (!slug) return;
-    RestaurantService.fetchRestaurantDetails(slug, palatesParam)
+    RestaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? '') )
       .then((data) => {
         if (!data) return notFound();
         const transformed = {
