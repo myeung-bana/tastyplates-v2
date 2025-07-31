@@ -214,17 +214,17 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
       <div className="restaurant-card">
         <div className="restaurant-card__image relative">
           <a
-            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {})}
+            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: palateParam } : {})}
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /listing page
               if (pathname === "/listing" && clickedElement.dataset.role === "image") {
-                router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId]));
+                router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId], palateParam ? { ethnic: palateParam } : {}));
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: encodeURIComponent(palateParam) } : {}));
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
             }}>
             {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
               <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
@@ -266,13 +266,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
             </div>
           )}
         </div>
-        <a 
-        href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
-        onClick={async (e) => {
-          e.preventDefault();
-          if (onClick) await onClick(); // Wait for mutation to complete
-          router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
-        }}
+        <a
+          href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
+          onClick={async (e) => {
+            e.preventDefault();
+            if (onClick) await onClick(); // Wait for mutation to complete
+            router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
+          }}
         >
           <div className="restaurant-card__content">
             <div className="restaurant-card__header">
@@ -288,27 +288,27 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
               </div>
             </div>
 
-              <div className="restaurant-card__info w-full">
-                <div className="restaurant-card__location">
-                  <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
-                </div>
+            <div className="restaurant-card__info w-full">
+              <div className="restaurant-card__location">
+                <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
               </div>
-
-              <div className ="restaurant-card__tags mt-1 text-[0.9rem]">
-                {(() => {
-                  const tags = [...cuisineNames];
-                  if (restaurant.priceRange) tags.push(restaurant.priceRange);
-                  return (
-                    <span className="restaurant-card__tag">
-                      {tags.filter(Boolean).join(' · ')}
-                    </span>
-                  );
-                })()}
-              </div>
-
             </div>
-          </a>
-        </div>
+
+            <div className="restaurant-card__tags mt-1 text-[0.9rem]">
+              {(() => {
+                const tags = [...cuisineNames];
+                if (restaurant.priceRange) tags.push(restaurant.priceRange);
+                return (
+                  <span className="restaurant-card__tag">
+                    {tags.filter(Boolean).join(' · ')}
+                  </span>
+                );
+              })()}
+            </div>
+
+          </div>
+        </a>
+      </div>
 
       <CustomModal
         isOpen={isDeleteModalOpen}
