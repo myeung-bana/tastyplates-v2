@@ -62,8 +62,8 @@ export default function CustomDatePicker({
                         className={clsx(
                             'w-full flex items-center justify-between border rounded-[10px] px-4 py-3 text-left text-sm sm:text-base transition-all duration-300 bg-white',
                             selectedDate
-                                ? 'border-gray-300 text-gray-900'
-                                : 'border-gray-300 text-gray-700',
+                                ? 'border-gray-300 text-[#31343F]'
+                                : 'border-gray-300 text-[#797979]',
                             'focus:outline-none focus:ring-1 focus:ring-gray-400',
                             disabled && 'cursor-not-allowed opacity-50',
                             buttonClassName
