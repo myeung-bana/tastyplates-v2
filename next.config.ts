@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import withPWA from "next-pwa";
+
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   sassOptions: {
@@ -55,4 +58,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+})(nextConfig);
