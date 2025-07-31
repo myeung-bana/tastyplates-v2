@@ -129,7 +129,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaRegHeart />
           <span className="underline">Save</span>
@@ -283,7 +283,7 @@ export default function RestaurantDetail() {
 
   const addReview = () => {
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     router.push(
@@ -321,20 +321,20 @@ export default function RestaurantDetail() {
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                      setIsShowSignup(false);
-                      setIsShowSignin(true);
-                    }}
-                  />
                   <SigninModal
                     isOpen={isShowSignin}
                     onClose={() => setIsShowSignin(false)}
                     onOpenSignup={() => {
                       setIsShowSignin(false);
                       setIsShowSignup(true);
+                    }}
+                  />
+                  <SignupModal
+                    isOpen={isShowSignup}
+                    onClose={() => setIsShowSignup(false)}
+                    onOpenSignin={() => {
+                      setIsShowSignup(true);
+                      setIsShowSignin(false);
                     }}
                   />
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />

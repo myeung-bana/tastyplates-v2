@@ -70,7 +70,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
 
   const handleLike = async (review: any) => {
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
     setLikeLoading((prev) => ({ ...prev, [review.id]: true }));
@@ -190,7 +190,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         width={40}
                         height={40}
                         className="rounded-full object-cover cursor-pointer"
-                        onClick={() => setIsShowSignup(true)}
+                        onClick={() => setIsShowSignin(true)}
                       />
                     )
                   ) : (
@@ -220,7 +220,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                       ) : (
                         <div
                           className="font-semibold text-[#31343F] cursor-pointer"
-                          onClick={() => setIsShowSignup(true)}
+                          onClick={() => setIsShowSignin(true)}
                         >
                           {review.author?.name || "Unknown User"}
                         </div>
@@ -325,27 +325,27 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     )}
                   </button>
                   <span>{review.commentLikes ?? 0}</span>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                      setIsShowSignup(false);
-                      setIsShowSignin(true);
-                    }}
-                  />
-                  <SigninModal
-                    isOpen={isShowSignin}
-                    onClose={() => setIsShowSignin(false)}
-                    onOpenSignup={() => {
-                      setIsShowSignin(false);
-                      setIsShowSignup(true);
-                    }}
-                  />
                 </div>
               </div>
             );
           })}
         </div>
+        <SignupModal
+          isOpen={isShowSignup}
+          onClose={() => setIsShowSignup(false)}
+          onOpenSignin={() => {
+            setIsShowSignup(false);
+            setIsShowSignin(true);
+          }}
+        />
+        <SigninModal
+          isOpen={isShowSignin}
+          onClose={() => setIsShowSignin(false)}
+          onOpenSignup={() => {
+            setIsShowSignin(false);
+            setIsShowSignup(true);
+          }}
+        />
       </div>
       <style jsx global>{`
         .animate-slide-in-right {
