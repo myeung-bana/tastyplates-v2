@@ -477,12 +477,10 @@
   color: #31343f; // Dark text color
   border-radius: 50px; // Rounded corners
   padding: 4px 8px; // Padding inside the tag
-  margin-right: 4px; // Space between tags
-  font-size: 0.8rem; // Smaller font size for tags
+  font-size: 10px !important; // Smaller font size for tags
 
   @media (max-width: 767px) {
     padding: 2px 4px;
-    font-size: 0.5rem;
   }
 }
 
