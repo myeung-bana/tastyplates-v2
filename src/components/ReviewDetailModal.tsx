@@ -21,7 +21,7 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
@@ -371,7 +371,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
 
     if (commentReply.length > reviewDescriptionDisplayLimit) {
-      toast.error(maximumReviewDescription(reviewDescriptionDisplayLimit));
+      toast.error(maximumCommentReplies(reviewDescriptionDisplayLimit));
       return;
     }
 
