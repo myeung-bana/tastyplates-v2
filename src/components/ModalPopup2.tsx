@@ -348,7 +348,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <button
                 onClick={() => {
                   if (!session?.accessToken) {
-                    setIsShowSignup(true);
+                    setIsShowSignin(true);
                   } else if (isFollowing) {
                     handleUnfollowAuthor();
                   } else {

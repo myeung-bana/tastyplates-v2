@@ -109,7 +109,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 width={32}
                 height={32}
                 className="review-card__user-image cursor-pointer"
-                onClick={() => setShowAuthModal("signup")}
+                onClick={() => setShowAuthModal('signin')}
                 type={FallbackImageType.Icon}
               />
             )
@@ -147,7 +147,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               ) : (
                 <h3
                   className="review-card__username line-clamp-1 cursor-pointer"
-                  onClick={() => setShowAuthModal("signup")}
+                  onClick={() => setShowAuthModal('signin')}
                 >
                   {data.author?.name || "Unknown User"}
                 </h3>
@@ -161,7 +161,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
               {UserPalateNames?.map((tag, index) => (
                 <span
                   key={index}
-                  className="review-block__palate-tag text-white px-2 py-1 font-medium !rounded-[50px] bg-[#1b1b1b] flex items-center gap-1"
+                  className="review-block__palate-tag !text-[10px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
                 >
                   {palateFlagMap[tag.toLowerCase()] && (
                     <Image
