@@ -17,7 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
@@ -248,6 +248,10 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateWeekError);
           setIsLoading(false);
           return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
+          return;
         } else {
           toast.error(errorOccurred);
           setIsLoading(false);
@@ -264,6 +268,10 @@ const ReviewSubmissionPage = () => {
         } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
+          return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
           return;
         } else {
           toast.error(errorOccurred);

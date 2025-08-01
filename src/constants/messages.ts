@@ -53,6 +53,7 @@ export const fetchLocationFailed = "Failed to fetch location data";
 export const geoLocationNotSupported = "Geolocation is not supported by your browser";
 export const errorOccurred = "An Error occurred, Please try again later.";
 export const commentDuplicateError = "Duplicate comment detected, You've already said that!";
+export const commentFloodError = "You are posting comments too quickly. Slow down.";
 export const commentDuplicateWeekError = "You can only post one review per week for this restaurant.";
 export const savedToWishlistSuccess = "You have saved this restaurant to your wishlist!";
 export const removedFromWishlistSuccess = "You have removed this restaurant from your wishlist!";
