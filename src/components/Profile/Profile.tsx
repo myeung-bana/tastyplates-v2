@@ -385,6 +385,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   };
 
+  const handleWishlistChange = (restaurant: Restaurant, isSaved: boolean) => {
+    setWishlist((prev) => {
+      const exists = prev.find(r => r.id === restaurant.id);
+      if (isSaved && !exists) {
+        return [...prev, restaurant];
+      } else if (!isSaved && exists) {
+        return prev.filter(r => r.id !== restaurant.id);
+      }
+      return prev;
+    });
+  };
+
   const getColumns = () => {
     if (width >= 1024) return 4;
     if (width >= 768) return 3;
@@ -505,6 +517,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                   restaurant={rest}
                   profileTablist="wishlists"
                   initialSavedStatus={true}
+                  onWishlistChange={handleWishlistChange}
                 />
               ))
             ) : (
@@ -555,6 +568,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                   restaurant={rest}
                   profileTablist="checkin"
                   initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+                  onWishlistChange={handleWishlistChange}
                 />
               ))
             ) : (
