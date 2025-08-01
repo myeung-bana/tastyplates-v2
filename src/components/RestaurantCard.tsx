@@ -41,10 +41,11 @@ export interface RestaurantCardProps {
   profileTablist?: 'listings' | 'wishlists' | 'checkin';
   initialSavedStatus?: boolean | null;
   ratingsCount?: number;
+  onWishlistChange?: (restaurant: Restaurant, isSaved: boolean) => void;
   onClick?: () => void;
 }
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onClick }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onWishlistChange, onClick }: RestaurantCardProps) => {
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -56,8 +57,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
-  const hasFetched = useRef(false);
+  // const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
+  // const hasFetched = useRef(false);
   const palateParam = searchParams?.get("ethnic");
 
   useEffect(() => {
@@ -90,6 +91,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
+        onWishlistChange?.(restaurant, data.status === "saved");
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
       } else {
         toast.error(favoriteStatusError);
@@ -120,7 +122,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
 
   const handleDeleteWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (profileTablist === 'wishlists') {
+    if (profileTablist === 'wishlists' || profileTablist === 'checkin') {
       setIsDeleteModalOpen(true);
     }
   };
@@ -148,6 +150,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
         toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         const data = await res.json();
         setSaved(data.status === "saved");
+        onWishlistChange?.(restaurant, data.status === "saved");
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
       } else {
         toast.error(favoriteStatusError);
@@ -239,7 +242,19 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
                 className="rounded-full p-2 bg-white"
-                onClick={profileTablist === 'wishlists' ? handleDeleteWishlist : handleHeartClick}
+                onClick={(e) => {
+                  if (profileTablist === 'wishlists') {
+                    handleDeleteWishlist(e);
+                  } else if (profileTablist === 'checkin') {
+                    if (saved) {
+                      handleDeleteWishlist(e);
+                    } else {
+                      handleHeartClick(e);
+                    }
+                  } else {
+                    handleHeartClick(e);
+                  }
+                }}
                 disabled={loading || saved === null}
                 aria-label={saved ? "Unfollow restaurant" : "Follow restaurant"}
               >
@@ -272,13 +287,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating text-[1rem]">
-                {displayRating > 0 ? (
+                {displayRating > 0 && (
                   <>
                     <FaStar className="restaurant-card__icon -mt-1" />
                     {displayRating}
                     <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
                   </>
-                ) : null}
+                )}
               </div>
             </div>
 
