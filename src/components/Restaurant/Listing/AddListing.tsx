@@ -180,6 +180,8 @@ const AddListingPage = (props: any) => {
       }, 300);
       return;
     }
+
+    // ✅ If saving draft
     setIsLoadingDraft(true);
     try {
       const formData = new FormData();
@@ -187,30 +189,40 @@ const AddListingPage = (props: any) => {
       formData.append("listingStreet", listing.address || "");
       formData.append("priceRange", listing.priceRange);
       formData.append("streetAddress", listing.address);
-      listing.listingCategories.forEach((cat) => {
-        formData.append("categories[]", cat);
-      });
 
+      // Categories
+      if (Array.isArray(listing.listingCategories)) {
+        listing.listingCategories.forEach((cat) => {
+          formData.append("categories[]", cat);
+        });
+      }
+
+      // Location & Palates
       formData.append("latitude", String(listing.latitude));
       formData.append("longitude", String(listing.longitude));
       selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-      formData.append("status", "pending");
 
-      const response = await RestaurantService.createRestaurantListing(
+      // ✅ If saving as draft, set status to draft
+      formData.append("status", action === "saveDraft" ? "draft" : "pending");
+
+      const response = await RestaurantService.createRestaurantListingAndReview(
         formData,
         sess
       );
-      const newListingId = response.id;
-      setCurrentRestaurantDbId(newListingId);
+
+      if (response?.id) {
+        setCurrentRestaurantDbId(response.id);
+      }
 
       setIsSubmitted(true);
+
+      // ✅ Redirect to draft page if saving draft
       if (action === "saveDraft") {
         router.push(LISTING_DRAFT);
       }
+
     } catch (err: any) {
-      console.error("Error submitting listing as draft:", err);
-      // Use a custom modal or toast for alerts instead of window.alert
-      // alert(err.message || "An error occurred during listing submission as draft.");
+      console.error("Error submitting listing:", err);
     } finally {
       setIsLoading(false);
       setIsLoadingDraft(false);
@@ -367,11 +379,17 @@ const AddListingPage = (props: any) => {
     }
   }, [searchParams]);
 
-  const submitReviewAndListing = async (e: FormEvent, reviewMode: "draft" | "publish", listingStatus: "pending" | "draft", isSaveAndExit = false) => {
+  const submitReviewAndListing = async (
+    e: FormEvent,
+    reviewMode: "draft" | "publish",
+    listingStatus: "pending" | "draft",
+    isSaveAndExit = false
+  ) => {
     e.preventDefault();
 
     let hasError = false;
 
+    // ✅ Validation
     if (reviewStars === 0) {
       setRatingError("Rating is required.");
       hasError = true;
@@ -408,80 +426,60 @@ const AddListingPage = (props: any) => {
 
     if (hasError) return;
 
-    if (isSaveAndExit) {
-      setIsLoadingDraft(true);
-    } else {
-      setIsLoading(true);
-    }
+    // ✅ Loading state
+    isSaveAndExit ? setIsLoadingDraft(true) : setIsLoading(true);
+
     try {
-      let finalRestaurantId = currentRestaurantDbId;
+      if (!validateStep1() && currentRestaurantDbId === 0) {
+        setIsLoading(false);
+        return;
+      }
 
-      if (finalRestaurantId === 0) {
-        if (!validateStep1()) {
-          setIsLoading(false);
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append("name", listing.name);
-        formData.append("listingStreet", listing.address || "");
-        formData.append("priceRange", listing.priceRange);
-        formData.append("streetAddress", listing.address);
-        // Ensure listing.category is an array or handle it correctly if it's a single string
-        if (Array.isArray(listing.listingCategories)) {
-          listing.listingCategories.forEach((cat) => {
-            formData.append("categories[]", cat);
-          });
-        } else if (listing.category) { // Fallback for single string
-          formData.append("categories", listing.category);
-        }
-
-
-        formData.append("latitude", String(listing.latitude));
-        formData.append("longitude", String(listing.longitude));
-
-        selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-
-        formData.append("status", listingStatus);
-        const listingResponse = await RestaurantService.createRestaurantListing(formData, sess);
-        finalRestaurantId = listingResponse.id;
-        setCurrentRestaurantDbId(finalRestaurantId);
-      } else {
-        const listingUpdateData = {
+      // ✅ Prepare request payload for unified endpoint
+      const payload = {
+        listing: {
+          id: currentRestaurantDbId || 0,
           name: listing.name,
           listingStreet: listing.address || "",
           priceRange: listing.priceRange,
           streetAddress: listing.address,
-          // Ensure listing.category is an array or handle it correctly if it's a single string
-          categories: Array.isArray(listing.listingCategories) ? listing.listingCategories : [listing.category],
+          categories: Array.isArray(listing.listingCategories)
+            ? listing.listingCategories
+            : listing.category
+              ? [listing.category]
+              : [],
           latitude: String(listing.latitude),
           longitude: String(listing.longitude),
-          palates: selectedPalates.map(p => p.label),
+          palates: selectedPalates.map((p) => p.label),
           status: listingStatus,
-        };
+        },
+        review: {
+          review_stars: reviewStars,
+          review_main_title: reviewMainTitle,
+          content,
+          review_images_idz: selectedFiles,
+          recognitions: selectedrecognition || [],
+          mode: reviewMode,
+        },
+      };
 
-        await RestaurantService.updateRestaurantListing(finalRestaurantId, listingUpdateData, sess);
+      // ✅ API call (single request)
+      const response = await RestaurantService.createRestaurantListingAndReview(payload, sess);
+
+      if (response?.listing?.id) {
+        setCurrentRestaurantDbId(response.listing.id);
       }
 
-      const reviewData = {
-        restaurantId: finalRestaurantId,
-        review_stars: reviewStars,
-        review_main_title: reviewMainTitle,
-        content,
-        review_images_idz: selectedFiles,
-        recognitions: selectedrecognition || [],
-        mode: reviewMode,
-      };
-      await ReviewService.postReview(reviewData, sess);
-
       setIsSubmitted(true);
+
+      // ✅ Redirect logic
       if (listingStatus === "pending") {
         router.push(LISTING_DRAFT);
-      } else if (reviewMode === "draft") {
-      } else {
+      } else if (reviewMode !== "draft") {
         router.push(LISTING);
       }
 
+      // ✅ Reset form state
       setReviewStars(0);
       setReviewMainTitle("");
       setContent("");
@@ -490,13 +488,13 @@ const AddListingPage = (props: any) => {
       setSelectedRecognition([]);
 
     } catch (error) {
-      console.error("Failed to submit review and/or listing:", error);
-      // alert("Failed to submit. Please try again."); // Use custom modal/toast
+      console.error("Failed to submit listing and review:", error);
     } finally {
       setIsLoading(false);
       setIsLoadingDraft(false);
     }
   };
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -720,7 +718,7 @@ const AddListingPage = (props: any) => {
                       onChange={handleAddressInputChange}
                       onFocus={() => listing.address.length >= 3 && setShowPredictions(true)}
                       onBlur={() => setTimeout(() => setShowPredictions(false), 200)}
-                      ref={addressInputRef} 
+                      ref={addressInputRef}
                     />
                     {addressError && (
                       <p className="text-red-500 text-sm mt-1">
