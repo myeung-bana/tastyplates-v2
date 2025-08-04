@@ -61,26 +61,24 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   useEffect(() => {
     let isMounted = true;
     if (!session || !restaurantSlug || initialized) return;
-    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
-      credentials: "include",
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch favorite status");
-        return res.json();
-      })
-      .then(data => {
-        if (isMounted) setSaved(data.status === "saved");
-      })
-      // No error state for initial check, just let it update when ready
-      .finally(() => {
+    const fetchFavoriteListing = async () => {
+      try {
+        const data = await RestaurantService.createFavoriteListing(
+          { restaurant_slug: restaurantSlug, action: "check" },
+          session?.accessToken
+        );
+
+        if (isMounted) {
+          setSaved(data.status === "saved");
+        }
+      } catch (error) {
+        console.error("Failed to fetch favorite status:", error);
+      } finally {
         if (isMounted) setInitialized(true);
-      });
+      }
+    };
+
+    fetchFavoriteListing();
     return () => { isMounted = false; };
   }, [restaurantSlug, session]);
 
@@ -93,15 +91,12 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: !saved } }));
     const action = saved ? "unsave" : "save";
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-        },
-        body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
-        credentials: "include",
-      });
+      const res: Response = await RestaurantService.createFavoriteListing(
+        { restaurant_slug: restaurantSlug, action },
+        session?.accessToken, // can be undefined
+        false // do not return JSON response
+      );
+      
       if (res.status === code.success) {
         toast.success(action === "save" ? savedToWishlistSuccess : removedFromWishlistSuccess);
         const data = await res.json();

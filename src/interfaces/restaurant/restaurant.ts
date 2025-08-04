@@ -59,3 +59,13 @@ export interface GetListingsData {
 export interface GetListingBySlugData {
     listing: Listing | null;
 }
+
+export interface FavoriteListingData {
+    restaurant_slug: any;
+    action: string;
+}
+
+export interface CheckInData {
+    restaurant_slug: any;
+    action: string;
+}

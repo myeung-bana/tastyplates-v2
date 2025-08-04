@@ -22,6 +22,7 @@ import { PROFILE_EDIT } from "@/constants/pages";
 import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { responseStatusCode as code } from "@/constants/response";
 
 interface Restaurant {
   id: string;
@@ -348,8 +349,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const success = await UserService.followUser(userIdNum, session.accessToken);
-    if (success) {
+    const response = await UserService.followUser(userIdNum, session.accessToken);
+    if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
       const [newFollowing, newFollowers] = await Promise.all([
@@ -368,8 +369,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const success = await UserService.unfollowUser(userIdNum, session.accessToken);
-    if (success) {
+    const response = await UserService.unfollowUser(userIdNum, session.accessToken);
+    if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
       const [newFollowing, newFollowers] = await Promise.all([
@@ -382,6 +383,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       })));
       localStorage.setItem('follow_sync', Date.now().toString());
     }
+  };
+
+  const handleWishlistChange = (restaurant: Restaurant, isSaved: boolean) => {
+    setWishlist((prev) => {
+      const exists = prev.find(r => r.id === restaurant.id);
+      if (isSaved && !exists) {
+        return [...prev, restaurant];
+      } else if (!isSaved && exists) {
+        return prev.filter(r => r.id !== restaurant.id);
+      }
+      return prev;
+    });
   };
 
   const getColumns = () => {
@@ -504,6 +517,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                   restaurant={rest}
                   profileTablist="wishlists"
                   initialSavedStatus={true}
+                  onWishlistChange={handleWishlistChange}
                 />
               ))
             ) : (
@@ -554,6 +568,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                   restaurant={rest}
                   profileTablist="checkin"
                   initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+                  onWishlistChange={handleWishlistChange}
                 />
               ))
             ) : (
@@ -599,16 +614,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/?user_id=${targetUserId}`,
-          {
-            headers: session?.accessToken
-              ? { Authorization: `Bearer ${session.accessToken}` }
-              : {},
-            credentials: "include",
-          }
-        );
-        const data = await res.json();
+        const data = await RestaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
         const favoriteIds = data.favorites || [];
         if (favoriteIds.length === 0) {
           setWishlist([]);
@@ -643,16 +649,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedCheckins) return; // Only fetch if not already fetched
       setCheckinsLoading(true);
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/?user_id=${targetUserId}`,
-          {
-            headers: session?.accessToken
-              ? { Authorization: `Bearer ${session.accessToken}` }
-              : {},
-            credentials: "include",
-          }
+        const data = await RestaurantService.fetchCheckInRestaurant(
+          targetUserId,
+          session?.accessToken
         );
-        const data = await res.json();
+
         const checkinIds = data.checkins || [];
         if (!didCancel) {
           if (checkinIds.length === 0) {

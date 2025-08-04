@@ -76,3 +76,17 @@ export interface CheckEmailExistResponse {
     status: number;
     message?: string;
 }
+
+export interface followUserResponse {
+    result: any;
+    following: number | string;
+    followers: number | string;
+    status?: number;
+    message?: string;
+}
+
+export interface isFollowingUserResponse {
+    is_following: boolean;
+    status?: number;
+    message?: string;
+}

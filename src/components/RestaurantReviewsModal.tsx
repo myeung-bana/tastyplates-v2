@@ -208,13 +208,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                       session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
                         <a href={PROFILE}>
                           <div className="font-semibold text-[#31343F] cursor-pointer">
-                            {review.author?.name || "Unknown User"}
+                            {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>
                         </a>
                       ) : session ? (
                         <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
                           <div className="font-semibold text-[#31343F] cursor-pointer">
-                            {review.author?.name || "Unknown User"}
+                            {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>
                         </a>
                       ) : (
@@ -222,12 +222,12 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                           className="font-semibold text-[#31343F] cursor-pointer"
                           onClick={() => setIsShowSignin(true)}
                         >
-                          {review.author?.name || "Unknown User"}
+                          {review.author?.name || review.author?.node?.name || "Unknown User"}
                         </div>
                       )
                     ) : (
                       <div className="font-semibold text-[#31343F]">
-                        {review.author?.name || "Unknown User"}
+                        {review.author?.name || review.author?.node?.name || "Unknown User"}
                       </div>
                     )}
                     <div className="flex gap-2 mt-1 flex-wrap">
