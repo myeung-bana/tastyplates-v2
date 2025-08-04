@@ -21,7 +21,7 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
@@ -70,7 +70,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
-  const [cooldown, setCooldown] = useState(0);
+  // const [cooldown, setCooldown] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -109,13 +109,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
   }, [isOpen, data?.id]);
 
-  useEffect(() => {
-    let timer: any;
-    if (cooldown > 0) {
-      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [cooldown]);
+  // useEffect(() => {
+  //   let timer: any;
+  //   if (cooldown > 0) {
+  //     timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+  //   }
+  //   return () => clearTimeout(timer);
+  // }, [cooldown]);
 
   useEffect(() => {
     if (isOpen && data) {
@@ -331,8 +331,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleCommentReplySubmit = async () => {
-    if (!commentReply.trim() || isLoading || cooldown > 0) return;
-
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -343,35 +341,62 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setIsLoading(true); // Ensure loading is set before optimistic update
+    // Optimistically add reply at the top
+    const optimisticReply = {
+      id: `optimistic-${Date.now()}`,
+      content: commentReply,
+      author: { node: { name: session.user.name, databaseId: session.user.userId } },
+      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      createdAt: new Date().toISOString(),
+      userLiked: false,
+      commentLikes: 0,
+      isOptimistic: true,
+      palates: session.user.palates || ""
+    };
+    setReplies(prev => [optimisticReply, ...prev]);
+    setCommentReply("");
 
     try {
       const payload = {
-        content: commentReply,
+        content: optimisticReply.content,
         restaurantId: data.commentedOn?.node?.databaseId,
         parent: data.databaseId,
         author: session?.user?.userId,
       };
-
       const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
+      console.log("Reply API response:", res); // <-- Log the full API response for debugging
       if (res.status === code.created) {
         toast.success(commentedSuccess);
-        setCommentReply("");
+        // Remove only the optimistic reply, then merge server replies (avoid duplicates)
         const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
-        setReplies(updatedReplies);
-        setCooldown(5);
+        setReplies(prev => {
+          // Remove optimistic reply
+          const withoutOptimistic = prev.filter(r => !r.isOptimistic);
+          // Merge: add any new replies from server not already in the list
+          const merged = updatedReplies.concat(
+            withoutOptimistic.filter(
+              (local) => !updatedReplies.some((server: any) => server.id === local.id)
+            )
+          );
+          return merged;
+        });
+      } else if (res.data?.code === 'comment_flood') {
+        toast.error(commentFloodError);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       } else if (res.status === code.conflict) {
         toast.error(commentDuplicateError);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       } else {
         toast.error(errorOccurred);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       }
     } catch (err: any) {
       console.error("Failed to post reply", err);
       toast.error(errorOccurred);
-    }
-    finally {
-      setIsLoading(false);
+      setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+    } finally {
+      setIsLoading(false); // Always reset loading
     }
   };
 
@@ -1024,11 +1049,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         <textarea
                           rows={1}
                           cols={30}
-                          placeholder={
-                            cooldown > 0
-                              ? `Please wait ${cooldown}s before commenting again...`
-                              : "Add a comment"
-                          }
+                          placeholder={ "Add a comment"}
                           value={commentReply}
                           onChange={(e) => setCommentReply(e.target.value)}
                           onKeyDown={(e) => {
@@ -1037,7 +1058,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               handleCommentReplySubmit();
                             }
                           }}
-                          disabled={cooldown > 0}
+                          disabled={isLoading}
                           className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
                         />
                       )}
