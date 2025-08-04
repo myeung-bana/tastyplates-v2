@@ -165,69 +165,6 @@ const AddListingPage = (props: any) => {
     return isValid;
   };
 
-  const submitListing = async (e: FormEvent, action: "continue" | "saveDraft") => {
-    e.preventDefault();
-
-    if (!validateStep1()) {
-      return;
-    }
-
-    if (action === "continue") {
-      setIsLoading(true);
-      setTimeout(() => {
-        setStep(2);
-        setIsLoading(false);
-      }, 300);
-      return;
-    }
-
-    // ✅ If saving draft
-    setIsLoadingDraft(true);
-    try {
-      const formData = new FormData();
-      formData.append("name", listing.name);
-      formData.append("listingStreet", listing.address || "");
-      formData.append("priceRange", listing.priceRange);
-      formData.append("streetAddress", listing.address);
-
-      // Categories
-      if (Array.isArray(listing.listingCategories)) {
-        listing.listingCategories.forEach((cat) => {
-          formData.append("categories[]", cat);
-        });
-      }
-
-      // Location & Palates
-      formData.append("latitude", String(listing.latitude));
-      formData.append("longitude", String(listing.longitude));
-      selectedPalates.forEach((p) => formData.append("palates[]", p.label));
-
-      // ✅ If saving as draft, set status to draft
-      formData.append("status", action === "saveDraft" ? "draft" : "pending");
-
-      const response = await RestaurantService.createRestaurantListingAndReview(
-        formData,
-        sess
-      );
-
-      if (response?.id) {
-        setCurrentRestaurantDbId(response.id);
-      }
-
-      setIsSubmitted(true);
-
-      // ✅ Redirect to draft page if saving draft
-      if (action === "saveDraft") {
-        router.push(LISTING_DRAFT);
-      }
-
-    } catch (err: any) {
-      console.error("Error submitting listing:", err);
-    } finally {
-      setIsLoading(false);
-      setIsLoadingDraft(false);
-    }
-  };
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -379,64 +316,82 @@ const AddListingPage = (props: any) => {
     }
   }, [searchParams]);
 
-  const submitReviewAndListing = async (
+  const submitListingAndReview = async (
     e: FormEvent,
-    reviewMode: "draft" | "publish",
-    listingStatus: "pending" | "draft",
-    isSaveAndExit = false
+    options: {
+      action: "continue" | "saveDraft"| "publish";
+      listingStatus?: "pending" | "draft";
+      reviewMode?: "draft";
+      isSaveAndExit?: boolean;
+      includeReview?: boolean;
+    }
   ) => {
     e.preventDefault();
 
+    const { action, listingStatus = "draft", reviewMode = "draft", isSaveAndExit = false, includeReview = false } = options;
+
+    // ✅ Step 1 Validation
+    if (!validateStep1() && currentRestaurantDbId === 0) {
+      return;
+    }
+
+   
+    if (action === "continue") {
+      setIsLoading(true);
+      setTimeout(() => {
+        setStep(2);
+        setIsLoading(false);
+      }, 300);
+      return;
+    }
+
     let hasError = false;
 
-    // ✅ Validation
-    if (reviewStars === 0) {
-      setRatingError("Rating is required.");
-      hasError = true;
-    } else {
-      setRatingError("");
-    }
+    // ✅ Review validation if review is included
+    if (includeReview) {
+      if (reviewStars === 0) {
+        setRatingError("Rating is required.");
+        hasError = true;
+      } else {
+        setRatingError("");
+      }
 
-    if (selectedFiles.length < minimumImage) {
-      setUploadedImageError(minimumImageLimit(minimumImage));
-      hasError = true;
-    } else if (selectedFiles.length > maximumImage) {
-      setUploadedImageError(maximumImageLimit(maximumImage));
-      hasError = true;
-    } else {
-      setUploadedImageError("");
-    }
+      if (selectedFiles.length < minimumImage) {
+        setUploadedImageError(minimumImageLimit(minimumImage));
+        hasError = true;
+      } else if (selectedFiles.length > maximumImage) {
+        setUploadedImageError(maximumImageLimit(maximumImage));
+        hasError = true;
+      } else {
+        setUploadedImageError("");
+      }
 
-    if (content.trim() === "") {
-      setDescriptionError("Description is required.");
-      hasError = true;
-    } else if (content.length > reviewDescriptionLimit) {
-      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
-      hasError = true;
-    } else {
-      setDescriptionError("");
-    }
+      if (content.trim() === "") {
+        setDescriptionError("Description is required.");
+        hasError = true;
+      } else if (content.length > reviewDescriptionLimit) {
+        setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+        hasError = true;
+      } else {
+        setDescriptionError("");
+      }
 
-    if (reviewMainTitle.length > reviewTitleLimit) {
-      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
-      hasError = true;
-    } else {
-      setReviewTitleError("");
+      if (reviewMainTitle.length > reviewTitleLimit) {
+        setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+        hasError = true;
+      } else {
+        setReviewTitleError("");
+      }
     }
 
     if (hasError) return;
 
-    // ✅ Loading state
-    isSaveAndExit ? setIsLoadingDraft(true) : setIsLoading(true);
+    // ✅ Loading states
+    isSaveAndExit || action === "saveDraft" ? setIsLoadingDraft(true) : setIsLoading(true);
 
     try {
-      if (!validateStep1() && currentRestaurantDbId === 0) {
-        setIsLoading(false);
-        return;
-      }
-
-      // ✅ Prepare request payload for unified endpoint
-      const payload = {
+      // ✅ Prepare payload
+      const payload: any = {
         listing: {
           id: currentRestaurantDbId || 0,
           name: listing.name,
@@ -453,21 +408,25 @@ const AddListingPage = (props: any) => {
           palates: selectedPalates.map((p) => p.label),
           status: listingStatus,
         },
-        review: {
+      };
+
+      // ✅ Add review data if applicable
+      if (includeReview) {
+        payload.review = {
           review_stars: reviewStars,
           review_main_title: reviewMainTitle,
           content,
           review_images_idz: selectedFiles,
           recognitions: selectedrecognition || [],
           mode: reviewMode,
-        },
-      };
+        };
+      }
 
-      // ✅ API call (single request)
+      // ✅ API call
       const response = await RestaurantService.createRestaurantListingAndReview(payload, sess);
 
-      if (response?.listing?.id) {
-        setCurrentRestaurantDbId(response.listing.id);
+      if (response?.listing?.id || response?.id) {
+        setCurrentRestaurantDbId(response.listing?.id || response.id);
       }
 
       setIsSubmitted(true);
@@ -475,18 +434,19 @@ const AddListingPage = (props: any) => {
       // ✅ Redirect logic
       if (listingStatus === "pending") {
         router.push(LISTING_DRAFT);
-      } else if (reviewMode !== "draft") {
+      } else if (includeReview && reviewMode !== "draft") {
         router.push(LISTING);
       }
 
-      // ✅ Reset form state
-      setReviewStars(0);
-      setReviewMainTitle("");
-      setContent("");
-      setSelectedFiles([]);
-      setIsDoneSelecting(false);
-      setSelectedRecognition([]);
-
+      
+      if (includeReview) {
+        setReviewStars(0);
+        setReviewMainTitle("");
+        setContent("");
+        setSelectedFiles([]);
+        setIsDoneSelecting(false);
+        setSelectedRecognition([]);
+      }
     } catch (error) {
       console.error("Failed to submit listing and review:", error);
     } finally {
@@ -813,7 +773,7 @@ const AddListingPage = (props: any) => {
                   <button
                     type="button"
                     className="listing__button"
-                    onClick={(e) => submitListing(e, "continue")}
+                    onClick={(e) => submitListingAndReview(e, { action: "continue" })}
                   >
                     {isLoading && (
                       <svg
@@ -838,7 +798,7 @@ const AddListingPage = (props: any) => {
                   <button
                     className="underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                     type="button"
-                    onClick={(e) => submitListing(e, "saveDraft")}
+                    onClick={(e) => submitListingAndReview(e, {action : "saveDraft", listingStatus: "pending" })}
                   >
                     {isLoadingDraft && (
                       <svg
@@ -1028,7 +988,7 @@ const AddListingPage = (props: any) => {
                 <button
                   type="button"
                   className="listing__button flex"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "draft", false)}
+                  onClick={(e) => submitListingAndReview(e, { action: "publish", listingStatus: "draft", reviewMode: "draft", isSaveAndExit: false, includeReview: true })}
                 >
                   {isLoading && (
                     <svg
@@ -1052,7 +1012,7 @@ const AddListingPage = (props: any) => {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => submitReviewAndListing(e, "draft", "pending", true)}
+                  onClick={(e) => submitListingAndReview(e, { action: "saveDraft", listingStatus: "pending", reviewMode: "draft", includeReview: true })}
                   className="underline flex h-fit text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
                 >
                   {isLoadingDraft && (
