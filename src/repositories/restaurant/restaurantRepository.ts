@@ -103,22 +103,24 @@ export class RestaurantRepository {
         return data.listing;
     }
 
-    static async createListing(formData: FormData, token: string): Promise<any> {
+    static async createListingAndReview(payload: any, token: string): Promise<any> {
         const res = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
             },
-            body: formData,
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.message || "Failed to submit listing");
+            throw new Error(errorData.error || "Failed to submit listing and review");
         }
 
         return res.json();
     }
+
 
     static async getFavoriteListing(
         userId: number,
@@ -259,7 +261,7 @@ export class RestaurantRepository {
             body: JSON.stringify(data),
             credentials: "include",
         }, jsonResponse);
-        
+
         return response;
     }
 
@@ -310,7 +312,7 @@ export class RestaurantRepository {
         // Return the array of IDs or an empty array if undefined
         return data?.currentUser?.recentlyVisited || [];
     }
-    
+
     static async getAddressByPalate(
         searchTerm: string,
         taxQuery: any,

@@ -306,7 +306,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 />
                 <div className="review-card__user-info">
                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                    {data.author?.name || "Unknown User"}
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                   <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                     {UserPalateNames?.map((tag: any, index: number) => (

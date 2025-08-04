@@ -79,14 +79,15 @@ export const RestaurantService = {
         }
     },
 
-    async createRestaurantListing(formData: FormData, token: string): Promise<any> {
+    async createRestaurantListingAndReview(payload: any, token: string): Promise<any> {
         try {
-            return await RestaurantRepository.createListing(formData, token);
+            return await RestaurantRepository.createListingAndReview(payload, token);
         } catch (error) {
-            console.error('Error creating restaurant listing:', error);
-            throw new Error('Failed to create restaurant listing');
+            console.error("Error creating listing and review:", error);
+            throw new Error("Failed to create listing and review");
         }
     },
+
 
     async fetchPendingRestaurants(token: string): Promise<any> {
         try {
