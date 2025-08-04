@@ -70,7 +70,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [replies, setReplies] = useState<any[]>([]);
-  // const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -109,13 +109,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
   }, [isOpen, data?.id]);
 
-  // useEffect(() => {
-  //   let timer: any;
-  //   if (cooldown > 0) {
-  //     timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-  //   }
-  //   return () => clearTimeout(timer);
-  // }, [cooldown]);
+  useEffect(() => {
+    let timer: any;
+    if (cooldown > 0) {
+      timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (isOpen && data) {
@@ -331,6 +331,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleCommentReplySubmit = async () => {
+    if (!commentReply.trim() || isLoading || cooldown > 0) return;
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -365,7 +366,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         author: session?.user?.userId,
       };
       const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
-      console.log("Reply API response:", res); // <-- Log the full API response for debugging
       if (res.status === code.created) {
         toast.success(commentedSuccess);
         // Remove only the optimistic reply, then merge server replies (avoid duplicates)
@@ -379,6 +379,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               (local) => !updatedReplies.some((server: any) => server.id === local.id)
             )
           );
+        setCooldown(5);
           return merged;
         });
       } else if (res.data?.code === 'comment_flood') {
@@ -1041,15 +1042,19 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                   <div className="w-full shrink-0 border-t bg-white border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-0">
                     <div className="flex flex-row justify-start items-center gap-4">
-                      {/* {isLoading ? (
+                      {isLoading ? (
                         <div className="py-3 px-4 w-full border border-[#CACACA] rounded-[10px] text-gray-500 italic">
                           Sending...
                         </div>
-                      ) : ( */}
+                      ) : (
                         <textarea
                           rows={1}
                           cols={30}
-                          placeholder={ "Add a comment"}
+                          placeholder={
+                            cooldown > 0
+                              ? `Please wait ${cooldown}s before commenting again...`
+                              : "Add a comment"
+                          }
                           value={commentReply}
                           onChange={(e) => setCommentReply(e.target.value)}
                           onKeyDown={(e) => {
@@ -1058,10 +1063,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               handleCommentReplySubmit();
                             }
                           }}
-                          disabled={isLoading}
+                          disabled={cooldown > 0 || isLoading}
                           className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
                         />
-                      {/* )} */}
+                      )}
                       <div className="flex gap-2 flex-row items-center">
                         <div className="flex items-center relative text-center">
                           <button
