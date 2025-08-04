@@ -1041,11 +1041,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   </div>
                   <div className="w-full shrink-0 border-t bg-white border-[#CACACA] p-4 md:p-6 absolute inset-x-0 bottom-0">
                     <div className="flex flex-row justify-start items-center gap-4">
-                      {isLoading ? (
+                      {/* {isLoading ? (
                         <div className="py-3 px-4 w-full border border-[#CACACA] rounded-[10px] text-gray-500 italic">
                           Sending...
                         </div>
-                      ) : (
+                      ) : ( */}
                         <textarea
                           rows={1}
                           cols={30}
@@ -1061,7 +1061,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           disabled={isLoading}
                           className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
                         />
-                      )}
+                      {/* )} */}
                       <div className="flex gap-2 flex-row items-center">
                         <div className="flex items-center relative text-center">
                           <button
