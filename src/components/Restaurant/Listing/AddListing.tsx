@@ -22,9 +22,9 @@ import debounce from 'lodash.debounce';
 import { LISTING, LISTING_DRAFT, WRITING_GUIDELINES } from "@/constants/pages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
-import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, listingTitleLimit } from "@/constants/validation";
 import { set } from "date-fns";
-import { maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit } from "@/constants/messages";
+import { maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, maximumListingTitle } from "@/constants/messages";
 
 declare global {
   interface Window {
@@ -134,6 +134,9 @@ const AddListingPage = (props: any) => {
     let isValid = true;
     if (!listing.name) {
       setNameError("Listing name is required.");
+      isValid = false;
+    } else if (listing.name.length > listingTitleLimit) {
+      setNameError(maximumListingTitle(listingTitleLimit));
       isValid = false;
     } else {
       setNameError("");
@@ -587,9 +590,15 @@ const AddListingPage = (props: any) => {
                       className="listing__input"
                       placeholder="Listing Name"
                       value={listing.name}
+                      maxLength={listingTitleLimit}
                       onChange={(e) => {
-                        setListing({ ...listing, name: e.target.value });
-                        setNameError("");
+                        const value = e.target.value;
+                        if (value.length > listingTitleLimit) {
+                          setNameError(maximumListingTitle(listingTitleLimit));
+                        } else {
+                          setNameError("");
+                        }
+                        setListing({ ...listing, name: value });
                       }}
                     />
                     {nameError && (
@@ -899,7 +908,7 @@ const AddListingPage = (props: any) => {
               </div>
               <div className="listing__form-group">
                 <label className="listing__label">
-                  Upload Photos(Max 6 Photos)
+                  Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
                   <label className="flex gap-2 items-center rounded-xl py-2 px-4 md:py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
