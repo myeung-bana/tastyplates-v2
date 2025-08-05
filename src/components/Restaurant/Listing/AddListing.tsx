@@ -582,7 +582,7 @@ const AddListingPage = (props: any) => {
                   </h1>
                 </div>
                 <div className="listing__form-group">
-                  <label className="listing__label">Title</label>
+                  <label className="listing__label">Listing Name</label>
                   <div className="listing__input-group">
                     <input
                       type="text"
@@ -865,7 +865,7 @@ const AddListingPage = (props: any) => {
                 </div>
               </div>
               <div className="listing__form-group">
-                <label className="listing__label">Title</label>
+                <label className="listing__label">Review Title</label>
                 <div className="listing__input-group">
                   <textarea
                     name="reviewTitle"

@@ -338,7 +338,7 @@ const ReviewSubmissionPage = () => {
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Title</label>
+                <label className="submitRestaurants__label">Review Title</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
