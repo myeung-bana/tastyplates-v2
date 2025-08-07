@@ -1,5 +1,5 @@
 import { FACEBOOK, INSTAGRAM, TWITTER } from "@/constants/images";
-import { HELP, HOME, RESTAURANTS } from "@/constants/pages";
+import { HELP, HOME, RESTAURANTS, PRIVACY_POLICY, TERMS_OF_SERVICE } from "@/constants/pages";
 import Image from "next/image";
 
 interface Props {
@@ -20,8 +20,8 @@ const footerLinks = {
     // { name: "COVID-19 Response", href: "/covid" },
   ],
   legal: [
-    { name: "Privacy Policy", href: "#" },
-    { name: "Terms of Service", href: "#" },
+    { name: "Privacy Policy", href: PRIVACY_POLICY },
+    { name: "Terms of Service", href: TERMS_OF_SERVICE },
     { name: "Cookie Settings", href: "#" },
     // { name: "Sitemap", href: "/sitemap" },
   ],
