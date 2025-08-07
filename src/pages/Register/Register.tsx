@@ -13,8 +13,8 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import { minimumPassword } from "@/constants/validation";
 import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
 import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
-import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { validEmail } from "@/lib/utils";
+import { HOME, ONBOARDING_ONE, TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/constants/pages";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -297,12 +297,30 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
                     )}
                   </div>
-                  <div className="text-sm font-normal">
-                    By continuing, you agree to TastyPlates'&nbsp;
-                    <span className="font-semibold underline text=[#494D5D]">Terms of Service</span>&nbsp;
-                    and&nbsp;
-                    <span className="font-semibold underline text=[#494D5D]">Privacy Policy</span>
-                  </div>
+                  {confirmPasswordError && (
+                    <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
+                  )}
+                </div>
+                <div className="text-sm font-normal w-full flex flex-wrap gap-x-1 gap-y-1 text-center mb-2">
+                  <span>By continuing, you agree to TastyPlates&apos;s</span>
+                  <a
+                    href={TERMS_OF_SERVICE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
+                  >
+                    Terms of Service
+                  </a>
+                  <span>and</span>
+                  <a
+                    href={PRIVACY_POLICY}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
+                  >
+                    Privacy Policy
+                  </a>
+                </div>
 
                   <button
                     disabled={isLoading}
