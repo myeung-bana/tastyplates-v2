@@ -8,6 +8,7 @@ export const aboutMeMaxLimit = 500
 export const palateLimit = 2
 export const maximumImage = 6
 export const minimumImage = 1
+export const listingTitleLimit = 30
 export const reviewTitleLimit = 150
 export const reviewTitleDisplayLimit = 50
 export const reviewDescriptionLimit = 1000

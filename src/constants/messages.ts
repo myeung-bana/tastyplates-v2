@@ -25,6 +25,7 @@ export const logOutSuccessfull = "Logged out successfully";
 export const checkEmailTitle = "Error checking email:";
 export const unfinishedSaved = "Unfinished registration saved";
 export const requiredDescription = "Description is required.";
+export const maximumListingTitle = (max: number) => `Listing title must be ${max} characters or less.`;
 export const maximumReviewTitle = (max: number) => `Review title must be ${max} characters or less.`;
 export const maximumReviewDescription = (max: number) => `Review description must be ${max} characters or less.`;
 export const maximumCommentReplies = (max: number) => `Comment must be ${max} characters or less.`;

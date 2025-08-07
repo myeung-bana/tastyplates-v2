@@ -338,7 +338,7 @@ const ReviewSubmissionPage = () => {
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Title</label>
+                <label className="submitRestaurants__label">Review Title</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
@@ -381,7 +381,7 @@ const ReviewSubmissionPage = () => {
               </div>
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">
-                  Upload Photos(Max 6 Photos)
+                  Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
                   <label className="flex gap-2 items-center rounded-xl py-2 px-4 md;py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
