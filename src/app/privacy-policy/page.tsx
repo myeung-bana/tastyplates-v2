@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { getPrivacyPolicy } from "@/services/PrivacyPolicy/privacypolicyService";
 import Navbar from "@/components/Navbar";
@@ -25,7 +25,9 @@ export default function PrivacyPolicy() {
 
   return (
     <>
-      <Navbar />
+      <Suspense fallback={<div></div>}>
+        <Navbar />
+      </Suspense>
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="text-[32px] font-bold text-center text-[#31343F] mb-8 max-w-xl w-full">
@@ -42,9 +44,9 @@ export default function PrivacyPolicy() {
               ) : policy ? (
                 <section>
                   <div
-                        className="prose prose-xs max-w-none text-[#31343F]"
-                        dangerouslySetInnerHTML={{ __html: policy.content }}
-                        />
+                    className="prose prose-xs max-w-none text-[#31343F]"
+                    dangerouslySetInnerHTML={{ __html: policy.content }}
+                  />
                 </section>
               ) : null}
             </div>
