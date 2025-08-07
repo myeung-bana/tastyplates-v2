@@ -22,8 +22,9 @@ import { logOutSuccessfull } from "@/constants/messages";
 import { sessionStatus } from "@/constants/response";
 import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
-import { DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TASTYPLATES_LOGO_WHITE } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import PasswordUpdatedModal from "./ui/Modal/PasswordUpdatedModal";
 
 const navigationItems = [
   { name: "Restaurant", href: RESTAURANTS },
@@ -41,12 +42,14 @@ export default function Navbar(props: any) {
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
+  const [isOpenPasswordUpdate, setIsOpenPasswordUpdate] = useState(false);
   const [navBg, setNavBg] = useState(false);
   const searchParams = useSearchParams();
   const LOGIN_BACK_KEY = 'loginBackMessage';
   const LOGIN_KEY = 'logInMessage';
   const LOGOUT_KEY = 'logOutMessage';
   const WELCOME_KEY = 'welcomeMessage';
+  const UPDATE_PASSWORD_KEY = 'openPasswordUpdateModal';
 
   const handleLogout = async () => {
     removeAllCookies();
@@ -66,7 +69,7 @@ export default function Navbar(props: any) {
       params.set('ethnic', encodeURIComponent(ethnicSearch));
     }
     if (addressSearch) {
-      params.set('address',(addressSearch));
+      params.set('address', (addressSearch));
     }
     router.push(PAGE(RESTAURANTS, [], params.toString()));
   };
@@ -75,7 +78,7 @@ export default function Navbar(props: any) {
     const ethnic = searchParams ? searchParams.get("ethnic") : null;
     if (ethnic) {
       setEthnicSearch(decodeURIComponent(ethnic));
-    } 
+    }
     // else {
     //   setEthnicSearch("");
     // }
@@ -83,23 +86,29 @@ export default function Navbar(props: any) {
     const address = searchParams ? searchParams.get("address") : null;
     setAddressSearch(address ? decodeURIComponent(address) : "");
   }, [searchParams]);
-  
+
   useEffect(() => {
     const loginMessage = localStorage?.getItem(LOGIN_BACK_KEY) ?? "";
     const logOutMessage = localStorage?.getItem(LOGOUT_KEY) ?? "";
     const googleMessage = Cookies.get(LOGIN_KEY) ?? "";
     const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
+    const openPasswordUpdateModal = localStorage?.getItem(UPDATE_PASSWORD_KEY) ?? "";
 
     if ((loginMessage || logOutMessage || googleMessage)) {
       if (!welcomeMessage) {
         toast.success(loginMessage || logOutMessage || googleMessage, {
           duration: 3000, // 3 seconds
-        });  
+        });
       }
 
       removeAllCookies([LOGIN_KEY]);
       localStorage.removeItem(LOGIN_BACK_KEY);
       localStorage.removeItem(LOGOUT_KEY);
+    }
+
+    if (openPasswordUpdateModal) {
+      setIsOpenPasswordUpdate(true);
+      localStorage.removeItem(UPDATE_PASSWORD_KEY);
     }
 
     window.addEventListener("scroll", changeNavBg);
@@ -118,8 +127,7 @@ export default function Navbar(props: any) {
 
   }, [router]);
 
-  // Check for onboarding pages
-  const isOnboardingPage = pathname?.includes('onboarding');
+  const validatePage = pathname?.includes('onboarding') || pathname?.includes('reset-password');
 
   return (
     <>
@@ -139,6 +147,7 @@ export default function Navbar(props: any) {
           setIsOpenSignup(true);
         }}
       />
+      <PasswordUpdatedModal isOpen={isOpenPasswordUpdate} onClose={() => setIsOpenPasswordUpdate(false)} />
       <nav
         className={`navbar !z-[1000] ${isLandingPage
           ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
@@ -183,7 +192,7 @@ export default function Navbar(props: any) {
               <div className="navbar__brand">
                 <Link href={HOME} className="flex-shrink-0 flex items-center">
                   <Image
-                    src={`${isLandingPage ? !navBg ? "/TastyPlates_Logo_White.svg" : "/TastyPlates_Logo_Black.svg" : "/TastyPlates_Logo_Colour.svg"}`}
+                    src={`${isLandingPage ? !navBg ? TASTYPLATES_LOGO_WHITE : TASTYPLATES_LOGO_BLACK : TASTYPLATES_LOGO_COLOUR}`}
                     className="h-6 md:h-8 w-auto object-contain"
                     height={32}
                     width={184}
@@ -252,7 +261,7 @@ export default function Navbar(props: any) {
               </div>
             )}
             <div className="navbar__auth">
-              {(status !== sessionStatus.authenticated && isOnboardingPage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
+              {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
                 <Image
                   src={DEFAULT_USER_ICON}
                   alt={"Profile"}

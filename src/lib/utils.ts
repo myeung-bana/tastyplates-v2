@@ -98,3 +98,9 @@ export const capitalizeFirstLetter = (string: string) => {
   if (!string) return "";
   return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 };
+
+export const validEmail = (email: string): boolean => {
+  // Simple email regex
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};

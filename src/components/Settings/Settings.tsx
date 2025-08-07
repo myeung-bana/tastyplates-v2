@@ -11,7 +11,7 @@ import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
 import { emailExistCode, sessionProvider as provider, responseStatusCode as code } from "@/constants/response";
 import CustomDatePicker from "../CustomDatepicker";
-import { formatDateForInput } from "@/lib/utils";
+import { formatDateForInput, validEmail } from "@/lib/utils";
 
 enum Field {
     None = "",
@@ -72,9 +72,7 @@ const Settings = (props: any) => {
 
   const validateEmail = (email: string) => {
     if (!email) return emailRequired;
-    // Simple email regex
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!re.test(email)) return invalidEmailFormat;
+    if (!validEmail(email)) return invalidEmailFormat;
     return "";
   };
 
