@@ -11,9 +11,10 @@ import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { minimumPassword } from "@/constants/validation";
-import { emailOccurredError, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
+import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
 import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
+import { validEmail } from "@/lib/utils";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -28,6 +29,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [error, setError] = useState<string>("");
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
@@ -63,6 +65,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   const validatePasswords = () => {
     let isValid = true;
+    setEmailError("")
     setPasswordError("");
     setConfirmPasswordError("");
 
@@ -77,11 +80,24 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     return isValid;
   };
 
+  const validateEmail = (email: string) => {
+    if (!email) return emailRequired;
+    if (!validEmail(email)) return invalidEmailFormat;
+    return "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
     localStorage.removeItem(REGISTRATION_KEY);
+
+    const err = validateEmail(email);
+    if (err) {
+      setIsLoading(false);
+      setEmailError(err);
+      return;
+    }
 
     // Password validation
     if (!validatePasswords()) {
@@ -193,103 +209,125 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
             </div>
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
-            <div className="auth__card !py-4 !rounded-3xl">
+            <div className="auth__card !px-0 !py-4 !rounded-3xl">
               <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
-              <form className="auth__form border-y border-[#CACACA] !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
-                <div className="auth__form-group mt-6">
-                  <label htmlFor="email" className="auth__label">
-                    Email
-                  </label>
-                  <div className="auth__input-group">
-                    <input
-                      type="email"
-                      id="email"
-                      className="auth__input"
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    // required
-                    />
+              <div className=" border-y border-[#CACACA]">
+                <form className="auth__form px-[2rem] !gap-4 overflow-y-auto !pb-6" onSubmit={handleSubmit}>
+                  <div className="auth__form-group mt-6">
+                    <label htmlFor="email" className="auth__label">
+                      Email
+                    </label>
+                    <div className="auth__input-group">
+                      <input
+                        type="text"
+                        id="email"
+                        className="auth__input"
+                        placeholder="Email"
+                        autoComplete="off"
+                        value={email}
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setEmail(value)
+                          setEmailError(!validEmail(value) ? validateEmail(value) : "")
+                        }}
+                        readOnly // prevent autofill until focus
+                      />
+                    </div>
                   </div>
-                </div>
-
-                <div className="auth__form-group">
-                  <label htmlFor="password" className="auth__label">
-                    Password
-                  </label>
-                  <div className="auth__input-group">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      id="password"
-                      className="auth__input"
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    {showPassword ? (
-                      <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
-                    ) : (
-                      <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
+                  {emailError && (
+                    <div className="text-red-600 text-xs">{emailError}</div>
+                  )}
+                  <div className="auth__form-group">
+                    <label htmlFor="password" className="auth__label">
+                      Password
+                    </label>
+                    <div className="auth__input-group">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        className="auth__input"
+                        placeholder="Password"
+                        autoComplete="off"
+                        value={password}
+                        onFocus={(e) => e.target.removeAttribute('readonly')}
+                        onChange={(e) => {
+                          setPassword(e.target.value)
+                          if (e.target.value == confirmPassword) { setConfirmPasswordError("") }
+                          if (password.length >= minimumPassword) { setPasswordError("") }
+                          if (password.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
+                        }}
+                        readOnly // prevent autofill until focus
+                      />
+                      {showPassword ? (
+                        <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
+                      ) : (
+                        <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
+                      )}
+                    </div>
+                    {passwordError && (
+                      <div className="text-red-600 text-xs mt-1">{passwordError}</div>
                     )}
                   </div>
-                  {passwordError && (
-                    <div className="text-red-600 text-xs mt-1">{passwordError}</div>
-                  )}
-                </div>
 
-                <div className="auth__form-group">
-                  <label htmlFor="confirmPassword" className="auth__label">
-                    Confirm Password
-                  </label>
-                  <div className="auth__input-group">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      id="confirmPassword"
-                      className="auth__input"
-                      placeholder="Confirm Password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                    {showConfirmPassword ? (
-                      <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
-                    ) : (
-                      <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                  <div className="auth__form-group">
+                    <label htmlFor="confirmPassword" className="auth__label">
+                      Confirm Password
+                    </label>
+                    <div className="auth__input-group">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        id="confirmPassword"
+                        className="auth__input"
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value)
+                          if (password == e.target.value) { setConfirmPasswordError("") }
+                          if (password != e.target.value) { setConfirmPasswordError(passwordsNotMatch) }
+                        }}
+                      />
+                      {showConfirmPassword ? (
+                        <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                      ) : (
+                        <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                      )}
+                    </div>
+                    {confirmPasswordError && (
+                      <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
                     )}
                   </div>
-                  {confirmPasswordError && (
-                    <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
-                  )}
-                </div>
-                <div className="text-sm font-normal">
-                  By continuing, you agree to TastyPlates'&nbsp;
-                  <span className="font-semibold underline text=[#494D5D]">Terms of Service</span>&nbsp;
-                  and&nbsp;
-                  <span className="font-semibold underline text=[#494D5D]">Privacy Policy</span>
-                </div>
+                  <div className="text-sm font-normal">
+                    By continuing, you agree to TastyPlates'&nbsp;
+                    <span className="font-semibold underline text=[#494D5D]">Terms of Service</span>&nbsp;
+                    and&nbsp;
+                    <span className="font-semibold underline text=[#494D5D]">Privacy Policy</span>
+                  </div>
 
-                <button
-                  disabled={isLoading}
-                  type="submit"
-                  className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
-                >
-                  Continue
-                </button>
-                <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
-                  <hr className="w-full border-t border-[#494D5D]" />
-                  or
-                  <hr className="w-full border-t border-[#494D5D]" />
-                </div>
+                  <button
+                    disabled={isLoading}
+                    type="submit"
+                    className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+                  >
+                    Continue
+                  </button>
+                  <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
+                    <hr className="w-full border-t border-[#494D5D]" />
+                    or
+                    <hr className="w-full border-t border-[#494D5D]" />
+                  </div>
 
-                <button
-                  disabled={isLoading}
-                  type="button"
-                  onClick={signUpWithGoogle}
-                  className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:!bg-gray-50 hover:!shadow-md hover:!border-gray-400 active:!bg-gray-100"
-                >
-                  <FcGoogle className="h-5 w-5 object-contain mr-2" />
-                  <span>Continue with Google</span>
-                </button>
-              </form>
+                  <button
+                    disabled={isLoading}
+                    type="button"
+                    onClick={signUpWithGoogle}
+                    className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:!bg-gray-50 hover:!shadow-md hover:!border-gray-400 active:!bg-gray-100"
+                  >
+                    <FcGoogle className="h-5 w-5 object-contain mr-2" />
+                    <span>Continue with Google</span>
+                  </button>
+                </form>
+              </div>
               {error && (
                 <div
                   className={`mt-4 text-center px-4 py-2 rounded-xl font-medium bg-red-100 
@@ -300,7 +338,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               <p className="auth__footer !mt-3.5">
                 Already have an account?{" "}
                 <a
-                  className="auth__link !text-[#494D5D] cursor-pointer"
+                  className="auth__link !text-[#494D5D] cursor-pointer !font-bold"
                   onClick={e => {
                     e.preventDefault();
                     onOpenSignin && onOpenSignin();

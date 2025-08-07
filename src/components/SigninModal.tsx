@@ -1,13 +1,10 @@
 "use client";
-import React, { useState } from "react";
-import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
+import React, { useEffect, useState } from "react";
+import { FiX } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
-import Image from "next/image";
-import { users } from "@/data/dummyUsers";
-import { palates } from "@/data/dummyPalate";
-import { restaurants } from "@/data/dummyRestaurants";
-import Link from "next/link";
 import LoginPage from "@/pages/Login/Login";
+import ForgotPasswordModal from "./ui/Modal/ForgotPasswordModal";
+import ForgotPassLinkModal from "./ui/Modal/ForgotPassLinkModal";
 
 interface SigninModalProps {
   isOpen: boolean;
@@ -22,19 +19,57 @@ const SigninModal: React.FC<SigninModalProps> = ({
   onClose,
   onOpenSignup,
 }) => {
-//   const [rating, setRating] = useState(0);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showForgotLinkSuccess, setShowForgotLinkSuccess] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowForgotPassword(false);
+      setShowForgotLinkSuccess(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="review-modal-overlay">
-      <div className="!max-w-[488px] w-full max-h-[700px] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
-        <button className="review-modal__close !top-6" onClick={onClose}>
-          <FiX />
-        </button>
-        <LoginPage onOpenSignup={onOpenSignup} />
-      </div>
-    </div>
+    <>
+      {/* Login Modal */}
+      {!showForgotPassword && !showForgotLinkSuccess && (
+        <div className="review-modal-overlay">
+          <div className="!max-w-[488px] w-full max-h-[700px] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
+            <button className="review-modal__close !top-5" onClick={onClose}>
+              <FiX />
+            </button>
+            <LoginPage
+              onOpenSignup={onOpenSignup}
+              onOpenForgotPassword={() => setShowForgotPassword(true)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showForgotPassword && !showForgotLinkSuccess && (
+        <ForgotPasswordModal
+          isOpen={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+          onSuccess={() => {
+            setShowForgotPassword(false);
+            // Use setTimeout to ensure state updates are batched correctly
+            setTimeout(() => setShowForgotLinkSuccess(true), 0);
+          }}
+        />
+      )}
+
+      {showForgotLinkSuccess && (
+        <ForgotPassLinkModal
+          isOpen={showForgotLinkSuccess}
+          onClose={() => {
+            setShowForgotLinkSuccess(false);
+            onClose();
+          }}
+        />
+      )}
+    </>
   );
 };
 
