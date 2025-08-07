@@ -87,10 +87,10 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
                                         value={email}
                                         onChange={handleEmailChange}
                                     />
+                                    {emailError && (
+                                        <div className="text-red-600 text-xs mt-2">{emailError}</div>
+                                    )}
                                 </div>
-                                {emailError && (
-                                    <div className="text-red-600 text-xs">{emailError}</div>
-                                )}
                             </div>
                             <button
                                 type="submit"
@@ -102,8 +102,8 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
                             {message && (
                                 <div
                                     className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
-                                        ? "bg-green-100 text-green-700 border border-green-300"
-                                        : "bg-red-100 text-red-700 border border-red-300"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
                                         }`}
                                     dangerouslySetInnerHTML={{ __html: message }}
                                 />

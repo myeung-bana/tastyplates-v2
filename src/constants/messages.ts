@@ -15,6 +15,7 @@ export const currentPasswordError = "Current password is incorrect";
 export const passwordMinLength = "New password must be at least 5 characters.";
 export const confirmPasswordRequired = "Confirm password is required.";
 export const passwordsNotMatch = "Passwords do not match.";
+export const passwordRequired = "Password is required."
 export const emailRequired = "Email is required.";
 export const emailOccurredError = "An error occurred while checking the email.";
 export const invalidEmailFormat = "Invalid email format.";

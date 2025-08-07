@@ -145,10 +145,10 @@ const UpdatePassword = () => {
                 ) : (
                   <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
+                {passwordError && (
+                  <div className="text-red-600 text-xs mt-2">{passwordError}</div>
+                )}
               </div>
-              {passwordError && (
-                <div className="text-red-600 text-xs mt-1">{passwordError}</div>
-              )}
             </div>
             <div className="auth__form-group">
               <label htmlFor="confirmPassword" className="auth__label !font-bold">
@@ -175,12 +175,11 @@ const UpdatePassword = () => {
                 ) : (
                   <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
+                {confirmPasswordError && (
+                  <div className="text-red-600 text-xs mt-2">{confirmPasswordError}</div>
+                )}
               </div>
-              {confirmPasswordError && (
-                <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
-              )}
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -191,9 +190,9 @@ const UpdatePassword = () => {
             {/* Success/Error Message */}
             {message && (
               <div
-                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium w-fit m-auto ${messageType === responseStatus.success
-                  ? "bg-green-100 text-green-700 border border-green-300"
-                  : "bg-red-100 text-red-700 border border-red-300"
+                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium mx-10 ${messageType === responseStatus.success
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
                   }`}
               >
                 {message}

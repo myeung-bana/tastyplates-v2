@@ -275,9 +275,9 @@ const OnboardingTwoPage = () => {
             {/* Success/Error Message */}
             {message && (
               <div
-                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === responseStatus.success
-                  ? "bg-green-100 text-green-700 border border-green-300"
-                  : "bg-red-100 text-red-700 border border-red-300"
+                className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium ${messageType === responseStatus.success
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
                   }`}
               >
                 {message}

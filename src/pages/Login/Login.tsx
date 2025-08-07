@@ -9,9 +9,10 @@ import Spinner from "@/components/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { googleLoginFailed, loginFailed, unexpectedError } from "@/constants/messages";
+import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME } from "@/constants/pages";
+import { validEmail } from "@/lib/utils";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -27,6 +28,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
 
   useEffect(() => {
     const googleError = Cookies.get('googleError');
@@ -41,10 +44,40 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
   }, [router]);
 
+  const validatePasswords = () => {
+    let isValid = true;
+    setPasswordError("");
+
+    if (password.length == 0) {
+      setPasswordError(passwordRequired);
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const validateEmail = (email: string) => {
+    if (!email) return emailRequired;
+    if (!validEmail(email)) return invalidEmailFormat;
+    return "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
     setIsLoading(true);
+
+    const err = validateEmail(email);
+    if (err) {
+      setIsLoading(false);
+      setEmailError(err);
+      return;
+    }
+
+    if (!validatePasswords()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const result = await signIn(provider.credentials, {
@@ -106,17 +139,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                 <div className="auth__input-group">
                   {/* <FiMail className="auth__input-icon" /> */}
                   <input
-                    type="email"
+                    type="text"
                     id="email"
                     className="auth__input"
                     placeholder="Enter your email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setEmail(value)
+                      setEmailError(!validEmail(value) ? validateEmail(value) : "")
+                    }}
                   />
+                  {emailError && (
+                    <div className="text-red-600 text-xs mt-2">{emailError}</div>
+                  )}
                 </div>
               </div>
-
               <div className="auth__form-group">
                 <label htmlFor="password" className="auth__label">
                   Password
@@ -128,17 +166,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                     className="auth__input"
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setPassword(value)
+                      if (value.length) { setPasswordError("") } else {
+                        setPasswordError(passwordRequired)
+                      }
+                    }}
                   />
                   {showPassword ? (
                     <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
                   ) : (
                     <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                   )}
+                  {passwordError && (
+                    <div className="text-red-600 text-xs mt-2">{passwordError}</div>
+                  )}
                 </div>
               </div>
-
               <button
                 type="submit"
                 disabled={isLoading}
@@ -166,9 +211,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
           </div>
           {message && (
             <div
-              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium w-fit m-auto ${messageType == responseStatus.success
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-red-100 text-red-700 border border-red-300"
+              className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
                 }`}
               dangerouslySetInnerHTML={{ __html: message }}
             />

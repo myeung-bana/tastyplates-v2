@@ -233,11 +233,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                         }}
                         readOnly // prevent autofill until focus
                       />
+                      {emailError && (
+                        <div className="text-red-600 text-xs mt-2">{emailError}</div>
+                      )}
                     </div>
                   </div>
-                  {emailError && (
-                    <div className="text-red-600 text-xs">{emailError}</div>
-                  )}
                   <div className="auth__form-group">
                     <label htmlFor="password" className="auth__label">
                       Password
@@ -252,10 +252,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                         value={password}
                         onFocus={(e) => e.target.removeAttribute('readonly')}
                         onChange={(e) => {
-                          setPassword(e.target.value)
-                          if (e.target.value == confirmPassword) { setConfirmPasswordError("") }
-                          if (password.length >= minimumPassword) { setPasswordError("") }
-                          if (password.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
+                          const value = e.target.value
+                          setPassword(value)
+                          if (value == confirmPassword) { setConfirmPasswordError("") }
+                          if (value.length >= minimumPassword) { setPasswordError("") }
+                          if (value.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
                         }}
                         readOnly // prevent autofill until focus
                       />
@@ -264,10 +265,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       ) : (
                         <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                       )}
+                      {passwordError && (
+                        <div className="text-red-600 text-xs mt-2">{passwordError}</div>
+                      )}
                     </div>
-                    {passwordError && (
-                      <div className="text-red-600 text-xs mt-1">{passwordError}</div>
-                    )}
                   </div>
 
                   <div className="auth__form-group">
@@ -282,9 +283,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                         placeholder="Confirm Password"
                         value={confirmPassword}
                         onChange={(e) => {
-                          setConfirmPassword(e.target.value)
-                          if (password == e.target.value) { setConfirmPasswordError("") }
-                          if (password != e.target.value) { setConfirmPasswordError(passwordsNotMatch) }
+                          const value = e.target.value
+                          setConfirmPassword(value)
+                          if (password == value) { setConfirmPasswordError("") }
+                          if (password != value) { setConfirmPasswordError(passwordsNotMatch) }
                         }}
                       />
                       {showConfirmPassword ? (
@@ -292,14 +294,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       ) : (
                         <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
                       )}
+                      {confirmPasswordError && (
+                        <div className="text-red-600 text-xs mt-2">{confirmPasswordError}</div>
+                      )}
                     </div>
-                    {confirmPasswordError && (
-                      <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
-                    )}
                   </div>
-                  {confirmPasswordError && (
-                    <div className="text-red-600 text-xs mt-1">{confirmPasswordError}</div>
-                  )}
                   <div className="text-sm font-normal w-full flex flex-wrap gap-x-1 gap-y-1 text-center mb-2">
                     <span>By continuing, you agree to TastyPlates&apos;s</span>
                     <a
@@ -347,8 +346,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               </div>
               {error && (
                 <div
-                  className={`mt-4 text-center px-4 py-2 rounded-xl font-medium bg-red-100 
-                text-red-700 border border-red-300"}`}
+                  className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium bg-red-100 text-red-700`}
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
