@@ -9,16 +9,17 @@ import Spinner from "@/components/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { googleLoginFailed, loginFailed, unexpectedError } from "@/constants/messages";
+import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
-import { DASHBOARD, HOME } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
+import { HOME } from "@/constants/pages";
+import { validEmail } from "@/lib/utils";
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
+  onOpenForgotPassword?: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -27,6 +28,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
 
   useEffect(() => {
     const googleError = Cookies.get('googleError');
@@ -41,10 +44,40 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
     }
   }, [router]);
 
+  const validatePasswords = () => {
+    let isValid = true;
+    setPasswordError("");
+
+    if (password.length == 0) {
+      setPasswordError(passwordRequired);
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const validateEmail = (email: string) => {
+    if (!email) return emailRequired;
+    if (!validEmail(email)) return invalidEmailFormat;
+    return "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
     setIsLoading(true);
+
+    const err = validateEmail(email);
+    if (err) {
+      setIsLoading(false);
+      setEmailError(err);
+      return;
+    }
+
+    if (!validatePasswords()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const result = await signIn(provider.credentials, {
@@ -95,78 +128,92 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
         </div>
       )}
       <div className="auth__container">
-        <div className="auth__card">
+        <div className="auth__card !px-0">
           <h1 className="auth__title">Login</h1>
-
-          <form className="auth__form border-y border-[#CACACA] !gap-4 !pb-6" onSubmit={handleSubmit}>
-            <div className="auth__form-group mt-6">
-              <label htmlFor="email" className="auth__label">
-                Email Address
-              </label>
-              <div className="auth__input-group">
-                {/* <FiMail className="auth__input-icon" /> */}
-                <input
-                  type="email"
-                  id="email"
-                  className="auth__input"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+          <div className="border-y border-[#CACACA]">
+            <form className="auth__form px-[2rem] !gap-4 !pb-6" onSubmit={handleSubmit}>
+              <div className="auth__form-group mt-6">
+                <label htmlFor="email" className="auth__label">
+                  Email Address
+                </label>
+                <div className="auth__input-group">
+                  {/* <FiMail className="auth__input-icon" /> */}
+                  <input
+                    type="text"
+                    id="email"
+                    className="auth__input"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setEmail(value)
+                      setEmailError(!validEmail(value) ? validateEmail(value) : "")
+                    }}
+                  />
+                  {emailError && (
+                    <div className="text-red-600 text-xs mt-2">{emailError}</div>
+                  )}
+                </div>
               </div>
-            </div>
-
-            <div className="auth__form-group">
-              <label htmlFor="password" className="auth__label">
-                Password
-              </label>
-              <div className="auth__input-group relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  className="auth__input"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                {showPassword ? (
-                  <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
-                ) : (
-                  <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
-                )}
+              <div className="auth__form-group">
+                <label htmlFor="password" className="auth__label">
+                  Password
+                </label>
+                <div className="auth__input-group relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    className="auth__input"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setPassword(value)
+                      if (value.length) { setPasswordError("") } else {
+                        setPasswordError(passwordRequired)
+                      }
+                    }}
+                  />
+                  {showPassword ? (
+                    <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
+                  ) : (
+                    <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
+                  )}
+                  {passwordError && (
+                    <div className="text-red-600 text-xs mt-2">{passwordError}</div>
+                  )}
+                </div>
               </div>
-            </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+              >
+                Continue
+              </button>
+              <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
+                <hr className="w-full border-t border-[#494D5D]" />
+                or
+                <hr className="w-full border-t border-[#494D5D]" />
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
-            >
-              Continue
-            </button>
-            <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
-              <hr className="w-full border-t border-[#494D5D]" />
-              or
-              <hr className="w-full border-t border-[#494D5D]" />
-            </div>
-
-            <button
-              disabled={isLoading}
-              type="button"
-              onClick={loginWithGoogle}
-              className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:border-gray-400 active:bg-gray-100"
-            >
-              <FcGoogle className="h-5 w-5 object-contain mr-2" />
-              <span>Continue with Google</span>
-            </button>
-          </form>
+              <button
+                disabled={isLoading}
+                type="button"
+                onClick={loginWithGoogle}
+                className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:bg-gray-50 hover:shadow-md hover:border-gray-400 active:bg-gray-100"
+              >
+                <FcGoogle className="h-5 w-5 object-contain mr-2" />
+                <span>Continue with Google</span>
+              </button>
+              <p className="text-sm cursor-pointer text-center underline font-semibold hover:opacity-90" onClick={() => { onOpenForgotPassword?.(); }}>Forgot Password?</p>
+            </form>
+          </div>
           {message && (
             <div
-              className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-red-100 text-red-700 border border-red-300"
+              className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
                 }`}
               dangerouslySetInnerHTML={{ __html: message }}
             />
@@ -174,7 +221,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
           <p className="auth__footer !mt-3.5">
             New to TastyPlates?{" "}
             <a
-              className="auth__link !text-[#494D5D] cursor-pointer"
+              className="auth__link !text-[#494D5D] cursor-pointer !font-bold"
               onClick={e => {
                 e.preventDefault();
                 onOpenSignup && onOpenSignup();

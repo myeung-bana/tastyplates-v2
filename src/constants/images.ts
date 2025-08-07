@@ -21,3 +21,6 @@ export const ARROW_WARM_UP = "/images/arrow_warm_up.svg";
 export const LISTING_BACKDROP_SP = "/images/Iisting-backdrop-sp.png";
 export const HERO_BG = "/images/hero-bg.png";
 export const HERO_BG_SP = "/images/hero-bg-sp.png";
+export const TASTYPLATES_LOGO_WHITE = "/TastyPlates_Logo_White.svg";
+export const TASTYPLATES_LOGO_BLACK = "/TastyPlates_Logo_Black.svg";
+export const TASTYPLATES_LOGO_COLOUR = "/TastyPlates_Logo_Colour.svg";
