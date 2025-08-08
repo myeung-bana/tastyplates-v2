@@ -133,10 +133,11 @@ const UpdatePassword = () => {
                   value={password}
                   onFocus={(e) => e.target.removeAttribute('readonly')}
                   onChange={(e) => {
-                    setPassword(e.target.value)
-                    if (e.target.value == confirmPassword) { setConfirmPasswordError("") }
-                    if (password.length >= minimumPassword) { setPasswordError("") }
-                    if (password.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
+                    const value = e.target.value;
+                    setPassword(value);
+                    if (value == confirmPassword) { setConfirmPasswordError("") }
+                    if (value.length >= minimumPassword) { setPasswordError("") }
+                    if (value.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
                   }}
                   readOnly // prevent autofill until focus
                 />
@@ -145,10 +146,10 @@ const UpdatePassword = () => {
                 ) : (
                   <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
-                {passwordError && (
-                  <div className="text-red-600 text-xs mt-2">{passwordError}</div>
-                )}
               </div>
+              {passwordError && (
+                <div className="text-red-600 text-xs">{passwordError}</div>
+              )}
             </div>
             <div className="auth__form-group">
               <label htmlFor="confirmPassword" className="auth__label !font-bold">
@@ -175,10 +176,10 @@ const UpdatePassword = () => {
                 ) : (
                   <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
-                {confirmPasswordError && (
-                  <div className="text-red-600 text-xs mt-2">{confirmPasswordError}</div>
-                )}
               </div>
+              {confirmPasswordError && (
+                <div className="text-red-600 text-xs">{confirmPasswordError}</div>
+              )}
             </div>
             <button
               type="submit"

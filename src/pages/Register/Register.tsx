@@ -233,10 +233,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                         }}
                         readOnly // prevent autofill until focus
                       />
-                      {emailError && (
-                        <div className="text-red-600 text-xs mt-2">{emailError}</div>
-                      )}
                     </div>
+                    {emailError && (
+                      <div className="text-red-600 text-xs">{emailError}</div>
+                    )}
                   </div>
                   <div className="auth__form-group">
                     <label htmlFor="password" className="auth__label">
@@ -265,10 +265,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       ) : (
                         <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                       )}
-                      {passwordError && (
-                        <div className="text-red-600 text-xs mt-2">{passwordError}</div>
-                      )}
                     </div>
+                    {passwordError && (
+                      <div className="text-red-600 text-xs">{passwordError}</div>
+                    )}
                   </div>
 
                   <div className="auth__form-group">
@@ -294,10 +294,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       ) : (
                         <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
                       )}
-                      {confirmPasswordError && (
-                        <div className="text-red-600 text-xs mt-2">{confirmPasswordError}</div>
-                      )}
                     </div>
+                    {confirmPasswordError && (
+                      <div className="text-red-600 text-xs">{confirmPasswordError}</div>
+                    )}
                   </div>
                   <div className="text-sm font-normal w-full flex flex-wrap gap-x-1 gap-y-1 text-center mb-2">
                     <span>By continuing, you agree to TastyPlates&apos;s</span>
