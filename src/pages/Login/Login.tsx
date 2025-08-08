@@ -150,10 +150,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                       setEmailError(!validEmail(value) ? validateEmail(value) : "")
                     }}
                   />
-                  {emailError && (
-                    <div className="text-red-600 text-xs mt-2">{emailError}</div>
-                  )}
                 </div>
+                {emailError && (
+                  <div className="text-red-600 text-xs">{emailError}</div>
+                )}
               </div>
               <div className="auth__form-group">
                 <label htmlFor="password" className="auth__label">
@@ -179,10 +179,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                   ) : (
                     <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                   )}
-                  {passwordError && (
-                    <div className="text-red-600 text-xs mt-2">{passwordError}</div>
-                  )}
                 </div>
+                {passwordError && (
+                  <div className="text-red-600 text-xs">{passwordError}</div>
+                )}
               </div>
               <button
                 type="submit"
