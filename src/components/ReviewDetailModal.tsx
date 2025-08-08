@@ -736,7 +736,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           passHref
                         >
                           <span className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline">
-                            {data.author?.name || "Unknown User"}
+                            {data.author?.name || data.author?.node?.name || "Unknown User"}
                           </span>
                         </Link>
                       ) : (
@@ -744,7 +744,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline"
                           onClick={() => handleProfileClick(data.author?.node?.id)}
                         >
-                          {data.author?.name || "Unknown User"}
+                          {data.author?.name || data.author?.node?.name || "Unknown User"}
                         </span>
                       )}
                       <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
