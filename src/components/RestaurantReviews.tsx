@@ -9,6 +9,7 @@ import ReviewBlock from "./ReviewBlock";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
+import CustomPopover from "./ui/Popover/Popover";
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
   // Session and user state
@@ -257,7 +258,24 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
         <h2>Reviews</h2>
         <div className="flex gap-4">
           <div className="search-bar">
-            <select
+            <CustomPopover
+              align="bottom-end"
+              trigger={
+                <button className="review-filter">
+                  {!selectedReviewFilter ? 'All Reviews' : selectedReviewFilter}
+                </button>
+              }
+              content={
+                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
+                  {reviewFilterOptions.map((option, index) =>
+                    <li key={index} onClick={() => { setSelectedReviewFilter(option.value); setCurrentPage(1); }}>
+                      {option.label}
+                    </li>
+                  )}
+                </ul>
+              }
+            />
+            {/* <select
               className="review-filter"
               style={{ color: '#494D5D' }}
               value={selectedReviewFilter}
@@ -268,7 +286,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                   {option.label}
                 </option>
               )}
-            </select>
+            </select> */}
           </div>
           <div className="search-bar">
             <select

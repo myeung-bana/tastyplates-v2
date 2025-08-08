@@ -31,7 +31,7 @@ interface Palate {
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<string>("");
-  const [rating, setRating] = useState<number>(0);
+  const [rating, setRating] = useState<number>(1);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
@@ -202,7 +202,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
         setSortOption("None");
         break;
       case "Rating":
-        setRating(0);
+        setRating(1);
         break;
       default:
         break;
@@ -239,7 +239,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     <>
       <div className="filter">
         <div className="filter__card">
-          <div className="filter__section">
+          <div className={`filter__section ${cuisinesArray.length > 0 || palatesArray.length > 0 ? 'bg-[#F1F1F1]' : ''}`}>
             <button
               onClick={() => onClickFilter("cuisine")}
               className="filter__options"
@@ -274,7 +274,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             </button>
           </div>
 
-          <div className="filter__section">
+          <div className={`filter__section ${badge !== "" ? 'bg-[#F1F1F1]' : ''}`}>
             <button
               className="filter__options"
               onClick={() => onClickFilter("badges")}
@@ -288,7 +288,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             </button>
           </div>
 
-          <div className="filter__section">
+          <div className={`filter__section ${rating > 0 ? 'bg-[#F1F1F1]' : ''}`}>
             <button
               onClick={() => onClickFilter("rating")}
               className="filter__options"
@@ -315,11 +315,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   <CustomPopover
                     isOpen={isCuisineOpen}
                     setIsOpen={setIsCuisineOpen}
-                    align="bottom-end"
+                    align="center"
                     trigger={
                       <button
                         onClick={() => setIsCuisineOpen(!isCuisineOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative"> {/* Added relative, items-start, removed flex-wrap, justify-between */}
+                        className="w-full box-border border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-[11px] relative"> {/* Added relative, items-start, removed flex-wrap, justify-between */}
                         <span className="text-[#31343F] text-start font-semibold flex-grow block"> {/* Added block */}
                           {selectedCuisines.size > 0
                             ? Array.from(selectedCuisines).map(slug => {
@@ -333,7 +333,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     }
                     content={
                       <div
-                        className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]"
+                        className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div
@@ -378,11 +378,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   <CustomPopover
                     isOpen={isPalateOpen}
                     setIsOpen={setIsPalateOpen}
-                    align="bottom-end"
+                    align="center"
                     trigger={
                       <button
                         onClick={() => setIsPalateOpen(!isPalateOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative"
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-[11px] relative"
                       >
                         <span className="text-[#31343F] text-start font-semibold flex-grow block">
                           {selectedPalates.size > 0
@@ -523,7 +523,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     className="flex flex-nowrap items-center gap-2"
                   >
                     <div
-                      className={`w-full rounded-[8px] py-3 px-6 ${price === item.value
+                      className={`w-full rounded-[8px] py-1 px-6 ${price === item.value
                         ? "bg-[#F1F1F1]"
                         : "bg-transparent"
                         }`}
@@ -566,11 +566,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   <CustomPopover
                     isOpen={isBadgeOpen}
                     setIsOpen={setIsBadgeOpen}
-                    align="bottom-end"
+                    align="center"
                     trigger={
                       <button
                         onClick={() => setIsBadgeOpen(!isBadgeOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 md:h-12 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
                           {badge === "all" ? "All" : badges?.find(b => b.name === badge)?.value || "All"}
                         </span>
@@ -578,7 +578,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] md:w-[440px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         {badges?.map((item: any, index: number) => (
                           <div
                             onClick={() => selectFilter(item.name, 'badge')}
@@ -605,11 +605,11 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   <CustomPopover
                     isOpen={isSortOpen}
                     setIsOpen={setIsSortOpen}
-                    align="bottom-end"
+                    align="center"
                     trigger={
                       <button
                         onClick={() => setIsSortOpen(!isSortOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 md:h-12 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
                         <span className="text-[#31343F] text-center font-semibold">
                           {sortOption === "none" ? "None" : sortOptions.find(s => s.name === sortOption)?.value || "None"}
                         </span>
@@ -617,7 +617,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] md:w-[440px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         {sortOptions.map((item, index) => (
                           <div
                             onClick={() => selectFilter(item.name, 'sortOption')}
@@ -640,7 +640,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               <div className="flex flex-col items-start gap-4">
                 <label
                   htmlFor="rating"
-                  className="text-xs md:text-base font-semibold"
+                  className="text-xs font-medium"
                 >
                   Over {rating}
                 </label>
@@ -649,10 +649,18 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                   id="rating"
                   name="rating"
                   value={rating}
+                  min="1"
                   max="5"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRating(Number(e.target.value))}
-                  className="w-full"
-                ></input>
+                  className="w-full filter__rating"
+                />
+                <div className="w-full mt-2 flex justify-between items-center gap-10">
+                  <span className="text-xs font-medium">1</span>
+                  <span className="text-xs font-medium">2</span>
+                  <span className="text-xs font-medium">3</span>
+                  <span className="text-xs font-medium">4</span>
+                  <span className="text-xs font-medium">5</span>
+                </div>
               </div>
             )}
           </>
@@ -662,20 +670,21 @@ const Filter = ({ onFilterChange }: FilterProps) => {
           <div className="flex gap-2 md:gap-4 justify-center">
             <button
               onClick={resetFilter}
-              className="py-2 px-16 border-[1.5px] border-[#494D5D] rounded-[8px] text-[#494D5D] text-sm md:text-lg font-semibold"
+              className="w-[163px] md:w-[212px] py-2 px-[62px] md:px-16 border-[1.5px] border-[#494D5D] rounded-[8px] text-[#494D5D] text-sm md:text-lg font-semibold"
             >
               Reset
             </button>
             <button
               onClick={applyFilters}
-              className="rounded-[8px] bg-[#E36B00] py-2 px-16 text-[#FCFCFC] text-sm md:text-lg font-semibold"
+              className="w-[163px] md:w-[212px] rounded-[8px] bg-[#E36B00] py-2 px-[62px] md:px-16 text-[#FCFCFC] text-sm md:text-lg font-semibold"
             >
               Apply
             </button>
           </div>
         }
-        contentClass="md:!p-6"
-        baseClass="!max-w-[488px]"
+        footerClass="!px-4 md:!px-6 !justify-center"
+        contentClass="!px-4 md:!p-6"
+        baseClass="!max-w-[366px] md:!max-w-[488px]"
         isOpen={isModalOpen}
         setIsOpen={() => setIsModalOpen(!isModalOpen)}
       />

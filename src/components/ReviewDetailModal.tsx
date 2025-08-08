@@ -286,7 +286,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     return (
       <div
-        className={`absolute !right-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
+        className={`absolute !right-6 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
         onClick={onClick}
         style={{ display: display }}
       >
@@ -301,7 +301,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     return (
       <div
-        className={`absolute !left-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
+        className={`absolute !left-6 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
         onClick={onClick}
         style={{ display: display }}
       >
@@ -565,7 +565,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                          className="review-block__palate-tag"
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
@@ -641,7 +641,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
+                        className="review-card__image !h-[70vh] max-h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -681,7 +681,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
+                        className="review-card__image !h-[70vh] max-h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -757,7 +757,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-[#31343f] px-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                            className="review-block__palate-tag"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -964,13 +964,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                           href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                           passHref
                                         >
-                                          <span className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
+                                          <span className="review-card__username !text-xs md:!text-sm !font-semibold cursor-pointer hover:underline">
                                             {reply.author?.node?.name || "Unknown User"}
                                           </span>
                                         </Link>
                                       ) : (
                                         <span
-                                          className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline"
+                                          className="review-card__username !text-xs md:!text-sm !font-semibold cursor-pointer hover:underline"
                                           onClick={() => handleProfileClick(reply.author?.node?.id)}
                                         >
                                           {reply.author?.node?.name || "Unknown User"}
@@ -983,7 +983,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-[#31343f] px-2 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                                            className="review-block__palate-tag"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
@@ -999,7 +999,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
                                       {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
                                         <>
                                           {expandedReplies[reply.id]

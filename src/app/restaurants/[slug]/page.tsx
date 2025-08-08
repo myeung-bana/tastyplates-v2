@@ -292,20 +292,20 @@ export default function RestaurantDetail() {
   }
 
   return (
-    <div className="restaurant-detail mt-32 md:mt-10">
-      <div className="restaurant-detail__container !max-w-[82rem]">
+    <div className="restaurant-detail mt-32 md:mt-20">
+      <div className="restaurant-detail__container !max-w-[82rem] !pt-0">
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
             <div className="flex flex-col-reverse md:flex-col">
               <div className="flex flex-col md:flex-row justify-between px-4 md:px-0">
                 <div className="mt-6 md:mt-0">
-                  <h1 className="restaurant-detail__name">{restaurant.name}</h1>
+                  <h1 className="restaurant-detail__name leading-7">{restaurant.name}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
                       {restaurant.palates.map((palate: { name: string }, index: number) => (
                         <div className="flex items-center gap-2" key={`palate-${index}`}>
                           {index > 0 && <span>&#8226;</span>}
-                          <span className="cuisine-tag">{palate.name}</span>
+                          <span className="cuisine-tag hover:!bg-transparent">{palate.name}</span>
                         </div>
                       ))}
                     </div>
@@ -341,12 +341,12 @@ export default function RestaurantDetail() {
                 </div>
               </div>
               <div className="flex flex-row gap-6">
-                <div className="md:rounded-l-3xl relative restaurant-detail__hero w-2/3">
+                <div className="md:rounded-l-3xl relative restaurant-detail__hero w-full max-h-[307px] !h-auto">
                   <FallbackImage
                     src={restaurant.image}
                     alt={restaurant.name}
                     fill
-                    className="restaurant-detail__image md:rounded-3xl w-full h-[307px]"
+                    className="restaurant-detail__image md:rounded-3xl w-full"
                     priority
                   />
                 </div>
@@ -366,7 +366,7 @@ export default function RestaurantDetail() {
 
                       <div className="flex items-start gap-2 p-4">
                         <FiMapPin className="w-5 h-5 text-gray-600 mt-1" />
-                        <p className="text-sm text-gray-800 leading-snug">
+                        <p className="text-sm text-gray-800 leading-snug text-left">
                           {address || 'Address not provided'}
                         </p>
                       </div>
@@ -388,7 +388,7 @@ export default function RestaurantDetail() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 mt-10 mx-4 lg:mx-0">
+              <div className="grid grid-cols-1 lg:grid-cols-2 mt-10 mx-4 md:mx-0">
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-t-2xl lg:rounded-none lg:rounded-l-3xl pt-4 pb-2">
                   <h1 className="text-xs lg:text-base font-bold">Rating</h1>
                   <div className="rating-summary w-full">

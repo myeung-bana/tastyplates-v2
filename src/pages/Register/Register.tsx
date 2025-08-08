@@ -193,9 +193,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
             </div>
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
-            <div className="auth__card !py-4 !rounded-3xl">
-              <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
-              <form className="auth__form border-y border-[#CACACA] !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
+            <h1 className="auth__title !text-sm md:!text-xl md:!leading-[30px] !font-semibold py-3.5 md:py-4 !mb-0">Sign up</h1>
+            <hr className="border-t border-[#CACACA]" />
+            <div className="auth__card !pt-0 !pb-4 md:!pb-6 !rounded-none">
+              <form className="auth__form !gap-4 overflow-y-auto" onSubmit={handleSubmit}>
                 <div className="auth__form-group mt-6">
                   <label htmlFor="email" className="auth__label">
                     Email
@@ -224,7 +225,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       className="auth__input"
                       placeholder="Password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value.length >=5) setPasswordError("");
+                        setPassword(e.target.value)
+                      }}
                     />
                     {showPassword ? (
                       <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
@@ -248,7 +252,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                       className="auth__input"
                       placeholder="Confirm Password"
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value == password) setConfirmPasswordError("");
+                        setConfirmPassword(e.target.value)
+                      }}
                     />
                     {showConfirmPassword ? (
                       <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
@@ -297,10 +304,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
-              <p className="auth__footer !mt-3.5">
+            </div>
+            <hr className="border-t border-[#CACACA]" />
+            <p className="auth__footer">
                 Already have an account?{" "}
                 <a
-                  className="auth__link !text-[#494D5D] cursor-pointer"
+                  className="auth__link"
                   onClick={e => {
                     e.preventDefault();
                     onOpenSignin && onOpenSignin();
@@ -309,7 +318,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   Log in
                 </a>
               </p>
-            </div>
           </div>
         </>
       )}

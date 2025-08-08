@@ -201,7 +201,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   };
 
   return (
-    <div className="review-block px-4 py-4">
+    <div className="review-block px-4 py-4 md:p-0">
       <div className="review-block__header">
         <div className="review-block__user">
           {(review.authorId) ? (

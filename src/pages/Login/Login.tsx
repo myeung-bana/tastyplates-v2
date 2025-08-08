@@ -94,11 +94,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
           <Spinner size={48} className="text-[#E36B00]" />
         </div>
       )}
-      <div className="auth__container">
-        <div className="auth__card">
-          <h1 className="auth__title">Login</h1>
-
-          <form className="auth__form border-y border-[#CACACA] !gap-4 !pb-6" onSubmit={handleSubmit}>
+      <div className="auth__container overflow-y-auto md:overflow-visible">
+        <h1 className="auth__title !text-sm md:!text-xl md:!leading-[30px] !font-semibold py-3.5 md:py-4 !mb-0">Login</h1>
+        <hr className="border-t border-[#CACACA]" />
+        <div className="auth__card !pt-0 !pb-4 md:!pb-6 !rounded-none">
+          <form className="auth__form !gap-4" onSubmit={handleSubmit}>
             <div className="auth__form-group mt-6">
               <label htmlFor="email" className="auth__label">
                 Email Address
@@ -171,19 +171,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup }) => {
               dangerouslySetInnerHTML={{ __html: message }}
             />
           )}
-          <p className="auth__footer !mt-3.5">
-            New to TastyPlates?{" "}
-            <a
-              className="auth__link !text-[#494D5D] cursor-pointer"
-              onClick={e => {
-                e.preventDefault();
-                onOpenSignup && onOpenSignup();
-              }}
-            >
-              Sign Up
-            </a>
-          </p>
         </div>
+        <hr className="border-t border-[#CACACA]" />
+        <p className="auth__footer">
+          New to TastyPlates?{" "}
+          <a
+            className="auth__link"
+            onClick={e => {
+              e.preventDefault();
+              onOpenSignup && onOpenSignup();
+            }}
+          >
+            Sign Up
+          </a>
+        </p>
       </div>
     </div>
   );

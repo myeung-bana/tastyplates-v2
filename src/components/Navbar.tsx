@@ -57,7 +57,7 @@ export default function Navbar(props: any) {
   };
 
   const changeNavBg = () => {
-    window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
+    window.scrollY > 64 ? setNavBg(true) : setNavBg(false);
   };
 
   const handleSearch = () => {
@@ -286,7 +286,7 @@ export default function Navbar(props: any) {
                   <CustomPopover
                     align="bottom-end"
                     trigger={
-                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white">
+                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white backdrop-blur-sm">
                         <span
                           className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                             } text-center font-semibold`}
@@ -404,7 +404,13 @@ export default function Navbar(props: any) {
                 </div>
                 <div className="navbar__brand">
                   <Link href={HOME} className="flex-shrink-0 flex items-center">
-                    <h1 className="text-[#494D5D]">TastyPlates</h1>
+                    <Image
+                      src="/TastyPlates_Logo_Black.svg"
+                      className="h-5 w-auto object-contain"
+                      height={20}
+                      width={184}
+                      alt="TastyPlates Logo"
+                    />
                   </Link>
                 </div>
               </li>
