@@ -20,7 +20,7 @@ import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED } from "@/constants/images";
+import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
 
@@ -303,6 +303,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             const half = !full && i + 0.5 <= review.rating;
             return full ? (
               <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
+            ) : half ? (
+              <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="star rating" />
             ) : (
               <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
             );
