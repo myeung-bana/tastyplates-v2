@@ -1,6 +1,9 @@
 import { UserRepository } from '@/repositories/userRepository';
-import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user';
+import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, followUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, isFollowingUserResponse, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user/user';
 import { DEFAULT_USER_ICON } from '@/constants/images';
+import { responseStatusCode as code } from '@/constants/response';
+import { resetEmailFailed, unexpectedError } from '@/constants/messages';
+import { HttpResponse } from '@/interfaces/httpResponse';
 
 export class UserService {
     static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
@@ -77,7 +80,7 @@ export class UserService {
         }
     }
 
-    static async getUserById(id: number |null) {
+    static async getUserById(id: number | null) {
         try {
             return await UserRepository.getUserById(id);
         } catch (error) {
@@ -148,23 +151,69 @@ export class UserService {
         }
     }
 
-    static async followUser(userId: number, token?: string): Promise<boolean> {
+    static async followUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            await UserRepository.followUser<any>(userId, token);
-            return true;
+            const response = await UserRepository.followUser(userId, token);
+            return {
+                ...response,
+                status: code.success,
+            };
         } catch (error) {
             console.error('Follow user error:', error);
-            return false;
+            return {} as followUserResponse;
         }
     }
 
-    static async unfollowUser(userId: number, token?: string): Promise<boolean> {
+    static async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            await UserRepository.unfollowUser<any>(userId, token);
-            return true;
+            const response = await UserRepository.unfollowUser(userId, token);
+            return {
+                ...response,
+                status: code.success,
+            };
         } catch (error) {
             console.error('Unfollow user error:', error);
-            return false;
+            return {} as followUserResponse;
+        }
+    }
+
+    static async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
+        try {
+            const response = await UserRepository.isFollowingUser(userId, token);
+            return response;
+        } catch (error) {
+            console.error('Check following user error:', error);
+            return { is_following: false };
+        }
+    }
+
+    static async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.sendForgotPasswordEmail(formData);    
+            return response;
+        } catch (error) {
+            console.error('Forgot password email error:', error);
+            return { status: false, message: unexpectedError };
+        }
+    }
+
+    static async verifyResetToken(token?: string): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.verifyResetToken(token);
+            return response;
+        } catch (error) {
+            console.error('Verify reset token error:', error);
+            return { status: false, message: unexpectedError };
+        }
+    }
+
+    static async resetPassword(token: string, password: string): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.resetPassword(token, password);
+            return response;
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return { status: false, message: unexpectedError };
         }
     }
 }

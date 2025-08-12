@@ -132,7 +132,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                 String(data.author?.node?.id || data.id) ? (
                 <Link href={PROFILE}>
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">
-                    {data.author?.name || "Unknown User"}
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
               ) : session ? (
@@ -141,7 +141,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                   prefetch={false}
                 >
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">
-                    {data.author?.name || "Unknown User"}
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
               ) : (
@@ -149,12 +149,12 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                   className="review-card__username line-clamp-1 cursor-pointer"
                   onClick={() => setShowAuthModal('signin')}
                 >
-                  {data.author?.name || "Unknown User"}
+                  {data.author?.name || data.author?.node?.name || "Unknown User"}
                 </h3>
               )
             ) : (
               <h3 className="review-card__username line-clamp-1">
-                {data.author?.name || "Unknown User"}
+                {data.author?.name || data.author?.node?.name || "Unknown User"}
               </h3>
             )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">

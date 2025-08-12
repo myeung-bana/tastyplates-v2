@@ -21,13 +21,14 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { UserService } from "@/services/userService";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -149,18 +150,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     (async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.accessToken}`,
-            },
-            body: JSON.stringify({ user_id: authorUserId }),
-          }
-        );
-        const result = await res.json();
+        const result = await UserService.isFollowingUser(authorUserId, session.accessToken);
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
@@ -181,19 +171,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({ user_id: authorUserId }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok || result?.result !== "followed") {
+      const result = await UserService.followUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
@@ -228,19 +207,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({ user_id: authorUserId }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok || result?.result !== "unfollowed") {
+      const result = await UserService.unfollowUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);
@@ -364,46 +332,72 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const handleCommentReplySubmit = async () => {
     if (!commentReply.trim() || isLoading || cooldown > 0) return;
-
     if (!session?.user) {
       setIsShowSignin(true);
       return;
     }
 
-    if (commentReply.length > reviewDescriptionLimit) {
-      toast.error(maximumReviewDescription(reviewDescriptionLimit));
+    if (commentReply.length > reviewDescriptionDisplayLimit) {
+      toast.error(maximumCommentReplies(reviewDescriptionDisplayLimit));
       return;
     }
 
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setIsLoading(true); // Ensure loading is set before optimistic update
+    // Optimistically add reply at the top
+    const optimisticReply = {
+      id: `optimistic-${Date.now()}`,
+      content: commentReply,
+      author: { node: { name: session.user.name, databaseId: session.user.userId } },
+      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      createdAt: new Date().toISOString(),
+      userLiked: false,
+      commentLikes: 0,
+      isOptimistic: true,
+      palates: session.user.palates || ""
+    };
+    setReplies(prev => [optimisticReply, ...prev]);
+    setCommentReply("");
 
     try {
       const payload = {
-        content: commentReply,
+        content: optimisticReply.content,
         restaurantId: data.commentedOn?.node?.databaseId,
         parent: data.databaseId,
         author: session?.user?.userId,
       };
-
       const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
       if (res.status === code.created) {
         toast.success(commentedSuccess);
-        setCommentReply("");
+        // Remove only the optimistic reply, then merge server replies (avoid duplicates)
         const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
-        setReplies(updatedReplies);
+        setReplies(prev => {
+          // Remove optimistic reply
+          const withoutOptimistic = prev.filter(r => !r.isOptimistic);
+          // Merge: add any new replies from server not already in the list
+          const merged = updatedReplies.concat(
+            withoutOptimistic.filter(
+              (local) => !updatedReplies.some((server: any) => server.id === local.id)
+            )
+          );
         setCooldown(5);
+          return merged;
+        });
+      } else if (res.data?.code === 'comment_flood') {
+        toast.error(commentFloodError);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       } else if (res.status === code.conflict) {
         toast.error(commentDuplicateError);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       } else {
         toast.error(errorOccurred);
+        setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       }
     } catch (err: any) {
       console.error("Failed to post reply", err);
       toast.error(errorOccurred);
-    }
-    finally {
-      setIsLoading(false);
+      setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+    } finally {
+      setIsLoading(false); // Always reset loading
     }
   };
 
@@ -1069,7 +1063,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               handleCommentReplySubmit();
                             }
                           }}
-                          disabled={cooldown > 0}
+                          disabled={cooldown > 0 || isLoading}
                           className="py-[11px] px-4 w-full border border-[#CACACA] text-gray-500 resize-none rounded-[10px]"
                         />
                       )}

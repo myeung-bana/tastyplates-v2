@@ -8,7 +8,7 @@ import { errorOccurred, pleaseLoginAgain, profileImageSizeLimit, registrationSuc
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME, PROFILE } from "@/constants/pages";
-import { IRegisterData } from "@/interfaces/user";
+import { IRegisterData } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
@@ -275,9 +275,9 @@ const OnboardingTwoPage = () => {
             {/* Success/Error Message */}
             {message && (
               <div
-                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType === responseStatus.success
-                  ? "bg-green-100 text-green-700 border border-green-300"
-                  : "bg-red-100 text-red-700 border border-red-300"
+                className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium ${messageType === responseStatus.success
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
                   }`}
               >
                 {message}

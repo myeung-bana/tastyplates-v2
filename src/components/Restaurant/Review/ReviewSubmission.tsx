@@ -17,7 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { commentDuplicateError, commentDuplicateWeekError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
@@ -248,6 +248,10 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateWeekError);
           setIsLoading(false);
           return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
+          return;
         } else {
           toast.error(errorOccurred);
           setIsLoading(false);
@@ -264,6 +268,10 @@ const ReviewSubmissionPage = () => {
         } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
+          return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
           return;
         } else {
           toast.error(errorOccurred);
@@ -330,7 +338,7 @@ const ReviewSubmissionPage = () => {
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Title</label>
+                <label className="submitRestaurants__label">Review Title</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
@@ -373,7 +381,7 @@ const ReviewSubmissionPage = () => {
               </div>
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">
-                  Upload Photos(Max 6 Photos)
+                  Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
                   <label className="flex gap-2 items-center rounded-xl py-2 px-4 md;py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
