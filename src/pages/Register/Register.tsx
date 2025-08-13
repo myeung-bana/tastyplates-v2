@@ -5,7 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from 'firebase/app';
-import { UserService } from '@/services/userService';
+import { UserService } from '@/services/user/userService';
 import Spinner from "@/components/LoadingSpinner";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
@@ -19,6 +19,8 @@ import { HOME, ONBOARDING_ONE, TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/consta
 interface RegisterPageProps {
   onOpenSignin?: () => void;
 }
+
+const userService = new UserService()
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [email, setEmail] = useState("");
@@ -49,7 +51,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   }, [router]);
 
   const checkEmailExists = async (email: string) => {
-    const checkEmail = await UserService.checkEmailExists(email);
+    const checkEmail = await userService.checkEmailExists(email);
     if (checkEmail.status == code.badRequest) {
       setError(checkEmail.message);
       return false;

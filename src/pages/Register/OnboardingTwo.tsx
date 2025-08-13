@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/LoadingSpinner";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { errorOccurred, pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved, welcomeProfile } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
@@ -11,7 +11,8 @@ import { HOME, PROFILE } from "@/constants/pages";
 import { IRegisterData } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
 import { signIn } from "next-auth/react";
-import Cookies from "js-cookie";
+
+const userService = new UserService()
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -87,7 +88,7 @@ const OnboardingTwoPage = () => {
     const email = completeRegistration.email;
     const password = completeRegistration.password;
 
-    await UserService.registerUser(completeRegistration);
+    await userService.registerUser(completeRegistration);
 
     localStorage.removeItem(REGISTRATION_KEY);
     setMessage(registrationSuccess);

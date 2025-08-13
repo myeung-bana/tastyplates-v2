@@ -24,6 +24,8 @@ interface FetchedRestaurant {
     countries: { nodes: { name: string }[] };
 }
 
+const restaurantService = new RestaurantService();
+
 const ListingDraftPage = () => {
 
     const [pendingListings, setPendingListings] = useState<FetchedRestaurant[]>([]);
@@ -40,7 +42,7 @@ const ListingDraftPage = () => {
 
         try {
             setLoading(true);
-            const data = await RestaurantService.fetchAllRestaurants("", 10, null, [], [], "", "PENDING", userId);
+            const data = await restaurantService.fetchAllRestaurants("", 10, null, [], [], "", "PENDING", userId);
             setPendingListings(data.nodes);
         } catch (err) {
             console.error("Failed to fetch pending listings:", err);

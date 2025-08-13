@@ -4,7 +4,7 @@ import "@/styles/pages/_settings.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
@@ -29,6 +29,8 @@ const formatDateForDisplay = (dateString: string) => {
   // Format as M/D/YYYY for display
   return date.toLocaleDateString('en-US');
 };
+
+const userService = new UserService()
 
 const Settings = (props: any) => {
   const { data: session, status, update } = useSession(); // Add status from useSession
@@ -101,7 +103,7 @@ const Settings = (props: any) => {
 
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
-      const response = await UserService.validatePassword(password, session?.accessToken);
+      const response = await userService.validatePassword(password, session?.accessToken);
       return response.valid && response.status === code.success;
     } catch (error) {
       return false;
@@ -179,7 +181,7 @@ const Settings = (props: any) => {
         updateData.password = passwordFields.new;
       }
 
-      const response = await UserService.updateUserFields(
+      const response = await userService.updateUserFields(
         updateData,
         session.accessToken
       );
@@ -245,7 +247,7 @@ const Settings = (props: any) => {
       }
 
       try {
-        const data = await UserService.getCurrentUser(
+        const data = await userService.getCurrentUser(
           session.accessToken as string
         );
 

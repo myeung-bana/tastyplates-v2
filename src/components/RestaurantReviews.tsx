@@ -7,8 +7,11 @@ import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
 import ReviewBlock from "./ReviewBlock";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { UserService } from '@/services/userService';
+import { UserService } from '@/services/user/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
+
+const userService = new UserService()
+const reviewService = new ReviewService();
 
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
   // Session and user state
@@ -62,7 +65,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     let hasNext = true;
     try {
       while (hasNext) {
-        const data = await ReviewService.getRestaurantReviews(
+        const data = await reviewService.getRestaurantReviews(
           restaurantId,
           session?.accessToken,
           50,
@@ -85,7 +88,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     const fetchFollowing = async () => {
       if (!session?.user?.id || !session?.accessToken) return;
       try {
-        const followingList = await UserService.getFollowingList(session.user.id, session.accessToken);
+        const followingList = await userService.getFollowingList(session.user.id, session.accessToken);
         setFollowingUserIds(followingList.map((u: any) => String(u.id)));
       } catch (e) {
         setFollowingUserIds([]);

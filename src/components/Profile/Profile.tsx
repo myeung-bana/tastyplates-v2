@@ -15,7 +15,7 @@ import FollowingModal from "./FollowingModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { PROFILE_EDIT } from "@/constants/pages";
@@ -42,6 +42,10 @@ interface Restaurant {
 interface ProfileProps {
   targetUserId: number;
 }
+
+const userService = new UserService()
+const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
 
 // Update the component signature to accept props
 const Profile = ({ targetUserId }: ProfileProps) => {
@@ -116,7 +120,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setLoading(true);
     setlistingLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(
+      const data = await restaurantService.fetchAllRestaurants(
         "",
         first,
         after,
@@ -226,7 +230,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     try {
       const first = isFirstLoad.current ? 16 : 8;
       const { reviews: newReviews, pageInfo, userCommentCount } =
-        await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
+        await reviewService.fetchUserReviews(targetUserId, first, endCursor);
 
       if (isFirstLoad.current) {
         setReviews([]);
@@ -260,7 +264,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setAboutMeLoading(true);
       setPalatesLoading(true);
       try {
-        const publicUser = await UserService.getUserById(targetUserId);
+        const publicUser = await userService.getUserById(targetUserId);
         setUserData(publicUser);
       } catch (error) {
         console.error("Error fetching public user data:", error);
@@ -288,7 +292,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       return [];
     }
     try {
-      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+      const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
       return followingList;
     } finally {
@@ -303,7 +307,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       return [];
     }
     try {
-      const followersList = await UserService.getFollowersList(
+      const followersList = await userService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
@@ -349,7 +353,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const response = await UserService.followUser(userIdNum, session.accessToken);
+    const response = await userService.followUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
@@ -369,7 +373,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const response = await UserService.unfollowUser(userIdNum, session.accessToken);
+    const response = await userService.unfollowUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
@@ -614,14 +618,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
       try {
-        const data = await RestaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
+        const data = await restaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
         const favoriteIds = data.favorites || [];
         if (favoriteIds.length === 0) {
           setWishlist([]);
         } else {
           const results = await Promise.all(
             favoriteIds.map((id: number) =>
-              RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+              restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
@@ -649,7 +653,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedCheckins) return; // Only fetch if not already fetched
       setCheckinsLoading(true);
       try {
-        const data = await RestaurantService.fetchCheckInRestaurant(
+        const data = await restaurantService.fetchCheckInRestaurant(
           targetUserId,
           session?.accessToken
         );
@@ -661,7 +665,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           } else {
             const results = await Promise.all(
               checkinIds.map((id: number) =>
-                RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+                restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
               )
             );
             const validResults = results.filter(r => r && typeof r === "object" && r.id);

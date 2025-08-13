@@ -1,8 +1,10 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
-import { getPrivacyPolicy } from "@/services/PrivacyPolicy/privacypolicyService";
 import Navbar from "@/components/Navbar";
+import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacypolicyService";
+
+const privacyPolicyService = new PrivacyPolicyService();
 
 export default function PrivacyPolicy() {
   const [policy, setPolicy] = useState<{ title: string; content: string } | null>(null);
@@ -12,7 +14,7 @@ export default function PrivacyPolicy() {
   useEffect(() => {
     async function fetchPolicy() {
       try {
-        const data = await getPrivacyPolicy();
+        const data = await privacyPolicyService.getPrivacyPolicy();
         setPolicy({ title: data.title, content: data.content });
       } catch (err: any) {
         setError(err.message || "Unknown error");

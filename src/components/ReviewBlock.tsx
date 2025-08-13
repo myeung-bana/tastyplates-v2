@@ -127,6 +127,8 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
   };
 };
 
+const reviewService = new ReviewService();
+
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -166,11 +168,11 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       let response;
       if (userLiked) {
         // Already liked, so unlike
-        response = await ReviewService.unlikeComment(
+        response = await reviewService.unlikeComment(
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === code.success) {
+        if (response?.status === code.success) {
           toast.success(commentUnlikedSuccess);
         } else {
           toast.error(updateLikeFailed);
@@ -178,11 +180,11 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         }
       } else {
         // Not liked yet, so like
-        response = await ReviewService.likeComment(
+        response = await reviewService.likeComment(
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === code.success) {
+        if (response?.status === code.success) {
           toast.success("Liked comment successfully!");
         } else {
           toast.error(updateLikeFailed);

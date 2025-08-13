@@ -2,13 +2,14 @@ import { AuthOptions } from "next-auth";
 import { cookies } from "next/headers";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { UserService } from '@/services/userService';
+import { UserService } from '@/services/user/userService';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
 import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 
-const cookieConfig = { path: '/', sameSite: 'lax' as const }
+const userService = new UserService();
+const cookieConfig = { path: '/', sameSite: 'lax' as const };
 
 const setCookies = async (entries: Record<string, string>) => {
     const cookieStore = await cookies();
@@ -45,7 +46,7 @@ export const authOptions: AuthOptions = {
                 try {
                     // Handle google-register auto login
                     if (!password && googleAuth) {
-                        const res = await UserService.handleGoogleAuth(email);
+                        const res = await userService.handleGoogleAuth(email);
                         if (res.status == code.success) {
                             await setCookies({ logInMessage: logInSuccessfull });
                             return {
@@ -63,7 +64,7 @@ export const authOptions: AuthOptions = {
                             return null;
                         }
                     }
-                    const res = await UserService.login({ email, password });
+                    const res = await userService.login({ email, password });
                     if (res.token) {
                         await setCookies({ logInMessage: logInSuccessfull });
                         return {
@@ -111,7 +112,7 @@ export const authOptions: AuthOptions = {
                             username: name,
                         });
 
-                        const { status, exists, message } = await UserService.checkEmailExists(email);
+                        const { status, exists, message } = await userService.checkEmailExists(email);
                         if (status === code.badRequest || exists) {
                             await setCookies({
                                 googleErrorType: sessionType.signup,
@@ -123,7 +124,7 @@ export const authOptions: AuthOptions = {
                         return ONBOARDING_ONE;
                     }
 
-                    const res = await UserService.handleGoogleAuth(user.email);
+                    const res = await userService.handleGoogleAuth(user.email);
                     if (res.status !== code.success) {
                         await setCookies({
                             googleErrorType: sessionType.login,
@@ -156,7 +157,7 @@ export const authOptions: AuthOptions = {
 
                 if (user.email && token.accessToken) {
                     try {
-                        const userData = await UserService.getCurrentUser(token.accessToken as string);
+                        const userData = await userService.getCurrentUser(token.accessToken as string);
                         if (userData) {
                             (token.user as any).userId = userData.ID || userData.id;
                             (token.user as any).id = userData.ID || userData.id;

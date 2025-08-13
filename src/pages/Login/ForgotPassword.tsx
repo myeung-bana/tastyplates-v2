@@ -3,7 +3,7 @@ import { useState } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from 'next/navigation';
 import Spinner from "@/components/LoadingSpinner";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { emailRequired, invalidEmailFormat } from "@/constants/messages";
@@ -11,6 +11,8 @@ import { emailRequired, invalidEmailFormat } from "@/constants/messages";
 interface ForgotPasswordPageProps {
     onSuccess?: () => void;
 }
+
+const userService = new UserService()
 
 const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
     const router = useRouter();
@@ -49,7 +51,7 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
         formData.append('email', email);
         formData.append('url', window.location.origin);
 
-        const res = await UserService.sendForgotPasswordEmail(formData);
+        const res = await userService.sendForgotPasswordEmail(formData);
         if (!res.status) {
             setMessageType(responseStatus.error);
         } else {

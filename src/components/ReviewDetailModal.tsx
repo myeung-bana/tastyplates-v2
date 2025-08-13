@@ -28,7 +28,10 @@ import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
+
+const userService = new UserService()
+const reviewService = new ReviewService();
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -105,7 +108,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data?.id) {
-      ReviewService.fetchCommentReplies(data.id).then(setReplies);
+      reviewService.fetchCommentReplies(data.id).then(setReplies);
     }
   }, [isOpen, data?.id]);
 
@@ -150,7 +153,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     (async () => {
       try {
-        const result = await UserService.isFollowingUser(authorUserId, session.accessToken);
+        const result = await userService.isFollowingUser(authorUserId, session.accessToken);
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
@@ -171,7 +174,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await UserService.followUser(authorUserId, session.accessToken);
+      const result = await userService.followUser(authorUserId, session.accessToken);
       if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
@@ -207,7 +210,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await UserService.unfollowUser(authorUserId, session.accessToken);
+      const result = await userService.unfollowUser(authorUserId, session.accessToken);
       if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
@@ -365,11 +368,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         parent: data.databaseId,
         author: session?.user?.userId,
       };
-      const res = await ReviewService.postReview(payload, session?.accessToken ?? "");
+      const res = await reviewService.postReview(payload, session?.accessToken ?? "");
       if (res.status === code.created) {
         toast.success(commentedSuccess);
         // Remove only the optimistic reply, then merge server replies (avoid duplicates)
-        const updatedReplies = await ReviewService.fetchCommentReplies(data.id);
+        const updatedReplies = await reviewService.fetchCommentReplies(data.id);
         setReplies(prev => {
           // Remove optimistic reply
           const withoutOptimistic = prev.filter(r => !r.isOptimistic);
@@ -435,11 +438,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       let response;
       if (userLiked) {
         // Already liked, so unlike
-        response = await ReviewService.unlikeComment(
+        response = await reviewService.unlikeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === code.success) {
+        if (response?.status === code.success) {
           toast.success(commentUnlikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -447,11 +450,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         }
       } else {
         // Not liked yet, so like
-        response = await ReviewService.likeComment(
+        response = await reviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response.data?.status === code.success) {
+        if (response?.status === code.success) {
           toast.success(commentLikedSuccess)
         } else {
           toast.error(updateLikeFailed);
@@ -487,16 +490,16 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     try {
       let response: any;
       if (reply?.userLiked) {
-        response = await ReviewService.unlikeComment(dbId, session.accessToken ?? "");
-        if (response.data?.status === code.success) {
+        response = await reviewService.unlikeComment(dbId, session.accessToken ?? "");
+        if (response?.status === code.success) {
           toast.success(commentUnlikedSuccess)
         } else {
           toast.error(updateLikeFailed);
           return;
         }
       } else {
-        response = await ReviewService.likeComment(dbId, session.accessToken ?? "");
-        if (response.data?.status === code.success) {
+        response = await reviewService.likeComment(dbId, session.accessToken ?? "");
+        if (response?.status === code.success) {
           toast.success(commentLikedSuccess)
         } else {
           toast.error(updateLikeFailed);

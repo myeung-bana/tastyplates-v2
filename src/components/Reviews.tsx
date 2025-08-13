@@ -7,6 +7,8 @@ import { Masonry } from "masonic";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
+const reviewService = new ReviewService();
+
 const Reviews = () => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const { data: session, status } = useSession();
@@ -46,7 +48,7 @@ const Reviews = () => {
     
     setLoading(true);
     const first = isFirstLoad.current ? 16 : 8;
-    const { reviews: newReviews, pageInfo } = await ReviewService.fetchAllReviews(first, endCursor, session?.accessToken);
+    const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, session?.accessToken);
     setReviews(prev => [...prev, ...newReviews]);
     setEndCursor(pageInfo.endCursor);
     setHasNextPage(pageInfo.hasNextPage);

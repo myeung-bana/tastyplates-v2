@@ -33,6 +33,8 @@ interface RestaurantReviewsModalProps {
   restaurant: Restaurant;
 }
 
+const reviewService = new ReviewService();
+
 const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen, setIsOpen, restaurant }) => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     if (!isOpen) return;
     setLoading(true);
     setError(null);
-    ReviewService.getRestaurantReviews(restaurant.databaseId, session?.accessToken)
+    reviewService.getRestaurantReviews(restaurant.databaseId, session?.accessToken)
       .then((data) => {
         setReviews(data.reviews || []);
         // Initialize likes count and userLikes
@@ -81,7 +83,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       const commentId = Number(review.databaseId);
       const accessToken = session.accessToken || "";
       if (alreadyLiked) {
-        response = await ReviewService.unlikeComment(commentId, accessToken);
+        response = await reviewService.unlikeComment(commentId, accessToken);
         if (response.status === code.success) {
           toast.success(commentUnlikedSuccess);
         } else {
@@ -89,7 +91,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           return;
         }
       } else {
-        response = await ReviewService.likeComment(commentId, accessToken);
+        response = await reviewService.likeComment(commentId, accessToken);
         if (response.status === code.success) {
           toast.success(commentLikedSuccess);
         } else {

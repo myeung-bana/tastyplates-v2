@@ -1,9 +1,12 @@
-import { ReviewRepository } from "@/repositories/Reviews/reviewRepository";
+import { ReviewRepository } from "@/repositories/http/Reviews/reviewRepository";
+import { ReviewRepo } from "@/repositories/interface/user/review";
+
+const reviewRepo: ReviewRepo = new ReviewRepository()
 
 export class ReviewService {
-    static async fetchAllReviews(first = 16, after: string | null = null, accessToken?: string) {
+    async fetchAllReviews(first = 16, after: string | null = null, accessToken?: string) {
         try {
-            const response = await ReviewRepository.getAllReviews(first, after, accessToken);
+            const response = await reviewRepo.getAllReviews(first, after, accessToken);
             return response;
             // const filteredReviews = response?.reviews.filter((review: any) => {
             //     return (
@@ -22,9 +25,9 @@ export class ReviewService {
         }
     }
 
-    static async fetchCommentReplies(id: string) {
+    async fetchCommentReplies(id: string) {
         try {
-            const replies = await ReviewRepository.getCommentReplies(id);
+            const replies = await reviewRepo.getCommentReplies(id);
             return replies;
         } catch (error) {
             console.error('Error fetching comment replies:', error);
@@ -32,7 +35,7 @@ export class ReviewService {
         }
     }
 
-    static async postReview(reviewData: any, accessToken: string): Promise<{ status: number; data: any }> {
+    async postReview(reviewData: any, accessToken: string): Promise<{ status: number; data: any }> {
         const formattedData = {
             post: reviewData.restaurantId,
             parent: reviewData.parent || 0,
@@ -45,12 +48,12 @@ export class ReviewService {
             mode: reviewData.mode,
         };
 
-        return await ReviewRepository.createReview(formattedData, accessToken);
+        return await reviewRepo.createReview(formattedData, accessToken);
     }
 
-    static async fetchReviewDrafts(accessToken?: string): Promise<any[]> {
+    async fetchReviewDrafts(accessToken?: string): Promise<any[]> {
         try {
-            const drafts = await ReviewRepository.getReviewDrafts(accessToken);
+            const drafts = await reviewRepo.getReviewDrafts(accessToken);
             return drafts;
         } catch (error) {
             console.error("Failed to fetch review drafts", error);
@@ -58,18 +61,18 @@ export class ReviewService {
         }
     }
 
-    static async deleteReviewDraft(draftId: number, accessToken?: string, force = false): Promise<void> {
+    async deleteReviewDraft(draftId: number, accessToken?: string, force = false): Promise<void> {
         try {
-            await ReviewRepository.deleteReviewDraft(draftId, accessToken, force);
+            await reviewRepo.deleteReviewDraft(draftId, accessToken, force);
         } catch (error) {
             console.error("Failed to delete review draft", error);
             throw new Error('Failed to delete review draft');
         }
     }
 
-    static async fetchUserReviews(userId: number, first = 16, after: string | null = null) {
+    async fetchUserReviews(userId: number, first = 16, after: string | null = null) {
         try {
-            const response = await ReviewRepository.getUserReviews(userId, first, after);
+            const response = await reviewRepo.getUserReviews(userId, first, after);
             return response;
         } catch (error) {
             console.error('Error fetching user reviews:', error);
@@ -77,38 +80,38 @@ export class ReviewService {
         }
     }
 
-    static async likeComment(commentId: number, accessToken: string) {
+    async likeComment(commentId: number, accessToken: string) {
         try {
             // Return the backend response so the component receives it!
-            return await ReviewRepository.likeComment(commentId, accessToken);
+            return await reviewRepo.likeComment(commentId, accessToken);
         } catch (error) {
             console.error("Failed to like comment", error);
             throw new Error("Failed to like comment");
         }
     }
 
-    static async unlikeComment(commentId: number, accessToken: string): Promise<{ status: number; data: any }> {
+    async unlikeComment(commentId: number, accessToken: string): Promise<{ status: number; data: any }> {
         try {
             // Return the backend response so the component receives it!
-            return await ReviewRepository.unlikeComment(commentId, accessToken);
+            return await reviewRepo.unlikeComment(commentId, accessToken);
         } catch (error) {
             console.error("Failed to unlike comment", error);
             throw new Error("Failed to unlike comment");
         }
     }
 
-    static async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
+    async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
         try {
-            return await ReviewRepository.getRestaurantReviews(restaurantId, accessToken, first, after);
+            return await reviewRepo.getRestaurantReviews(restaurantId, accessToken, first, after);
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
             throw new Error('Failed to fetch restaurant reviews');
         }
     }
 
-    static async fetchRestaurantReviewsById(restaurantId: string | number) {
+    async fetchRestaurantReviewsById(restaurantId: string | number) {
         try {
-            return await ReviewRepository.getRestaurantReviewsById(restaurantId);
+            return await reviewRepo.getRestaurantReviewsById(restaurantId);
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
             throw new Error('Failed to fetch restaurant reviews');
