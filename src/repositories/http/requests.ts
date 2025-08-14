@@ -1,10 +1,11 @@
 import { HTTP_METHODS } from "@/constants/httpMethods";
 import { sessionExpired } from "@/constants/messages";
 import { HOME } from "@/constants/pages";
-import { responseStatusCode as code } from "@/constants/response";
+import { responseStatusCode as code, jwtAuthInvalidCode } from "@/constants/response";
 import { SESSION_EXPIRED_KEY } from "@/constants/session";
+import { HttpResponse } from "@/interfaces/httpResponse";
 import { removeAllCookies } from "@/utils/removeAllCookies";
-import { signOut } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -36,8 +37,11 @@ export default class HttpMethods {
             headers,
         });
 
+        const session = await getSession();
+        const jsonData: HttpResponse = await response.json();
+
         // redirect back when unauthenticated request
-        if (typeof window !== 'undefined' && (response.status == code.unauthorized || response.status == code.forbidden)) {
+        if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
             await handleUnauthorized()
             localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
             const baseUrl = window.location.origin;
@@ -46,7 +50,7 @@ export default class HttpMethods {
 
         if (jsonResponse) {
             try {
-                return response.json();
+                return jsonData;
             } catch (error) {
                 console.error('Failed to parse JSON response:', error);
                 throw new Error('Invalid JSON response');
