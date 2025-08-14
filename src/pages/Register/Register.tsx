@@ -15,6 +15,7 @@ import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, p
 import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { HOME, ONBOARDING_ONE, TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/constants/pages";
+import { REGISTRATION_KEY } from "@/constants/session";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -35,7 +36,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
-  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
     const registrationData = localStorage.getItem(REGISTRATION_KEY);

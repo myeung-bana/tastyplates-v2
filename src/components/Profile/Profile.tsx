@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
+import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY, WELCOME_KEY } from "@/constants/session";
 
 interface Restaurant {
   id: string;
@@ -83,7 +84,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
   const isViewingOwnProfile = session?.user?.id === targetUserId;
-  const WELCOME_KEY = 'welcomeMessage';
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -355,8 +355,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (isNaN(userIdNum)) return;
     const response = await userService.followUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
-      localStorage.removeItem(`following_${targetUserId}`);
-      localStorage.removeItem(`followers_${targetUserId}`);
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -365,7 +365,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      localStorage.setItem('follow_sync', Date.now().toString());
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };
 
@@ -375,8 +375,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (isNaN(userIdNum)) return;
     const response = await userService.unfollowUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
-      localStorage.removeItem(`following_${targetUserId}`);
-      localStorage.removeItem(`followers_${targetUserId}`);
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -385,7 +385,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      localStorage.setItem('follow_sync', Date.now().toString());
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };
 

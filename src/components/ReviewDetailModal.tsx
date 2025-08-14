@@ -29,6 +29,7 @@ import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { UserService } from "@/services/user/userService";
+import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from "@/constants/session";
 
 const userService = new UserService()
 const reviewService = new ReviewService();
@@ -185,10 +186,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         // Invalidate cache and trigger sync for current user
         const currentUserId = session?.user?.id;
         if (currentUserId) {
-          localStorage.removeItem(`following_${currentUserId}`);
-          localStorage.removeItem(`followers_${currentUserId}`);
+          localStorage.removeItem(FOLLOWING_KEY(currentUserId));
+          localStorage.removeItem(FOLLOWERS_KEY(currentUserId));
         }
-        localStorage.setItem("follow_sync", Date.now().toString());
+        localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
       }
     } catch (err) {
       console.error("Follow error", err);
@@ -221,10 +222,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         // Invalidate cache and trigger sync for current user
         const currentUserId = session?.user?.id;
         if (currentUserId) {
-          localStorage.removeItem(`following_${currentUserId}`);
-          localStorage.removeItem(`followers_${currentUserId}`);
+          localStorage.removeItem(FOLLOWING_KEY(currentUserId));
+          localStorage.removeItem(FOLLOWERS_KEY(currentUserId));
         }
-        localStorage.setItem("follow_sync", Date.now().toString());
+        localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
       }
     } catch (err) {
       console.error("Unfollow error", err);

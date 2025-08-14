@@ -7,6 +7,7 @@ import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { emailRequired, invalidEmailFormat } from "@/constants/messages";
+import { RESET_EMAIL_KEY } from "@/constants/session";
 
 interface ForgotPasswordPageProps {
     onSuccess?: () => void;
@@ -55,7 +56,7 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
         if (!res.status) {
             setMessageType(responseStatus.error);
         } else {
-            localStorage.setItem('reset-email', email);
+            localStorage.setItem(RESET_EMAIL_KEY, email);
             onSuccess?.();
         }
 

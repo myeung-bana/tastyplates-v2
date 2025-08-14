@@ -8,6 +8,7 @@ import { minimumPassword } from "@/constants/validation";
 import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
+import { UPDATE_PASSWORD_KEY } from "@/constants/session";
 
 const userService = new UserService()
 
@@ -57,7 +58,7 @@ const UpdatePassword = () => {
     setIsLoading(false);
     if (result.status) {
       if (typeof window !== "undefined") {
-        localStorage.setItem("openPasswordUpdateModal", 'true');
+        localStorage.setItem(UPDATE_PASSWORD_KEY, 'true');
       }
       setTimeout(() => router.push(HOME), 1000);
     } else {

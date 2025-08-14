@@ -1,4 +1,23 @@
+import { HTTP_METHODS } from "@/constants/httpMethods";
+import { sessionExpired } from "@/constants/messages";
+import { HOME } from "@/constants/pages";
+import { responseStatusCode as code } from "@/constants/response";
+import { SESSION_EXPIRED_KEY } from "@/constants/session";
+import { removeAllCookies } from "@/utils/removeAllCookies";
+import { signOut } from "next-auth/react";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
+
+const handleUnauthorized = async () => {
+    removeAllCookies();
+    localStorage.clear()
+    sessionStorage.clear()
+    await signOut({
+        callbackUrl: HOME,
+    })
+    document.cookie =
+        '__Host-next-auth.csrf-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; Secure; SameSite=Lax'
+}
 
 export default class HttpMethods {
     private async request(
@@ -16,6 +35,14 @@ export default class HttpMethods {
             ...options,
             headers,
         });
+
+        // redirect back when unauthenticated request
+        if (typeof window !== 'undefined' && (response.status == code.unauthorized || response.status == code.forbidden)) {
+            await handleUnauthorized()
+            localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
+            const baseUrl = window.location.origin;
+            window.location.href = baseUrl + HOME;
+        }
 
         if (jsonResponse) {
             try {
@@ -38,7 +65,7 @@ export default class HttpMethods {
             endpoint,
             {
                 ...options,
-                method: 'GET',
+                method: HTTP_METHODS.GET,
             },
             jsonResponse
         );
@@ -56,7 +83,7 @@ export default class HttpMethods {
             endpoint,
             {
                 ...restOptions,
-                method: 'POST',
+                method: HTTP_METHODS.POST,
                 body,
             },
             jsonResponse,
@@ -76,7 +103,7 @@ export default class HttpMethods {
             endpoint,
             {
                 ...restOptions,
-                method: 'PUT',
+                method: HTTP_METHODS.PUT,
                 body,
             },
             jsonResponse,
@@ -93,7 +120,7 @@ export default class HttpMethods {
             endpoint,
             {
                 ...options,
-                method: 'DELETE',
+                method: HTTP_METHODS.DELETE,
             },
             jsonResponse
         );

@@ -11,6 +11,7 @@ import { HOME, PROFILE } from "@/constants/pages";
 import { IRegisterData } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
 import { signIn } from "next-auth/react";
+import { LOGIN_BACK_KEY, REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
 
 const userService = new UserService()
 
@@ -25,9 +26,6 @@ const OnboardingTwoPage = () => {
   const [isDoItLaterLoading, setIsDoItLaterLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
-  const REGISTRATION_KEY = 'registrationData';
-  const LOGIN_BACK_KEY = 'loginBackMessage';
-  const WELCOME_KEY = 'welcomeMessage';
 
   // Add effect to load saved data
   useEffect(() => {

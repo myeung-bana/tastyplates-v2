@@ -192,6 +192,11 @@ const Settings = (props: any) => {
         return;
       }
 
+      if (response?.data?.status == code.unauthorized || response?.data?.status == code.forbidden) {
+        setIsLoading(false);
+        return;
+      }
+
       // Update local cache
       const localKey = `userData_${session.user.email}`;
       const cachedData = JSON.parse(localStorage.getItem(localKey) || '{}');
@@ -232,7 +237,7 @@ const Settings = (props: any) => {
       setIsPersonalInfoLoading(true);
       const localKey = `userData_${session.user.email}`;
       const cached = typeof window !== "undefined" ? localStorage.getItem(localKey) : null;
-      
+
       if (cached) {
         const parsedData = JSON.parse(cached);
         setUserData(parsedData);
@@ -375,12 +380,12 @@ const Settings = (props: any) => {
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : editable == Field.Birthdate ? (
                   <CustomDatePicker
-                      className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
-                      value={setting.birthdate}
-                      onChange={(val) => setSetting({ ...setting, birthdate: val })}
-                      formatValue="MM/dd/yyyy"
-                      disabled={isLoading}
-                    />
+                    className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
+                    value={setting.birthdate}
+                    onChange={(val) => setSetting({ ...setting, birthdate: val })}
+                    formatValue="MM/dd/yyyy"
+                    disabled={isLoading}
+                  />
                 ) : userData?.birthdate ? (
                   formatDateForDisplay(userData.birthdate)
                 ) : (
