@@ -329,7 +329,7 @@ const ReviewSubmissionPage = () => {
                     defaultRating={review_stars}
                     onRating={handleRating}
                   />
-                  <span className="text-[10px] leading-3 md:text-base">
+                  <span className="text-[10px] leading-3 md:text-sm">
                     Rating should be solely based on taste of the food
                   </span>
                   {ratingError && (
@@ -363,7 +363,7 @@ const ReviewSubmissionPage = () => {
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="content"
-                    className="submitRestaurants__input resize-vertical"
+                    className="submitRestaurants__input resize-vertical md:!h-full"
                     placeholder="Write a review about the food, service or ambiance of the restaurant"
                     value={content}
                     onChange={(e) => {

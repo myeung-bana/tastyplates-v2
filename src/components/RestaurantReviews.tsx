@@ -11,6 +11,11 @@ import { UserService } from '@/services/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import CustomPopover from "./ui/Popover/Popover";
 
+interface CustomType {
+  text: string,
+  value: string,
+}
+
 export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
   // Session and user state
   const { data: session } = useSession();
@@ -21,8 +26,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
-  const [selectedReviewFilter, setSelectedReviewFilter] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [selectedReviewFilter, setSelectedReviewFilter] = useState<CustomType>({text: "", value: ""});
+  const [sortOrder, setSortOrder] = useState<CustomType>({text: "Newest First", value: "newest"});
   const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);
 
   // Constants
@@ -118,25 +123,25 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
 
   // Filtering and sorting logic
   const filteredReviews = allReviews.filter((review) => {
-    if (!selectedReviewFilter) return true;
-    if (selectedReviewFilter === 'following') {
+    if (!selectedReviewFilter?.value) return true;
+    if (selectedReviewFilter?.value === 'following') {
       const authorId = String(review?.author?.node?.databaseId ?? review?.authorId ?? '');
       return followingUserIds.includes(authorId);
     }
-    if (selectedReviewFilter === 'mine') {
+    if (selectedReviewFilter?.value === 'mine') {
       return String(review?.author?.node?.databaseId) === String(currentUserId);
     }
     return true;
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
-    if (sortOrder === "newest") {
+    if (sortOrder?.value === "newest") {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
-    } else if (sortOrder === "oldest") {
+    } else if (sortOrder?.value === "oldest") {
       return new Date(a.date).getTime() - new Date(b.date).getTime();
-    } else if (sortOrder === "highest") {
+    } else if (sortOrder?.value === "highest") {
       return getNumericRating(b) - getNumericRating(a);
-    } else if (sortOrder === "lowest") {
+    } else if (sortOrder?.value === "lowest") {
       return getNumericRating(a) - getNumericRating(b);
     }
     return 0;
@@ -259,16 +264,35 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
         <div className="flex gap-4">
           <div className="search-bar">
             <CustomPopover
-              align="bottom-end"
+              align="center"
               trigger={
                 <button className="review-filter">
-                  {!selectedReviewFilter ? 'All Reviews' : selectedReviewFilter}
+                  {!selectedReviewFilter.text ? 'All Reviews' : selectedReviewFilter.text}
                 </button>
               }
               content={
-                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D]">
+                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
                   {reviewFilterOptions.map((option, index) =>
-                    <li key={index} onClick={() => { setSelectedReviewFilter(option.value); setCurrentPage(1); }}>
+                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold" onClick={() => { setSelectedReviewFilter({text: option.label, value: option.value}); setCurrentPage(1); }}>
+                      {option.label}
+                    </li>
+                  )}
+                </ul>
+              }
+            />
+          </div>
+          <div className="search-bar">
+            <CustomPopover
+              align="center"
+              trigger={
+                <button className="review-filter">
+                  {!sortOrder.text ? 'All Reviews' : sortOrder.text}
+                </button>
+              }
+              content={
+                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
+                  {sortOptions.map((option, index) =>
+                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold" onClick={() => { setSortOrder({text: option.label, value: option.value}); setCurrentPage(1); }}>
                       {option.label}
                     </li>
                   )}
@@ -276,20 +300,6 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
               }
             />
             {/* <select
-              className="review-filter"
-              style={{ color: '#494D5D' }}
-              value={selectedReviewFilter}
-              onChange={e => { setSelectedReviewFilter(e.target.value); setCurrentPage(1); }}
-            >
-              {reviewFilterOptions.map((option, index) =>
-                <option value={option.value} key={index}>
-                  {option.label}
-                </option>
-              )}
-            </select> */}
-          </div>
-          <div className="search-bar">
-            <select
               className="review-filter"
               style={{ color: '#494D5D' }}
               value={sortOrder}
@@ -300,7 +310,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                   {option.label}
                 </option>
               )}
-            </select>
+            </select> */}
           </div>
         </div>
       </div>

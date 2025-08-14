@@ -714,7 +714,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   return (
     <>
-      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
+      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-0 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <FallbackImage
             src={
@@ -909,7 +909,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           tabWrapper: "w-full",
           base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
-            "py-4 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
+            "py-0 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList:
             "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",

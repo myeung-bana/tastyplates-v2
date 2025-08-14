@@ -230,7 +230,7 @@ const ListingPage = () => {
 
           {/* Conditional rendering of "My Review Drafts" */}
           {!debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
                 {reviewDrafts.length === 0 && !loadingDrafts && (
@@ -254,7 +254,7 @@ const ListingPage = () => {
 
           {/* Conditional rendering of "Recently Visited" */}
           {!debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content mt-6 md:mt-10">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
                 {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
@@ -274,7 +274,7 @@ const ListingPage = () => {
 
           {/* Display Restaurants section only when there's an active search or it's loading search results */}
           {debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content mt-6 md:mt-10">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">
                   Search Results

@@ -346,7 +346,7 @@ export default function RestaurantDetail() {
                   />
                 </div>
                 <div className="items-center justify-center rounded-3xl text-center w-1/3 hidden md:flex">
-                  <div className="restaurant-detail__details">
+                  <div className="w-full">
                     <div className="rounded-xl overflow-hidden shadow-md border border-gray-200 max-w-md bg-white">
                       {lat && lng ? (
                         <div className="cursor-pointer">
@@ -360,8 +360,8 @@ export default function RestaurantDetail() {
                       )}
 
                       <div className="flex items-start gap-2 p-4">
-                        <FiMapPin className="w-5 h-5 text-gray-600 mt-1" />
-                        <p className="text-sm text-gray-800 leading-snug text-left">
+                        <FiMapPin className="w-5 h-5 text-gray-600 mt-1 shrink-0" />
+                        <p className="text-xs md:text-base text-[#31343F] leading-snug text-left line-clamp-3">
                           {address || 'Address not provided'}
                         </p>
                       </div>

@@ -31,7 +31,7 @@ interface Palate {
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<string>("");
-  const [rating, setRating] = useState<number>(1);
+  const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
@@ -202,7 +202,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
         setSortOption("None");
         break;
       case "Rating":
-        setRating(1);
+        setRating(0);
         break;
       default:
         break;
@@ -274,12 +274,12 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             </button>
           </div>
 
-          <div className={`filter__section ${badge !== "" ? 'bg-[#F1F1F1]' : ''}`}>
+          <div className={`filter__section ${badge !== "All" ? 'bg-[#F1F1F1]' : ''}`}>
             <button
               className="filter__options"
               onClick={() => onClickFilter("badges")}
             >
-              <span className="filter__label">{badge !== "" ? badge : "Badges"}</span>
+              <span className="filter__label">{badge !== "All" ? badge : "Badges"}</span>
               <img
                 src={ARROW_WARM_UP}
                 className="size-4 sm:size-5"
