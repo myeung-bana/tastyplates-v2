@@ -11,13 +11,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
 const handleUnauthorized = async () => {
     removeAllCookies();
-    localStorage.clear()
-    sessionStorage.clear()
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie =
+    '__Host-next-auth.csrf-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; Secure; SameSite=Lax';
+    localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
     await signOut({
         callbackUrl: HOME,
     })
-    document.cookie =
-        '__Host-next-auth.csrf-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; Secure; SameSite=Lax'
 }
 
 export default class HttpMethods {
@@ -38,19 +39,17 @@ export default class HttpMethods {
         });
 
         const session = await getSession();
-        const jsonData: HttpResponse = await response.json();
+        const clonedResponse = response.clone();
+        const jsonData: HttpResponse = await clonedResponse.json();
 
         // redirect back when unauthenticated request
         if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
             await handleUnauthorized()
-            localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
-            const baseUrl = window.location.origin;
-            window.location.href = baseUrl + HOME;
         }
 
         if (jsonResponse) {
             try {
-                return jsonData;
+                return response.json();
             } catch (error) {
                 console.error('Failed to parse JSON response:', error);
                 throw new Error('Invalid JSON response');
