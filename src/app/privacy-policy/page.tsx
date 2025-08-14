@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacypolicyService";
+import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyService";
 
 const privacyPolicyService = new PrivacyPolicyService();
 

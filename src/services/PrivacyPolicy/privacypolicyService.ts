@@ -1,4 +1,4 @@
-import { PrivacyPolicyRepository } from "@/repositories/http/PrivacyPolicy/privacypolicyRepository";
+import { PrivacyPolicyRepository } from "@/repositories/http/PrivacyPolicy/privacyPolicyRepository";
 import { PrivacyPolicyRepo } from "@/repositories/interface/user/privacyPolicy";
 
 const privacyPolicyRepo: PrivacyPolicyRepo = new PrivacyPolicyRepository()

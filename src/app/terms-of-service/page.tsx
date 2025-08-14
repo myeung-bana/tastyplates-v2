@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import { TermsOfServiceService } from "@/services/TermsOfService/termsofserviceService";
+import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
 
 const termsOfServiceService = new TermsOfServiceService();
 
