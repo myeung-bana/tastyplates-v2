@@ -20,6 +20,7 @@ export const LISTING_EXPLANATION = "/listing/explanation";
 export const HELP = "/help";
 export const WRITING_GUIDELINES = "/writing-guidelines";
 export const TERMS_OF_SERVICE = "/terms-of-service";
+export const CONTENT_GUIDELINES = "/content-guidelines";
 export const PRIVACY_POLICY = "/privacy-policy";
 
 export const GOOGLE_MAPS = (lat: any, lng: any) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
