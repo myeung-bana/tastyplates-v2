@@ -11,6 +11,7 @@ import {
 } from "@/app/graphql/Restaurant/restaurantQueries";
 import { user } from "@heroui/theme";
 import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
+import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
@@ -31,11 +32,14 @@ export class RestaurantRepository {
         return response;
     }
 
-    static async getRestaurantBySlug(slug: string) {
+    static async getRestaurantBySlug(slug: string, palates: string) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_SLUG,
             fetchPolicy: "no-cache",
-            variables: { slug },
+            variables: { 
+                slug,
+                palates
+            },
         });
         return data.listing;
     }
@@ -52,7 +56,8 @@ export class RestaurantRepository {
         sortOption?: string | null,
         rating: number | null = null,
         statuses: string[] | null = null,
-        address: string | null = null
+        address: string | null = null,
+        ethnicSearch: string | null = null
     ) {
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -69,6 +74,7 @@ export class RestaurantRepository {
                 minAverageRating: rating,
                 statuses: statuses || [],
                 streetAddress: address || "",
+                ethnicSearch: ethnicSearch || "",
             },
         });
         return {
@@ -97,22 +103,42 @@ export class RestaurantRepository {
         return data.listing;
     }
 
-    static async createListing(formData: FormData, token: string): Promise<any> {
+    static async createListingAndReview(payload: any, token: string): Promise<any> {
         const res = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing`, {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
             },
-            body: formData,
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.message || "Failed to submit listing");
+            throw new Error(errorData.error || "Failed to submit listing and review");
         }
 
         return res.json();
     }
+
+
+    static async getFavoriteListing(
+        userId: number,
+        accessToken?: string
+    ): Promise<any> {
+        return this.request(
+            `/wp-json/restaurant/v1/favorites/?user_id=${userId}`,
+            {
+                method: 'GET',
+                headers: accessToken
+                    ? { Authorization: `Bearer ${accessToken}` }
+                    : {},
+                credentials: "include",
+            },
+            true
+        );
+    }
+
     static async updateListing(
         id: number,
         listingUpdateData: Record<string, any>, // Changed to accept a plain object
@@ -168,7 +194,6 @@ export class RestaurantRepository {
                 const text = await response.text();
                 if (!text) {
                     // If the response is empty, assume success without JSON content
-                    console.log('Delete successful, but no content in response.');
                     return { success: true, deleted: id }; // Return a custom success object
                 }
                 // Try parsing as JSON
@@ -200,6 +225,44 @@ export class RestaurantRepository {
             console.error("Failed to fetch listing pending", error);
             throw new Error('Failed to fetch listing pending');
         }
+    }
+
+    static async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await this.request('/wp-json/restaurant/v1/favorite/', {
+            method: 'POST',
+            headers: {
+                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        }, jsonResponse);
+
+        return response;
+    }
+
+    static async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await this.request(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
+            method: 'GET',
+            headers: accessToken
+                ? { Authorization: `Bearer ${accessToken}` }
+                : {},
+            credentials: "include",
+        }, jsonResponse);
+
+        return response;
+    }
+
+    static async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await this.request('/wp-json/restaurant/v1/checkin/', {
+            method: "POST",
+            headers: {
+                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        }, jsonResponse);
+
+        return response;
     }
 
     static async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
@@ -249,7 +312,7 @@ export class RestaurantRepository {
         // Return the array of IDs or an empty array if undefined
         return data?.currentUser?.recentlyVisited || [];
     }
-    
+
     static async getAddressByPalate(
         searchTerm: string,
         taxQuery: any,
@@ -268,11 +331,14 @@ export class RestaurantRepository {
                 ? GET_ADDRESS_BY_PALATE_WITH_TAX
                 : GET_ADDRESS_BY_PALATE_NO_TAX,
             variables,
+            fetchPolicy: 'network-only',
         });
 
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
+            hasNextPage: data.listings.pageInfo.hasNextPage,
+            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 
@@ -288,10 +354,13 @@ export class RestaurantRepository {
                 first,
                 after,
             },
+            fetchPolicy: 'network-only',
         });
         return {
             nodes: data.listings.nodes,
             pageInfo: data.listings.pageInfo,
+            hasNextPage: data.listings.pageInfo.hasNextPage,
+            endCursor: data.listings.pageInfo.endCursor,
         };
     }
 }

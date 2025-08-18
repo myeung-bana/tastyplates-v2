@@ -18,6 +18,12 @@ import { useFollowContext } from "./FollowContext";
 //styles
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
+import toast from "react-hot-toast";
+import { authorIdMissing, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { UserService } from "@/services/userService";
+import { responseStatusCode as code } from "@/constants/response";
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -74,18 +80,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     (async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/is-following`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.accessToken}`,
-            },
-            body: JSON.stringify({ user_id: authorUserId }),
-          }
-        );
-        const result = await res.json();
+        const result = await UserService.isFollowingUser(authorUserId, session.accessToken);        
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
@@ -200,23 +195,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Always use the correct user id for the author (databaseId, integer)
     const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
-      alert("Author user ID is missing.");
+      toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/follow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: authorUserId }),
-      });
-      const result = await res.json();
-      if (!res.ok || result?.result !== "followed") {
+      const result = await UserService.followUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
-        alert(result?.message || "Failed to follow user. Please try again.");
+        toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
       } else {
         setIsFollowing(true);
@@ -224,7 +211,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       }
     } catch (err) {
       console.error("Follow error", err);
-      alert("Failed to follow user. Please try again.");
+      toast.error(userFollowedFailed);
       setIsFollowing(false);
     } finally {
       setFollowLoading(false);
@@ -239,23 +226,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Always use the correct user id for the author (databaseId, integer)
     const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
     if (!authorUserId) {
-      alert("Author user ID is missing.");
+      toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/unfollow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify({ user_id: authorUserId }),
-      });
-      const result = await res.json();
-      if (!res.ok || result?.result !== "unfollowed") {
+      const result = await UserService.unfollowUser(authorUserId, session.accessToken);
+      if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
-        alert(result?.message || "Failed to unfollow user. Please try again.");
+        toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);
       } else {
         setIsFollowing(false);
@@ -263,7 +242,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       }
     } catch (err) {
       console.error("Unfollow error", err);
-      alert("Failed to unfollow user. Please try again.");
+      toast.error(userUnfollowedFailed);
       setIsFollowing(true);
     } finally {
       setFollowLoading(false);
@@ -294,7 +273,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             >
               {Array.isArray(data?.reviewImages) && data.reviewImages.length > 0 ? (
                 data.reviewImages.map((image: any, index: number) => (
-                  <Image
+                  <FallbackImage
                     key={index}
                     src={image?.sourceUrl}
                     alt="Review"
@@ -305,7 +284,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 ))
               ) : (
                 <Image
-                  src="http://localhost/wordpress/wp-content/uploads/2024/07/default-image.png"
+                  src={DEFAULT_IMAGE}
                   alt="Default"
                   width={400}
                   height={400}
@@ -317,16 +296,17 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           <div className="review-card__content !m-2 sm:!m-0 !pb-10">
             <div className="flex justify-between pr-10 items-center">
               <div className="review-card__user">
-                <Image
-                  src={data.author?.node?.avatar?.url || "/profile-icon.svg"}
+                <FallbackImage
+                  src={data.author?.node?.avatar?.url || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image !rounded-2xl"
+                  type={FallbackImageType.Icon}
                 />
                 <div className="review-card__user-info">
                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                    {data.author?.name || "Unknown User"}
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                   <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
                     {UserPalateNames?.map((tag: any, index: number) => (
@@ -343,7 +323,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               <button
                 onClick={() => {
                   if (!session?.accessToken) {
-                    setIsShowSignup(true);
+                    setIsShowSignin(true);
                   } else if (isFollowing) {
                     handleUnfollowAuthor();
                   } else {
@@ -410,12 +390,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
                           return (
                             <div key={index} className="reply flex items-start gap-3 mb-3">
-                              <Image
-                                src={reply.author?.node?.avatar?.url || "/profile-icon.svg"}
+                              <FallbackImage
+                                src={reply.author?.node?.avatar?.url || DEFAULT_USER_ICON}
                                 alt={reply.author?.node?.name || "User"}
                                 width={28}
                                 height={28}
                                 className="rounded-full"
+                                type={FallbackImageType.Icon}
                               />
                               <div className="review-card__user-info">
                                 <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">

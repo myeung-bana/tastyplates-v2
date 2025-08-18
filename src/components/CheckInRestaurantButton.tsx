@@ -3,6 +3,11 @@ import { useEffect, useState } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
+import toast from "react-hot-toast";
+import CustomModal from "@/components/ui/Modal/Modal";
+import { checkInStatusError, checkInRestaurantSuccess, uncheckInRestaurantSuccess } from "@/constants/messages";
+import { responseStatusCode as code } from "@/constants/response";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
 
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session } = useSession();
@@ -12,29 +17,29 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
   const [error, setError] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
+  const [showUncheckModal, setShowUncheckModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     if (!session || !restaurantSlug || initialized) return;
-    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkin/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
-      credentials: "include",
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch check-in status");
-        return res.json();
-      })
-      .then(data => {
-        if (isMounted) setCheckedIn(data.status === "checkedin");
-      })
-      .finally(() => {
+    const fetchCheckIn = async () => {
+      try {
+        const data = await RestaurantService.createCheckIn(
+          { restaurant_slug: restaurantSlug, action: "check" },
+          session?.accessToken // can be undefined
+        );
+
+        if (isMounted) {
+          setCheckedIn(data.status === "checkedin");
+        }
+      } catch (error) {
+        console.error("Failed to fetch check-in status:", error);
+      } finally {
         if (isMounted) setInitialized(true);
-      });
+      }
+    };
+
+    fetchCheckIn();
     return () => { isMounted = false; };
   }, [restaurantSlug, session]);
 
@@ -47,23 +52,28 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: !checkedIn } }));
     const action = checkedIn ? "uncheckin" : "checkin";
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkin/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-        },
-        body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to update check-in status");
-      const data = await res.json();
-      setCheckedIn(data.status === "checkedin");
-      window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: data.status === "checkedin" } }));
+      const res: Response = await RestaurantService.createCheckIn(
+        { restaurant_slug: restaurantSlug, action },
+        session?.accessToken,
+        false
+      );
+
+      if (res.status == code.success) {
+        toast.success(checkedIn ? uncheckInRestaurantSuccess : checkInRestaurantSuccess);
+        const data = await res.json();
+        setCheckedIn(data.status === "checkedin");
+        window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: data.status === "checkedin" } }));
+      } else {
+        toast.error(checkInStatusError);
+        setCheckedIn(prevCheckedIn);
+        window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
+      }
+      if (!res.ok) throw new Error(checkInStatusError);
     } catch (err) {
+      toast.error(checkInStatusError);
       setCheckedIn(prevCheckedIn);
       window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
-      setError("Could not update check-in status");
+      setError(checkInStatusError);
     } finally {
       setLoading(false);
     }
@@ -74,7 +84,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaMapMarkerAlt />
           <span className="underline">Check-In</span>

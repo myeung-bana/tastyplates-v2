@@ -57,7 +57,7 @@ export const reviewlist: ReviewList[] = [
         date: "March 5, 2024",
         comment:
           "Great variety of dishes and excellent service. Will definitely come back!",
-        images: ["/images/Photos-Review-12.png", "/images/food-review-001.jpg"],
+        images: ["/images/default-image.png", "/images/food-review-001.jpg"],
         userImage: "/profile-icon.svg",
       },
       {

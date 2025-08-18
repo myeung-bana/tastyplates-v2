@@ -9,6 +9,7 @@ import "@/styles/pages/_lists.scss";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -38,7 +39,7 @@ const SettingsPage = () => {
       id: item.id,
       slug: item.slug,
       name: item.title,
-      image: item.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+      image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
       rating: 4.5,
       databaseId: item.databaseId || 0, // Default to 0 if not present
       cuisineNames: item.palates || [],

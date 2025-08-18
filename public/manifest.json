@@ -1,0 +1,37 @@
+{
+  "name": "TastyPlates",
+  "short_name": "TastyPlates",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#31343F",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/Favicon_Orange_Circle.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/dashboard.png",
+      "sizes": "720x1280",
+      "type": "image/png"
+    }
+  ]
+}

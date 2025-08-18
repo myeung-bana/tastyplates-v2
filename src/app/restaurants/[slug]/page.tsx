@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useSearchParams } from "next/navigation";
 import { FiMapPin, FiPhone } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import { getRestaurantReviews } from "@/utils/reviewUtils";
@@ -20,6 +20,13 @@ import { useRouter } from "next/navigation";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import CheckInRestaurantButton from "@/components/CheckInRestaurantButton";
+import { ADD_REVIEW } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
+import FallbackImage from "@/components/ui/Image/FallbackImage";
+import { CASH, DEFAULT_IMAGE, FLAG, HELMET, PHONE } from "@/constants/images";
+import { responseStatusCode as code } from "@/constants/response";
 
 type tParams = { slug: string };
 
@@ -54,26 +61,24 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   useEffect(() => {
     let isMounted = true;
     if (!session || !restaurantSlug || initialized) return;
-    fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-      },
-      body: JSON.stringify({ restaurant_slug: restaurantSlug, action: "check" }),
-      credentials: "include",
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch favorite status");
-        return res.json();
-      })
-      .then(data => {
-        if (isMounted) setSaved(data.status === "saved");
-      })
-      // No error state for initial check, just let it update when ready
-      .finally(() => {
+    const fetchFavoriteListing = async () => {
+      try {
+        const data = await RestaurantService.createFavoriteListing(
+          { restaurant_slug: restaurantSlug, action: "check" },
+          session?.accessToken
+        );
+
+        if (isMounted) {
+          setSaved(data.status === "saved");
+        }
+      } catch (error) {
+        console.error("Failed to fetch favorite status:", error);
+      } finally {
         if (isMounted) setInitialized(true);
-      });
+      }
+    };
+
+    fetchFavoriteListing();
     return () => { isMounted = false; };
   }, [restaurantSlug, session]);
 
@@ -86,23 +91,29 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: !saved } }));
     const action = saved ? "unsave" : "save";
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorite/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
-        },
-        body: JSON.stringify({ restaurant_slug: restaurantSlug, action }),
-        credentials: "include",
-      });
+      const res: Response = await RestaurantService.createFavoriteListing(
+        { restaurant_slug: restaurantSlug, action },
+        session?.accessToken, // can be undefined
+        false // do not return JSON response
+      );
+      
+      if (res.status === code.success) {
+        toast.success(action === "save" ? savedToWishlistSuccess : removedFromWishlistSuccess);
+        const data = await res.json();
+        setSaved(data.status === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
       if (!res.ok) throw new Error("Failed to update favorite status");
-      const data = await res.json();
-      setSaved(data.status === "saved");
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
     } catch (err) {
+      toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
-      setError("Could not update favorite status");
+      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -113,7 +124,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       <>
         <button
           className="restaurant-detail__review-button flex items-center gap-2"
-          onClick={() => setShowSignup(true)}
+          onClick={() => setShowSignin(true)}
         >
           <FaRegHeart />
           <span className="underline">Save</span>
@@ -169,13 +180,15 @@ export default function RestaurantDetail() {
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const palatesParam = searchParams?.get("ethnic") || null;
 
   const params = useParams();
   const slug = params?.slug as string;
 
   useEffect(() => {
     if (!slug) return;
-    RestaurantService.fetchRestaurantDetails(slug)
+    RestaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? '') )
       .then((data) => {
         if (!data) return notFound();
         const transformed = {
@@ -183,7 +196,7 @@ export default function RestaurantDetail() {
           slug: data.slug,
           name: data.title,
           databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || "/images/Photos-Review-12.png",
+          image: data.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
           palates: data.palates?.nodes || [],
           countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
           priceRange: data.priceRange || "$$",
@@ -207,6 +220,7 @@ export default function RestaurantDetail() {
           overAllReviewCount: data.ratingsCount,
           recognitionCounts: data.recognitionCounts,
           palateStats: data.palateStats,
+          searchPalateStats: data.searchPalateStats,
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -216,9 +230,11 @@ export default function RestaurantDetail() {
         setLoading(false);
       });
   }, [slug]);
-  // console.log('average palate', restaurant.palateStats?.[restaurant.palates[1].name]?.count)
 
-
+  const searchRatingStats = restaurant?.searchPalateStats;
+  const myPreferenceStats = restaurant?.palateStats?.find(
+    (stat: any) => stat.name === "My Preference"
+  );
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
   const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
@@ -262,10 +278,12 @@ export default function RestaurantDetail() {
 
   const addReview = () => {
     if (!session?.user) {
-      setIsShowSignup(true);
+      setIsShowSignin(true);
       return;
     }
-    router.push(`/add-review/${restaurant.slug}/${restaurant.databaseId}`);
+    router.push(
+      PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId])
+    );
   }
 
   return (
@@ -298,20 +316,20 @@ export default function RestaurantDetail() {
                     <FaPen className="size-4 md:size-5" />
                     <span className="underline">Write a Review</span>
                   </button>
-                  <SignupModal
-                    isOpen={isShowSignup}
-                    onClose={() => setIsShowSignup(false)}
-                    onOpenSignin={() => {
-                    setIsShowSignup(false);
-                    setIsShowSignin(true);
-                    }}
-                  />
                   <SigninModal
                     isOpen={isShowSignin}
                     onClose={() => setIsShowSignin(false)}
                     onOpenSignup={() => {
-                    setIsShowSignin(false);
-                    setIsShowSignup(true);
+                      setIsShowSignin(false);
+                      setIsShowSignup(true);
+                    }}
+                  />
+                  <SignupModal
+                    isOpen={isShowSignup}
+                    onClose={() => setIsShowSignup(false)}
+                    onOpenSignin={() => {
+                      setIsShowSignup(true);
+                      setIsShowSignin(false);
                     }}
                   />
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
@@ -319,7 +337,7 @@ export default function RestaurantDetail() {
               </div>
               <div className="flex flex-row gap-6">
                 <div className="md:rounded-l-3xl relative restaurant-detail__hero w-2/3">
-                  <Image
+                  <FallbackImage
                     src={restaurant.image}
                     alt={restaurant.name}
                     fill
@@ -369,29 +387,6 @@ export default function RestaurantDetail() {
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-t-2xl lg:rounded-none lg:rounded-l-3xl pt-4 pb-2">
                   <h1 className="text-xs lg:text-base font-bold">Rating</h1>
                   <div className="rating-summary w-full">
-                    {restaurant?.palates?.[0] && (
-                      <>
-                      <div className="rating-column">
-                        <h3>{restaurant.palates[0]?.name} Palate</h3>
-                        <div className="rating-value">
-                          {/* <FiStar className="fill-yellow-500" /> */}
-                          <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                            {restaurant.palateStats?.[0]?.count > 0
-                              ? (Number(restaurant.palateStats[0].avg) % 1 === 0
-                                ? restaurant.palateStats[0].avg.toFixed(0)
-                                : restaurant.palateStats[0].avg.toFixed(2))
-                              : "0"}
-                          </span>
-                        </div>
-                        <span className="review-count">
-                          {restaurant.palateStats?.[0]?.count > 0
-                            ? `${restaurant.palateStats[0].count} reviews`
-                            : "No matching palate reviews"}
-                        </span>
-                      </div>
-                      <div className="h-[85%] border-l border-[#CACACA]"></div>
-                      </>
-                    )}
                     <div className="rating-column">
                       <h3>Overall Rating</h3>
                       <div className="rating-value">
@@ -410,28 +405,43 @@ export default function RestaurantDetail() {
                           : "No reviews yet"}
                       </span>
                     </div>
-                    {restaurant?.palates?.[1] && (
-                      <>
-                        <div className="h-[85%] border-l border-[#CACACA]"></div>
-                        <div className="rating-column">
-                          <h3>{restaurant.palates[1].name} Palate</h3>
-                          <div className="rating-value">
-                            <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                              {restaurant.palateStats?.[1]?.count > 0
-                                ? (Number(restaurant.palateStats[1].avg) % 1 === 0
-                                  ? restaurant.palateStats[1].avg.toFixed(0)
-                                  : restaurant.palateStats[1].avg.toFixed(2))
-                                : "0"}
-                            </span>
-                          </div>
-                          <span className="review-count">
-                            {restaurant.palateStats?.[1]?.count > 0
-                              ? `${restaurant.palateStats[1].count} reviews`
-                              : "No matching palate reviews"}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                    <div className="h-[85%] border-l border-[#CACACA]"></div>
+                    <div className="rating-column">
+                      <h3>Search Rating</h3>
+                      <div className="rating-value">
+                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                          {searchRatingStats && searchRatingStats.count > 0
+                            ? (searchRatingStats.avg % 1 === 0
+                              ? searchRatingStats.avg.toFixed(0)
+                              : searchRatingStats.avg.toFixed(2))
+                            : "0"}
+                        </span>
+                      </div>
+                      <span className="review-count">
+                        {searchRatingStats && searchRatingStats.count > 0
+                          ? `${searchRatingStats.count} reviews`
+                          : "No matching palate reviews"}
+                      </span>
+                    </div>
+                    <div className="h-[85%] border-l border-[#CACACA]"></div>
+                    <div className="rating-column">
+                      <h3>My Preference</h3>
+                      <div className="rating-value">
+                        {/* <FiStar className="fill-yellow-500" /> */}
+                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                          {myPreferenceStats?.count > 0
+                            ? (myPreferenceStats.avg % 1 === 0
+                              ? myPreferenceStats.avg.toFixed(0)
+                              : myPreferenceStats.avg.toFixed(2))
+                            : "0"}
+                        </span>
+                      </div>
+                      <span className="review-count">
+                        {myPreferenceStats?.count > 0
+                          ? `${myPreferenceStats.count} reviews`
+                          : "No matching palate reviews"}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
@@ -440,7 +450,7 @@ export default function RestaurantDetail() {
                     <div className="flex items-center w-full">
                       <div className="rating-column w-full border-r border-[#CACACA]">
                         <Image
-                          src="/flag.svg"
+                          src={FLAG}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -457,7 +467,7 @@ export default function RestaurantDetail() {
                       {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
                       <div className="rating-column w-full lg:border-r border-[#CACACA]">
                         <Image
-                          src="/phone.svg"
+                          src={PHONE}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -475,7 +485,7 @@ export default function RestaurantDetail() {
                     <div className="flex items-center w-full">
                       <div className="rating-column w-full border-r border-[#CACACA]">
                         <Image
-                          src="/cash.svg"
+                          src={CASH}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"
@@ -492,7 +502,7 @@ export default function RestaurantDetail() {
                       {/* <div className="h-4/5 border-l border-[#CACACA]"></div> */}
                       <div className="rating-column w-full">
                         <Image
-                          src="/helmet.svg"
+                          src={HELMET}
                           height={40}
                           width={40}
                           className="size-6 md:size-10"

@@ -1,5 +1,6 @@
+// app/components/Profile.tsx (or wherever you place your reusable components)
 "use client";
-import React, { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
@@ -16,6 +17,12 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { palateFlagMap } from "@/utils/palateFlags";
+import { PROFILE_EDIT } from "@/constants/pages";
+import toast from "react-hot-toast";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { responseStatusCode as code } from "@/constants/response";
 
 interface Restaurant {
   id: string;
@@ -31,8 +38,15 @@ interface Restaurant {
   ratingsCount?: number;
 }
 
-const Profile = () => {
-  const { data: session, status } = useSession(); // Add status from useSession
+
+interface ProfileProps {
+  targetUserId: number;
+}
+
+// Update the component signature to accept props
+const Profile = ({ targetUserId }: ProfileProps) => {
+  const { data: session, status } = useSession();
+
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [nameLoading, setNameLoading] = useState(true);
   const [aboutMeLoading, setAboutMeLoading] = useState(true);
@@ -58,14 +72,14 @@ const Profile = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const user = session?.user;
-  const targetUserId = user?.id;
   const [wishlist, setWishlist] = useState<Restaurant[]>([]);
   const [listingLoading, setlistingLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [checkins, setCheckins] = useState<Restaurant[]>([]);
-  const [checkinsLoading, setCheckinsLoading] = useState(true);
+  const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
+  const isViewingOwnProfile = session?.user?.id === targetUserId;
+  const WELCOME_KEY = 'welcomeMessage';
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -73,7 +87,7 @@ const Profile = () => {
       slug: item.slug,
       name: item.title,
       image:
-        item.featuredImage?.node?.sourceUrl || "/images/Photos-Review-12.png",
+        item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
       rating: item.averageRating || 0,
       databaseId: item.databaseId || 0,
       palatesNames:
@@ -93,7 +107,7 @@ const Profile = () => {
     }));
   };
 
-  const statuses = ["PUBLISH", "DRAFT"];
+  const statuses = isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"];
   const fetchRestaurants = async (
     first = 8,
     after: string | null = null,
@@ -106,7 +120,7 @@ const Profile = () => {
         "",
         first,
         after,
-        "",
+        [],
         [],
         null,
         null,
@@ -122,7 +136,6 @@ const Profile = () => {
         if (!after) {
           return transformed;
         }
-        // Pagination: append unique restaurants only
         const all = [...prev, ...transformed];
         const uniqueMap = new Map(all.map((r) => [r.id, r]));
         return Array.from(uniqueMap.values());
@@ -139,21 +152,25 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    if (targetUserId) { // Only fetch if targetUserId is available
+    if (targetUserId) {
       fetchRestaurants(8, null, targetUserId);
     }
-  }, [targetUserId]); // Re-fetch when targetUserId changes
+    return () => {
+      setRestaurants([]);
+    };
+  }, [targetUserId]);
 
   useEffect(() => {
-    window.addEventListener("load", () => {
-      if (typeof window !== "undefined") {
-        handleResize();
-      }
-    });
-    window.addEventListener("resize", () => {
-      handleResize();
-    });
+    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
+    if (welcomeMessage) {
+      toast.success(welcomeMessage, {
+        duration: 3000, // 3 seconds
+      });
+      localStorage.removeItem(WELCOME_KEY);
+    }
 
+    window.addEventListener("load", handleResize);
+    window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("load", handleResize);
@@ -164,14 +181,12 @@ const Profile = () => {
     setWidth(window.innerWidth);
   };
 
-  // Reset reviews when user changes or component unmounts
   useEffect(() => {
     setReviews([]);
     setEndCursor(null);
     setHasNextPage(true);
     isFirstLoad.current = true;
     return () => {
-      // Cleanup when component unmounts
       setReviews([]);
       setEndCursor(null);
       isFirstLoad.current = true;
@@ -179,14 +194,12 @@ const Profile = () => {
   }, [targetUserId]);
 
   useEffect(() => {
-    // Clear data immediately on tab/page change
     setReviews([]);
     if (status !== "loading" && targetUserId) {
-      loadMore(); // Only load when session is ready and we have the userId
+      loadMore();
     }
-  }, [status, targetUserId]); // Add dependencies
+  }, [status, targetUserId]);
 
-  // Setup Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -215,11 +228,10 @@ const Profile = () => {
       const { reviews: newReviews, pageInfo, userCommentCount } =
         await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
 
-      // Reset reviews array before setting new data
       if (isFirstLoad.current) {
-        setReviews([]); // Clear existing reviews
+        setReviews([]);
         setTimeout(() => {
-          setReviews(newReviews); // Set new reviews after a brief delay
+          setReviews(newReviews);
         }, 0);
       } else {
         const existingIds = new Set(reviews.map((review) => review.id));
@@ -242,89 +254,76 @@ const Profile = () => {
     }
   };
 
-  // Fetch following with cache (5 min TTL)
+  useEffect(() => {
+    const fetchPublicUserData = async () => {
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+      try {
+        const publicUser = await UserService.getUserById(targetUserId);
+        setUserData(publicUser);
+      } catch (error) {
+        console.error("Error fetching public user data:", error);
+        setUserData(null);
+      } finally {
+        setNameLoading(false);
+        setAboutMeLoading(false);
+        setPalatesLoading(false);
+      }
+    };
+    if (targetUserId && !isViewingOwnProfile) {
+      fetchPublicUserData();
+    } else {
+      setUserData(null);
+      setNameLoading(false);
+      setAboutMeLoading(false);
+      setPalatesLoading(false);
+    }
+  }, [targetUserId]);
+
   const fetchFollowing = async (forceRefresh = false) => {
     setFollowingLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowingLoading(false);
       return [];
     }
-    const cacheKey = `following_${targetUserId}`;
-    let followingList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowing(data);
-            setFollowingLoading(false);
-            return data;
-          }
-        } catch {}
-      }
-    }
     try {
-      followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followingList, timestamp: Date.now() }));
       return followingList;
     } finally {
       setFollowingLoading(false);
     }
   };
 
-  // Fetch followers with cache (5 min TTL)
   const fetchFollowers = async (forceRefresh = false, followingList?: any[]) => {
     setFollowersLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowersLoading(false);
       return [];
     }
-    const cacheKey = `followers_${targetUserId}`;
-    let followersList = [];
-    if (!forceRefresh) {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 5 * 60 * 1000) {
-            setFollowers(data);
-            setFollowersLoading(false);
-            return data;
-          }
-        } catch {}
-      }
-    }
     try {
-      followersList = await UserService.getFollowersList(
+      const followersList = await UserService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
       );
       setFollowers(followersList);
-      localStorage.setItem(cacheKey, JSON.stringify({ data: followersList, timestamp: Date.now() }));
       return followersList;
     } finally {
       setFollowersLoading(false);
     }
   };
 
-  // Separate effect for user data loading states
   useEffect(() => {
-    if (!session?.user) {
-      setNameLoading(true);
-      setAboutMeLoading(true);
-      setPalatesLoading(true);
-      return;
+    // Only set userData from session.user if viewing own profile
+    if (isViewingOwnProfile && session?.user) {
+      setUserData(session.user);
+      setNameLoading(false);
+      setAboutMeLoading(false);
+      setPalatesLoading(false);
     }
-    setUserData(session.user);
-    setNameLoading(false);
-    setAboutMeLoading(false);
-    setPalatesLoading(false);
-  }, [session?.user]);
-
-  // On mount or user change, load from cache or fetch
+  }, [isViewingOwnProfile, session?.user]);
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
     const loadFollowData = async () => {
@@ -342,34 +341,18 @@ const Profile = () => {
     };
     loadFollowData();
   }, [session?.accessToken, targetUserId]);
-
-  // Listen for follow/unfollow in other tabs and sync instantly
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'follow_sync') {
-        if (targetUserId) {
-          localStorage.removeItem(`following_${targetUserId}`);
-          localStorage.removeItem(`followers_${targetUserId}`);
-        }
-        // Always re-fetch from backend and update cache
-        fetchFollowing(true);
-        fetchFollowers(true);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    // No cache sync needed, always fetch fresh
   }, [targetUserId]);
 
   const handleFollow = async (id: string) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const success = await UserService.followUser(userIdNum, session.accessToken);
-    if (success) {
-      // Invalidate caches
+    const response = await UserService.followUser(userIdNum, session.accessToken);
+    if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -378,7 +361,6 @@ const Profile = () => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      // Notify other tabs (and ReviewDetailModal) to update
       localStorage.setItem('follow_sync', Date.now().toString());
     }
   };
@@ -387,12 +369,10 @@ const Profile = () => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const success = await UserService.unfollowUser(userIdNum, session.accessToken);
-    if (success) {
-      // Invalidate caches
+    const response = await UserService.unfollowUser(userIdNum, session.accessToken);
+    if (response.status == code.success) {
       localStorage.removeItem(`following_${targetUserId}`);
       localStorage.removeItem(`followers_${targetUserId}`);
-      // Fetch both lists fresh and update cache
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -401,9 +381,20 @@ const Profile = () => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      // Notify other tabs (and ReviewDetailModal) to update
       localStorage.setItem('follow_sync', Date.now().toString());
     }
+  };
+
+  const handleWishlistChange = (restaurant: Restaurant, isSaved: boolean) => {
+    setWishlist((prev) => {
+      const exists = prev.find(r => r.id === restaurant.id);
+      if (isSaved && !exists) {
+        return [...prev, restaurant];
+      } else if (!isSaved && exists) {
+        return prev.filter(r => r.id !== restaurant.id);
+      }
+      return prev;
+    });
   };
 
   const getColumns = () => {
@@ -412,21 +403,28 @@ const Profile = () => {
     return 2;
   };
 
-  // Build tab contents, using filteredRestaurants instead of the full list
   const tabs = [
     {
       id: "reviews",
       label: "Reviews",
       content: (
         <>
-          <Masonry
-            items={reviews}
-            render={ReviewCard}
-            columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12}
-            maxColumnWidth={304}
-            columnCount={getColumns()}
-            maxColumnCount={4}
-          />
+          {reviews.length > 0 ? (
+            <Masonry
+              items={reviews}
+              render={ReviewCard}
+              columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12}
+              maxColumnWidth={304}
+              columnCount={getColumns()}
+              maxColumnCount={4}
+            />
+          ) : (
+            !loading && (
+              <div className="col-span-full text-center text-gray-400 py-12">
+                No Reviews Yet.
+              </div>
+            )
+          )}
           <div
             ref={observerRef}
             className="flex justify-center text-center mt-6 min-h-[40px]"
@@ -462,15 +460,23 @@ const Profile = () => {
       label: "Listings",
       content: (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-          {restaurants.map((rest) => (
-            <RestaurantCard
-              key={rest.id}
-              restaurant={rest}
-              profileTablist="listings"
-            />
-          ))}
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+            {restaurants.length > 0 ? (
+              restaurants.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="listings"
+                />
+              ))
+            ) : (
+              !listingLoading && (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Listings Yet.
+                </div>
+              )
+            )}
+          </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
             {listingLoading && restaurants.length === 0 && (
               <>
@@ -495,7 +501,7 @@ const Profile = () => {
               </>
             )}
           </div>
-          </>
+        </>
       ),
     },
     {
@@ -504,18 +510,22 @@ const Profile = () => {
       content: (
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {wishlist.map((rest) => (
-              <RestaurantCard
-                key={rest.id}
-                restaurant={rest}
-                profileTablist="wishlists"
-                initialSavedStatus={true}
-              />
-            ))}
-            {wishlist.length === 0 && !wishlistLoading && (
-              <div className="col-span-full text-center text-gray-400 py-12">
-                No wishlisted restaurants yet.
-              </div>
+            {wishlist.length > 0 ? (
+              wishlist.map((rest) => (
+                <RestaurantCard
+                  key={rest.id}
+                  restaurant={rest}
+                  profileTablist="wishlists"
+                  initialSavedStatus={true}
+                  onWishlistChange={handleWishlistChange}
+                />
+              ))
+            ) : (
+              !wishlistLoading && (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Wishlisted Restaurants Yet.
+                </div>
+              )
             )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
@@ -558,11 +568,16 @@ const Profile = () => {
                   restaurant={rest}
                   profileTablist="checkin"
                   initialSavedStatus={wishlist.some(w => w.databaseId === rest.databaseId)}
+                  onWishlistChange={handleWishlistChange}
                 />
               ))
-            ) : !checkinsLoading && hasFetchedCheckins ? (
-              <div className="col-span-full text-center py-8">No check-ins yet.</div>
-            ) : null}
+            ) : (
+              !checkinsLoading && hasFetchedCheckins && (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  No Check-ins Yet.
+                </div>
+              )
+            )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
             {checkinsLoading && !hasFetchedCheckins && (
@@ -593,20 +608,13 @@ const Profile = () => {
     },
   ];
 
+  const [hasFetchedWishlist, setHasFetchedWishlist] = useState(false);
   useEffect(() => {
     const fetchWishlist = async () => {
+      if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/favorites/`,
-          {
-            headers: session?.accessToken
-              ? { Authorization: `Bearer ${session.accessToken}` }
-              : {},
-            credentials: "include",
-          }
-        );
-        const data = await res.json();
+        const data = await RestaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
         const favoriteIds = data.favorites || [];
         if (favoriteIds.length === 0) {
           setWishlist([]);
@@ -616,11 +624,11 @@ const Profile = () => {
               RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
-
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
           const transformed = transformNodes(validResults);
           setWishlist(transformed);
         }
+        setHasFetchedWishlist(true);
       } catch (e) {
         console.error("Error fetching wishlist:", e);
         setWishlist([]);
@@ -628,26 +636,24 @@ const Profile = () => {
         setWishlistLoading(false);
       }
     };
-
-    if (session) fetchWishlist();
-    else setWishlist([]);
-  }, [session]);
+    if (session && targetUserId) fetchWishlist();
+    else {
+      setWishlist([]);
+      setHasFetchedWishlist(false);
+    }
+  }, [session, targetUserId, hasFetchedWishlist]);
 
   useEffect(() => {
     let didCancel = false;
     const fetchCheckins = async () => {
-      if (!hasFetchedCheckins) setCheckinsLoading(true);
+      if (hasFetchedCheckins) return; // Only fetch if not already fetched
+      setCheckinsLoading(true);
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/restaurant/v1/checkins/`,
-          {
-            headers: session?.accessToken
-              ? { Authorization: `Bearer ${session.accessToken}` }
-              : {},
-            credentials: "include",
-          }
+        const data = await RestaurantService.fetchCheckInRestaurant(
+          targetUserId,
+          session?.accessToken
         );
-        const data = await res.json();
+
         const checkinIds = data.checkins || [];
         if (!didCancel) {
           if (checkinIds.length === 0) {
@@ -658,7 +664,6 @@ const Profile = () => {
                 RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
               )
             );
-            // Only keep valid restaurant objects
             const validResults = results.filter(r => r && typeof r === "object" && r.id);
             const transformed = transformNodes(validResults);
             setCheckins(transformed);
@@ -671,7 +676,7 @@ const Profile = () => {
         if (!didCancel) setCheckinsLoading(false);
       }
     };
-    if (session) {
+    if (session && targetUserId) {
       fetchCheckins();
     } else {
       setCheckins([]);
@@ -680,18 +685,46 @@ const Profile = () => {
     return () => {
       didCancel = true;
     };
-  }, [session]);
+  }, [session, targetUserId, hasFetchedCheckins]);
+
+  // Reset all relevant state when targetUserId changes
+  useEffect(() => {
+    // Only reset state when targetUserId actually changes, not on window focus
+    if (!isViewingOwnProfile) {
+      setUserData(null);
+      setReviews([]);
+      setRestaurants([]);
+      setWishlist([]);
+      setCheckins([]);
+      setFollowers([]);
+      setFollowing([]);
+      setUserReviewCount(0);
+      setEndCursor(null);
+      setHasNextPage(true);
+      setHasFetchedCheckins(false);
+      setHasFetchedWishlist(false);
+      setLoading(true);
+      setNameLoading(true);
+      setAboutMeLoading(true);
+      setPalatesLoading(true);
+    }
+  }, [targetUserId]);
+
+  // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
 
   return (
     <>
       <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
-          <Image
-            src={user?.image || "/profile-icon.svg"}
+          <FallbackImage
+            src={
+              userData?.image ||
+              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? DEFAULT_USER_ICON)
+            }
             fill
             className="rounded-full object-cover"
             alt="profile"
-            unoptimized
+            type={FallbackImageType.Icon}
           />
         </div>
         <div className="flex flex-col justify-start gap-3 sm:gap-4 flex-1 w-full sm:w-auto text-left">
@@ -711,44 +744,61 @@ const Profile = () => {
                     <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                   </>
                 ) : (
-                  userData?.palates
-                    ?.split(/[|,]\s*/)
-                    .map((palate: string, index: number) => {
-                      const capitalizedPalate = palate
-                        .trim()
-                        .split(" ")
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() +
-                            word.slice(1).toLowerCase()
-                        )
-                        .join(" ");
-                      return (
-                        <span
-                          key={index}
-                          className="bg-[#FDF0EF] py-1 px-2 rounded-[50px] text-xs font-medium text-[#E36B00]"
-                        >
-                          {capitalizedPalate}
-                        </span>
-                      );
-                    })
+                  (userData?.userProfile?.palates || userData?.palates) ? (
+                    (userData.userProfile?.palates || userData.palates)
+                      .split(/[|,]\s*/)
+                      .filter((palate: string) => palate.trim().length > 0)
+                      .map((palate: string, index: number) => {
+                        const capitalizedPalate = palate
+                          .trim()
+                          .split(" ")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() +
+                              word.slice(1).toLowerCase()
+                          )
+                          .join(" ");
+                        const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                        return (
+                          <span
+                            key={index}
+                            className="bg-[#f1f1f1] py-1 px-2 rounded-[50px] text-xs font-medium text-[#31343f] flex items-center gap-1"
+                          >
+                            {flagSrc && (
+                              <img
+                                src={flagSrc}
+                                alt={`${capitalizedPalate} flag`}
+                                width={18}
+                                height={10}
+                                className="w-[18px] h-[10px] rounded object-cover"
+                              />
+                            )}
+                            {capitalizedPalate}
+                          </span>
+                        );
+                      })
+                  ) : (
+                    <span className="text-gray-400 text-xs">No palates set</span>
+                  )
                 )}
               </div>
             </div>
-            <div className="sm:ml-auto">
-              <Link
-                href="/profile/edit"
-                className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-xs sm:text-sm whitespace-nowrap"
-              >
-                Edit Profile
-              </Link>
-            </div>
+            {isViewingOwnProfile && (
+              <div className="sm:ml-auto">
+                <Link
+                  href={PROFILE_EDIT}
+                  className="py-1.5 sm:py-2 px-3 sm:px-4 rounded-[50px] border-[1.2px] border-[#494D5D] text-[#494D5D] font-semibold text-xs sm:text-sm whitespace-nowrap"
+                >
+                  Edit Profile
+                </Link>
+              </div>
+            )}
           </div>
           <p className="text-[10px] md:text-sm">
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              userData?.about_me
+              userData?.userProfile?.aboutMe || userData?.about_me || <span className="text-gray-400">No bio set</span>
             )}
           </p>
           <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
@@ -782,11 +832,10 @@ const Profile = () => {
                 )}
               </span>{" "}
               <span
-                className={`${
-                  followersLoading || followers.length === 0
-                    ? "cursor-default"
-                    : "cursor-pointer"
-                } text-[10px] md:text-sm`}
+                className={`${followersLoading || followers.length === 0
+                  ? "cursor-default"
+                  : "cursor-pointer"
+                  } text-[10px] md:text-sm`}
               >
                 Followers
               </span>
@@ -809,16 +858,34 @@ const Profile = () => {
                 )}
               </span>{" "}
               <span
-                className={`${
-                  followingLoading || following.length === 0
-                    ? "cursor-default"
-                    : "cursor-pointer"
-                } text-[10px] md:text-sm`}
+                className={`${followingLoading || following.length === 0
+                  ? "cursor-default"
+                  : "cursor-pointer"
+                  } text-[10px] md:text-sm`}
               >
                 Following
               </span>
             </button>
           </div>
+          {!isViewingOwnProfile && userData?.databaseId && session?.accessToken && (
+            <div className="mt-4">
+              {following.some((f: any) => f.id === userData.databaseId) ? (
+                <button
+                  onClick={() => handleUnfollow(String(userData.databaseId))}
+                  className="py-2 px-4 rounded-[50px] border-[1.2px] border-red-500 text-red-500 font-semibold text-sm whitespace-nowrap"
+                >
+                  Unfollow
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleFollow(String(userData.databaseId))}
+                  className="py-2 px-4 rounded-[50px] bg-blue-500 text-white font-semibold text-sm whitespace-nowrap"
+                >
+                  Follow
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <FollowersModal
@@ -848,14 +915,14 @@ const Profile = () => {
           cursor: "w-full bg-[#31343F]",
           tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
           tabContent:
-            "group-data-[selected=true]:text-[#31343F] text-[#494D5D] text-xs sm:text-base font-semibold",
+            "group-data-[selected=true]:text-[#31343F] text-xs sm:text-base font-semibold",
         }}
         variant="underlined"
       >
         {(item) => (
           <Tab key={item.id} title={item.label}>
             <div className="bg-none rounded-none">
-              <div>{item.content}</div>
+              {item.content}
             </div>
           </Tab>
         )}

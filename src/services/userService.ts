@@ -1,14 +1,18 @@
 import { UserRepository } from '@/repositories/userRepository';
-import { ILoginCredentials, IJWTResponse } from '@/interfaces/user';
+import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, followUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, isFollowingUserResponse, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user/user';
+import { DEFAULT_USER_ICON } from '@/constants/images';
+import { responseStatusCode as code } from '@/constants/response';
+import { resetEmailFailed, unexpectedError } from '@/constants/messages';
+import { HttpResponse } from '@/interfaces/httpResponse';
 
 export class UserService {
-    static async registerUser(userData: any): Promise<any> {
+    static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
         const formattedData = {
             username: userData.username,
             email: userData.email,
             password: userData.password,
-            birthdate: userData.birthdate, 
-            gender: userData.gender, 
+            birthdate: userData.birthdate,
+            gender: userData.gender,
             custom_gender: userData.customGender,
             pronoun: userData.pronoun,
             palates: userData.palates,
@@ -21,13 +25,13 @@ export class UserService {
         await UserRepository.registerUser<any>(formattedData);
     }
 
-    static async login(credentials: ILoginCredentials): Promise<any> {
+    static async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
         try {
-            const response = await UserRepository.login<any>({
+            const response = await UserRepository.login({
                 email: credentials.email,
                 password: credentials.password as string
             });
-            
+
             return response;
         } catch (error) {
             console.error('Login error:', error);
@@ -35,10 +39,10 @@ export class UserService {
         }
     }
 
-    static async handleGoogleAuth(email: string): Promise<any> {
+    static async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
         try {
             // First check if user exists
-            const checkResponse = await UserRepository.checkGoogleUser<any>(email);
+            const checkResponse = await UserRepository.checkGoogleUser(email);
             return checkResponse;
         } catch (error) {
             console.error('Google auth error:', error);
@@ -56,9 +60,9 @@ export class UserService {
         }
     }
 
-    static async checkUsernameExists(username: string): Promise<any> {
+    static async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
         try {
-            const response = await UserRepository.checkUsernameExists<any>(username);
+            const response = await UserRepository.checkUsernameExists(username);
             return response;
         } catch (error) {
             console.error('Check username error:', error);
@@ -66,9 +70,9 @@ export class UserService {
         }
     }
 
-    static async getCurrentUser(token?: string): Promise<any> {
+    static async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         try {
-            const response = await UserRepository.getCurrentUser<any>(token);
+            const response = await UserRepository.getCurrentUser(token);
             return response;
         } catch (error) {
             console.error('Get user by ID error:', error);
@@ -76,9 +80,18 @@ export class UserService {
         }
     }
 
-    static async updateUserFields(data: any, token?: any): Promise<any> {
+    static async getUserById(id: number | null) {
         try {
-            const response = await UserRepository.updateUserFields<any>(data, token);
+            return await UserRepository.getUserById(id);
+        } catch (error) {
+            console.error('Error fetching user by ID:', error);
+            throw new Error('Failed to fetch user by ID');
+        }
+    }
+
+    static async updateUserFields(data: Partial<IUserUpdate>, token?: any): Promise<IUserUpdateResponse> {
+        try {
+            const response = await UserRepository.updateUserFields<IUserUpdateResponse>(data, token);
             return response;
         } catch (error) {
             console.error('Update user fields error:', error);
@@ -113,7 +126,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: true,
             })) : [];
         } catch (error) {
@@ -129,7 +142,7 @@ export class UserService {
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
-                image: user.image || "/profile-icon.svg",
+                image: user.image || DEFAULT_USER_ICON,
                 isFollowing: followingList.some(f => f.id === user.id),
             })) : [];
         } catch (error) {
@@ -138,23 +151,69 @@ export class UserService {
         }
     }
 
-    static async followUser(userId: number, token?: string): Promise<boolean> {
+    static async followUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            await UserRepository.followUser<any>(userId, token);
-            return true;
+            const response = await UserRepository.followUser(userId, token);
+            return {
+                ...response,
+                status: code.success,
+            };
         } catch (error) {
             console.error('Follow user error:', error);
-            return false;
+            return {} as followUserResponse;
         }
     }
 
-    static async unfollowUser(userId: number, token?: string): Promise<boolean> {
+    static async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            await UserRepository.unfollowUser<any>(userId, token);
-            return true;
+            const response = await UserRepository.unfollowUser(userId, token);
+            return {
+                ...response,
+                status: code.success,
+            };
         } catch (error) {
             console.error('Unfollow user error:', error);
-            return false;
+            return {} as followUserResponse;
+        }
+    }
+
+    static async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
+        try {
+            const response = await UserRepository.isFollowingUser(userId, token);
+            return response;
+        } catch (error) {
+            console.error('Check following user error:', error);
+            return { is_following: false };
+        }
+    }
+
+    static async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.sendForgotPasswordEmail(formData);    
+            return response;
+        } catch (error) {
+            console.error('Forgot password email error:', error);
+            return { status: false, message: unexpectedError };
+        }
+    }
+
+    static async verifyResetToken(token?: string): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.verifyResetToken(token);
+            return response;
+        } catch (error) {
+            console.error('Verify reset token error:', error);
+            return { status: false, message: unexpectedError };
+        }
+    }
+
+    static async resetPassword(token: string, password: string): Promise<HttpResponse> {
+        try {
+            const response = await UserRepository.resetPassword(token, password);
+            return response;
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return { status: false, message: unexpectedError };
         }
     }
 }

@@ -1,25 +1,22 @@
-// Filter.tsx
-// components/Filter/Filter.tsx
-import { GiRoundStar } from "react-icons/gi";
 import "@/styles/components/filter.scss";
-import { MdStar, MdStarOutline } from "react-icons/md";
 import CustomModal from "../ui/Modal/Modal";
 import { Key, useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
+import { ARROW_WARM_UP, STAR } from "@/constants/images";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 interface FilterProps {
   onFilterChange: (filters: {
-    cuisine?: string | null;
+    cuisine?: string[] | null;
     price?: string | null;
     rating?: number | null;
     badges?: string | null;
     sortOption?: string | null;
     palates?: string[] | null;
   }) => void;
-  initialPalates?: string[]; // Add this prop
 }
 
 interface Palate {
@@ -31,21 +28,18 @@ interface Palate {
   }[];
 }
 
-const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // Initialize initialPalates
-  const [cuisine, setCuisine] = useState<string>("All");
+const Filter = ({ onFilterChange }: FilterProps) => {
+  const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isCuisineOpen, setIsCuisineOpen] = useState<boolean>(false);
-  const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
   const [isBadgeOpen, setIsBadgeOpen] = useState<boolean>(false);
-  const [isRatingOpen, setIsRatingOpen] = useState<boolean>(false);
-  // const [badges, setBadges] = useState<string | null>(null); // State for badges filter
   const [isPalateOpen, setIsPalateOpen] = useState<boolean>(false);
   const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
-
+  const [expandedPalateItems, setExpandedPalateItems] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>("");
-  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set(initialPalates)); // Initialize with prop
+  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
   const [badge, setBadge] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("None");
 
@@ -94,10 +88,6 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
       .finally(() => setIsLoadingPalates(false));
   }, []);
 
-  // Update selectedPalates when initialPalates prop changes
-  useEffect(() => {
-    setSelectedPalates(new Set(initialPalates));
-  }, [initialPalates]);
 
   const prices = [
     { name: "$", value: "$" },
@@ -123,10 +113,48 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
     setSelectedPalates(keys);
   };
 
+  const handleCuisineChange = (slug: string) => {
+    setSelectedCuisines((prevSelectedCuisines) => {
+      const newSelection = new Set(prevSelectedCuisines);
+      if (newSelection.has(slug)) {
+        newSelection.delete(slug);
+      } else {
+        newSelection.add(slug);
+      }
+      return newSelection;
+    });
+  };
+
   const onClickFilter = (type: string) => {
     setIsModalOpen(!isModalOpen);
     setFilterType(type.charAt(0).toUpperCase() + type.slice(1));
   };
+
+  const toggleExpansion = (key: string) => {
+    setExpandedPalateItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  const getAllPalateKeys = () => {
+    const allKeys = new Set<string>();
+    dbPalates.forEach(item => {
+      allKeys.add(item.key);
+      item.children?.forEach(child => {
+        allKeys.add(child.key);
+      });
+    });
+    return allKeys;
+  };
+
+  const isAllSelected = selectedPalates.size > 0 && Array.from(getAllPalateKeys()).every(key => selectedPalates.has(key));
+
 
   const selectFilter = (value: string, type?: string) => {
     switch (type) {
@@ -138,8 +166,15 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
         setSortOption(value);
         setIsSortOpen(false);
         break;
-      default: // For Cuisine
-        setCuisine(value);
+      default:
+        const newSelection = new Set(selectedCuisines);
+        if (newSelection.has(value)) {
+          newSelection.delete(value);
+        } else {
+          newSelection.add(value);
+        }
+        setSelectedCuisines(newSelection);
+
         setIsCuisineOpen(false);
         break;
     }
@@ -147,16 +182,16 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
 
   const handleChangePrice = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // If the clicked value is already selected, unselect it (set price to empty)
-    // Otherwise, select the new value
     setPrice(price === value ? "" : value);
   };
 
+  const palatesArray = Array.from(selectedPalates);
+  const cuisinesArray = Array.from(selectedCuisines);
 
   const resetFilter = () => {
     switch (filterType) {
       case "Cuisine":
-        setCuisine("All");
+        setSelectedCuisines(new Set());
         setSelectedPalates(new Set());
         break;
       case "Price":
@@ -172,21 +207,33 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
       default:
         break;
     }
+
+    // onFilterChange({
+    //   cuisine: cuisinesArray, // Send empty array if no cuisines selected
+    //   price: price || null,
+    //   rating: rating > 0 ? rating : null,
+    //   badges: badge === "All" ? null : badge,
+    //   sortOption: sortOption === "None" ? null : sortOption,
+    //   palates: palatesArray, // Send empty array if no palates selected
+    // });
+
   };
 
   const applyFilters = () => {
-    const palatesArray = Array.from(selectedPalates);
+
 
     onFilterChange({
-      cuisine: cuisine === "All" ? null : cuisine,
+      cuisine: cuisinesArray,
       price: price || null,
       rating: rating > 0 ? rating : null,
       badges: badge === "All" ? null : badge,
       sortOption: sortOption === "None" ? null : sortOption,
-      palates: palatesArray
+      palates: palatesArray,
     });
+
     setIsModalOpen(false);
   };
+
 
   return (
     <>
@@ -197,16 +244,33 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
               onClick={() => onClickFilter("cuisine")}
               className="filter__options"
             >
-              <span className="filter__label">Cuisine</span>
+              <span className="filter__label">
+                {cuisinesArray.length > 0 || palatesArray.length > 0 ? (
+                  <>
+                    {[
+                      cuisinesArray.length > 0 ? cuisinesArray.join(", ") : null,
+                      palatesArray.length > 0
+                        ? palatesArray
+                          .map(capitalizeFirstLetter)
+                          .join(", ")
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" | ")}
+                  </>
+                ) : (
+                  "Cuisines"
+                )}
+              </span>
             </button>
           </div>
 
-          <div className="filter__section">
+          <div className={"filter__section" + (price !== "" ? " bg-[#F1F1F1]" : "")}>
             <button
               onClick={() => onClickFilter("price")}
               className="filter__options"
             >
-              <span className="filter__label">Price</span>
+              <span className="filter__label">{price !== "" ? price : "Price"}</span>
             </button>
           </div>
 
@@ -217,7 +281,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
             >
               <span className="filter__label">{badge !== "" ? badge : "Badges"}</span>
               <img
-                src="/images/arrow_warm_up.svg"
+                src={ARROW_WARM_UP}
                 className="size-4 sm:size-5"
                 alt="arrow up"
               />
@@ -229,7 +293,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
               onClick={() => onClickFilter("rating")}
               className="filter__options"
             >
-              <img src="/star.svg" className="size-4 sm:size-5" alt="star" />
+              <img src={STAR} className="size-4 sm:size-5" alt="star" />
               <span className="filter__label">{rating > 0 ? 'Over ' + rating : "Rating"}</span>
             </button>
           </div>
@@ -255,19 +319,27 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                     trigger={
                       <button
                         onClick={() => setIsCuisineOpen(!isCuisineOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]">
-                        <span className="text-[#31343F] text-center font-semibold">
-                          {cuisine}
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative"> {/* Added relative, items-start, removed flex-wrap, justify-between */}
+                        <span className="text-[#31343F] text-start font-semibold flex-grow block"> {/* Added block */}
+                          {selectedCuisines.size > 0
+                            ? Array.from(selectedCuisines).map(slug => {
+                              const cuisine = dbCuisines.find(c => c.slug === slug || c.name === slug);
+                              return cuisine?.name || slug;
+                            }).join(", ")
+                            : "Select Cuisine"}
                         </span>
-                        <PiCaretDown className="fill-[#494D5D] size-5 flex-shrink-0" />
+                        <PiCaretDown className={`fill-[#494D5D] size-5 flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2`} /> {/* Absolute positioning */}
                       </button>
                     }
                     content={
-                      <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
+                      <div
+                        className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div
-                          onClick={() => selectFilter("All")}
-                          className={`py-2 px-4 ${cuisine == "All" ? "bg-[#F1F1F1]" : "bg-transparent"
-                            } text-sm md:text-lg font-semibold`}
+                          onClick={() => setSelectedCuisines(new Set())}
+                          className={`py-2 px-4 ${selectedCuisines.size === 0 ? "bg-[#F1F1F1]" : "bg-transparent"
+                            } text-sm md:text-lg font-semibold cursor-pointer`}
                         >
                           All
                         </div>
@@ -276,14 +348,19 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                         ) : (
                           dbCuisines.map((item: { name: string, slug: string }, index: number) => (
                             <div
-                              onClick={() => selectFilter(item.slug || item.name)}
-                              className={`py-2 px-4 ${cuisine == (item.slug || item.name)
-                                  ? "bg-[#F1F1F1]"
-                                  : "bg-transparent"
-                                } text-sm md:text-lg font-semibold`}
                               key={index}
+                              className={`py-2 px-4 flex items-center gap-2 cursor-pointer hover:bg-gray-50`}
+                              onClick={() => handleCuisineChange(item.slug || item.name)}
                             >
-                              {item.name}
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                checked={selectedCuisines.has(item.slug || item.name)}
+                                readOnly
+                              />
+                              <label className="text-sm md:text-lg font-semibold">
+                                {item.name}
+                              </label>
                             </div>
                           ))
                         )}
@@ -305,16 +382,20 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                     trigger={
                       <button
                         onClick={() => setIsPalateOpen(!isPalateOpen)}
-                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-10 px-4 md:px-6 flex flex-row flex-nowrap justify-between items-center gap-2 text-[#31343F]"
+                        className="w-full border border-[#797979] mt-2 rounded-[10px] h-auto min-h-10 px-4 md:px-6 flex items-start gap-2 text-[#31343F] py-2 relative"
                       >
-                        <span className="text-[#31343F] text-center font-semibold">
+                        <span className="text-[#31343F] text-start font-semibold flex-grow block">
                           {selectedPalates.size > 0
-                            ? Array.from(selectedPalates).join(", ")
-                            : "Select your palate"}
+                            ? Array.from(selectedPalates).map(slug => {
+                              const palate = dbPalates.find(p => p.key === slug);
+                              return palate
+                                ? palate.label
+                                : dbPalates.flatMap(p => p.children).find(c => c.key === slug)?.label || slug;
+                            }).join(', ')
+                            : 'Select your palate'}
                         </span>
                         <PiCaretDown
-                          className={`fill-[#494D5D] size-5 ${isPalateOpen ? "rotate-180" : ""
-                            }`}
+                          className={`fill-[#494D5D] size-5 ${isPalateOpen ? 'rotate-180' : ''} flex-shrink-0 absolute right-4 top-1/2 -translate-y-1/2`}
                         />
                       </button>
                     }
@@ -324,29 +405,27 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                           onClick={(e: any) => {
                             e.stopPropagation();
                             let newSet = new Set(selectedPalates);
-                            if (newSet.has("all")) {
-                              newSet.delete("all");
-                            } else {
+                            if (isAllSelected) {
                               newSet.clear();
-                              newSet.add("all");
+                            } else {
+                              getAllPalateKeys().forEach(key => newSet.add(key));
                             }
                             handlePalateChange(newSet);
                           }}
-                          className={`w-full py-2 px-4 md:py-3 md:px-6 flex justify-between items-center gap-2 ${selectedPalates.has("all") ? "bg-[#F1F1F1]" : "bg-transparent"
+                          className={`w-full py-2 px-4 md:py-3 md:px-6 flex justify-between items-center gap-2 ${isAllSelected ? 'bg-[#F1F1F1]' : 'bg-transparent' // Use isAllSelected for styling
                             } text-sm md:text-lg font-semibold border-b border-[#E5E5E5]`}
                         >
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
                               className="form-checkbox h-4 w-4 text-[#E36B00]"
-                              checked={selectedPalates.has("all")}
+                              checked={isAllSelected}
                               readOnly
                             />
                             <span className="text-sm md:text-base font-semibold w-full">All</span>
                           </div>
                           <PiCaretDown
-                            className={`fill-[#494D5D] size-5 ${selectedPalates.has("all") ? "rotate-180" : ""
-                              }`}
+                            className={`fill-[#494D5D] size-5 ${isAllSelected ? 'rotate-180' : ''}`}
                           />
                         </div>
 
@@ -357,40 +436,59 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                             <div key={item.key} className="">
                               <div
                                 className="font-semibold flex items-center gap-2 py-2 px-4 md:py-3 md:px-6"
-                                onClick={(e: any) => {
-                                  e.stopPropagation();
-                                  const newSelection = new Set(selectedPalates);
-                                  if (newSelection.has("all")) newSelection.delete("all");
-                                  if (newSelection.has(item.key)) {
-                                    newSelection.delete(item.key);
-                                  } else {
-                                    newSelection.add(item.key);
-                                  }
-                                  handlePalateChange(newSelection);
-                                }}
                               >
-                                <div className="flex items-center gap-2">
+                                <div
+                                  className="flex items-center gap-2 flex-grow cursor-pointer"
+                                  onClick={(e: any) => {
+                                    e.stopPropagation();
+                                    const newSelection = new Set(selectedPalates);
+                                    // Toggle parent selection
+                                    if (newSelection.has(item.key)) {
+                                      newSelection.delete(item.key);
+                                    } else {
+                                      newSelection.add(item.key);
+                                    }
+
+                                    // Also toggle all children if the parent is toggled
+                                    item.children?.forEach(child => {
+                                      if (newSelection.has(item.key)) { // If parent is now selected, select children
+                                        newSelection.add(child.key);
+                                      } else { // If parent is now deselected, deselect children
+                                        newSelection.delete(child.key);
+                                      }
+                                    });
+
+                                    handlePalateChange(newSelection);
+                                  }}
+                                >
                                   <input
                                     type="checkbox"
                                     className="form-checkbox h-4 w-4 text-[#E36B00]"
-                                    checked={selectedPalates.has(item.key)}
+                                    checked={selectedPalates.has(item.key) && (!item.children || item.children.every(child => selectedPalates.has(child.key)))}
                                     readOnly
                                   />
                                   <label htmlFor="">{item.label}</label>
                                 </div>
-                                <PiCaretDown
-                                  className={`fill-[#494D5D] size-5 ${selectedPalates.has(item.key) ? "rotate-180" : ""
-                                    }`}
-                                />
+
+                                {item.children && item.children.length > 0 && (
+                                  <PiCaretDown
+                                    className={`fill-[#494D5D] size-5 cursor-pointer ${expandedPalateItems.has(item.key) ? 'rotate-180' : ''
+                                      }`}
+                                    onClick={(e: any) => {
+                                      e.stopPropagation();
+                                      toggleExpansion(item.key);
+                                    }}
+                                  />
+                                )}
                               </div>
-                              {item.children?.map((child) => (
+                              {item.children?.map(child => (
                                 <div
                                   key={child.key}
-                                  className={`${selectedPalates.has(item.key) ? "flex" : "hidden"} items-center gap-2 py-2 px-4 md:py-3 md:px-6 cursor-pointer hover:bg-gray-50`}
-                                  onClick={(e) => {
+                                  className={`${expandedPalateItems.has(item.key) ? 'flex' : 'hidden'
+                                    } items-center gap-2 py-2 px-4 md:py-3 md:px-6 cursor-pointer hover:bg-gray-50`}
+                                  onClick={e => {
                                     e.stopPropagation();
                                     const newSelection = new Set(selectedPalates);
-                                    if (newSelection.has("all")) newSelection.delete("all");
                                     if (newSelection.has(child.key)) {
                                       newSelection.delete(child.key);
                                     } else {
@@ -405,9 +503,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                                     checked={selectedPalates.has(child.key)}
                                     readOnly
                                   />
-                                  <span className="font-medium">
-                                    {child.label}
-                                  </span>
+                                  <span className="font-medium">{child.label}</span>
                                 </div>
                               ))}
                             </div>
@@ -427,9 +523,9 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                     className="flex flex-nowrap items-center gap-2"
                   >
                     <div
-                      className={`w-full rounded-[8px] py-3 px-6 ${price === item.value // Check if the current item's value matches the selected price
-                          ? "bg-[#F1F1F1]"
-                          : "bg-transparent"
+                      className={`w-full rounded-[8px] py-3 px-6 ${price === item.value
+                        ? "bg-[#F1F1F1]"
+                        : "bg-transparent"
                         }`}
                     >
                       <input
@@ -437,7 +533,7 @@ const Filter = ({ onFilterChange, initialPalates = [] }: FilterProps) => { // In
                         type="checkbox"
                         name="price"
                         value={item.value}
-                        checked={price === item.value} // Check if the current item's value matches the selected price
+                        checked={price === item.value}
                         onChange={handleChangePrice}
                         className="appearance-none size-6 absolute hidden inset-0"
                       />

@@ -7,6 +7,7 @@ import InactivityLogout from "@/components/InactivityLogout";
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

@@ -17,8 +17,11 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
-import { maximumImageLimit, requiredDescription, savedAsDraft } from "@/constants/messages";
-import { maximumImage } from "@/constants/validation";
+import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import { responseStatusCode as code } from "@/constants/response";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 interface Restaurant {
   id: string;
   slug: string;
@@ -47,7 +50,9 @@ const ReviewSubmissionPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
+  const [reviewTitleError, setReviewTitleError] = useState('');
   const [uploadedImageError, setUploadedImageError] = useState('');
+  const [ratingError, setRatingError] = useState('');
   const router = useRouter();
   const [restaurant, setRestaurant] = useState<
     Omit<Restaurant, "id" | "reviews">
@@ -89,22 +94,22 @@ const ReviewSubmissionPage = () => {
     {
       id: 1,
       name: "Must Revisit",
-      icon: "/flag.svg",
+      icon: FLAG,
     },
     {
       id: 2,
       name: "Insta-Worthy",
-      icon: "/phone.svg",
+      icon: PHONE,
     },
     {
       id: 3,
       name: "Value for Money",
-      icon: "/cash.svg",
+      icon: CASH,
     },
     {
       id: 4,
       name: "Best Service",
-      icon: "/helmet.svg",
+      icon: HELMET,
     },
   ];
 
@@ -169,17 +174,45 @@ const ReviewSubmissionPage = () => {
 
   const handleRating = (rate: number) => {
     setReviewStars(rate);
+    setRatingError('');
   };
 
   const submitReview = async (e: FormEvent, mode: 'publish' | 'draft') => {
     e.preventDefault();
     let hasError = false;
 
+    if (review_stars === 0) {
+      setRatingError(requiredRating);
+      hasError = true;
+    } else {
+      setRatingError('');
+    }
+
+    if (selectedFiles.length < minimumImage) {
+      setUploadedImageError(minimumImageLimit(minimumImage));
+      hasError = true;
+    } else if (selectedFiles.length > maximumImage) {
+      setUploadedImageError(maximumImageLimit(maximumImage));
+      hasError = true;
+    } else {
+      setUploadedImageError('');
+    }
+
     if (content.trim() === '') {
       setDescriptionError(requiredDescription);
       hasError = true;
+    } else if (content.length > reviewDescriptionLimit) {
+      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+      hasError = true;
     } else {
       setDescriptionError('');
+    }
+
+    if (review_main_title.length > reviewTitleLimit) {
+      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+      hasError = true;
+    } else {
+      setReviewTitleError('');
     }
 
     if (hasError) return;
@@ -203,12 +236,48 @@ const ReviewSubmissionPage = () => {
         mode,
       };
 
-      await ReviewService.postReview(reviewData, session?.accessToken ?? "");
+      const res = await ReviewService.postReview(reviewData, session?.accessToken ?? "");
       if (mode === 'publish') {
-        setIsSubmitted(true);
+        if (res.status === code.created) {
+          setIsSubmitted(true);
+        } else if (res.status === code.conflict) {
+          toast.error(commentDuplicateError);
+          setIsLoading(false);
+          return
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsLoading(false);
+          return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error(errorOccurred);
+          setIsLoading(false);
+          return;
+        }
       } else if (mode === 'draft') {
-        toast.success(savedAsDraft);
-        router.push('/listing');
+        if (res.status === code.created) {
+          toast.success(savedAsDraft);
+          router.push(LISTING);
+        } else if (res.status === code.duplicate_week) {
+          toast.error(commentDuplicateWeekError);
+          setIsSavingAsDraft(false);
+          return;
+        } else if (res.status === code.conflict) {
+          toast.error(commentDuplicateError);
+          setIsSavingAsDraft(false);
+          return;
+        } else if (res.data?.code === 'comment_flood') {
+          toast.error(commentFloodError);
+          setIsLoading(false);
+          return;
+        } else {
+          toast.error(errorOccurred);
+          setIsSavingAsDraft(false);
+          return;
+        }
       }
 
       // Reset form fields here:
@@ -263,22 +332,30 @@ const ReviewSubmissionPage = () => {
                   <span className="text-[10px] leading-3 md:text-base">
                     Rating should be solely based on taste of the food
                   </span>
-                  {/* {ratingError && (
+                  {ratingError && (
                     <p className="text-red-600 text-sm mt-1">{ratingError}</p>
-                  )} */}
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Title</label>
+                <label className="submitRestaurants__label">Review Title</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="title"
                     className="submitRestaurants__input resize-vertical"
                     placeholder="Title of your review"
                     value={review_main_title}
-                    onChange={(e) => setReviewMainTitle(e.target.value)}
+                    onChange={(e) => {
+                      setReviewMainTitle(e.target.value);
+                      if (e.target.value.trim() !== '') {
+                        setReviewTitleError('');
+                      }
+                    }}
                     rows={2}
                   ></textarea>
+                  {reviewTitleError && (
+                    <p className="text-red-600 text-sm mt-1">{reviewTitleError}</p>
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -304,7 +381,7 @@ const ReviewSubmissionPage = () => {
               </div>
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">
-                  Upload Photos(Max 6 Photos)
+                  Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
                   <label className="flex gap-2 items-center rounded-xl py-2 px-4 md;py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
@@ -371,7 +448,7 @@ const ReviewSubmissionPage = () => {
               <p className="text-xs md:text-sm text-[#31343F]">
                 By posting review, you agree to TastyPlates'&nbsp;
                 <Link
-                  href="/writing-guidelines"
+                  href={WRITING_GUIDELINES}
                   className="underline"
                   target="_blank"
                 >

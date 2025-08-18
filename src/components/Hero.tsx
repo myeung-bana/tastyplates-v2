@@ -12,6 +12,11 @@ import SelectOptions from "@/components/ui/Options/SelectOptions";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
+import { RESTAURANTS } from "@/constants/pages";
+import { PAGE } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
+import { HERO_BG, HERO_BG_SP } from "@/constants/images";
 
 const Hero = () => {
   const router = useRouter();
@@ -34,6 +39,12 @@ const Hero = () => {
   const [listingLoading, setListingLoading] = useState(false);
   const fetchPalatesDebouncedRef = useRef<(values: Set<Key>) => void>();
   const fetchListingsDebouncedRef = useRef<(input: string) => void>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
+  const [listingHasNextPage, setListingHasNextPage] = useState(false);
+  const [listingCurrentPage, setListingCurrentPage] = useState(1);
 
   useEffect(() => {
     // Initialize both debounced functions once
@@ -50,7 +61,7 @@ const Hero = () => {
     setIsLoading(true);
 
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      toast.error(geoLocationNotSupported);
       setIsLoading(false);
       return;
     }
@@ -64,7 +75,7 @@ const Hero = () => {
           );
 
           if (!response.ok) {
-            throw new Error("Failed to fetch location data");
+            throw new Error(fetchLocationFailed);
           }
 
           const data = await response.json();
@@ -80,14 +91,14 @@ const Hero = () => {
           setLocation(address);
         } catch (error) {
           console.error("Error fetching location:", error);
-          alert("Unable to fetch your location");
+          toast.error(fetchLocationFailed);
         } finally {
           setIsLoading(false);
         }
       },
       (error) => {
         console.error("Error getting location:", error);
-        alert("Unable to get your location");
+        toast.error(fetchLocationFailed);
         setIsLoading(false);
       },
       {
@@ -105,11 +116,22 @@ const Hero = () => {
     if (isSearchListing && listing) {
       queryParams.set("listing", listing);
     } else {
-      if (cuisine) queryParams.set("palates", cuisine);
+      if (selectedPalates.size > 0) {
+        const selectedSlugs = Array.from(selectedPalates).map(key => key.toString());
+        queryParams.set("ethnic", selectedSlugs.join(','));
+      } else if (cuisine) { 
+        let ethnicValue = cuisine;
+        if (cuisine.startsWith("What ") && cuisine.endsWith(" like to eat?")) {
+          ethnicValue = cuisine.substring("What ".length, cuisine.length - " like to eat?".length);
+        }
+        if (ethnicValue) {
+            queryParams.set("ethnic", ethnicValue);
+        }
+      }
       if (location) queryParams.set("address", location);
     }
 
-    router.push(`/restaurants?${queryParams.toString()}`);
+    router.push(PAGE(RESTAURANTS, [], queryParams.toString()));
   };
 
   const searchByListingName = () => {
@@ -124,12 +146,12 @@ const Hero = () => {
     setShowLocationModal(true)
   };
 
-  const fetchAddressByPalate = async (values: Set<Key>) => {
+  const fetchAddressByPalate = async (values: Set<Key>, page = 1) => {
     try {
       setAddressLoading(true);
       const slugs = Array.from(values).map((val) => val.toString());
 
-      const result = await RestaurantService.fetchAddressByPalate("", slugs);
+      const result = await RestaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
       const uniqueLocations = Array.from(
         new Set(result.nodes.map((r: any) => r.listingDetails?.googleMapUrl?.streetAddress?.toLowerCase().trim()))
       ).filter(Boolean);
@@ -139,7 +161,10 @@ const Hero = () => {
         label: loc as string,
       }));
 
-      setLocationOptions(locationOptionsFormatted);
+      setLocationOptions(prev => page === 1 ? locationOptionsFormatted : [...prev, ...locationOptionsFormatted]);
+      setCurrentPage(page);
+      setEndCursor(result.endCursor);
+      setHasNextPage(result.hasNextPage);
       setAddressLoading(false);
     } catch (error) {
       console.error("Failed to fetch restaurant locations by palate:", error);
@@ -147,14 +172,22 @@ const Hero = () => {
     }
   }
 
-  const fetchListingsName = async (search: string = '') => {
+  const fetchListingsName = async (search: string = '', page = 1) => {
     try {
-      const result = await RestaurantService.fetchListingsName(search);
+      setListingLoading(true);
+      const result = await RestaurantService.fetchListingsName(
+        search,
+        32,
+        page === 1 ? null : listingEndCursor
+      );
       const formatted = result.nodes.map((item: any) => ({
         key: item.slug,
         label: item.title,
       }));
-      setListingOptions(formatted);
+      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
+      setListingCurrentPage(page);
+      setListingEndCursor(result.pageInfo.endCursor);
+      setListingHasNextPage(result.pageInfo.hasNextPage);
     } catch (err) {
       console.error("Error loading listing options", err);
       setListingOptions([]);
@@ -163,43 +196,40 @@ const Hero = () => {
     }
   };
 
-  const handlePalateChange = async (values: Set<Key>) => {
+  const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
     setLocation('');
     setListing('');
-    setSelectedPalates(values);
+    const childValues = new Set<Key>();
 
-    // Get current custom inputs in cuisine that are NOT from palateOptions
-    const allPalateLabels = palateOptions.flatMap((group) =>
-      group.children?.map((child) => child.label.toLowerCase())
-    );
-
-    const currentCuisineParts = cuisine
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s !== '');
-
-    const customInputs = currentCuisineParts.filter(
-      (label) => !allPalateLabels.includes(label.toLowerCase())
-    );
-
-    // Extract new selected labels from palateOptions based on selected keys
-    const selectedLabels = Array.from(values).map((value) => {
-      for (const category of palateOptions) {
-        const found = category.children?.find((child) => child.key === value);
-        if (found) return found.label;
+    if (selectedHeaderLabel) {
+      const matchedGroup = palateOptions.find(
+        (group) => group.label == selectedHeaderLabel
+      );
+  
+      if (matchedGroup && matchedGroup.children) {
+        matchedGroup.children.forEach((child) => {
+          childValues.add(child.key);
+        });
       }
-      return null;
-    }).filter(Boolean) as string[];
+      // setCuisine(`What ${selectedHeaderLabel} like to eat?`);
+      setCuisine(selectedHeaderLabel)
+    } else if (values.size > 0) {
+      const selectedChildKey = Array.from(values)[0];
+      const selectedChild = palateOptions.flatMap(opt => opt.children || []).find(child => child.key === selectedChildKey);
+      if (selectedChild) {
+        // setCuisine(`What ${selectedChild.label} like to eat?`);
+        setCuisine(selectedChild.label)
+      } else {
+        setCuisine('');
+      }
+    } else {
+      setCuisine('');
+    }
 
-    // Merge and dedupe: custom inputs + new selected palate labels
-    const mergedLabels = Array.from(new Set([...customInputs, ...selectedLabels]));
-
-    setCuisine(mergedLabels.join(', '));
-
-    console.log('cuisine:', mergedLabels.join(', '))
-
-    fetchPalatesDebouncedRef.current?.(values);
-  };  
+    setSelectedPalates(values);
+    // if childValues size is 0, the header checkbox is not check
+    fetchPalatesDebouncedRef.current?.(childValues.size == 0 ? values : childValues);
+  };
 
   const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation('')
@@ -207,25 +237,7 @@ const Hero = () => {
     const inputValue = e.target.value;
     setCuisine(inputValue);
 
-    const newSelection = new Set<Key>();
-    const searchTerms = inputValue
-      .split(",")
-      .map(term => term.trim().toLowerCase())
-      .filter(term => term !== "");
-
-    if (searchTerms.length > 0) {
-      palateOptions.forEach((group) => {
-        group.children?.forEach((item) => {
-          const itemLabel = item.label.toLowerCase();
-          if (searchTerms.some(term => itemLabel.includes(term))) {
-            newSelection.add(item.key);
-          }
-        });
-      });
-    }
-
-    setSelectedPalates(newSelection);
-    fetchPalatesDebouncedRef.current?.(newSelection);
+    setSelectedPalates(new Set<Key>());
   };
 
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,14 +267,14 @@ const Hero = () => {
       <div className="hero__container mx-auto">
         <div className="hero__content mx-auto">
           <img
-            src="/images/hero-bg.png"
+            src={HERO_BG}
             width={1980}
             height={538}
             className="absolute inset-0 w-full -z-10 h-[538px] object-cover hidden sm:block"
             alt="Hero background"
           />
           <img
-            src="/images/hero-bg-sp.png"
+            src={HERO_BG_SP}
             width={640}
             height={466}
             className="absolute inset-0 w-full h-[466px] -z-10 object-left-top object-cover sm:hidden"
@@ -290,13 +302,14 @@ const Hero = () => {
               {!isSearchListing ? (
                 <>
                   <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
-                    <label className="text-sm md:text-lg font-medium text-[#31343F]">
-                      My Palate
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
+                      {/* {cuisine.length > 0 ? "" : "What ______ like to eat?"} */}
+                      Which cuisine tempts you today?
                     </label>
                     <div className="relative w-full">
                       <input
                         type="text"
-                        placeholder="Search Palate"
+                        placeholder="Search Cuisine"
                         className="hero__search-input"
                         value={cuisine}
                         onChange={handleCuisineChange}
@@ -306,7 +319,7 @@ const Hero = () => {
                   </div>
                   <div className="hero__search-divider"></div>
                   <div className="hero__search-location !hidden md:!flex flex-col !items-start w-[50%]">
-                    <label className="text-sm md:text-lg font-medium text-[#31343F]">
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
                       Location
                     </label>
                     <div className="relative w-full">
@@ -331,10 +344,11 @@ const Hero = () => {
                     hideDropdownLabel={true}
                     hideDropdownSearch={true}
                     items={palateOptions}
+                    limitValueLength={1}
                     value={selectedPalates}
-                    onChange={handlePalateChange}
+                    onSelectionChangeWithHeader={handlePalateChange}
                     onClose={handleSearchModalClose}
-                    placeholder="Search Palate"
+                    placeholder="Search Cuisine"
                     dropDownClassName="!max-h-[350px]"
                     baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-50"
                     className="!bg-transparent !border-0 !shadow-none !w-full !cursor-default"
@@ -344,6 +358,8 @@ const Hero = () => {
                     isOpen={showLocationModal}
                     options={locationOptions}
                     searchValue={location}
+                    hasNextPage={hasNextPage}
+                    onLoadMore={() => fetchAddressByPalate(selectedPalates, currentPage + 1)}
                     onSelect={(label) => {
                       setLocation(label);
                       setShowLocationModal(false);
@@ -375,6 +391,8 @@ const Hero = () => {
                     isLoading={listingLoading}
                     options={listingOptions}
                     searchValue={listing}
+                    hasNextPage={listingHasNextPage}
+                    onLoadMore={() => fetchListingsName(listing.trim(), listingCurrentPage + 1)}
                     onSelect={(label) => {
                       setListing(label);
                       setShowListingModal(false);
@@ -389,7 +407,7 @@ const Hero = () => {
               <button
                 type="submit"
                 className="hero__search-button h-8 w-8 sm:h-11 sm:w-11 text-center"
-                disabled={!listing ? (!location && !cuisine) ? true : false : false}
+                disabled={!listing && !location && !cuisine && selectedPalates.size === 0}
               >
                 <FiSearch className="hero__search-icon stroke-white" />
               </button>
@@ -401,7 +419,7 @@ const Hero = () => {
               onClick={searchByListingName}
               className="border-b border-[#FCFCFC] font-semibold text-sm sm:text-base text-[#FCFCFC] leading-5"
             >
-              Search by Listing Name
+              {!isSearchListing ? ("Search by Listing Name") : ("Search by Palate")}
             </button>
           </div>
         </div>

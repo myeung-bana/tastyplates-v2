@@ -1,3 +1,5 @@
+import { FACEBOOK, INSTAGRAM, TWITTER } from "@/constants/images";
+import { HELP, HOME, RESTAURANTS, PRIVACY_POLICY, TERMS_OF_SERVICE } from "@/constants/pages";
 import Image from "next/image";
 
 interface Props {
@@ -6,20 +8,20 @@ interface Props {
 }
 const footerLinks = {
   company: [
-    { name: "Home", href: "/" },
-    { name: "Restaurant", href: "/restaurants" },
-    { name: "Add a Listing", href: "/" },
-    { name: "Write a Review", href: "/" },
+    { name: "Home", href: HOME },
+    { name: "Restaurant", href: RESTAURANTS },
+    { name: "Add a Listing", href: HOME },
+    { name: "Write a Review", href: HOME },
   ],
   support: [
-    { name: "Help Center", href: "/help" },
+    { name: "Help Center", href: HELP },
     // { name: "Safety Information", href: "/safety" },
     // { name: "Cancellation Options", href: "/cancellation" },
     // { name: "COVID-19 Response", href: "/covid" },
   ],
   legal: [
-    { name: "Privacy Policy", href: "#" },
-    { name: "Terms of Service", href: "#" },
+    { name: "Privacy Policy", href: PRIVACY_POLICY },
+    { name: "Terms of Service", href: TERMS_OF_SERVICE },
     { name: "Cookie Settings", href: "#" },
     // { name: "Sitemap", href: "/sitemap" },
   ],
@@ -31,7 +33,7 @@ export default function Footer({
 }: Props) {
   return (
     <footer className="bg-[#F1F1F1] text-[#31343F]">
-      <div className={`${isShowLinks ? 'pt-12' : ''} w-[92%] mx-auto`}>
+      <div className={`${isShowLinks ? 'pt-12' : ''} max-w-[82rem] px-4 xl:px-0 mx-auto`}>
         {/* Main footer content */}
         {isShowLinks && (
           <div className="flex flex-col sm:flex-row flex-wrap justify-start items-start gap-6 sm:gap-8 md:gap-[122px]">
@@ -48,7 +50,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Facebook</span>
                   <Image
-                    src='/facebook.svg'
+                    src={FACEBOOK}
                     className="h-6 w-6"
                     width={24}
                     height={24}
@@ -58,7 +60,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Instagram</span>
                   <Image
-                    src='/instagram.svg'
+                    src={INSTAGRAM}
                     className="h-6 w-6"
                     width={24}
                     height={24}
@@ -68,7 +70,7 @@ export default function Footer({
                 <a href="#" className="hover:text-[#31343F]">
                   <span className="sr-only">Twitter</span>
                   <Image
-                    src='/x.svg'
+                    src={TWITTER}
                     className="h-6 w-6"
                     width={24}
                     height={24}

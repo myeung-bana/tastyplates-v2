@@ -15,6 +15,7 @@ export const currentPasswordError = "Current password is incorrect";
 export const passwordMinLength = "New password must be at least 5 characters.";
 export const confirmPasswordRequired = "Confirm password is required.";
 export const passwordsNotMatch = "Passwords do not match.";
+export const passwordRequired = "Password is required."
 export const emailRequired = "Email is required.";
 export const emailOccurredError = "An error occurred while checking the email.";
 export const invalidEmailFormat = "Invalid email format.";
@@ -25,13 +26,42 @@ export const logOutSuccessfull = "Logged out successfully";
 export const checkEmailTitle = "Error checking email:";
 export const unfinishedSaved = "Unfinished registration saved";
 export const requiredDescription = "Description is required.";
-export const maximumImageLimit = (max: number) => `You can Upload a maximum of ${max} images.`
-export const savedAsDraft = "Review saved as draft!"
-export const deleteDraftError = "Failed to delete draft."
-export const deleteDraftSuccess = "Draft deleted successfully!"
-export const commentedSuccess = "Replied successfully!"
-export const commentLikedSuccess = "Liked comment successfully!"
-export const commentUnlikedSuccess = "Un-Liked comment successfully!"
+export const maximumListingTitle = (max: number) => `Listing title must be ${max} characters or less.`;
+export const maximumReviewTitle = (max: number) => `Review title must be ${max} characters or less.`;
+export const maximumReviewDescription = (max: number) => `Review description must be ${max} characters or less.`;
+export const maximumCommentReplies = (max: number) => `Comment must be ${max} characters or less.`;
+export const requiredRating = "Rating is required.";
+export const minimumImageLimit = (min: number) => `You must upload at least ${min} image.`;
+export const maximumImageLimit = (max: number) => `You can upload a maximum of ${max} images.`;
+export const savedAsDraft = "Review saved as draft!";
+export const deleteDraftError = "Failed to delete draft.";
+export const deleteDraftSuccess = "Draft deleted successfully!";
+export const commentedSuccess = "Replied successfully!";
+export const commentLikedSuccess = "Liked comment successfully!";
+export const commentUnlikedSuccess = "Un-Liked comment successfully!";
 export const googleAuthenticationFailed = "Google authentication failed";
-export const sessionExpired = "Session expired — signing out"
-export const Inactive = "Inactivity detected — signing out"
+export const sessionExpired = "Session expired — signing out";
+export const Inactive = "Inactivity detected — signing out";
+export const authenticationFailed = "Authentication failed`";
+export const profileImageTypeError = "Profile image must be a valid image type";
+export const profileUpdateFailed = "Failed to update profile. Please try again.";
+export const updateLikeFailed = "Failed to update like. Please try again.";
+export const userFollowedFailed = "Failed to follow user. Please try again."
+export const userUnfollowedFailed = "Failed to unfollow user. Please try again.";
+export const authorIdMissing = "Author user ID is missing.";
+export const signInReview = "You must be signed in to like a review.";
+export const saveSettingsFailed = "Failed to save settings.";
+export const fetchLocationFailed = "Failed to fetch location data";
+export const geoLocationNotSupported = "Geolocation is not supported by your browser";
+export const errorOccurred = "An Error occurred, Please try again later.";
+export const commentDuplicateError = "Duplicate comment detected, You've already said that!";
+export const commentFloodError = "You are posting comments too quickly. Slow down.";
+export const commentDuplicateWeekError = "You can only post one review per week for this restaurant.";
+export const savedToWishlistSuccess = "You have saved this restaurant to your wishlist!";
+export const removedFromWishlistSuccess = "You have removed this restaurant from your wishlist!";
+export const checkInRestaurantSuccess = "You have checked in to this restaurant!";
+export const uncheckInRestaurantSuccess = "You have removed this restaurant from your checked in!";
+export const favoriteStatusError = "Failed to update favorite status. Please try again.";
+export const checkInStatusError = "Failed to update check-in status. Please try again.";
+export const welcomeProfile = "Welcome to your profile!";
+export const resetEmailFailed = "Failed to send reset email";

@@ -1,13 +1,26 @@
+import client from "@/app/graphql/client";
+import { GET_USER_BY_ID } from "@/app/graphql/User/userQueries";
+import { TASTYPLATES_LOGO_COLOUR } from "@/constants/images";
+import { HttpResponse } from "@/interfaces/httpResponse";
+import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, followUserResponse, IJWTResponse, IRegisterData, isFollowingUserResponse, IUserUpdate, IUserUpdateResponse } from "@/interfaces/user/user";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 
 export class UserRepository {
-    private static async request(endpoint: string, options: RequestInit, jsonResponse = false): Promise<any> {
+    private static async request(
+        endpoint: string,
+        options: RequestInit,
+        jsonResponse = false,
+        jsonContentType = true
+    ): Promise<any> {
+        const headers = {
+            ...(jsonContentType && { 'Content-Type': 'application/json' }),
+            ...options.headers,
+        };
+
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
+            headers,
         });
 
         if (jsonResponse) {
@@ -17,14 +30,14 @@ export class UserRepository {
         return response;
     }
 
-    static async registerUser<T>(data: any): Promise<T> {
+    static async registerUser<T>(data: Partial<IRegisterData>): Promise<T> {
         return this.request('/wp-json/wp/v2/api/users', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     }
 
-    static async login<T>(credentials: { email: string; password: string }): Promise<T> {
+    static async login(credentials: { email: string; password: string }): Promise<IJWTResponse> {
         return this.request('/wp-json/jwt-auth/v1/token', {
             method: 'POST',
             body: JSON.stringify({
@@ -34,7 +47,7 @@ export class UserRepository {
         }, true);
     }
 
-    static async checkGoogleUser<T>(email: string): Promise<T> {
+    static async checkGoogleUser(email: string): Promise<CheckGoogleUserResponse> {
         return this.request('/wp-json/wp/v2/api/users/google-check', {
             method: 'POST',
             body: JSON.stringify({ email }),
@@ -50,14 +63,14 @@ export class UserRepository {
         }, true);
     }
 
-    static async checkUsernameExists<T>(username: string): Promise<T> {
+    static async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
         return this.request('/wp-json/wp/v2/api/users/check-username', {
             method: 'POST',
             body: JSON.stringify({ username })
         }, true);
     }
 
-    static async getCurrentUser<T>(token?: string): Promise<T> {
+    static async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         return this.request(
             '/wp-json/wp/v2/api/users/current',
             {
@@ -70,19 +83,23 @@ export class UserRepository {
         );
     }
 
+    static async getUserById(
+        id: number | null,
+        accessToken?: string,
+    ) {
+        const { data } = await client.query({
+            query: GET_USER_BY_ID,
+            variables: { id },
+            fetchPolicy: "no-cache",
+        });
+
+        return data.user;
+    }
+
     static async updateUserFields<T>(
-        data: {
-            username?: string;
-            email?: string;
-            birthdate?: string;
-            language?: string;
-            password?: string;
-            palates?: string;
-            profile_image?: string;
-            about_me?: string;
-        },
+        data: Partial<IUserUpdate>,
         token: string
-    ): Promise<T> {
+    ): Promise<IUserUpdateResponse> {
         return this.request(
             `/wp-json/wp/v2/api/users/update-fields`,
             {
@@ -146,7 +163,7 @@ export class UserRepository {
         );
     }
 
-    static async followUser<T>(userId: number, token?: string): Promise<T> {
+    static async followUser(userId: number, token?: string): Promise<followUserResponse> {
         return this.request(
             `/wp-json/v1/follow`,
             {
@@ -160,7 +177,7 @@ export class UserRepository {
         );
     }
 
-    static async unfollowUser<T>(userId: number, token?: string): Promise<T> {
+    static async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
         return this.request(
             `/wp-json/v1/unfollow`,
             {
@@ -169,6 +186,56 @@ export class UserRepository {
                     Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({ user_id: userId }),
+            },
+            true
+        );
+    }
+
+    static async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
+        return this.request(
+            `/wp-json/v1/is-following`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ user_id: userId }),
+            },
+            true
+        );
+    }
+
+    static async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
+        return this.request(
+            `/wp-json/wp/v2/api/users/forgot-password`,
+            {
+                method: "POST",
+                body: formData,
+            },
+            true,
+            false
+        );
+    }
+
+    static async verifyResetToken(token?: string): Promise<HttpResponse> {
+        return this.request(
+            `/wp-json/wp/v2/api/users/verify-reset-token?token=${token}`,
+            {
+                method: "GET",
+            },
+            true
+        );
+    }
+
+    static async resetPassword(token: string, password: string): Promise<HttpResponse> {
+        return this.request(
+            '/wp-json/wp/v2/api/users/reset-password',
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    token,
+                    password,
+                }),
             },
             true
         );

@@ -1,16 +1,17 @@
 // services/restaurant/restaurantService.ts
+import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepository } from "@/repositories/restaurant/restaurantRepository";
 
 export const RestaurantService = {
-    async fetchRestaurantDetails(slug: string) {
-        return await RestaurantRepository.getRestaurantBySlug(slug);
+    async fetchRestaurantDetails(slug: string, palates: string | null = null) {
+        return await RestaurantRepository.getRestaurantBySlug(slug, palates ?? '');
     },
 
     async fetchAllRestaurants(
         searchTerm: string,
         first = 8,
         after: string | null = null,
-        cuisineSlug: string | null = null,
+        cuisineSlug: string[] | null = null,
         palateSlugs: string[] = [],
         priceRange?: string | null,
         status: string | null = null,
@@ -19,16 +20,17 @@ export const RestaurantService = {
         sortOption?: string | null,
         rating: number | null = null,
         statuses: string[] | null = null,
-        address: string | null = null
+        address: string | null = null,
+        ethnicSearch: string | null = null
     ) {
         try {
             const taxArray = [];
 
-            if (cuisineSlug && cuisineSlug !== 'all') {
+            if (cuisineSlug && cuisineSlug.length > 0 && cuisineSlug[0] !== 'all') {
                 taxArray.push({
                     taxonomy: 'LISTINGCATEGORY',
                     field: 'SLUG',
-                    terms: [cuisineSlug],
+                    terms: cuisineSlug,
                     operator: 'IN',
                 });
             }
@@ -59,7 +61,8 @@ export const RestaurantService = {
                 sortOption,
                 rating,
                 statuses,
-                address
+                address,
+                ethnicSearch
             );
         } catch (error) {
             console.error('Error fetching list:', error);
@@ -76,14 +79,15 @@ export const RestaurantService = {
         }
     },
 
-    async createRestaurantListing(formData: FormData, token: string): Promise<any> {
+    async createRestaurantListingAndReview(payload: any, token: string): Promise<any> {
         try {
-            return await RestaurantRepository.createListing(formData, token);
+            return await RestaurantRepository.createListingAndReview(payload, token);
         } catch (error) {
-            console.error('Error creating restaurant listing:', error);
-            throw new Error('Failed to create restaurant listing');
+            console.error("Error creating listing and review:", error);
+            throw new Error("Failed to create listing and review");
         }
     },
+
 
     async fetchPendingRestaurants(token: string): Promise<any> {
         try {
@@ -91,6 +95,43 @@ export const RestaurantService = {
         } catch (error) {
             console.error('Error fetching pending restaurants:', error);
             throw new Error('Failed to fetch pending restaurants');
+        }
+    },
+
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.createFavoriteListing(data, accessToken, jsonResponse);
+        }
+        catch (error) {
+            console.error('Error creating favorite listing:', error);
+            throw new Error('Failed to create favorite listing');
+        }
+    },
+
+    async fetchFavoritingListing(userId: number, accessToken?: string) {
+        try {
+            return await RestaurantRepository.getFavoriteListing(userId, accessToken);
+        } catch (error) {
+            console.error('Error fetching favoriting list:', error);
+            throw new Error('Failed to fetch favoriting list');
+        }
+    },
+
+    async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.getCheckInRestaurant(userId, accessToken, jsonResponse);
+        } catch (error) {
+            console.error('Error fetching check-in restaurant:', error);
+            throw new Error('Failed to fetch check-in restaurant');
+        }
+    },
+
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+        try {
+            return await RestaurantRepository.createCheckIn(data, accessToken, jsonResponse);
+        } catch (error) {
+            console.error('Error creating check-in:', error);
+            throw new Error('Failed to create check-in');
         }
     },
 
@@ -141,7 +182,9 @@ export const RestaurantService = {
 
     async fetchAddressByPalate(
         searchTerm: string,
-        palateSlugs: string[]
+        palateSlugs: string[],
+        first = 32,
+        after: string | null = null
     ) {
         try {
             const taxQuery = palateSlugs.length > 0 ? {
@@ -156,7 +199,7 @@ export const RestaurantService = {
                 ],
             } : {};
 
-            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery);
+            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery, first, after);
         } catch (error) {
             console.error('Error fetching by palate:', error);
             throw new Error('Failed to fetch restaurants by palate');
