@@ -61,3 +61,8 @@ export interface ReviewModalProps {
   likesCount?: number;
   onLikeChange?: (userLiked: boolean, likesCount: number) => void;
 }
+
+export interface CreateReviewResponse {
+  status: number;
+  data: any;
+}

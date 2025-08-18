@@ -6,7 +6,7 @@ import {
   ReviewedDataProps,
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { BsFillStarFill } from "react-icons/bs";
 import { GiRoundStar } from "react-icons/gi";
 import { palateFlagMap } from "@/utils/palateFlags";
@@ -159,21 +159,26 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {UserPalateNames?.map((tag, index) => (
-                <span
-                  key={index}
-                  className="review-block__palate-tag !text-[10px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
-                >
-                  {palateFlagMap[tag.toLowerCase()] && (
-                    <Image
-                      src={palateFlagMap[tag.toLowerCase()]}
-                      alt={`${tag} flag`}
-                      width={18}
-                      height={10}
-                      className="w-[18px] h-[10px] rounded object-cover"
-                    />
-                  )}
-                  {tag}
-                </span>
+                <Fragment key={tag}>
+                  <span
+                    key={index}
+                    className="review-block__palate-tag"
+                  >
+                    {palateFlagMap[tag.toLowerCase()] && (
+                      <Image
+                        src={palateFlagMap[tag.toLowerCase()]}
+                        alt={`${tag} flag`}
+                        width={18}
+                        height={10}
+                        className="w-[18px] h-[10px] rounded object-cover"
+                      />
+                    )}
+                    {tag}
+                  </span>
+                  {index == 0 && index != UserPalateNames.length -1 && 
+                    <span className="text-[8px]">·</span>
+                  }
+                </Fragment>
               ))}
             </div>
           </div>

@@ -1,8 +1,10 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
-import { getTermsOfService } from "@/services/TermsOfService/termsofserviceService";
 import Navbar from "@/components/Navbar";
+import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
+
+const termsOfServiceService = new TermsOfServiceService();
 
 export default function TermsOfService() {
   const [terms, setTerms] = useState<{ title: string; content: string } | null>(null);
@@ -12,7 +14,7 @@ export default function TermsOfService() {
   useEffect(() => {
     async function fetchTerms() {
       try {
-        const data = await getTermsOfService();
+        const data = await termsOfServiceService.getTermsOfService();
         setTerms({ title: data.title, content: data.content });
       } catch (err: any) {
         setError(err.message || "Unknown error");

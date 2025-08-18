@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import "@/styles/pages/_auth.scss";
+import { RESET_EMAIL_KEY } from "@/constants/session";
 
 interface ForgotPassowordModalProps {
     isOpen: boolean;
@@ -16,10 +17,10 @@ const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
     const [email, setEmail] = useState("xxx@gmail.com");
 
     useEffect(() => {
-        const savedEmail = localStorage.getItem('reset-email');
+        const savedEmail = localStorage.getItem(RESET_EMAIL_KEY);
         if (savedEmail) {
             setEmail(savedEmail);
-            localStorage.removeItem('reset-email');
+            localStorage.removeItem(RESET_EMAIL_KEY);
         }
     }, []);
 
