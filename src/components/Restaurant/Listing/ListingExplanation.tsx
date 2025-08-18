@@ -6,7 +6,7 @@ import Link from "next/link"
 const ListingExplanation = () => 
 <div className="font-inter mt-16">
           <div className="flex flex-col justify-center items-center bg-[url('/images/listing-backdrop-sp.png')] md:bg-[url('/images/listing-backdrop.png')] bg-cover bg-center bg-no-repeat">
-              <div className="flex flex-col gap-6 md:gap-8 justify-center items-center h-fit md:h-[663px] w-full max-w-[82rem] py-8 px-3 md:p-0 md:pl-16">
+              <div className="flex flex-col gap-6 md:gap-8 justify-center items-center md:items-start  h-fit md:h-[663px] w-full max-w-[82rem] py-8 px-3 md:p-0 md:pl-16">
                 <h1 className="text-xl md:text-[32px] text-center md:leading-9 text-[#31343F] md:text-left font-medium">
                   Add Listing
                 </h1>

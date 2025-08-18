@@ -162,7 +162,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                 .filter((s: any) => s.name)
               : [];
             return (
-              <div key={review.id || review.databaseId} className="mb-8 border-b pb-6 last:border-b-0 last:pb-0">
+              <div key={review.id || review.databaseId} className="mb-8 pb-0 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-3 mb-2">
                   {(review.author?.node?.id || review.userId) ? (
                     session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
@@ -254,7 +254,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-[#31343F] mt-2">
+                <div className="flex items-center text-sm text-[#31343F] mt-2">
                   {Array.from({ length: 5 }, (_, i) => {
                     const full = i + 1 <= reviewStars;
                     const half = !full && i + 0.5 <= reviewStars;

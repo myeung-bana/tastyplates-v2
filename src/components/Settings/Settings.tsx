@@ -574,7 +574,7 @@ const Settings = (props: any) => {
                 </>
               )}
             </div>
-            <hr className="border border-[#CACACA] w-full mt-6 sm:mt-8" />
+            <hr className="border-t border-[#CACACA] w-full mt-6 sm:mt-8" />
             
             <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium text-center mt-6 sm:mt-8">
               Security

@@ -213,6 +213,7 @@ const OnboardingOnePage = () => {
   };
 
   const handleGenderChange = (value: string) => {
+    console.log('gender reveal', value)
     setGender(value);
     // Reset custom gender fields when switching genders
     if (value !== "custom") {
@@ -235,7 +236,7 @@ const OnboardingOnePage = () => {
       value: name,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
       disabled: isLoading,
-      className: "!rounded-[10px] !h-[48px]"
+      className: "!rounded-[10px] !h-10 md:!h-[48px]"
     },
     {
       label: "Birthdate",
@@ -244,20 +245,17 @@ const OnboardingOnePage = () => {
       value: birthdate,
       onChange: (val: string) => setBirthdate(val),
       disabled: isLoading,
-      className: "relative !h-[48px]",
+      className: "relative",
     },
     {
       label: "Gender",
       type: "select",
       placeholder: "Select your gender",
       defaultValue: gender || "0",
-      className: "!min-h-[48px] border border-gray-200 rounded-[10px] text-sm",
+      className: `auth__input auth__select !h-10 md:!h-[48px] rounded-[10px] focus:!text-[#31343f] ${gender ? '!text-[#31343f]' : '!text-[#797979]'}`,
       value: gender,
       onChange: handleGenderChange,
-      items: genderOptions.map(option => ({
-        ...option,
-        content: <div>{option.content}</div>
-      })),
+      items: genderOptions,
       disabled: isLoading,
     },
   ];
@@ -270,14 +268,14 @@ const OnboardingOnePage = () => {
       value: customGender,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
       disabled: isLoading,
-      className: "min-h-[48px] border border-gray-200 rounded-[10px]",
+      className: "auth__input h-10 md:h-[48px] rounded-[10px]",
     },
     {
       label: "Pronoun",
       type: "select",
       placeholder: "Select your pronoun",
       defaultValue: pronoun || "0",
-      className: "min-h-[48px] text-sm border border-gray-200 rounded-[10px]",
+      className: `auth__input auth__select h-10 md:h-[48px] rounded-[10px] focus:!text-[#31343f] ${pronoun ? '!text-[#31343f]' : '!text-[#797979]'}`,
       value: pronoun,
       onChange: (value: string) => setPronoun(value),
       items: pronounOptions,
@@ -298,7 +296,7 @@ const OnboardingOnePage = () => {
       items: palateOptions,
       disabled: isLoading,
       limitValueLength: 2,
-      className: "!min-h-[48px] !rounded-[10px] text-sm",
+      className: "!h-10 md:!h-[48px] !rounded-[10px] auth__input",
     },
   ];
 
@@ -308,7 +306,7 @@ const OnboardingOnePage = () => {
         <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
         <div className="auth__card py-4 !rounded-[24px] border border-[#CACACA] w-full sm:!w-[672px] bg-white">
           <p className="auth__subtitle text-sm sm:text-base">Step 1 of 2</p>
-          <h1 className="auth__title text-lg sm:!text-xl font-semibold">
+          <h1 className="auth__title">
             Basic Information
           </h1>
           <form
@@ -324,7 +322,7 @@ const OnboardingOnePage = () => {
 
               return (
                 <div key={index} className={groupClassName}>
-                  <label htmlFor={field.label?.toLowerCase()} className="font-bold text-sm sm:text-base">
+                  <label htmlFor={field.label?.toLowerCase()} className="font-semibold text-sm sm:text-base">
                     {field.label}
                   </label>
                   <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
@@ -332,13 +330,20 @@ const OnboardingOnePage = () => {
                         <CustomDatePicker
                           id={field.label?.toLowerCase()}
                           className={`!w-full text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
+                          buttonClassName="!h-10 md:!h-[48px] text-[#31343f] text-xs md:text-base border border-solid !border-[#797979] hover:border-[#31343f] hover:bg-[#F1F1F1] placeholder:text-[#797979]"
                           value={field.value}
                           onChange={field.onChange}
                           formatValue="MM/dd/yyyy"
                           disabled={field.disabled}
                         />
                     ) : field.type === "select" ? (
-                      <CustomSelect {...field} />
+                      // <CustomSelect {...field} />
+                      <select className={field.className} value={field.value} onChange={(e: any) => field.onChange(e.target.value)} disabled={field.disabled}>
+                        <option value="">{field.placeholder}</option>
+                        {field.items.map((option: any) =>
+                          <option key={option.key} value={option.value}>{option.content}</option>
+                        )}
+                      </select>
                     ) : field.type === "multiple-select" ? (
                       <CustomMultipleSelect {...field} />
                     ) : (

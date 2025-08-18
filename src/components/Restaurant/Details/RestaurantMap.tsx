@@ -58,7 +58,7 @@ const RestaurantMap = ({ lat, lng, small = false }: Props) => {
                 <GoogleMap
                     mapContainerStyle={{
                         ...mapContainerStyle,
-                        height: small ? "200px" : "400px",
+                        height: small ? "203px" : "400px",
                     }}
                     zoom={15}
                     center={center}
@@ -69,7 +69,7 @@ const RestaurantMap = ({ lat, lng, small = false }: Props) => {
             </div>
 
             {/* Fullscreen Modal */}
-            <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-50">
+            <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-[1010]">
                 <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
                     <Dialog.Panel className="bg-white rounded-xl shadow-xl overflow-hidden w-full max-w-4xl">
@@ -98,7 +98,7 @@ const RestaurantMap = ({ lat, lng, small = false }: Props) => {
                                 href={GOOGLE_MAPS(lat, lng)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-block bg-[#E36B00] !rounded-[1vw] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-lg"
+                                className="inline-block bg-[#E36B00] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-xl"
                             >
                                 Get Directions
                             </a>

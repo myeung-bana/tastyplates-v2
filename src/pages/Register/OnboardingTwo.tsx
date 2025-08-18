@@ -150,7 +150,7 @@ const OnboardingTwoPage = () => {
   }, [router]);
 
   return (
-    <div className="px-2 pt-8 sm:px-1">
+    <div className="px-3 pt-8 sm:px-1 w-full">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
         <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
         <div className="auth__card py-4 !rounded-[24px] border border-[#CACACA] w-full sm:!w-[672px] bg-white">

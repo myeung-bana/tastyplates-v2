@@ -127,11 +127,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
           <Spinner size={48} className="text-[#E36B00]" />
         </div>
       )}
-      <div className="auth__container">
-        <div className="auth__card !px-0">
-          <h1 className="auth__title">Login</h1>
-          <div className="border-y border-[#CACACA]">
-            <form className="auth__form px-[2rem] !gap-4 !pb-6" onSubmit={handleSubmit}>
+            <div className="auth__container overflow-y-auto md:overflow-visible">
+        <h1 className="auth__title !text-sm md:!text-xl md:!leading-[30px] !font-semibold py-3.5 md:py-4 !mb-0">Login</h1>
+        <hr className="border-t border-[#CACACA]" />
+        <div className="auth__card !px-4 md:!px-8 !pt-0 !pb-4 md:!pb-6 !rounded-none">
+          <form className="auth__form !gap-3 md:!gap-4" onSubmit={handleSubmit}>
               <div className="auth__form-group mt-6">
                 <label htmlFor="email" className="auth__label">
                   Email Address
@@ -208,7 +208,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
               </button>
               <p className="text-sm cursor-pointer text-center underline font-semibold hover:opacity-90" onClick={() => { onOpenForgotPassword?.(); }}>Forgot Password?</p>
             </form>
-          </div>
+          {/* </div> */}
           {message && (
             <div
               className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
@@ -218,19 +218,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
               dangerouslySetInnerHTML={{ __html: message }}
             />
           )}
-          <p className="auth__footer !mt-3.5">
-            New to TastyPlates?{" "}
-            <a
-              className="auth__link !text-[#494D5D] cursor-pointer !font-bold"
-              onClick={e => {
-                e.preventDefault();
-                onOpenSignup && onOpenSignup();
-              }}
-            >
-              Sign Up
-            </a>
-          </p>
         </div>
+        <hr className="border-t border-[#CACACA]" />
+        <p className="auth__footer">
+          New to TastyPlates?{" "}
+          <a
+            className="auth__link"
+            onClick={e => {
+              e.preventDefault();
+              onOpenSignup && onOpenSignup();
+            }}
+          >
+            Sign Up
+          </a>
+        </p>
       </div>
     </div>
   );

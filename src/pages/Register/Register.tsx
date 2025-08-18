@@ -211,151 +211,152 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
             </div>
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
-            <div className="auth__card !px-0 !py-4 !rounded-3xl">
-              <h1 className="auth__title !text-xl !font-semibold">Sign up</h1>
-              <div className=" border-y border-[#CACACA]">
-                <form className="auth__form px-[2rem] !gap-4 overflow-y-auto !pb-6" onSubmit={handleSubmit}>
-                  <div className="auth__form-group mt-6">
-                    <label htmlFor="email" className="auth__label">
-                      Email
-                    </label>
-                    <div className="auth__input-group">
-                      <input
-                        type="text"
-                        id="email"
-                        className="auth__input"
-                        placeholder="Email"
-                        autoComplete="off"
-                        value={email}
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          setEmail(value)
-                          setEmailError(!validEmail(value) ? validateEmail(value) : "")
-                        }}
-                        readOnly // prevent autofill until focus
-                      />
-                    </div>
-                    {emailError && (
-                      <div className="text-red-600 text-xs">{emailError}</div>
+            <h1 className="auth__title !text-sm md:!text-xl md:!leading-[30px] !font-semibold py-3.5 md:py-4 !mb-0">Sign up</h1>
+            <hr className="border-t border-[#CACACA]" />
+            <div className="auth__card !px-4 md:!px-8 !pt-0 !pb-4 md:!pb-6 !rounded-none">
+              <form className="auth__form !gap-3 md:!gap-4 overflow-y-auto" onSubmit={handleSubmit}>
+                <div className="auth__form-group mt-6">
+                  <label htmlFor="email" className="auth__label">
+                    Email
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type="text"
+                      id="email"
+                      className="auth__input"
+                      placeholder="Email"
+                      autoComplete="off"
+                      value={email}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setEmail(value)
+                        setEmailError(!validEmail(value) ? validateEmail(value) : "")
+                      }}
+                      readOnly // prevent autofill until focus
+                    />
+                  </div>
+                  {emailError && (
+                    <div className="text-red-600 text-xs">{emailError}</div>
+                  )}
+                </div>
+                <div className="auth__form-group">
+                  <label htmlFor="password" className="auth__label">
+                    Password
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      className="auth__input"
+                      placeholder="Password"
+                      autoComplete="off"
+                      value={password}
+                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setPassword(value)
+                        if (value == confirmPassword) { setConfirmPasswordError("") }
+                        if (value.length >= minimumPassword) { setPasswordError("") }
+                        if (value.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
+                      }}
+                      readOnly // prevent autofill until focus
+                    />
+                    {showPassword ? (
+                      <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
+                    ) : (
+                      <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
                     )}
                   </div>
-                  <div className="auth__form-group">
-                    <label htmlFor="password" className="auth__label">
-                      Password
-                    </label>
-                    <div className="auth__input-group">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        id="password"
-                        className="auth__input"
-                        placeholder="Password"
-                        autoComplete="off"
-                        value={password}
-                        onFocus={(e) => e.target.removeAttribute('readonly')}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          setPassword(value)
-                          if (value == confirmPassword) { setConfirmPasswordError("") }
-                          if (value.length >= minimumPassword) { setPasswordError("") }
-                          if (value.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
-                        }}
-                        readOnly // prevent autofill until focus
-                      />
-                      {showPassword ? (
-                        <FiEye onClick={toggleShowPassword} className="auth__input-icon" />
-                      ) : (
-                        <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon" />
-                      )}
-                    </div>
-                    {passwordError && (
-                      <div className="text-red-600 text-xs">{passwordError}</div>
-                    )}
-                  </div>
+                  {passwordError && (
+                    <div className="text-red-600 text-xs">{passwordError}</div>
+                  )}
+                </div>
 
-                  <div className="auth__form-group">
-                    <label htmlFor="confirmPassword" className="auth__label">
-                      Confirm Password
-                    </label>
-                    <div className="auth__input-group">
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        id="confirmPassword"
-                        className="auth__input"
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          setConfirmPassword(value)
-                          if (password == value) { setConfirmPasswordError("") }
-                          if (password != value) { setConfirmPasswordError(passwordsNotMatch) }
-                        }}
-                      />
-                      {showConfirmPassword ? (
-                        <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
-                      ) : (
-                        <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
-                      )}
-                    </div>
-                    {confirmPasswordError && (
-                      <div className="text-red-600 text-xs">{confirmPasswordError}</div>
+                <div className="auth__form-group">
+                  <label htmlFor="confirmPassword" className="auth__label">
+                    Confirm Password
+                  </label>
+                  <div className="auth__input-group">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      id="confirmPassword"
+                      className="auth__input"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setConfirmPassword(value)
+                        if (password == value) { setConfirmPasswordError("") }
+                        if (password != value) { setConfirmPasswordError(passwordsNotMatch) }
+                      }}
+                    />
+                    {showConfirmPassword ? (
+                      <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
+                    ) : (
+                      <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
                     )}
                   </div>
-                  <div className="text-sm font-normal w-full flex flex-wrap gap-x-1 gap-y-1 text-center mb-2">
-                    <span>By continuing, you agree to TastyPlates&apos;s</span>
-                    <a
-                      href={TERMS_OF_SERVICE}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
-                    >
-                      Terms of Service
-                    </a>
-                    <span>and</span>
-                    <a
-                      href={PRIVACY_POLICY}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
-                    >
-                      Privacy Policy
-                    </a>
-                  </div>
-
-                  <button
-                    disabled={isLoading}
-                    type="submit"
-                    className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+                  {confirmPasswordError && (
+                    <div className="text-red-600 text-xs">{confirmPasswordError}</div>
+                  )}
+                </div>
+                <div className="text-sm font-normal w-full flex flex-wrap gap-x-1 gap-y-1 text-center mb-2">
+                  <span>By continuing, you agree to TastyPlates&apos;s</span>
+                  <a
+                    href={TERMS_OF_SERVICE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
                   >
-                    Continue
-                  </button>
-                  <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
-                    <hr className="w-full border-t border-[#494D5D]" />
-                    or
-                    <hr className="w-full border-t border-[#494D5D]" />
-                  </div>
-
-                  <button
-                    disabled={isLoading}
-                    type="button"
-                    onClick={signUpWithGoogle}
-                    className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:!bg-gray-50 hover:!shadow-md hover:!border-gray-400 active:!bg-gray-100"
+                    Terms of Service
+                  </a>
+                  <span>and</span>
+                  <a
+                    href={PRIVACY_POLICY}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline text-[#494D5D] hover:text-[#31343F]"
                   >
-                    <FcGoogle className="h-5 w-5 object-contain mr-2" />
-                    <span>Continue with Google</span>
-                  </button>
-                </form>
-              </div>
+                    Privacy Policy
+                  </a>
+                </div>
+
+                <button
+                  disabled={isLoading}
+                  type="submit"
+                  className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+                >
+                  Continue
+                </button>
+                <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2">
+                  <hr className="w-full border-t border-[#494D5D]" />
+                  or
+                  <hr className="w-full border-t border-[#494D5D]" />
+                </div>
+
+                <button
+                  disabled={isLoading}
+                  type="button"
+                  onClick={signUpWithGoogle}
+                  className="!bg-transparent text-center py-3 !mt-0 !border !border-[#494D5D] !rounded-xl !text-black flex items-center justify-center transition-all duration-200 hover:!bg-gray-50 hover:!shadow-md hover:!border-gray-400 active:!bg-gray-100"
+                >
+                  <FcGoogle className="h-5 w-5 object-contain mr-2" />
+                  <span>Continue with Google</span>
+                </button>
+              </form>
               {error && (
                 <div
                   className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-medium bg-red-100 text-red-700`}
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
-              <p className="auth__footer !mt-3.5">
+            </div>
+            <hr className="border-t border-[#CACACA]" />
+            <p className="auth__footer">
                 Already have an account?{" "}
                 <a
-                  className="auth__link !text-[#494D5D] cursor-pointer !font-bold"
+                  className="auth__link"
                   onClick={e => {
                     e.preventDefault();
                     onOpenSignin && onOpenSignin();
@@ -364,7 +365,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   Log in
                 </a>
               </p>
-            </div>
           </div>
         </>
       )}

@@ -258,11 +258,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     return (
       <div
-        className={`absolute !right-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
+        className={`absolute !right-3 md:!right-6 z-10 top-1/2 size-8 md:h-[44px!important] md:w-[44px!important] transform bg-white rounded-full`}
         onClick={onClick}
         style={{ display: display }}
       >
-        <RxCaretRight className="h-11 w-11 stroke-black" />
+        <RxCaretRight className="size-8 md:h-11 md:w-11 stroke-[#31343F]" />
       </div>
     );
   };
@@ -273,11 +273,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     return (
       <div
-        className={`absolute !left-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
+        className={`absolute !left-3 md:!left-6 z-10 top-1/2 size-8 md:h-[44px!important] md:w-[44px!important] transform bg-white rounded-full`}
         onClick={onClick}
         style={{ display: display }}
       >
-        <RxCaretLeft className="h-11 w-11 stroke-black" />
+        <RxCaretLeft className="size-8 md:h-11 md:w-11 stroke-[#31343F]" />
       </div>
     );
   };
@@ -563,7 +563,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {UserPalateNames?.map((tag: any, index: number) => (
                         <span
                           key={index}
-                          className="review-block__palate-tag !text-[8px] text-[#31343f] px-2 py-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                          className="review-block__palate-tag"
                         >
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
@@ -615,7 +615,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   }}
                 />
               </div>
-              <div className="review-card__image-container bg-black overflow-hidden hidden md:block">
+              <div className="review-card__image-container relative bg-black overflow-hidden hidden md:block">
+                <span className="absolute top-4 right-4 md:top-5 md:right-5 z-10 bg-[#F1F1F1] px-3 py-2 rounded-[50px] text-sm leading-[17px] font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
                 <Slider
                   ref={sliderRef}
                   {...settings}
@@ -639,7 +640,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
+                        className="review-card__image !h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -648,7 +649,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       alt="Default"
                       width={400}
                       height={400}
-                      className="review-card__image !h-[530px] lg:!h-[640px]  xl:!h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
+                      className="review-card__image md:!h-[70vh] !max-h-[530px] lg:!max-h-[640px]  xl:!max-h-[720px] !w-full !object-cover sm:!rounded-l-3xl"
                     />
                   )}
                 </Slider>
@@ -656,6 +657,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             </div>
             <div>
               <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
+                <span className="absolute top-4 right-4 z-10 bg-[#F1F1F1] px-2 py-1 rounded-[50px] text-[10px] leading-3 font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
                 <Slider
                   ref={sliderRef}
                   {...settings}
@@ -679,7 +681,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         alt="Review"
                         width={400}
                         height={400}
-                        className="review-card__image !h-[530px] lg:!h-[640px] xl:!h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
+                        className="review-card__image !h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] !w-full !object-contain sm:!rounded-l-3xl"
                       />
                     ))
                   ) : (
@@ -693,7 +695,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   )}
                 </Slider>
               </div>
-              <div className="review-card__content h-fit md:h-[530px] lg:h-[640px] xl:h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
+              <div className="review-card__content h-fit md:h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] !m-3 md:!m-0 md:!pt-4 md:!pb-14 md:relative overflow-y-auto md:overflow-y-hidden">
                 <div className="justify-between pr-10 items-center hidden md:flex">
                   <div className="review-card__user">
                     {(data.author?.node?.id || data.id) ? (
@@ -755,7 +757,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         {UserPalateNames?.map((tag: any, index: number) => (
                           <span
                             key={index}
-                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[5px] md:px-2 md:!text-xs text-[#31343f] px-1 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                            className="review-block__palate-tag"
                           >
                             {palateFlagMap[tag.toLowerCase()] && (
                               <Image
@@ -812,7 +814,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
-                        <p className="text-sm font-semibold w-[450px]">
+                        <p className="text-sm font-semibold line-clamp-1 max-w-[450px]">
                           {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
                             <>
                               {showFullTitle
@@ -882,7 +884,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           </span>
                         </div>
                         {replies.length > 0 && (
-                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[380px] overflow-y-auto">
+                          <div className="pt-4 pr-1 pb-3 h-full md:max-h-[280px] lg:max-h-[320px] xl:max-h-[380px] overflow-y-auto overflow-x-hidden">
                             {replies.map((reply, index) => {
                               const replyUserLiked = reply.userLiked ?? false;
                               const replyUserLikedCounts = reply.commentLikes ?? 0;
@@ -962,13 +964,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                           href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
                                           passHref
                                         >
-                                          <span className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline">
+                                          <span className="review-card__username !text-xs md:!text-sm !font-semibold cursor-pointer hover:underline">
                                             {reply.author?.node?.name || "Unknown User"}
                                           </span>
                                         </Link>
                                       ) : (
                                         <span
-                                          className="review-card__username !text-xs md:!text-base !font-semibold cursor-pointer hover:underline"
+                                          className="review-card__username !text-xs md:!text-sm !font-semibold cursor-pointer hover:underline"
                                           onClick={() => handleProfileClick(reply.author?.node?.id)}
                                         >
                                           {reply.author?.node?.name || "Unknown User"}
@@ -981,7 +983,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         return (
                                           <span
                                             key={tagIndex}
-                                            className="review-block__palate-tag !text-[10px] leading-[14px] md:py-[3px] md:px-2 md:!text-xs text-[#31343f] px-2 font-medium !rounded-[50px] bg-[#f1f1f1] flex items-center gap-1"
+                                            className="review-block__palate-tag"
                                           >
                                             {palateFlagMap[tag.toLowerCase()] && (
                                               <Image
@@ -997,7 +999,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text text-[10px] md:text-sm font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
                                       {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
                                         <>
                                           {expandedReplies[reply.id]
@@ -1113,7 +1115,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         }
         isOpen={isOpen}
         setIsOpen={onClose}
-        baseClass="h-full !max-w-[1060px] h-full md:h-[530px] lg:h-[640px] xl:h-[720px] m-0 rounded-none relative md:rounded-3xl"
+        baseClass="h-full !max-w-[1060px] h-full md:h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
         closeButtonClass="!top-5 md:!top-6 !right-3 z-10"
         headerClass="border-none !p-0"
         contentClass="!p-0 overflow-y-auto md:overflow-hidden"
@@ -1122,6 +1124,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         footerClass="!p-0 hidden"
         overlayClass="!z-[1010]"
         wrapperClass="!z-[1010]"
+        backdropClass="!z-[1010]"
       />
     </>
   );

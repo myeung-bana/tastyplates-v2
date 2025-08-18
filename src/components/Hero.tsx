@@ -272,7 +272,7 @@ const Hero = () => {
             src={HERO_BG}
             width={1980}
             height={538}
-            className="absolute inset-0 w-full -z-10 h-[538px] object-cover hidden sm:block"
+            className="absolute inset-0 w-full -z-10 h-[538px] object-cover object-[70%] hidden sm:block"
             alt="Hero background"
           />
           <img
@@ -378,7 +378,7 @@ const Hero = () => {
                     <input
                       type="text"
                       placeholder="Search by Listing Name"
-                      className="hero__search-input md:my-3.5"
+                      className="hero__search-input"
                       value={listing}
                       onChange={(e) => {
                         handleListingChange(e)
