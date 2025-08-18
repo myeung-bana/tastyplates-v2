@@ -45,6 +45,8 @@ export interface RestaurantCardProps {
   onClick?: () => void;
 }
 
+const restaurantService = new RestaurantService();
+
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onWishlistChange, onClick }: RestaurantCardProps) => {
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -81,7 +83,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
-      const res: Response = await RestaurantService.createFavoriteListing(
+      const res: Response = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -140,7 +142,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
     try {
-      const res: Response = await RestaurantService.createFavoriteListing(
+      const res: Response = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action: "unsave" },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -279,6 +281,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
           href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
           onClick={async (e) => {
             e.preventDefault();
+            if (pathname === "/listing") {
+              router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId], palateParam ? { ethnic: palateParam } : {}));
+              return;
+            }
             if (onClick) await onClick(); // Wait for mutation to complete
             router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
           }}

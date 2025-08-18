@@ -16,7 +16,7 @@ const AddListingWrapper = (props: any) => {
     libraries={['places']}
   >
 
-    <AddListingPage />;
+    <AddListingPage />
   </LoadScript>
 };
 

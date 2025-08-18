@@ -1,4 +1,5 @@
-export const emailExistCode = "email_exists"
+export const emailExistCode = "email_exists";
+export const jwtAuthInvalidCode = "jwt_auth_invalid_token";
 
 export const sessionStatus = {
     authenticated: "authenticated",

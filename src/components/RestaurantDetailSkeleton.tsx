@@ -2,7 +2,7 @@ import React  from "react";
 
 const RestaurantDetailSkeleton = () => {
     return (
-        <div className="restaurant-detail mt-32 md:mt-10 animate-pulse">
+        <div className="restaurant-detail mt-32 md:mt-20 animate-pulse">
             <div className="restaurant-detail__container">
                 <div className="restaurant-detail__header">
                     <div className="restaurant-detail__info">
@@ -22,7 +22,7 @@ const RestaurantDetailSkeleton = () => {
                                     <div className="h-10 w-24 bg-gray-300 rounded"></div>
                                 </div>
                             </div>
-                            <div className="flex flex-row gap-6 mt-6 md:mt-0">
+                            <div className="flex flex-row gap-6 mt-6 md:mt-10">
                                 <div className="w-2/3 h-[307px] bg-gray-300 rounded-3xl"></div>
                                 <div className="hidden md:flex flex-col justify-center w-1/3 gap-3">
                                     <div className="h-6 w-full bg-gray-300 rounded"></div>

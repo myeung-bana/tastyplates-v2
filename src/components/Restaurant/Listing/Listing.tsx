@@ -33,6 +33,9 @@ interface Restaurant {
   palatesNames?: string[];
 }
 
+const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
+
 const ListingPage = () => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -92,7 +95,7 @@ const ListingPage = () => {
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const data = await restaurantService.fetchAllRestaurants(search, first, after);
       const transformed = transformNodes(data.nodes);
 
       setRestaurants(prev => {
@@ -123,7 +126,7 @@ const ListingPage = () => {
     setLoadingDrafts(true);
     try {
       if (!session?.accessToken) return;
-      const data = await ReviewService.fetchReviewDrafts(session.accessToken);
+      const data = await reviewService.fetchReviewDrafts(session.accessToken);
       const transformedDrafts = transformReviewDrafts(data);
       setAllDrafts(transformedDrafts)
       setReviewDrafts(transformedDrafts.slice(0, 4));
@@ -143,7 +146,7 @@ const ListingPage = () => {
   const confirmDeleteDraft = async (draftId: number) => {
     if (!session?.accessToken) return;
     try {
-      await ReviewService.deleteReviewDraft(draftId, session.accessToken, true);
+      await reviewService.deleteReviewDraft(draftId, session.accessToken, true);
       setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
       const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
       setAllDrafts(updatedAllDrafts);
@@ -173,9 +176,9 @@ const ListingPage = () => {
 
     setLoadingVisited(true);
     try {
-      const visitedIds = await RestaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
+      const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
       const restaurantPromises = visitedIds.map((id: any) =>
-        RestaurantService.fetchRestaurantById(id)
+        restaurantService.fetchRestaurantById(id)
       );
       const restaurants = await Promise.all(restaurantPromises);
       const transformed = transformNodes(restaurants);
@@ -230,7 +233,7 @@ const ListingPage = () => {
 
           {/* Conditional rendering of "My Review Drafts" */}
           {!debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
                 {reviewDrafts.length === 0 && !loadingDrafts && (
@@ -254,7 +257,7 @@ const ListingPage = () => {
 
           {/* Conditional rendering of "Recently Visited" */}
           {!debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content mt-6 md:mt-10">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
                 {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
@@ -274,7 +277,7 @@ const ListingPage = () => {
 
           {/* Display Restaurants section only when there's an active search or it's loading search results */}
           {debouncedSearchTerm && (
-            <div className="restaurants__container mt-6 md:mt-10 w-full">
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content mt-6 md:mt-10">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">
                   Search Results

@@ -1,7 +1,7 @@
 .restaurant-detail {
   &__hero {
     position: relative;
-    height: 370px;
+    height: 307px;
     width: 100%;
 
     @media (max-width: 767px) {
@@ -28,7 +28,7 @@
   &__container {
     // max-width: 80rem;
     margin: auto;
-    padding: 1rem;
+    padding: 1rem 0;
     position: relative;
 
     @media (max-width: 767px) {
@@ -38,8 +38,8 @@
 
   &__header {
     background: white;
-    border-radius: 1rem;
-    padding: 2rem;
+    border-radius: 1rem 0;
+    padding: 2rem 0;
     margin-bottom: 2rem;
     // box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 
@@ -99,7 +99,7 @@
   &__content {
     background: white;
     border-radius: 1rem;
-    padding: 0 2rem;
+    padding: 0;
     margin-bottom: 2rem;
 
     @media (max-width: 767px) {
@@ -339,10 +339,6 @@
   // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
   // transition: box-shadow 0.3s ease; // Smooth transition for hover effect
 
-  &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); // Darker shadow on hover
-  }
-
   &__header {
     display: flex; // Flexbox for header layout
     flex-direction: column;
@@ -463,7 +459,15 @@
 // _restaurant-details.scss
 
 .review-block__palate-tags {
+  width: fit-content;
+  display: flex;
+  gap: 4px;
+  align-items: center;
   margin-top: 4px; // Space above the tags
+  background-color: #f1f1f1; // Light gray background for tags
+  color: #31343f; // Dark text color
+  border-radius: 50px; // Rounded corners
+  padding: 4px 8px; // Padding inside the tag
 
   @media (max-width: 767px) {
     margin-top: 0;
@@ -473,15 +477,13 @@
 
 .review-block__palate-tag {
   display: flex; // Make tags flex
-  background-color: #f1f1f1; // Light gray background for tags
+  align-items: center;
+  gap: 4px;
+  background-color: transparent; // Transparent background for tags
   color: #31343f; // Dark text color
-  border-radius: 50px; // Rounded corners
-  padding: 4px 8px; // Padding inside the tag
-  font-size: 10px !important; // Smaller font size for tags
-
-  @media (max-width: 767px) {
-    padding: 2px 4px;
-  }
+  font-size: 8px !important; // Smaller font size for tags
+  font-weight: 500;
+  line-height: 10px;
 }
 
 .cuisine-tag {

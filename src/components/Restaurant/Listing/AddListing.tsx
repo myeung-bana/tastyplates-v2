@@ -32,6 +32,11 @@ declare global {
     initMap: () => void;
   }
 }
+
+const categoryService = new CategoryService();
+const palateService = new PalatesService();
+const restaurantService = new RestaurantService();
+
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState({
     address: "",
@@ -220,14 +225,14 @@ const AddListingPage = (props: any) => {
   };
 
   useEffect(() => {
-    CategoryService.fetchCategories()
+    categoryService.fetchCategories()
       .then(setCategories)
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
-    PalatesService.fetchPalates()
+    palateService.fetchPalates()
       .then(setPalates)
       .catch((error) => console.error("Error fetching palates:", error))
       .finally(() => setIsLoading(false));
@@ -273,7 +278,7 @@ const AddListingPage = (props: any) => {
         if (currentResId > 0) {
           setIsLoading(true);
           try {
-            const restaurantData = await RestaurantService.fetchRestaurantById(
+            const restaurantData = await restaurantService.fetchRestaurantById(
               currentResId.toString(),
               "DATABASE_ID"
             );
@@ -426,7 +431,7 @@ const AddListingPage = (props: any) => {
       }
 
       // ✅ API call
-      const response = await RestaurantService.createRestaurantListingAndReview(payload, sess);
+      const response = await restaurantService.createRestaurantListingAndReview(payload, sess);
 
       if (response?.listing?.id || response?.id) {
         setCurrentRestaurantDbId(response.listing?.id || response.id);
@@ -570,7 +575,7 @@ const AddListingPage = (props: any) => {
           {step === 1 && (
             <>
               <form
-                className="listing__form max-w-[672px] w-full my-6 md:my-10 py-8 px-6 rounded-3xl border border-[#CACACA] bg-white"
+                className="listing__form max-w-[672px] w-full my-6 md:my-10 px-4 py-6 md:py-8 md:px-6 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
                 onSubmit={(e) => e.preventDefault()}
               >
                 <div className="text-center">
@@ -610,34 +615,7 @@ const AddListingPage = (props: any) => {
                 </div>
                 <div className="listing__form-group">
                   <label className="listing__label">
-                    Cuisine (Select up to 2 cuisines)
-                  </label>
-                  <div className="listing__input-group">
-                    <Select
-                      options={palateOptions}
-                      value={selectedPalates}
-                      onChange={handleChange}
-                      isMulti
-                      closeMenuOnSelect={false}
-                      isSearchable
-                      placeholder="Select palates..."
-                      className="!rounded-[10px] text-sm"
-                      hideSelectedOptions={false}
-                      components={{
-                        Option: CustomOption,
-                        GroupHeading: CustomGroupHeading,
-                      }}
-                    />
-                    {palatesError && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {palatesError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="listing__form-group">
-                  <label className="listing__label">
-                    Category (Select up to 3 categories)
+                    Category
                   </label>
                   <div className="listing__input-group">
                     <Select
@@ -662,16 +640,45 @@ const AddListingPage = (props: any) => {
                         }
                       }}
                       isMulti
-                      placeholder="Select categories..."
+                      placeholder="Select a category"
                       className="!rounded-[10px] text-sm"
                       hideSelectedOptions={false}
                       closeMenuOnSelect={false}
                       components={{
                         Option: CustomOption,
+                        IndicatorSeparator: () => null
                       }}
                     />
                     {categoryError && (
                       <p className="text-red-500 text-sm mt-1">{categoryError}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="listing__form-group">
+                  <label className="listing__label">
+                    Palate (Select up to 2 palates)
+                  </label>
+                  <div className="listing__input-group">
+                    <Select
+                      options={palateOptions}
+                      value={selectedPalates}
+                      onChange={handleChange}
+                      isMulti
+                      closeMenuOnSelect={false}
+                      isSearchable
+                      placeholder="Select your palate"
+                      className="!rounded-[10px] text-sm"
+                      hideSelectedOptions={false}
+                      components={{
+                        Option: CustomOption,
+                        GroupHeading: CustomGroupHeading,
+                        IndicatorSeparator: () => null
+                      }}
+                    />
+                    {palatesError && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {palatesError}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -725,7 +732,7 @@ const AddListingPage = (props: any) => {
                 </div>
                 <div className="listing__form-group">
                   <label className="listing__label">Price</label>
-                  <div className="listing__listing-checkbox-grid border-[1.5px] border-[#797979] rounded-xl p-2">
+                  <div className="listing__listing-checkbox-grid border-[1.5px] border-[#797979] rounded-xl px-2 h-12">
                     {prices.map((price, index) => (
                       <div
                         key={index}
@@ -854,7 +861,7 @@ const AddListingPage = (props: any) => {
                     totalStars={5}
                     onRating={handleRating}
                   />
-                  <span className="text-[10px] leading-3 md:text-base">
+                  <span className="text-[10px] leading-3 md:text-sm">
                     Rating should be solely based on taste of the food
                   </span>
                   {ratingError && (
@@ -869,7 +876,7 @@ const AddListingPage = (props: any) => {
                 <div className="listing__input-group">
                   <textarea
                     name="reviewTitle"
-                    className="listing__input resize-vertical"
+                    className="listing__input resize-vertical !h-[7.5rem] md:!h-[4.5rem]"
                     placeholder="Title of your review"
                     value={reviewMainTitle}
                     onChange={(e) => {
@@ -890,7 +897,7 @@ const AddListingPage = (props: any) => {
                 <div className="listing__input-group">
                   <textarea
                     name="reviewDescription"
-                    className="listing__input resize-vertical"
+                    className="listing__input resize-vertical !h-[7.5rem] md:!h-[4.5rem]"
                     placeholder="Write a review about the food, service or ambiance of the restaurant"
                     value={content}
                     onChange={(e) => {

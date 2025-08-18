@@ -1,11 +1,14 @@
 // services/restaurant/restaurantService.ts
 import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
-import { RestaurantRepository } from "@/repositories/restaurant/restaurantRepository";
+import { RestaurantRepository } from "@/repositories/http/restaurant/restaurantRepository";
+import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
 
-export const RestaurantService = {
+const restaurantRepo: RestaurantRepo = new RestaurantRepository()
+
+export class RestaurantService {
     async fetchRestaurantDetails(slug: string, palates: string | null = null) {
-        return await RestaurantRepository.getRestaurantBySlug(slug, palates ?? '');
-    },
+        return await restaurantRepo.getRestaurantBySlug(slug, palates ?? '');
+    }
 
     async fetchAllRestaurants(
         searchTerm: string,
@@ -49,7 +52,7 @@ export const RestaurantService = {
                 taxArray: taxArray,
             } : {};
 
-            return await RestaurantRepository.getAllRestaurants(
+            return await restaurantRepo.getAllRestaurants(
                 searchTerm,
                 first,
                 after,
@@ -68,72 +71,72 @@ export const RestaurantService = {
             console.error('Error fetching list:', error);
             throw new Error('Failed to fetch list');
         }
-    },
+    }
 
     async fetchRestaurantById(id: string, idType: string = "DATABASE_ID", accessToken?: string, userId?: number | null) {
         try {
-            return await RestaurantRepository.getRestaurantById(id, idType, accessToken, userId);
+            return await restaurantRepo.getRestaurantById(id, idType, accessToken, userId);
         } catch (error) {
             console.error('Error fetching restaurant by ID:', error);
             throw new Error('Failed to fetch restaurant by ID');
         }
-    },
+    }
 
     async createRestaurantListingAndReview(payload: any, token: string): Promise<any> {
         try {
-            return await RestaurantRepository.createListingAndReview(payload, token);
+            return await restaurantRepo.createListingAndReview(payload, token);
         } catch (error) {
             console.error("Error creating listing and review:", error);
             throw new Error("Failed to create listing and review");
         }
-    },
+    }
 
 
     async fetchPendingRestaurants(token: string): Promise<any> {
         try {
-            return await RestaurantRepository.getlistingDrafts(token);
+            return await restaurantRepo.getlistingDrafts(token);
         } catch (error) {
             console.error('Error fetching pending restaurants:', error);
             throw new Error('Failed to fetch pending restaurants');
         }
-    },
+    }
 
     async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
         try {
-            return await RestaurantRepository.createFavoriteListing(data, accessToken, jsonResponse);
+            return await restaurantRepo.createFavoriteListing(data, accessToken, jsonResponse);
         }
         catch (error) {
             console.error('Error creating favorite listing:', error);
             throw new Error('Failed to create favorite listing');
         }
-    },
+    }
 
     async fetchFavoritingListing(userId: number, accessToken?: string) {
         try {
-            return await RestaurantRepository.getFavoriteListing(userId, accessToken);
+            return await restaurantRepo.getFavoriteListing(userId, accessToken);
         } catch (error) {
             console.error('Error fetching favoriting list:', error);
             throw new Error('Failed to fetch favoriting list');
         }
-    },
+    }
 
     async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
         try {
-            return await RestaurantRepository.getCheckInRestaurant(userId, accessToken, jsonResponse);
+            return await restaurantRepo.getCheckInRestaurant(userId, accessToken, jsonResponse);
         } catch (error) {
             console.error('Error fetching check-in restaurant:', error);
             throw new Error('Failed to fetch check-in restaurant');
         }
-    },
+    }
 
     async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
         try {
-            return await RestaurantRepository.createCheckIn(data, accessToken, jsonResponse);
+            return await restaurantRepo.createCheckIn(data, accessToken, jsonResponse);
         } catch (error) {
             console.error('Error creating check-in:', error);
             throw new Error('Failed to create check-in');
         }
-    },
+    }
 
     async updateRestaurantListing(
         id: number,
@@ -142,43 +145,43 @@ export const RestaurantService = {
     ) {
         try {
             // Delegate the actual API call to the repository
-            return await RestaurantRepository.updateListing(id, listingUpdateData, accessToken);
+            return await restaurantRepo.updateListing(id, listingUpdateData, accessToken);
         } catch (error) {
             console.error('Error updating restaurant listing in service:', error);
             throw new Error('Failed to update restaurant listing');
         }
-    },
+    }
 
     async deleteRestaurantListing(id: number, accessToken?: string): Promise<any> {
         try {
-            return await RestaurantRepository.deleteListing(id, accessToken);
+            return await restaurantRepo.deleteListing(id, accessToken);
         } catch (error) {
             console.error('Error deleting restaurant listing in service:', error);
             throw new Error('Failed to delete restaurant listing');
         }
-    },
+    }
 
     async fetchRestaurantRatingsCount(restaurantId: number): Promise<number> {
-        return await RestaurantRepository.getRestaurantRatingsCount(restaurantId);
-    },
+        return await restaurantRepo.getRestaurantRatingsCount(restaurantId);
+    }
 
     async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
         try {
-            return await RestaurantRepository.addRecentlyVisitedRestaurant(postId, accessToken);
+            return await restaurantRepo.addRecentlyVisitedRestaurant(postId, accessToken);
         } catch (error) {
             console.error('Error adding recently visited restaurant:', error);
             throw new Error('Failed to add recently visited restaurant');
         }
-    },
+    }
 
     async fetchRecentlyVisitedRestaurants(accessToken?: string) {
         try {
-            return await RestaurantRepository.getRecentlyVisitedRestaurants(accessToken);
+            return await restaurantRepo.getRecentlyVisitedRestaurants(accessToken);
         } catch (error) {
             console.error('Error fetching recently visited restaurants:', error);
             throw new Error('Failed to fetching recently visited restaurants');
         }
-    },
+    }
 
     async fetchAddressByPalate(
         searchTerm: string,
@@ -199,12 +202,12 @@ export const RestaurantService = {
                 ],
             } : {};
 
-            return await RestaurantRepository.getAddressByPalate(searchTerm, taxQuery, first, after);
+            return await restaurantRepo.getAddressByPalate(searchTerm, taxQuery, first, after);
         } catch (error) {
             console.error('Error fetching by palate:', error);
             throw new Error('Failed to fetch restaurants by palate');
         }
-    },
+    }
 
     async fetchListingsName(
         searchTerm: string,
@@ -212,7 +215,7 @@ export const RestaurantService = {
         after: string | null = null,
     ) {
         try {
-            return await RestaurantRepository.getListingsName(
+            return await restaurantRepo.getListingsName(
                 searchTerm,
                 first,
                 after
@@ -221,5 +224,5 @@ export const RestaurantService = {
             console.error('Error fetching list:', error);
             throw new Error('Failed to fetch list');
         }
-    },
+    }
 };
