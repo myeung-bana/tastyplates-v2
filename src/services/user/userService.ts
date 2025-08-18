@@ -1,12 +1,15 @@
-import { UserRepository } from '@/repositories/userRepository';
+import { UserRepository } from '@/repositories/http/user/userRepository';
 import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, followUserResponse, IJWTResponse, ILoginCredentials, IRegisterData, isFollowingUserResponse, IUserUpdate, IUserUpdateResponse } from '@/interfaces/user/user';
 import { DEFAULT_USER_ICON } from '@/constants/images';
 import { responseStatusCode as code } from '@/constants/response';
-import { resetEmailFailed, unexpectedError } from '@/constants/messages';
+import { unexpectedError } from '@/constants/messages';
 import { HttpResponse } from '@/interfaces/httpResponse';
+import { UserRepo } from '@/repositories/interface/user/user';
+
+const userRepo: UserRepo = new UserRepository()
 
 export class UserService {
-    static async registerUser(userData: Partial<IRegisterData>): Promise<any> {
+    async registerUser(userData: Partial<IRegisterData>): Promise<any> {
         const formattedData = {
             username: userData.username,
             email: userData.email,
@@ -22,27 +25,27 @@ export class UserService {
             google_token: userData.googleToken || null
         };
 
-        await UserRepository.registerUser<any>(formattedData);
+        await userRepo.registerUser<any>(formattedData);
     }
 
-    static async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
+    async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
         try {
-            const response = await UserRepository.login({
+            const res = await userRepo.login({
                 email: credentials.email,
                 password: credentials.password as string
             });
 
-            return response;
+            return res;
         } catch (error) {
             console.error('Login error:', error);
             throw new Error('Invalid credentials');
         }
     }
 
-    static async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
+    async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
         try {
             // First check if user exists
-            const checkResponse = await UserRepository.checkGoogleUser(email);
+            const checkResponse = await userRepo.checkGoogleUser(email);
             return checkResponse;
         } catch (error) {
             console.error('Google auth error:', error);
@@ -50,79 +53,79 @@ export class UserService {
         }
     }
 
-    static async checkEmailExists(email: string): Promise<any> {
+    async checkEmailExists(email: string): Promise<any> {
         try {
-            const response = await UserRepository.checkEmailExists<any>(email);
-            return response;
+            const res = await userRepo.checkEmailExists<any>(email);
+            return res;
         } catch (error) {
             console.error('Check email error:', error);
             throw error;
         }
     }
 
-    static async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
+    async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
         try {
-            const response = await UserRepository.checkUsernameExists(username);
-            return response;
+            const res = await userRepo.checkUsernameExists(username);
+            return res;
         } catch (error) {
             console.error('Check username error:', error);
             throw error;
         }
     }
 
-    static async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
+    async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         try {
-            const response = await UserRepository.getCurrentUser(token);
-            return response;
+            const res = await userRepo.getCurrentUser(token);
+            return res;
         } catch (error) {
             console.error('Get user by ID error:', error);
             throw new Error('Failed to fetch user data');
         }
     }
 
-    static async getUserById(id: number | null) {
+    async getUserById(id: number | null) {
         try {
-            return await UserRepository.getUserById(id);
+            return await userRepo.getUserById(id);
         } catch (error) {
             console.error('Error fetching user by ID:', error);
             throw new Error('Failed to fetch user by ID');
         }
     }
 
-    static async updateUserFields(data: Partial<IUserUpdate>, token?: any): Promise<IUserUpdateResponse> {
+    async updateUserFields(data: Partial<IUserUpdate>, token?: any): Promise<IUserUpdateResponse> {
         try {
-            const response = await UserRepository.updateUserFields<IUserUpdateResponse>(data, token);
-            return response;
+            const res = await userRepo.updateUserFields(data, token);
+            return res;
         } catch (error) {
             console.error('Update user fields error:', error);
             throw new Error('Failed to update user fields');
         }
     }
 
-    static async validatePassword(password: string, token?: any): Promise<any> {
+    async validatePassword(password: string, token?: any): Promise<any> {
         try {
-            const response = await UserRepository.validatePassword(password, token);
-            return response;
+            const res = await userRepo.validatePassword(password, token);
+            return res;
         } catch (error) {
             console.error('Validate password error:', error);
             throw new Error('Failed to validate password');
         }
     }
 
-    static async getUserPalates(userId: number, token?: string): Promise<any> {
+    async getUserPalates(userId: number, token?: string): Promise<any> {
         try {
-            const response = await UserRepository.getUserPalates<any>(userId, token);
-            return response;
+            const res = await userRepo.getUserPalates<any>(userId, token);
+            return res;
         } catch (error) {
             console.error('Get user palates error:', error);
             throw new Error('Failed to fetch user palates');
         }
     }
 
-    static async getFollowingList(userId: number, token?: string): Promise<any[]> {
+    async getFollowingList(userId: number, token?: string): Promise<any[]> {
         try {
-            const response = await UserRepository.getFollowingList<any>(userId, token);
-            return Array.isArray(response) ? response.map(user => ({
+            const res = await userRepo.getFollowingList<any>(userId, token);
+            return Array.isArray(res) ? res.map(user => ({
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
@@ -135,10 +138,10 @@ export class UserService {
         }
     }
 
-    static async getFollowersList(userId: number, followingList: any[], token?: string): Promise<any[]> {
+    async getFollowersList(userId: number, followingList: any[], token?: string): Promise<any[]> {
         try {
-            const response = await UserRepository.getFollowersList<any>(userId, token);
-            return Array.isArray(response) ? response.map(user => ({
+            const res = await userRepo.getFollowersList<any>(userId, token);
+            return Array.isArray(res) ? res.map(user => ({
                 id: user.id,
                 name: user.name,
                 cuisines: user.palates || [],
@@ -151,11 +154,11 @@ export class UserService {
         }
     }
 
-    static async followUser(userId: number, token?: string): Promise<followUserResponse> {
+    async followUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            const response = await UserRepository.followUser(userId, token);
+            const res = await userRepo.followUser(userId, token);
             return {
-                ...response,
+                ...res,
                 status: code.success,
             };
         } catch (error) {
@@ -164,11 +167,11 @@ export class UserService {
         }
     }
 
-    static async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
+    async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
         try {
-            const response = await UserRepository.unfollowUser(userId, token);
+            const res = await userRepo.unfollowUser(userId, token);
             return {
-                ...response,
+                ...res,
                 status: code.success,
             };
         } catch (error) {
@@ -177,40 +180,40 @@ export class UserService {
         }
     }
 
-    static async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
+    async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
         try {
-            const response = await UserRepository.isFollowingUser(userId, token);
-            return response;
+            const res = await userRepo.isFollowingUser(userId, token);
+            return res;
         } catch (error) {
             console.error('Check following user error:', error);
             return { is_following: false };
         }
     }
 
-    static async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
+    async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
         try {
-            const response = await UserRepository.sendForgotPasswordEmail(formData);    
-            return response;
+            const res = await userRepo.sendForgotPasswordEmail(formData);    
+            return res;
         } catch (error) {
             console.error('Forgot password email error:', error);
             return { status: false, message: unexpectedError };
         }
     }
 
-    static async verifyResetToken(token?: string): Promise<HttpResponse> {
+    async verifyResetToken(token?: string): Promise<HttpResponse> {
         try {
-            const response = await UserRepository.verifyResetToken(token);
-            return response;
+            const res = await userRepo.verifyResetToken(token);
+            return res;
         } catch (error) {
             console.error('Verify reset token error:', error);
             return { status: false, message: unexpectedError };
         }
     }
 
-    static async resetPassword(token: string, password: string): Promise<HttpResponse> {
+    async resetPassword(token: string, password: string): Promise<HttpResponse> {
         try {
-            const response = await UserRepository.resetPassword(token, password);
-            return response;
+            const res = await userRepo.resetPassword(token, password);
+            return res;
         } catch (error) {
             console.error('Reset password error:', error);
             return { status: false, message: unexpectedError };

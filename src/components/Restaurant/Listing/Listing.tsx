@@ -33,6 +33,9 @@ interface Restaurant {
   palatesNames?: string[];
 }
 
+const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
+
 const ListingPage = () => {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -92,7 +95,7 @@ const ListingPage = () => {
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const data = await restaurantService.fetchAllRestaurants(search, first, after);
       const transformed = transformNodes(data.nodes);
 
       setRestaurants(prev => {
@@ -123,7 +126,7 @@ const ListingPage = () => {
     setLoadingDrafts(true);
     try {
       if (!session?.accessToken) return;
-      const data = await ReviewService.fetchReviewDrafts(session.accessToken);
+      const data = await reviewService.fetchReviewDrafts(session.accessToken);
       const transformedDrafts = transformReviewDrafts(data);
       setAllDrafts(transformedDrafts)
       setReviewDrafts(transformedDrafts.slice(0, 4));
@@ -143,7 +146,7 @@ const ListingPage = () => {
   const confirmDeleteDraft = async (draftId: number) => {
     if (!session?.accessToken) return;
     try {
-      await ReviewService.deleteReviewDraft(draftId, session.accessToken, true);
+      await reviewService.deleteReviewDraft(draftId, session.accessToken, true);
       setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
       const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
       setAllDrafts(updatedAllDrafts);
@@ -173,9 +176,9 @@ const ListingPage = () => {
 
     setLoadingVisited(true);
     try {
-      const visitedIds = await RestaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
+      const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
       const restaurantPromises = visitedIds.map((id: any) =>
-        RestaurantService.fetchRestaurantById(id)
+        restaurantService.fetchRestaurantById(id)
       );
       const restaurants = await Promise.all(restaurantPromises);
       const transformed = transformNodes(restaurants);

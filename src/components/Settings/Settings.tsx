@@ -4,7 +4,7 @@ import "@/styles/pages/_settings.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
@@ -29,6 +29,8 @@ const formatDateForDisplay = (dateString: string) => {
   // Format as M/D/YYYY for display
   return date.toLocaleDateString('en-US');
 };
+
+const userService = new UserService()
 
 const Settings = (props: any) => {
   const { data: session, status, update } = useSession(); // Add status from useSession
@@ -101,7 +103,7 @@ const Settings = (props: any) => {
 
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
-      const response = await UserService.validatePassword(password, session?.accessToken);
+      const response = await userService.validatePassword(password, session?.accessToken);
       return response.valid && response.status === code.success;
     } catch (error) {
       return false;
@@ -179,13 +181,18 @@ const Settings = (props: any) => {
         updateData.password = passwordFields.new;
       }
 
-      const response = await UserService.updateUserFields(
+      const response = await userService.updateUserFields(
         updateData,
         session.accessToken
       );
 
       if (response?.code == emailExistCode) {
         setEmailError(response?.message || emailOccurredError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (response?.data?.status == code.unauthorized || response?.data?.status == code.forbidden) {
         setIsLoading(false);
         return;
       }
@@ -230,7 +237,7 @@ const Settings = (props: any) => {
       setIsPersonalInfoLoading(true);
       const localKey = `userData_${session.user.email}`;
       const cached = typeof window !== "undefined" ? localStorage.getItem(localKey) : null;
-      
+
       if (cached) {
         const parsedData = JSON.parse(cached);
         setUserData(parsedData);
@@ -245,7 +252,7 @@ const Settings = (props: any) => {
       }
 
       try {
-        const data = await UserService.getCurrentUser(
+        const data = await userService.getCurrentUser(
           session.accessToken as string
         );
 
@@ -373,12 +380,12 @@ const Settings = (props: any) => {
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : editable == Field.Birthdate ? (
                   <CustomDatePicker
-                      className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
-                      value={setting.birthdate}
-                      onChange={(val) => setSetting({ ...setting, birthdate: val })}
-                      formatValue="MM/dd/yyyy"
-                      disabled={isLoading}
-                    />
+                    className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
+                    value={setting.birthdate}
+                    onChange={(val) => setSetting({ ...setting, birthdate: val })}
+                    formatValue="MM/dd/yyyy"
+                    disabled={isLoading}
+                  />
                 ) : userData?.birthdate ? (
                   formatDateForDisplay(userData.birthdate)
                 ) : (

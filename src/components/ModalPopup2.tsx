@@ -22,8 +22,11 @@ import toast from "react-hot-toast";
 import { authorIdMissing, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { responseStatusCode as code } from "@/constants/response";
+
+const userService = new UserService();
+const reviewService = new ReviewService();
 
 const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   data,
@@ -62,7 +65,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data?.id) {
-      ReviewService.fetchCommentReplies(data.id).then(setReplies);
+      reviewService.fetchCommentReplies(data.id).then(setReplies);
     }
   }, [isOpen, data?.id]);
 
@@ -80,7 +83,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     (async () => {
       try {
-        const result = await UserService.isFollowingUser(authorUserId, session.accessToken);        
+        const result = await userService.isFollowingUser(authorUserId, session.accessToken);        
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId, !!result.is_following);
       } catch (err) {
@@ -200,7 +203,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await UserService.followUser(authorUserId, session.accessToken);
+      const result = await userService.followUser(authorUserId, session.accessToken);
       if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
@@ -231,7 +234,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await UserService.unfollowUser(authorUserId, session.accessToken);
+      const result = await userService.unfollowUser(authorUserId, session.accessToken);
       if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);

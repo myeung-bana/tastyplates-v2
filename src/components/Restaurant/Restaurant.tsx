@@ -30,6 +30,8 @@ interface Restaurant {
   ratingsCount?: number;
 }
 
+const restaurantService = new RestaurantService();
+
 const RestaurantPage = () => {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -107,7 +109,7 @@ const RestaurantPage = () => {
   const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(
+      const data = await restaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
         firstOverride ?? (reset && isFirstLoad.current ? 16 : 8),
         after,
@@ -199,7 +201,7 @@ const RestaurantPage = () => {
     }
 
     try {
-      await RestaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
+      await restaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
     } catch (error) {
       console.error("Failed to record visited restaurant:", error);
     }

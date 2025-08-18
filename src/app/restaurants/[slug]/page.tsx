@@ -63,7 +63,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     if (!session || !restaurantSlug || initialized) return;
     const fetchFavoriteListing = async () => {
       try {
-        const data = await RestaurantService.createFavoriteListing(
+        const data = await restaurantService.createFavoriteListing(
           { restaurant_slug: restaurantSlug, action: "check" },
           session?.accessToken
         );
@@ -91,7 +91,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: !saved } }));
     const action = saved ? "unsave" : "save";
     try {
-      const res: Response = await RestaurantService.createFavoriteListing(
+      const res: Response = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurantSlug, action },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -172,6 +172,8 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   );
 }
 
+const restaurantService = new RestaurantService();
+
 export default function RestaurantDetail() {
   const { data: session } = useSession();
   const [isShowSignup, setIsShowSignup] = useState(false);
@@ -188,7 +190,7 @@ export default function RestaurantDetail() {
 
   useEffect(() => {
     if (!slug) return;
-    RestaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? '') )
+    restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? '') )
       .then((data) => {
         if (!data) return notFound();
         const transformed = {

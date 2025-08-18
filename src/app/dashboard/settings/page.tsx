@@ -23,6 +23,8 @@ interface Restaurant {
   palatesNames?: string[];
 }
 
+const restaurantService = new RestaurantService();
+
 const SettingsPage = () => {
   const params = useParams();
   const slug = params?.slug;
@@ -51,7 +53,7 @@ const SettingsPage = () => {
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const data = await restaurantService.fetchAllRestaurants(search, first, after);
       const transformed = transformNodes(data.nodes);
 
       setRestaurants(prev => {

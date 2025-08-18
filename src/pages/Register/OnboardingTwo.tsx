@@ -3,15 +3,17 @@ import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Spinner from "@/components/LoadingSpinner";
-import { UserService } from "@/services/userService";
-import { errorOccurred, pleaseLoginAgain, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved, welcomeProfile } from "@/constants/messages";
+import { UserService } from "@/services/user/userService";
+import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved, welcomeProfile } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME, PROFILE } from "@/constants/pages";
 import { IRegisterData } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
 import { signIn } from "next-auth/react";
-import Cookies from "js-cookie";
+import { LOGIN_BACK_KEY, REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
+
+const userService = new UserService()
 
 const OnboardingTwoPage = () => {
   const router = useRouter();
@@ -24,9 +26,6 @@ const OnboardingTwoPage = () => {
   const [isDoItLaterLoading, setIsDoItLaterLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
-  const REGISTRATION_KEY = 'registrationData';
-  const LOGIN_BACK_KEY = 'loginBackMessage';
-  const WELCOME_KEY = 'welcomeMessage';
 
   // Add effect to load saved data
   useEffect(() => {
@@ -87,7 +86,7 @@ const OnboardingTwoPage = () => {
     const email = completeRegistration.email;
     const password = completeRegistration.password;
 
-    await UserService.registerUser(completeRegistration);
+    await userService.registerUser(completeRegistration);
 
     localStorage.removeItem(REGISTRATION_KEY);
     setMessage(registrationSuccess);
@@ -113,7 +112,6 @@ const OnboardingTwoPage = () => {
   }
 
   const handleDoItLater = () => {
-    setIsLoading(true);
     setIsDoItLaterLoading(true);
     setProfileError(null);
     setAboutMeError(null);
@@ -122,7 +120,6 @@ const OnboardingTwoPage = () => {
     if (aboutMe.length > aboutMeMaxLimit) {
       setAboutMeError(textLimit(aboutMeMaxLimit));
       setIsDoItLaterLoading(false);
-      setIsLoading(false);
       return;
     }
 
@@ -139,7 +136,7 @@ const OnboardingTwoPage = () => {
     localStorage.setItem(LOGIN_BACK_KEY, unfinishedSaved);
     localStorage.setItem(REGISTRATION_KEY, JSON.stringify(partialData));
     setTimeout(() => {
-      setIsLoading(false);
+      setIsDoItLaterLoading(false);
       router.push(HOME);
     }, 1000);
   };
@@ -168,7 +165,7 @@ const OnboardingTwoPage = () => {
                     <img
                       src={profileImage}
                       alt="Profile"
-                      className={`w-full h-full object-cover ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                      className={`w-full h-full object-cover ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none opacity-50' : ''}`}
                     />
                   ) : (
                     <svg
@@ -177,7 +174,7 @@ const OnboardingTwoPage = () => {
                       viewBox="0 0 96 94"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
-                      className={`scale-[1.5] translate-y-4 ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                      className={`scale-[1.5] translate-y-4 ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none opacity-50' : ''}`}
                     >
                       <path d="M48 48C41.4 48 35.75 45.65 31.05 40.95C26.35 36.25 24 30.6 24 24C24 17.4 26.35 11.75 31.05 7.05C35.75 2.35 41.4 0 48 0C54.6 0 60.25 2.35 64.95 7.05C69.65 11.75 72 17.4 72 24C72 30.6 69.65 36.25 64.95 40.95C60.25 45.65 54.6 48 48 48ZM0 84V79.2C0 75.8 0.875 72.675 2.625 69.825C4.375 66.975 6.7 64.8 9.6 63.3C15.8 60.2 22.1 57.875 28.5 56.325C34.9 54.775 41.4 54 48 54C54.6 54 61.1 54.775 67.5 56.325C73.9 57.875 80.2 60.2 86.4 63.3C89.3 64.8 91.625 66.975 93.375 69.825C95.125 72.675 96 75.8 96 79.2V84C96 87.3 94.825 90.125 92.475 92.475C90.125 94.825 87.3 96 84 96H12C8.7 96 5.875 94.825 3.525 92.475C1.175 90.125 0 87.3 0 84Z" fill="#31343F" />
                     </svg>
@@ -190,10 +187,10 @@ const OnboardingTwoPage = () => {
                 onChange={handleImageUpload}
                 accept="image/*"
                 className="hidden"
-                disabled={isLoading}
+                disabled={isLoading || isDoItLaterLoading}
               />
               <div
-                className={`absolute -bottom-1 -right-1 cursor-pointer ${isLoading ? 'pointer-events-none' : ''}`}
+                className={`absolute -bottom-1 -right-1 cursor-pointer ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none' : ''}`}
                 onClick={handleImageClick}
               >
                 {profileImage ? (
@@ -239,8 +236,8 @@ const OnboardingTwoPage = () => {
                 value={aboutMe}
                 onChange={(e) => setAboutMe(e.target.value)}
                 placeholder="Tell us a little about yourself! Share your interests, background, or food that you like."
-                className={`w-full border border-gray-300 rounded-[10px] p-3 text-sm resize-none ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
-                readOnly={isLoading}
+                className={`w-full border border-gray-300 rounded-[10px] p-3 text-sm resize-none ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none opacity-50' : ''}`}
+                readOnly={isLoading || isDoItLaterLoading}
               />
               <div className="flex justify-between items-center mt-1">
                 {aboutMeError && (
@@ -253,15 +250,15 @@ const OnboardingTwoPage = () => {
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button
                 type="submit"
-                className={`bg-[#E36B00] hover:bg-[#c75e00] text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center w-full sm:w-auto ${isLoading ? 'pointer-events-none' : ''}`}
-                disabled={isLoading}
+                className={`bg-[#E36B00] hover:bg-[#c75e00] text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center w-full sm:w-auto ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none' : ''}`}
+                disabled={isLoading || isDoItLaterLoading}
               >
                 {isLoading ? "Loading..." : "Done"}
               </button>
               <button
                 disabled={isLoading || isDoItLaterLoading}
                 type="button"
-                className={`text-sm text-black-700 underline font-bold self-center w-full sm:w-auto flex items-center justify-center ${isLoading ? 'pointer-events-none' : ''}`}
+                className={`text-sm text-black-700 underline font-bold self-center w-full sm:w-auto flex items-center justify-center ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none' : ''}`}
                 onClick={handleDoItLater}
               >
                 {isDoItLaterLoading && (
