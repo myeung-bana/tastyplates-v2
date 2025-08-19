@@ -15,7 +15,7 @@ import FollowingModal from "./FollowingModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { PROFILE_EDIT } from "@/constants/pages";
@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
+import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY, WELCOME_KEY } from "@/constants/session";
 
 interface Restaurant {
   id: string;
@@ -42,6 +43,10 @@ interface Restaurant {
 interface ProfileProps {
   targetUserId: number;
 }
+
+const userService = new UserService()
+const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
 
 // Update the component signature to accept props
 const Profile = ({ targetUserId }: ProfileProps) => {
@@ -79,7 +84,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
   const isViewingOwnProfile = session?.user?.id === targetUserId;
-  const WELCOME_KEY = 'welcomeMessage';
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -116,7 +120,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     setLoading(true);
     setlistingLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(
+      const data = await restaurantService.fetchAllRestaurants(
         "",
         first,
         after,
@@ -226,7 +230,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     try {
       const first = isFirstLoad.current ? 16 : 8;
       const { reviews: newReviews, pageInfo, userCommentCount } =
-        await ReviewService.fetchUserReviews(targetUserId, first, endCursor);
+        await reviewService.fetchUserReviews(targetUserId, first, endCursor);
 
       if (isFirstLoad.current) {
         setReviews([]);
@@ -260,7 +264,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setAboutMeLoading(true);
       setPalatesLoading(true);
       try {
-        const publicUser = await UserService.getUserById(targetUserId);
+        const publicUser = await userService.getUserById(targetUserId);
         setUserData(publicUser);
       } catch (error) {
         console.error("Error fetching public user data:", error);
@@ -288,7 +292,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       return [];
     }
     try {
-      const followingList = await UserService.getFollowingList(targetUserId, session.accessToken);
+      const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
       setFollowing(followingList);
       return followingList;
     } finally {
@@ -303,7 +307,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       return [];
     }
     try {
-      const followersList = await UserService.getFollowersList(
+      const followersList = await userService.getFollowersList(
         targetUserId,
         followingList || following,
         session.accessToken
@@ -349,10 +353,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const response = await UserService.followUser(userIdNum, session.accessToken);
+    const response = await userService.followUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
-      localStorage.removeItem(`following_${targetUserId}`);
-      localStorage.removeItem(`followers_${targetUserId}`);
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -361,7 +365,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      localStorage.setItem('follow_sync', Date.now().toString());
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };
 
@@ -369,10 +373,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (!session?.accessToken) return;
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
-    const response = await UserService.unfollowUser(userIdNum, session.accessToken);
+    const response = await userService.unfollowUser(userIdNum, session.accessToken);
     if (response.status == code.success) {
-      localStorage.removeItem(`following_${targetUserId}`);
-      localStorage.removeItem(`followers_${targetUserId}`);
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       const [newFollowing, newFollowers] = await Promise.all([
         fetchFollowing(true),
         fetchFollowers(true)
@@ -381,7 +385,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         ...user,
         isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
       })));
-      localStorage.setItem('follow_sync', Date.now().toString());
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };
 
@@ -614,14 +618,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedWishlist) return; // Only fetch if not already fetched
       setWishlistLoading(true);
       try {
-        const data = await RestaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
+        const data = await restaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
         const favoriteIds = data.favorites || [];
         if (favoriteIds.length === 0) {
           setWishlist([]);
         } else {
           const results = await Promise.all(
             favoriteIds.map((id: number) =>
-              RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+              restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
@@ -649,7 +653,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       if (hasFetchedCheckins) return; // Only fetch if not already fetched
       setCheckinsLoading(true);
       try {
-        const data = await RestaurantService.fetchCheckInRestaurant(
+        const data = await restaurantService.fetchCheckInRestaurant(
           targetUserId,
           session?.accessToken
         );
@@ -661,7 +665,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           } else {
             const results = await Promise.all(
               checkinIds.map((id: number) =>
-                RestaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
+                restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
               )
             );
             const validResults = results.filter(r => r && typeof r === "object" && r.id);
@@ -714,7 +718,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   return (
     <>
-      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-4 sm:mb-8 max-w-[624px] px-3 sm:px-0">
+      <div className="w-full flex flex-row self-center justify-center items-start md:items-center sm:items-start gap-4 sm:gap-8 mt-6 sm:mt-10 mb-0 max-w-[624px] px-3 sm:px-0">
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <FallbackImage
             src={
@@ -909,7 +913,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           tabWrapper: "w-full",
           base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
-            "py-4 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
+            "py-0 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
           tabList:
             "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",

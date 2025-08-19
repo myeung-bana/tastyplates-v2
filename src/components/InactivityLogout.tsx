@@ -5,10 +5,10 @@ import { signOut, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Inactive } from "@/constants/messages";
 import { HOME } from "@/constants/pages";
+import { LAST_ACTIVE_KEY } from "@/constants/session";
 
 // const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 1 minute for testing
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
-const LAST_ACTIVE_KEY = "lastActive";
 
 export default function InactivityLogout() {
   const { data: session } = useSession();

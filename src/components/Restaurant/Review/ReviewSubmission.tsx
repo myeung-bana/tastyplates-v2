@@ -38,6 +38,9 @@ interface Restaurant {
   recognition?: string[];
 }
 
+const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
+
 const ReviewSubmissionPage = () => {
   const params = useParams() as { slug: string; id: string };
   const restaurantId = params.id;
@@ -75,7 +78,7 @@ const ReviewSubmissionPage = () => {
       if (!restaurantId || !session?.accessToken) return;
 
       try {
-        const data = await RestaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
+        const data = await restaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
         setRestaurantName(data.title);
       } catch (error) {
         console.error(error);
@@ -236,7 +239,7 @@ const ReviewSubmissionPage = () => {
         mode,
       };
 
-      const res = await ReviewService.postReview(reviewData, session?.accessToken ?? "");
+      const res = await reviewService.postReview(reviewData, session?.accessToken ?? "");
       if (mode === 'publish') {
         if (res.status === code.created) {
           setIsSubmitted(true);
@@ -329,7 +332,7 @@ const ReviewSubmissionPage = () => {
                     defaultRating={review_stars}
                     onRating={handleRating}
                   />
-                  <span className="text-[10px] leading-3 md:text-base">
+                  <span className="text-[10px] leading-3 md:text-sm">
                     Rating should be solely based on taste of the food
                   </span>
                   {ratingError && (
@@ -363,7 +366,7 @@ const ReviewSubmissionPage = () => {
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="content"
-                    className="submitRestaurants__input resize-vertical"
+                    className="submitRestaurants__input resize-vertical md:!h-full"
                     placeholder="Write a review about the food, service or ambiance of the restaurant"
                     value={content}
                     onChange={(e) => {

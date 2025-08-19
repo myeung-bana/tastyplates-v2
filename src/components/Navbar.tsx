@@ -25,6 +25,7 @@ import { PAGE } from "@/lib/utils";
 import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TASTYPLATES_LOGO_WHITE } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import PasswordUpdatedModal from "./ui/Modal/PasswordUpdatedModal";
+import { LOGOUT_KEY, LOGIN_BACK_KEY, LOGIN_KEY, WELCOME_KEY, SESSION_EXPIRED_KEY, UPDATE_PASSWORD_KEY } from "@/constants/session";
 
 const navigationItems = [
   { name: "Restaurant", href: RESTAURANTS },
@@ -45,11 +46,6 @@ export default function Navbar(props: any) {
   const [isOpenPasswordUpdate, setIsOpenPasswordUpdate] = useState(false);
   const [navBg, setNavBg] = useState(false);
   const searchParams = useSearchParams();
-  const LOGIN_BACK_KEY = 'loginBackMessage';
-  const LOGIN_KEY = 'logInMessage';
-  const LOGOUT_KEY = 'logOutMessage';
-  const WELCOME_KEY = 'welcomeMessage';
-  const UPDATE_PASSWORD_KEY = 'openPasswordUpdateModal';
 
   const handleLogout = async () => {
     removeAllCookies();
@@ -60,7 +56,7 @@ export default function Navbar(props: any) {
   };
 
   const changeNavBg = () => {
-    window.scrollY >= 200 ? setNavBg(true) : setNavBg(false);
+    window.scrollY > 64 ? setNavBg(true) : setNavBg(false);
   };
 
   const handleSearch = () => {
@@ -92,6 +88,7 @@ export default function Navbar(props: any) {
     const logOutMessage = localStorage?.getItem(LOGOUT_KEY) ?? "";
     const googleMessage = Cookies.get(LOGIN_KEY) ?? "";
     const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
+    const sessionExpiredMessage = localStorage?.getItem(SESSION_EXPIRED_KEY) ?? "";
     const openPasswordUpdateModal = localStorage?.getItem(UPDATE_PASSWORD_KEY) ?? "";
 
     if ((loginMessage || logOutMessage || googleMessage)) {
@@ -105,6 +102,14 @@ export default function Navbar(props: any) {
       localStorage.removeItem(LOGIN_BACK_KEY);
       localStorage.removeItem(LOGOUT_KEY);
     }
+
+    if (sessionExpiredMessage) {
+      toast.error(sessionExpiredMessage, {
+        duration: 3000, // 3 seconds
+      });
+      localStorage.removeItem(SESSION_EXPIRED_KEY);
+    }
+
 
     if (openPasswordUpdateModal) {
       setIsOpenPasswordUpdate(true);
@@ -295,7 +300,7 @@ export default function Navbar(props: any) {
                   <CustomPopover
                     align="bottom-end"
                     trigger={
-                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white">
+                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white backdrop-blur-sm">
                         <span
                           className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                             } text-center font-semibold`}
@@ -413,7 +418,13 @@ export default function Navbar(props: any) {
                 </div>
                 <div className="navbar__brand">
                   <Link href={HOME} className="flex-shrink-0 flex items-center">
-                    <h1 className="text-[#494D5D]">TastyPlates</h1>
+                    <Image
+                      src="/TastyPlates_Logo_Black.svg"
+                      className="h-5 w-auto object-contain"
+                      height={20}
+                      width={184}
+                      alt="TastyPlates Logo"
+                    />
                   </Link>
                 </div>
               </li>

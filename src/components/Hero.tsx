@@ -18,6 +18,8 @@ import toast from "react-hot-toast";
 import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
 import { HERO_BG, HERO_BG_SP } from "@/constants/images";
 
+const restaurantService = new RestaurantService();
+
 const Hero = () => {
   const router = useRouter();
   const [location, setLocation] = useState("");
@@ -151,7 +153,7 @@ const Hero = () => {
       setAddressLoading(true);
       const slugs = Array.from(values).map((val) => val.toString());
 
-      const result = await RestaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
+      const result = await restaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
       const uniqueLocations = Array.from(
         new Set(result.nodes.map((r: any) => r.listingDetails?.googleMapUrl?.streetAddress?.toLowerCase().trim()))
       ).filter(Boolean);
@@ -175,7 +177,7 @@ const Hero = () => {
   const fetchListingsName = async (search: string = '', page = 1) => {
     try {
       setListingLoading(true);
-      const result = await RestaurantService.fetchListingsName(
+      const result = await restaurantService.fetchListingsName(
         search,
         32,
         page === 1 ? null : listingEndCursor
@@ -270,7 +272,7 @@ const Hero = () => {
             src={HERO_BG}
             width={1980}
             height={538}
-            className="absolute inset-0 w-full -z-10 h-[538px] object-cover hidden sm:block"
+            className="absolute inset-0 w-full -z-10 h-[538px] object-cover object-[70%] hidden sm:block"
             alt="Hero background"
           />
           <img
@@ -376,7 +378,7 @@ const Hero = () => {
                     <input
                       type="text"
                       placeholder="Search by Listing Name"
-                      className="hero__search-input md:my-3.5"
+                      className="hero__search-input"
                       value={listing}
                       onChange={(e) => {
                         handleListingChange(e)

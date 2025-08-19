@@ -40,7 +40,7 @@ export default function CustomModal(props: any) {
         onOpenChange={onOpenChange}
         classNames={{
           body: cn("py-4 md:py-6 bg-transparent text-xs md:text-base", contentClass),
-          backdrop: cn("bg-black/20 backdrop-opacity-10", backdropClass),
+          backdrop: cn("bg-black/[14%] backdrop-opacity-[14%]", backdropClass),
           base: cn("border-[#292f46] text-[#31343F] bg-[#FCFCFC] rounded-2xl", baseClass),
           header: cn(
             "border-b-[1px] border-[#CACACA] !p-4 md:!px-6 !text-sm md:!text-lg flex flex-col text-center gap-1 justify-center border-b border-[#CACACA] text-xl",
@@ -48,7 +48,7 @@ export default function CustomModal(props: any) {
           ),
           footer: cn("!pt-0", footerClass),
           closeButton: "hidden",
-          wrapper: wrapperClass
+          wrapper: wrapperClass,
         }}
         placement="center"
         closeButton={false}

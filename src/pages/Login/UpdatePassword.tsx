@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { passwordLimit, passwordsNotMatch } from "@/constants/messages";
 import { minimumPassword } from "@/constants/validation";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
+import { UPDATE_PASSWORD_KEY } from "@/constants/session";
+
+const userService = new UserService()
 
 const UpdatePassword = () => {
   const router = useRouter();
@@ -51,11 +54,11 @@ const UpdatePassword = () => {
       return;
     }
 
-    const result = await UserService.resetPassword(searchParams?.get('token') as string, password);
+    const result = await userService.resetPassword(searchParams?.get('token') as string, password);
     setIsLoading(false);
     if (result.status) {
       if (typeof window !== "undefined") {
-        localStorage.setItem("openPasswordUpdateModal", 'true');
+        localStorage.setItem(UPDATE_PASSWORD_KEY, 'true');
       }
       setTimeout(() => router.push(HOME), 1000);
     } else {
@@ -74,7 +77,7 @@ const UpdatePassword = () => {
       }
 
       try {
-        const res = await UserService.verifyResetToken(token);
+        const res = await userService.verifyResetToken(token);
         setIsTokenValid(res?.status || false);
       } catch (e) {
         setIsTokenValid(false);

@@ -12,7 +12,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { palateOptions } from "@/constants/formOptions";
-import { UserService } from "@/services/userService";
+import { UserService } from "@/services/user/userService";
 import { checkImageType } from "@/constants/utils";
 import {
   imageMBLimit,
@@ -37,6 +37,8 @@ import toast from "react-hot-toast";
 import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
+
+const userService = new UserService()
 
 const FormContent = memo(({
   isSubmitted,
@@ -315,7 +317,7 @@ const Form = () => {
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (formattedPalates) updateData.palates = formattedPalates;
 
-      const res = await UserService.updateUserFields(
+      const res = await userService.updateUserFields(
         updateData as Partial<IUserUpdate>,
         session?.accessToken
       );
