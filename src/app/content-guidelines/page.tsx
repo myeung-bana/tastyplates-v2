@@ -1,8 +1,10 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
-import Footer from "@/components/Footer";
-import { getContentGuidelines } from "@/services/ContentGuidelines/contentGuidelinesService";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { ContentGuidelinesService } from "@/services/ContentGuidelines/contentGuidelinesService";
+
+const contentGuidelinesService = new ContentGuidelinesService();
 
 export default function ContentGuidelines() {
   const [guidelines, setGuidelines] = useState<{ title: string; content: string } | null>(null);
@@ -12,7 +14,7 @@ export default function ContentGuidelines() {
   useEffect(() => {
     async function fetchGuidelines() {
       try {
-        const data = await getContentGuidelines();
+        const data = await contentGuidelinesService.getContentGuidelines();
         setGuidelines({ title: data.title, content: data.content });
       } catch (err: any) {
         setError(err.message || "Unknown error");

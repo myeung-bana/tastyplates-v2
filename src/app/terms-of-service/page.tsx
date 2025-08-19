@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
-import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
 
 const termsOfServiceService = new TermsOfServiceService();
