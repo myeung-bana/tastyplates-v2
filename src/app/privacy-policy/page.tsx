@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
-import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyService";
 
 const privacyPolicyService = new PrivacyPolicyService();
