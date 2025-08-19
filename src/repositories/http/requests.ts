@@ -37,13 +37,16 @@ export default class HttpMethods {
             headers,
         });
 
-        const session = await getSession();
-        const clonedResponse = response.clone();
-        const jsonData: HttpResponse = await clonedResponse.json();
+        // only happens when status error in backend request
+        if (response.status == code.unauthorized || response.status == code.forbidden) {
+            const session = await getSession();
+            const clonedResponse = response.clone();
+            const jsonData: HttpResponse = await clonedResponse.json();
 
-        // redirect back when unauthenticated request
-        if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
-            await handleUnauthorized();
+            // redirect back when unauthenticated request
+            if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
+                await handleUnauthorized();
+            }
         }
 
         if (jsonResponse) {
