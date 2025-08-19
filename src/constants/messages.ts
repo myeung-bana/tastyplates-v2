@@ -11,6 +11,7 @@ export const palateMaxLimit = (limit: number) => `You can only select up to ${li
 export const genderRequired = "Gender is required.";
 export const palateRequired = "Please select at least one palate";
 export const usernameCheckError = "Error checking username availability";
+export const currentPasswordRequired = "Current password is required.";
 export const currentPasswordError = "Current password is incorrect";
 export const passwordMinLength = "New password must be at least 5 characters.";
 export const confirmPasswordRequired = "Confirm password is required.";
