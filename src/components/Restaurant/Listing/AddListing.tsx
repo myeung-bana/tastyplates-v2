@@ -32,6 +32,11 @@ declare global {
     initMap: () => void;
   }
 }
+
+const categoryService = new CategoryService();
+const palateService = new PalatesService();
+const restaurantService = new RestaurantService();
+
 const AddListingPage = (props: any) => {
   const [listing, setListing] = useState({
     address: "",
@@ -220,14 +225,14 @@ const AddListingPage = (props: any) => {
   };
 
   useEffect(() => {
-    CategoryService.fetchCategories()
+    categoryService.fetchCategories()
       .then(setCategories)
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
-    PalatesService.fetchPalates()
+    palateService.fetchPalates()
       .then(setPalates)
       .catch((error) => console.error("Error fetching palates:", error))
       .finally(() => setIsLoading(false));
@@ -273,7 +278,7 @@ const AddListingPage = (props: any) => {
         if (currentResId > 0) {
           setIsLoading(true);
           try {
-            const restaurantData = await RestaurantService.fetchRestaurantById(
+            const restaurantData = await restaurantService.fetchRestaurantById(
               currentResId.toString(),
               "DATABASE_ID"
             );
@@ -426,7 +431,7 @@ const AddListingPage = (props: any) => {
       }
 
       // ✅ API call
-      const response = await RestaurantService.createRestaurantListingAndReview(payload, sess);
+      const response = await restaurantService.createRestaurantListingAndReview(payload, sess);
 
       if (response?.listing?.id || response?.id) {
         setCurrentRestaurantDbId(response.listing?.id || response.id);

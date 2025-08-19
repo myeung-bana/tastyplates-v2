@@ -49,6 +49,9 @@ export interface IUserUpdateResponse {
     message: string;
     status: number;
     code?: any;
+    data?: {
+        status?: number;
+    }
 }
 
 export interface CheckGoogleUserResponse {

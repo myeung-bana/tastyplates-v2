@@ -12,31 +12,17 @@ import {
 import { user } from "@heroui/theme";
 import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
 import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
+import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
+import HttpMethods from "../requests";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
+const request = new HttpMethods();
 
-export class RestaurantRepository {
-    private static async request(endpoint: string, options: RequestInit, jsonResponse = false): Promise<any> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
-        });
-
-        if (jsonResponse) {
-            return response.json();
-        }
-
-        return response;
-    }
-
-    static async getRestaurantBySlug(slug: string, palates: string) {
+export class RestaurantRepository implements RestaurantRepo {
+    async getRestaurantBySlug(slug: string, palates: string) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_SLUG,
             fetchPolicy: "no-cache",
-            variables: { 
+            variables: {
                 slug,
                 palates
             },
@@ -44,7 +30,7 @@ export class RestaurantRepository {
         return data.listing;
     }
 
-    static async getAllRestaurants(
+    async getAllRestaurants(
         searchTerm: string,
         first = 8,
         after: string | null = null,
@@ -83,7 +69,7 @@ export class RestaurantRepository {
         };
     }
 
-    static async getRestaurantById(
+    async getRestaurantById(
         id: string,
         idType: string = "DATABASE_ID",
         accessToken?: string,
@@ -103,16 +89,12 @@ export class RestaurantRepository {
         return data.listing;
     }
 
-    static async createListingAndReview(payload: any, token: string): Promise<any> {
-        const res = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing`, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-        });
+    async createListingAndReview(payload: any, token: string): Promise<any> {
+        const headers: HeadersInit = {
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+        };
 
+        const res: Response = await request.POST('/wp-json/custom/v1/listing', { body: JSON.stringify(payload), headers: headers });
         if (!res.ok) {
             const errorData = await res.json();
             throw new Error(errorData.error || "Failed to submit listing and review");
@@ -122,37 +104,36 @@ export class RestaurantRepository {
     }
 
 
-    static async getFavoriteListing(
+    async getFavoriteListing(
         userId: number,
         accessToken?: string
     ): Promise<any> {
-        return this.request(
-            `/wp-json/restaurant/v1/favorites/?user_id=${userId}`,
+        const headers: HeadersInit = {
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        };
+
+        return request.GET(`/wp-json/restaurant/v1/favorites/?user_id=${userId}`,
             {
-                method: 'GET',
-                headers: accessToken
-                    ? { Authorization: `Bearer ${accessToken}` }
-                    : {},
+                headers: headers,
                 credentials: "include",
             },
             true
         );
     }
 
-    static async updateListing(
+    async updateListing(
         id: number,
         listingUpdateData: Record<string, any>, // Changed to accept a plain object
         accessToken?: string
     ): Promise<any> {
         try {
-            const response = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing/${id}`, {
-                method: "PUT",
+            const response: Response = await request.PUT(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
-                    'Content-Type': 'application/json',
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
                 },
                 body: JSON.stringify(listingUpdateData),
             });
+
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -167,10 +148,9 @@ export class RestaurantRepository {
         }
     }
 
-    static async deleteListing(id: number, accessToken?: string): Promise<any> {
+    async deleteListing(id: number, accessToken?: string): Promise<any> {
         try {
-            const response = await fetch(`${API_BASE_URL}/wp-json/custom/v1/listing/${id}`, {
-                method: "DELETE",
+            const response: Response = await request.DELETE(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
                 },
@@ -211,12 +191,10 @@ export class RestaurantRepository {
         }
     }
 
-    static async getlistingDrafts(token: string): Promise<any> {
+    async getlistingDrafts(token: string): Promise<any> {
         try {
-            const response = await this.request('/wp-json/wp/v2/listings?status=pending', {
-                method: 'GET',
+            const response = await request.GET('/wp-json/wp/v2/listings?status=pending', {
                 headers: {
-                    'Content-Type': 'application/json',
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
             }, true);
@@ -227,9 +205,8 @@ export class RestaurantRepository {
         }
     }
 
-    static async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
-        const response = await this.request('/wp-json/restaurant/v1/favorite/', {
-            method: 'POST',
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
             },
@@ -240,21 +217,19 @@ export class RestaurantRepository {
         return response;
     }
 
-    static async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<any> {
-        const response = await this.request(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
-            method: 'GET',
-            headers: accessToken
-                ? { Authorization: `Bearer ${accessToken}` }
-                : {},
+    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
+            headers: {
+                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+            },
             credentials: "include",
         }, jsonResponse);
 
         return response;
     }
 
-    static async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
-        const response = await this.request('/wp-json/restaurant/v1/checkin/', {
-            method: "POST",
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+        const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
             },
@@ -265,9 +240,9 @@ export class RestaurantRepository {
         return response;
     }
 
-    static async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
+    async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
         try {
-            const res = await fetch(`${API_BASE_URL}/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
+            const res: Response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
             const data = await res.json();
             if (data && Array.isArray(data.reviews)) {
                 return data.reviews.length;
@@ -279,7 +254,7 @@ export class RestaurantRepository {
         }
     }
 
-    static async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
+    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
         try {
             const { data } = await client.mutate({
                 mutation: ADD_RECENTLY_VISITED_RESTAURANT,
@@ -298,7 +273,7 @@ export class RestaurantRepository {
         }
     }
 
-    static async getRecentlyVisitedRestaurants(accessToken?: string,) {
+    async getRecentlyVisitedRestaurants(accessToken?: string,) {
         const { data } = await client.query({
             query: GET_RECENTLY_VISITED_RESTAURANTS,
             context: {
@@ -313,7 +288,7 @@ export class RestaurantRepository {
         return data?.currentUser?.recentlyVisited || [];
     }
 
-    static async getAddressByPalate(
+    async getAddressByPalate(
         searchTerm: string,
         taxQuery: any,
         first = 32,
@@ -342,7 +317,7 @@ export class RestaurantRepository {
         };
     }
 
-    static async getListingsName(
+    async getListingsName(
         searchTerm: string,
         first = 32,
         after: string | null = null,

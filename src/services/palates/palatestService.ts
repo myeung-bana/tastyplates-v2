@@ -1,9 +1,12 @@
-import { PalatesRepository } from "@/repositories/palates/palatesRepository";
+import { PalatesRepository } from "@/repositories/http/palates/palatesRepository";
+import { PalateRepo } from "@/repositories/interface/user/palate";
 
-export const PalatesService = {
+const palateRepo: PalateRepo = new PalatesRepository()
+
+export class PalatesService {
     async fetchPalates() {
         try {
-            return await PalatesRepository.getPalates();
+            return await palateRepo.getPalates();
         } catch (error) {
             console.error('Error fetching Palates:', error);
             throw new Error('Failed to fetch Palates');

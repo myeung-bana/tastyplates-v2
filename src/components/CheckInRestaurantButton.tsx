@@ -9,6 +9,8 @@ import { checkInStatusError, checkInRestaurantSuccess, uncheckInRestaurantSucces
 import { responseStatusCode as code } from "@/constants/response";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 
+const restaurantService = new RestaurantService();
+
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session } = useSession();
   const [checkedIn, setCheckedIn] = useState(false);
@@ -24,7 +26,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     if (!session || !restaurantSlug || initialized) return;
     const fetchCheckIn = async () => {
       try {
-        const data = await RestaurantService.createCheckIn(
+        const data = await restaurantService.createCheckIn(
           { restaurant_slug: restaurantSlug, action: "check" },
           session?.accessToken // can be undefined
         );
@@ -52,7 +54,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: !checkedIn } }));
     const action = checkedIn ? "uncheckin" : "checkin";
     try {
-      const res: Response = await RestaurantService.createCheckIn(
+      const res: Response = await restaurantService.createCheckIn(
         { restaurant_slug: restaurantSlug, action },
         session?.accessToken,
         false

@@ -5,7 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from 'firebase/app';
-import { UserService } from '@/services/userService';
+import { UserService } from '@/services/user/userService';
 import Spinner from "@/components/LoadingSpinner";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
@@ -15,10 +15,13 @@ import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, p
 import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { HOME, ONBOARDING_ONE, TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/constants/pages";
+import { REGISTRATION_KEY } from "@/constants/session";
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
 }
+
+const userService = new UserService()
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [email, setEmail] = useState("");
@@ -33,7 +36,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
-  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
     const registrationData = localStorage.getItem(REGISTRATION_KEY);
@@ -49,7 +51,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   }, [router]);
 
   const checkEmailExists = async (email: string) => {
-    const checkEmail = await UserService.checkEmailExists(email);
+    const checkEmail = await userService.checkEmailExists(email);
     if (checkEmail.status == code.badRequest) {
       setError(checkEmail.message);
       return false;

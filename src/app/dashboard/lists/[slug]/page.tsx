@@ -24,6 +24,7 @@ interface Restaurant {
 
 type tParams = { slug: string };
 
+const restaurantService = new RestaurantService()
 
 const ListsDetailPage = () => {
   const params = useParams();
@@ -53,7 +54,7 @@ const ListsDetailPage = () => {
   const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
     setLoading(true);
     try {
-      const data = await RestaurantService.fetchAllRestaurants(search, first, after);
+      const data = await restaurantService.fetchAllRestaurants(search, first, after);
       const transformed = transformNodes(data.nodes);
 
       setRestaurants(prev => {

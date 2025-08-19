@@ -14,7 +14,7 @@ import {
 import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
-import { UserService } from '@/services/userService';
+import { UserService } from '@/services/user/userService';
 import {
   birthdateRequired,
   birthdateLimit,
@@ -28,6 +28,9 @@ import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/con
 import CustomDatePicker from "@/components/CustomDatepicker";
 import { HOME, ONBOARDING_TWO } from "@/constants/pages";
 import { formatDateForInput } from "@/lib/utils";
+import { REGISTRATION_KEY } from "@/constants/session";
+
+const userService = new UserService()
 
 const OnboardingOnePage = () => {
   const router = useRouter();
@@ -44,7 +47,6 @@ const OnboardingOnePage = () => {
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const REGISTRATION_KEY = 'registrationData';
 
   useEffect(() => {
     setHasMounted(true); // Ensures code only runs after client-side mount
@@ -170,7 +172,7 @@ const OnboardingOnePage = () => {
       }
 
       try {
-        const response = await UserService.checkUsernameExists(name);
+        const response = await userService.checkUsernameExists(name);
         if (response.exists) {
           setUsernameError(response.message as string);
           setIsLoading(false);

@@ -28,6 +28,9 @@ interface Palate {
   }[];
 }
 
+const categoryService = new CategoryService();
+const palateService = new PalatesService();
+
 const Filter = ({ onFilterChange }: FilterProps) => {
   const [selectedCuisines, setSelectedCuisines] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<string>("");
@@ -51,7 +54,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   const [isLoadingPalates, setIsLoadingPalates] = useState<boolean>(true);
 
   useEffect(() => {
-    CategoryService.fetchCategories()
+    categoryService.fetchCategories()
       .then((data) => {
         setDbCuisines(data || []);
       })
@@ -60,7 +63,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   }, []);
 
   useEffect(() => {
-    PalatesService.fetchPalates()
+    palateService.fetchPalates()
       .then((data) => {
         const allChildSlugs = new Set<string>();
         data?.forEach((p: any) => {

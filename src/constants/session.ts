@@ -1,0 +1,12 @@
+export const LOGIN_BACK_KEY = 'loginBackMessage';
+export const LOGIN_KEY = 'logInMessage';
+export const LOGOUT_KEY = 'logOutMessage';
+export const WELCOME_KEY = 'welcomeMessage';
+export const SESSION_EXPIRED_KEY = 'sessionExpiredMessage';
+export const UPDATE_PASSWORD_KEY = 'openPasswordUpdateModal';
+export const REGISTRATION_KEY = 'registrationData';
+export const LAST_ACTIVE_KEY = 'lastActive';
+export const RESET_EMAIL_KEY = 'reset-email';
+export const FOLLOW_SYNC_KEY = 'follow_sync';
+export const FOLLOWING_KEY = (userId: string | number) => `following_${userId}`;
+export const FOLLOWERS_KEY = (userId: string | number) => `followers_${userId}`;

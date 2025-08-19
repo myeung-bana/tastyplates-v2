@@ -32,6 +32,8 @@ interface ListingCardProps {
     onDeleteSuccess: () => void;
 }
 
+const restaurantService = new RestaurantService();
+
 const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSuccess }) => {
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
@@ -54,7 +56,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
 
         setIsLoadingDelete(true);
         try {
-            await RestaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
+            await restaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
             toast.success(deleteDraftSuccess);
             onDeleteSuccess();
             setIsShowDelete(false);
