@@ -1,8 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
 import Slider from "react-slick";
 import "@/styles/pages/_restaurant-details.scss";
-import { PiCaretCircleLeft, PiCaretCircleRight } from "react-icons/pi";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import { useEffect, useState } from "react";
 import FallbackImage from "@/components/ui/Image/FallbackImage";

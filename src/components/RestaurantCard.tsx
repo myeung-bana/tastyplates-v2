@@ -1,14 +1,11 @@
-import Image from "next/image";
-import Link from "next/link";
 import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { cuisines } from "@/data/dummyCuisines";
-import Photo from "../../public/images/default-image.png";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import SignupModal from "@/components/SignupModal";
 import SigninModal from "@/components/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
@@ -16,7 +13,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { PAGE } from "@/lib/utils";
 import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { errorOccurred, favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
+import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "./ui/Image/FallbackImage";
 import { responseStatusCode as code } from "@/constants/response";
 

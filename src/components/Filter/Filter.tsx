@@ -1,6 +1,6 @@
 import "@/styles/components/filter.scss";
 import CustomModal from "../ui/Modal/Modal";
-import { Key, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";

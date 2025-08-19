@@ -1,14 +1,8 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
 import { IoMdClose } from "react-icons/io";
 import "@/styles/components/_listing-card.scss";
-// import { cuisines } from "@/data/dummyCuisines";
-import { getRestaurantReviewsCount } from "@/utils/reviewUtils";
-import { useState } from "react";
-import { FaStar } from "react-icons/fa";
 import { formatDateT, stripTags } from "@/lib/utils";
-import { BsStarFill, BsStarHalf, BsStar } from 'react-icons/bs';
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 

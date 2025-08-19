@@ -1,9 +1,7 @@
-import Image from "next/image";
 import { useState } from "react";
 import ReviewDetailModal from "@/components/ReviewDetailModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
-import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import { DEFAULT_IMAGE } from "@/constants/images";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 

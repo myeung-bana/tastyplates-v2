@@ -6,7 +6,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
-import { useState } from "react";
 import { MdClose } from "react-icons/md";
 export default function CustomModal(props: any) {
   const {
