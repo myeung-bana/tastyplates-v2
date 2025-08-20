@@ -1,10 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
+import { FiX, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
 import { stripTags, formatDate } from "../lib/utils"
-import Link from "next/link";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";

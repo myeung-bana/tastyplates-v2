@@ -1,6 +1,5 @@
 // ListingCardDraft.tsx
 import React, { useState } from 'react';
-import Image from "next/image";
 import { IoMdClose } from "react-icons/io";
 import Photo from "../../../../public/images/default-image.png";
 import { useSession } from 'next-auth/react';

@@ -2,7 +2,6 @@ import client from "@/app/graphql/client";
 import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_RESTAURANT_REVIEWS, GET_REVIEWS_BY_RESTAURANT_ID, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
 import { ReviewRepo } from "@/repositories/interface/user/review";
 import HttpMethods from "../requests";
-import { CreateReviewResponse } from "@/interfaces/Reviews/review";
 
 const request = new HttpMethods();
 

@@ -6,7 +6,7 @@ import { languageOptions } from "@/constants/formOptions";
 import { useSession } from "next-auth/react";
 import { UserService } from "@/services/user/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
+import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, currentPasswordRequired, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
 import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
 import { emailExistCode, sessionProvider as provider, responseStatusCode as code } from "@/constants/response";
@@ -81,7 +81,9 @@ const Settings = (props: any) => {
   const validatePasswords = () => {
     let errors = { current: "", new: "", confirm: "" };
     if (editable === Field.Password) {
-      // Current password: no frontend validation, backend only
+      if (passwordFields.current.length == 0) {
+        errors.current = currentPasswordRequired;
+      }
       // New password: must be at least 5 characters
       if (!passwordFields.new || passwordFields.new.length < minimumPassword) {
         errors.new = passwordLimit(minimumPassword, "New password");

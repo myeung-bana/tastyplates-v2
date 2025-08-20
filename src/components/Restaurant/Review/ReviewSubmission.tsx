@@ -1,17 +1,14 @@
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
 import Footer from "@/components/Footer";
-import { FiMail } from "react-icons/fi";
-import { palates } from "@/data/dummyPalate";
 import "@/styles/pages/_submit-restaurants.scss";
 import Rating from "./Rating";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
-import { image } from "@heroui/theme";
 import Link from "next/link";
 import Image from "next/image";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'

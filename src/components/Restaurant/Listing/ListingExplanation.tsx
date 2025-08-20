@@ -1,7 +1,6 @@
 import { LISTING_BACKDROP_SP } from "@/constants/images"
 import { LISTING_STEP_ONE } from "@/constants/pages"
 import Image from "next/image"
-import Link from "next/link"
 
 const ListingExplanation = () => 
 <div className="font-inter mt-16">
