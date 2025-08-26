@@ -131,21 +131,6 @@ const RestaurantPage = () => {
     ratingsCount: item.ratingsCount ?? 0,
   });
 
-  const fetchListingsName = async (search: string = '') => {
-    try {
-      const result = await RestaurantService.fetchListingsName(search);
-      const formatted = result.nodes.map((item: any) => ({
-        key: item.slug,
-        label: item.title,
-      }));
-      setListingOptions(formatted);
-    } catch (err) {
-      setListingOptions([]);
-    } finally {
-      setListingLoading(false);
-    }
-  };
-
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setListing(inputValue);
@@ -234,12 +219,6 @@ const RestaurantPage = () => {
       }));
   }, []);
 
-  useEffect(() => {
-    const [debouncedListing] = debounce(fetchListingsName, 500);
-
-    fetchListingsDebouncedRef.current = debouncedListing;
-    fetchListingsDebouncedRef.current?.('');
-  }, [])
 
   useEffect(() => {
     setRestaurants([]);
@@ -321,7 +300,7 @@ const RestaurantPage = () => {
             header={<></>}
             content={
               <>
-                <div className="flex flex-row gap-3 items-center py-7 px-3 md:p-0 border-b border-[#CACACA]">
+                <div className="flex flex-row gap-3 items-center py-7 px-3 md:p-0">
                     <button onClick={() => setIsShowPopup(false) } className="size-8 md:hidden flex justify-center items-center">
                       <MdArrowBackIos className="size-4" />
                     </button>
