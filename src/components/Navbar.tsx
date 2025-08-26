@@ -48,6 +48,7 @@ export default function Navbar(props: any) {
   const [isOpenPasswordUpdate, setIsOpenPasswordUpdate] = useState(false);
   const [navBg, setNavBg] = useState(false);
   const [isShowPopup, setIsShowPopup] = useState<boolean>(false)
+  const [isShowPopupMobile, setIsShowPopupMobile] = useState<boolean>(false)
   const searchParams = useSearchParams();
 
   const handleLogout = async () => {
@@ -237,7 +238,6 @@ export default function Navbar(props: any) {
                       </div>
                       <div className="hero__search-divider"></div>
                       <div className="hero__search-location !bg-transparent">
-                        {/* <FiMapPin className="hero__search-icon" /> */}
                         <input
                           type="text"
                           placeholder="Search location"
@@ -261,12 +261,13 @@ export default function Navbar(props: any) {
                   setIsOpen={setIsShowPopup}
                   header={<></>}
                   content={
-                    <div className="hidden md:block">
-                      <div className="flex gap-2.5 items-center h-[76px] bg-white border border-[#E5E5E5] pl-6 pr-4 py-3.5 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
+                    <>
+                      <div className="flex gap-2.5 items-center h-[76px] bg-white border border-[#E5E5E5] pl-6 pr-4 py-3.5 !rounded-[50px]">
                         <div className="hero__search-restaurant !bg-transparent">
                           <input
                             type="text"
                             placeholder="Search Ethnic"
+                            name="ethnic"
                             className="hero__search-input"
                             value={ethnicSearch}
                             onChange={(e) => setEthnicSearch(e.target.value)}
@@ -274,27 +275,14 @@ export default function Navbar(props: any) {
                         </div>
                         <div className="hero__search-divider"></div>
                         <div className="hero__search-location !bg-transparent">
-                          {/* <FiMapPin className="hero__search-icon" /> */}
                           <input
                             type="text"
                             placeholder="Search location"
+                            name="location"
                             className="hero__search-input"
                             value={addressSearch} // Set value to addressSearch
                             onChange={(e) => setAddressSearch(e.target.value)}
                           />
-                          {/* <button
-                                      type="button"
-                                      className="hero__location-button"
-                                      onClick={getCurrentLocation}
-                                      disabled={isLoading}
-                                      title="Use current location"
-                                    >
-                                      <FiNavigation
-                                        className={`hero__location-icon ${
-                                          isLoading ? "spinning" : ""
-                                        }`}
-                                      />
-                                    </button> */}
                         </div>
                         <button
                           type="submit"
@@ -305,7 +293,7 @@ export default function Navbar(props: any) {
                           <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
                         </button>
                       </div>
-                    </div>
+                    </>
                   }
                   hasFooter
                   footerClass="!p-0"
@@ -416,7 +404,7 @@ export default function Navbar(props: any) {
           {hasSearchBarMobile && (
             <>
               <div className="mb-4 md:hidden">
-                <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]" onClick={() => setIsShowPopup(true)}>
+                <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]" onClick={() => setIsShowPopupMobile(true)}>
                   <div className="hero__search-restaurant !bg-transparent">
                     {/* <input
                       type="text"
@@ -439,12 +427,12 @@ export default function Navbar(props: any) {
                 </div>
               </div>
               <CustomModal
-                isOpen={isShowPopup}
-                setIsOpen={setIsShowPopup}
+                isOpen={isShowPopupMobile}
+                setIsOpen={setIsShowPopupMobile}
                 header={<></>}
                 content={
-                  <div className="flex flex-row gap-3 items-center py-4 px-3 md:p-0">
-                    <button onClick={() => setIsShowPopup(false) } className="size-8 md:hidden flex justify-center items-center">
+                  <div className="flex flex-row gap-3 items-center py-4 px-3 md:p-0 md:hidden">
+                    <button onClick={() => setIsShowPopupMobile(false) } className="size-8 md:hidden flex justify-center items-center">
                       <MdArrowBackIos className="size-4" />
                     </button>
                     <div className="w-full flex flex-col gap-3 items-center bg-[#FCFCFC]">
@@ -474,10 +462,10 @@ export default function Navbar(props: any) {
                 footerClass="!p-0"
                 headerClass="!p-0 !border-none"
                 contentClass="md:!gap-10 !p-0 border-b border-[#CACACA]"
-                baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0"
+                baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0 md:!hidden"
                 hasCustomCloseButton
                 customButton={<></>}
-                wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent"
+                wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent md:!hidden"
               />
             </>
           )}
