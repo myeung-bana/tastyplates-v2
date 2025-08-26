@@ -4,7 +4,7 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard from "./ReviewCard";
 import "@/styles/pages/_reviews.scss";
 import { Masonry } from "masonic";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 
 const reviewService = new ReviewService();

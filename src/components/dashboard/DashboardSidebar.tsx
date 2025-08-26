@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   FiHome,
   FiHeart,
-  FiClock,
   FiMessageCircle,
   FiSettings,
   FiLogOut,

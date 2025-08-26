@@ -7,7 +7,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
-import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
+import { commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";

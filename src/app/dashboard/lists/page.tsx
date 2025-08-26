@@ -4,8 +4,7 @@
 import { useState, useEffect } from "react";
 import { lists } from "@/data/dummyList";
 import Link from "next/link";
-import { restaurants } from "@/data/dummyRestaurants";
-import { FiPlus, FiEdit2, FiTrash2, FiMove } from "react-icons/fi";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 import "@/styles/pages/_lists.scss";
 import { PAGE } from "@/lib/utils";
 import { DASHBOARD_LISTS } from "@/constants/pages";

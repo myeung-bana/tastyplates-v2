@@ -6,9 +6,7 @@ import {
   ReviewedDataProps,
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
-import { Fragment, useEffect, useState } from "react";
-import { BsFillStarFill } from "react-icons/bs";
-import { GiRoundStar } from "react-icons/gi";
+import { Fragment, useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link"; // Import Link
 import { useSession } from "next-auth/react";

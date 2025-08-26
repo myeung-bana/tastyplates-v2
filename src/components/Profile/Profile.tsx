@@ -5,7 +5,6 @@ import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
 import { Tab, Tabs } from "@heroui/tabs";
-import Image from "next/image";
 import Link from "next/link";
 import ReviewCard from "../ReviewCard";
 import { Masonry } from "masonic";
