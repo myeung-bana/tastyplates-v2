@@ -219,7 +219,6 @@ const RestaurantPage = () => {
       }));
   }, []);
 
-
   useEffect(() => {
     setRestaurants([]);
     setEndCursor(null);
