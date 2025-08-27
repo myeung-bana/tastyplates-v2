@@ -8,20 +8,30 @@ const termsOfServiceService = new TermsOfServiceService();
 
 export default function TermsOfService() {
   const [terms, setTerms] = useState<{ title: string; content: string } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const cached = localStorage.getItem("termsOfService");
+    const expiry = localStorage.getItem("termsOfServiceExpiry");
+
+    if (cached && expiry && Date.now() < parseInt(expiry)) {
+      setTerms(JSON.parse(cached));
+    }
+
     async function fetchTerms() {
       try {
         const data = await termsOfServiceService.getTermsOfService();
-        setTerms({ title: data.title, content: data.content });
+        const newData = { title: data.title, content: data.content };
+
+        localStorage.setItem("termsOfService", JSON.stringify(newData));
+        localStorage.setItem("termsOfServiceExpiry", (Date.now() + 5 * 60 * 1000).toString());
+
+        setTerms(newData);
       } catch (err: any) {
         setError(err.message || "Unknown error");
-      } finally {
-        setLoading(false);
       }
     }
+
     fetchTerms();
   }, []);
 
@@ -36,12 +46,11 @@ export default function TermsOfService() {
             {terms?.title || "Terms of Service"}
           </h1>
         </div>
+
         <div className="flex-1 flex items-center justify-center px-4 pb-8">
           <div className="w-full max-w-xl">
             <div className="text-[#31343F] flex flex-col gap-3 p-0">
-              {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading Terms of Service...</div>
-              ) : error ? (
+              {error ? (
                 <div className="text-center py-8 text-red-500">{error}</div>
               ) : terms ? (
                 <section>
@@ -54,6 +63,7 @@ export default function TermsOfService() {
             </div>
           </div>
         </div>
+
         <Footer />
       </main>
     </>
