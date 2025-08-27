@@ -11,7 +11,7 @@
     // height: 88px;
     margin-left: auto;
     margin-right: auto;
-    padding-right: 1rem;
+    padding: 0 0.75rem;
 
     @media (min-width: 640px) {
       padding-left: 1rem;
@@ -28,7 +28,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 4rem;
+    height: 88px;
+
+    @media (max-width: 767px) {
+      height: 4rem;
+    }
   }
 
   &__brand {

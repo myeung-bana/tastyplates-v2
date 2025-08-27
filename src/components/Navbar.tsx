@@ -26,6 +26,8 @@ import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TAS
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import PasswordUpdatedModal from "./ui/Modal/PasswordUpdatedModal";
 import { LOGOUT_KEY, LOGIN_BACK_KEY, LOGIN_KEY, WELCOME_KEY, SESSION_EXPIRED_KEY, UPDATE_PASSWORD_KEY } from "@/constants/session";
+import CustomModal from "./ui/Modal/Modal";
+import { MdArrowBackIos } from "react-icons/md";
 
 const navigationItems = [
   { name: "Restaurant", href: RESTAURANTS },
@@ -45,6 +47,8 @@ export default function Navbar(props: any) {
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [isOpenPasswordUpdate, setIsOpenPasswordUpdate] = useState(false);
   const [navBg, setNavBg] = useState(false);
+  const [isShowPopup, setIsShowPopup] = useState<boolean>(false)
+  const [isShowPopupMobile, setIsShowPopupMobile] = useState<boolean>(false)
   const searchParams = useSearchParams();
 
   const handleLogout = async () => {
@@ -67,6 +71,7 @@ export default function Navbar(props: any) {
     if (addressSearch) {
       params.set('address', (addressSearch));
     }
+    setIsShowPopup(false)
     router.push(PAGE(RESTAURANTS, [], params.toString()));
   };
 
@@ -160,7 +165,7 @@ export default function Navbar(props: any) {
           }`}
       >
         <div
-          className={`navbar__container py-0 flex flex-col justify-center ${!isLandingPage ? "sm:py-2" : "sm:py-3"
+          className={`navbar__container py-0 flex flex-col justify-center ${!isLandingPage ? "sm:!py-0" : "sm:!py-0"
             }`}
         >
           <div className="navbar__content">
@@ -172,7 +177,7 @@ export default function Navbar(props: any) {
                   className="inline-flex items-center justify-center p-2 rounded-md"
                 >
                   <svg
-                    className="h-6 w-6"
+                    className="h-4 w-4"
                     stroke={`${isLandingPage && !navBg ? '#FCFCFC' : '#31343F'}`}
                     fill="none"
                     viewBox="0 0 24 24"
@@ -219,51 +224,87 @@ export default function Navbar(props: any) {
               </div>
             </div>
             {(navBg && isLandingPage) || hasSearchBar && (
-              <div className="hidden md:block">
-                <div className="flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 !rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
-                  <div className="hero__search-restaurant !bg-transparent">
-                    <input
-                      type="text"
-                      placeholder="Search Ethnic"
-                      className="hero__search-input"
-                      value={ethnicSearch}
-                      onChange={(e) => setEthnicSearch(e.target.value)}
-                    />
-                  </div>
-                  <div className="hero__search-divider"></div>
-                  <div className="hero__search-location !bg-transparent">
-                    {/* <FiMapPin className="hero__search-icon" /> */}
-                    <input
-                      type="text"
-                      placeholder="Search location"
-                      className="hero__search-input"
-                      value={addressSearch} // Set value to addressSearch
-                      onChange={(e) => setAddressSearch(e.target.value)}
-                    />
-                    {/* <button
-                                type="button"
-                                className="hero__location-button"
-                                onClick={getCurrentLocation}
-                                disabled={isLoading}
-                                title="Use current location"
-                              >
-                                <FiNavigation
-                                  className={`hero__location-icon ${
-                                    isLoading ? "spinning" : ""
-                                  }`}
-                                />
-                              </button> */}
-                  </div>
-                  <button
-                    type="submit"
-                    className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
-                    onClick={handleSearch} // Add onClick handler here
-                  // disabled={!location || !cuisine}
-                  >
-                    <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
-                  </button>
+              <>
+                <div className={`hidden ${!isShowPopup ? 'md:block' : 'md:hidden'}`} onClick={() => setIsShowPopup(true)}>
+                    <div className="max-w-[400px] flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 h-[56px] !rounded-[50px] shadow-[0_0_10px_#E5E5E5]">
+                      <div className="hero__search-restaurant !bg-transparent !flex-none max-w-[108px]">
+                        <input
+                          type="text"
+                          placeholder="Search Ethnic"
+                          className="hero__search-input"
+                          value={ethnicSearch}
+                          onChange={(e) => setEthnicSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="hero__search-divider"></div>
+                      <div className="hero__search-location !bg-transparent">
+                        <input
+                          type="text"
+                          placeholder="Search location"
+                          className="hero__search-input"
+                          value={addressSearch} // Set value to addressSearch
+                          onChange={(e) => setAddressSearch(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="hero__search-button !rounded-full h-8 w-8 !py-2 !px-1 text-center !bg-[#E36B00]"
+                        onClick={handleSearch} // Add onClick handler here
+                      // disabled={!location || !cuisine}
+                      >
+                        <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white !mx-1" />
+                      </button>
+                    </div>
                 </div>
-              </div>
+                <CustomModal
+                  isOpen={isShowPopup}
+                  setIsOpen={setIsShowPopup}
+                  header={<></>}
+                  content={
+                    <>
+                      <div className="flex gap-2.5 items-center h-[76px] bg-white border border-[#E5E5E5] pl-6 pr-4 py-3.5 !rounded-[50px]">
+                        <div className="hero__search-restaurant !bg-transparent">
+                          <input
+                            type="text"
+                            placeholder="Search Ethnic"
+                            name="ethnic"
+                            className="hero__search-input"
+                            value={ethnicSearch}
+                            onChange={(e) => setEthnicSearch(e.target.value)}
+                          />
+                        </div>
+                        <div className="hero__search-divider"></div>
+                        <div className="hero__search-location !bg-transparent">
+                          <input
+                            type="text"
+                            placeholder="Search location"
+                            name="location"
+                            className="hero__search-input"
+                            value={addressSearch} // Set value to addressSearch
+                            onChange={(e) => setAddressSearch(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="hero__search-button !rounded-full h-[44px] w-[44px] !p-3 text-center !bg-[#E36B00]"
+                          onClick={handleSearch} // Add onClick handler here
+                        // disabled={!location || !cuisine}
+                        >
+                          <FiSearch className="hero__search-icon !h-5 !w-5 stroke-white" />
+                        </button>
+                      </div>
+                    </>
+                  }
+                  hasFooter
+                  footerClass="!p-0"
+                  headerClass="!p-0 !border-none"
+                  contentClass="md:!gap-10 !p-0"
+                  baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0"
+                  hasCustomCloseButton
+                  customButton={<></>}
+                  wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent"
+                />
+              </>
             )}
             <div className="navbar__auth">
               {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
@@ -290,7 +331,7 @@ export default function Navbar(props: any) {
                       setIsOpenSignup(true)
                       setIsOpenSignin(false)
                     }}
-                    className="navbar__button navbar__button--secondary rounded-[50px] bg-white text-[#494D5D] font-semibold"
+                    className="navbar__button navbar__button--secondary rounded-[50px] bg-white text-[#494D5D] font-semibold mr-1 md:mr-0"
                   >
                     Sign Up
                   </button>
@@ -361,27 +402,72 @@ export default function Navbar(props: any) {
             </div>
           </div>
           {hasSearchBarMobile && (
-            <div className="mb-4 md:hidden">
-              <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
-                <div className="hero__search-restaurant !bg-transparent">
-                  <input
-                    type="text"
-                    placeholder="Start Your Search"
-                    className="hero__search-input text-center"
-                    value={ethnicSearch}
-                    onChange={(e) => setEthnicSearch(e.target.value)}
-                  />
+            <>
+              <div className="mb-4 md:hidden">
+                <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]" onClick={() => setIsShowPopupMobile(true)}>
+                  <div className="hero__search-restaurant !bg-transparent">
+                    {/* <input
+                      type="text"
+                      placeholder="Start Your Search"
+                      className="hero__search-input text-center"
+                      value={ethnicSearch}
+                    /> */}
+                    <div className="hero__search-input text-center">
+                      {ethnicSearch || "Start Your Search"}
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="hero__search-button !rounded-full h-8 w-8 text-center"
+                    onClick={handleSearch} // Add onClick handler for mobile search
+                    disabled
+                  >
+                    <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  className="hero__search-button !rounded-full h-8 w-8 text-center"
-                  onClick={handleSearch} // Add onClick handler for mobile search
-                // disabled={!location || !cuisine}
-                >
-                  <FiSearch className="hero__search-icon !h-4 !w-4 stroke-white" />
-                </button>
               </div>
-            </div>
+              <CustomModal
+                isOpen={isShowPopupMobile}
+                setIsOpen={setIsShowPopupMobile}
+                header={<></>}
+                content={
+                  <div className="flex flex-row gap-3 items-center py-4 px-3 md:p-0 md:hidden">
+                    <button onClick={() => setIsShowPopupMobile(false) } className="size-8 md:hidden flex justify-center items-center">
+                      <MdArrowBackIos className="size-4" />
+                    </button>
+                    <div className="w-full flex flex-col gap-3 items-center bg-[#FCFCFC]">
+                      <div className="hero__search-restaurant w-full !bg-transparent">
+                        <input
+                          type="text"
+                          placeholder="Search Ethnic"
+                          className="hero__search-input px-4 py-3 w-full !border !border-solid !text-[#494D5D] !border-[#E5E5E5] rounded-[100px]"
+                          value={ethnicSearch}
+                          onChange={(e) => setEthnicSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="hero__search-divider"></div>
+                      <div className="hero__search-location w-full !bg-transparent">
+                        <input
+                          type="text"
+                          placeholder="Search location"
+                          className="hero__search-input px-4 py-3 w-full !border !border-solid !text-[#494D5D] !border-[#E5E5E5] rounded-[100px]"
+                          value={addressSearch} // Set value to addressSearch
+                          onChange={(e) => setAddressSearch(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                }
+                hasFooter
+                footerClass="!p-0"
+                headerClass="!p-0 !border-none"
+                contentClass="md:!gap-10 !p-0 border-b border-[#CACACA]"
+                baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0 md:!hidden"
+                hasCustomCloseButton
+                customButton={<></>}
+                wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent md:!hidden"
+              />
+            </>
           )}
         </div>
 
