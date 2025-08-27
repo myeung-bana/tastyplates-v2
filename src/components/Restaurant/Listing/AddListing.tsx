@@ -621,22 +621,23 @@ const AddListingPage = (props: any) => {
                         value: c.slug || c.name,
                         label: c.name,
                       }))}
-                      value={listing.listingCategories}
+                      value={listing.listingCategories.map((cat) => ({
+                        label: cat,
+                        value: cat,
+                      }))}
                       onChange={(selected: any) => {
-                        // const selectedValues = selected.map((item: any) => item.value);
+                        const selectedValues = selected.map((item: any) => item.value);
 
-                        // if (selectedValues.length > 3) {
-                        //   setCategoryError("You can select a maximum of 3 categories.");
-                        //   const trimmed = selected.slice(0, 3).map((item: any) => item.value);
-                        //   setListing({ ...listing, listingCategories: trimmed });
-                        // } else {
-                        //   setListing({ ...listing, listingCategories: selectedValues });
-                        //   setCategoryError("");
-                        // }
-                        setListing({ ...listing, listingCategories: selected });
-                        setCategoryError("");
+                        if (selectedValues.length > 3) {
+                          setCategoryError("You can select a maximum of 3 categories.");
+                          const trimmed = selected.slice(0, 3).map((item: any) => item.value);
+                          setListing({ ...listing, listingCategories: trimmed });
+                        } else {
+                          setListing({ ...listing, listingCategories: selectedValues });
+                          setCategoryError("");
+                        }
                       }}
-                      isClearable
+                      isMulti
                       placeholder="Select a category"
                       className="text-sm"
                       styles={{
@@ -664,13 +665,15 @@ const AddListingPage = (props: any) => {
                           scrollbarWidth: "none",
                           padding: "0"
                         }),
-                        singleValue: (base) => ({
+                        multiValue: (base) => ({
                           ...base,
-                          color: "#31343F", // gray-900
-                          fontSize: "1rem",
-                          fontWeight: 400,
-                          padding: 0,
-                          paddingLeft: 0,
+                          backgroundColor: "#F1F1F1", // gray-100
+                          borderRadius: "50px",
+                          padding: "8px 16px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          margin: "0"
                         }),
                         multiValueLabel: (base) => ({
                           ...base,
@@ -680,6 +683,15 @@ const AddListingPage = (props: any) => {
                           padding: 0,
                           paddingLeft: 0,
                           lineHeight: "17px",
+                        }),
+                        multiValueRemove: (base) => ({
+                          ...base,
+                          color: "#6b7280", // gray-500
+                          cursor: "pointer",
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            color: "#111827",
+                          },
                         }),
                         option: (base, { isFocused }) => ({
                           ...base,
@@ -700,7 +712,7 @@ const AddListingPage = (props: any) => {
                         placeholder: (base) => ({
                           ...base,
                           color: "#9ca3af",
-                          fontSize: "1rem",
+                          fontSize: "0.875rem",
                         }),
                         clearIndicator: (base) => ({
                           ...base,
