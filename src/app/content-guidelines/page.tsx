@@ -8,20 +8,31 @@ const contentGuidelinesService = new ContentGuidelinesService();
 
 export default function ContentGuidelines() {
   const [guidelines, setGuidelines] = useState<{ title: string; content: string } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔹 First read cache synchronously on mount
   useEffect(() => {
+    const cached = localStorage.getItem("guidelines");
+    const expiry = localStorage.getItem("guidelinesExpiry");
+
+    if (cached && expiry && Date.now() < parseInt(expiry)) {
+      setGuidelines(JSON.parse(cached));
+    }
+
     async function fetchGuidelines() {
       try {
         const data = await contentGuidelinesService.getContentGuidelines();
-        setGuidelines({ title: data.title, content: data.content });
+        const newData = { title: data.title, content: data.content };
+
+        localStorage.setItem("guidelines", JSON.stringify(newData));
+        localStorage.setItem("guidelinesExpiry", (Date.now() + 5 * 60 * 1000).toString());
+
+        setGuidelines(newData);
       } catch (err: any) {
         setError(err.message || "Unknown error");
-      } finally {
-        setLoading(false);
       }
     }
+
     fetchGuidelines();
   }, []);
 
@@ -36,12 +47,11 @@ export default function ContentGuidelines() {
             {guidelines?.title || "Content Guidelines"}
           </h1>
         </div>
+
         <div className="flex-1 flex items-center justify-center px-4 pb-8">
           <div className="w-full max-w-xl">
             <div className="text-[#31343F] flex flex-col gap-3 p-0">
-              {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading Content Guidelines...</div>
-              ) : error ? (
+              {error ? (
                 <div className="text-center py-8 text-red-500">{error}</div>
               ) : guidelines ? (
                 <section>
@@ -54,6 +64,7 @@ export default function ContentGuidelines() {
             </div>
           </div>
         </div>
+
         <Footer />
       </main>
     </>
