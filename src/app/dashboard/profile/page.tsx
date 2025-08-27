@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { FiEdit2, FiSave, FiUpload } from "react-icons/fi";
 import { users } from "@/data/dummyUsers";
 import { palates } from "@/data/dummyPalate";
-import Image from "next/image";
 import "@/styles/pages/_profile.scss";
 import FallbackImage, { FallbackImageType } from "@/components/ui/Image/FallbackImage";
 import { DEFAULT_USER_IMAGE } from "@/constants/images";

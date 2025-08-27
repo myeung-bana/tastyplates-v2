@@ -2,37 +2,38 @@
 import { Suspense, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
+import { ContentGuidelinesService } from "@/services/ContentGuidelines/contentGuidelinesService";
 
-const termsOfServiceService = new TermsOfServiceService();
+const contentGuidelinesService = new ContentGuidelinesService();
 
-export default function TermsOfService() {
-  const [terms, setTerms] = useState<{ title: string; content: string } | null>(null);
+export default function ContentGuidelines() {
+  const [guidelines, setGuidelines] = useState<{ title: string; content: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔹 First read cache synchronously on mount
   useEffect(() => {
-    const cached = localStorage.getItem("termsOfService");
-    const expiry = localStorage.getItem("termsOfServiceExpiry");
+    const cached = localStorage.getItem("guidelines");
+    const expiry = localStorage.getItem("guidelinesExpiry");
 
     if (cached && expiry && Date.now() < parseInt(expiry)) {
-      setTerms(JSON.parse(cached));
+      setGuidelines(JSON.parse(cached));
     }
 
-    async function fetchTerms() {
+    async function fetchGuidelines() {
       try {
-        const data = await termsOfServiceService.getTermsOfService();
+        const data = await contentGuidelinesService.getContentGuidelines();
         const newData = { title: data.title, content: data.content };
 
-        localStorage.setItem("termsOfService", JSON.stringify(newData));
-        localStorage.setItem("termsOfServiceExpiry", (Date.now() + 5 * 60 * 1000).toString());
+        localStorage.setItem("guidelines", JSON.stringify(newData));
+        localStorage.setItem("guidelinesExpiry", (Date.now() + 5 * 60 * 1000).toString());
 
-        setTerms(newData);
+        setGuidelines(newData);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       }
     }
 
-    fetchTerms();
+    fetchGuidelines();
   }, []);
 
   return (
@@ -43,7 +44,7 @@ export default function TermsOfService() {
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="text-[32px] font-bold text-center text-[#31343F] mb-8 max-w-xl w-full">
-            {terms?.title || "Terms of Service"}
+            {guidelines?.title || "Content Guidelines"}
           </h1>
         </div>
 
@@ -52,11 +53,11 @@ export default function TermsOfService() {
             <div className="text-[#31343F] flex flex-col gap-3 p-0">
               {error ? (
                 <div className="text-center py-8 text-red-500">{error}</div>
-              ) : terms ? (
+              ) : guidelines ? (
                 <section>
                   <div
                     className="prose prose-xs max-w-none text-[#31343F]"
-                    dangerouslySetInnerHTML={{ __html: terms.content }}
+                    dangerouslySetInnerHTML={{ __html: guidelines.content }}
                   />
                 </section>
               ) : null}

@@ -6,9 +6,7 @@ import {
   ReviewedDataProps,
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
-import { useEffect, useState } from "react";
-import { BsFillStarFill } from "react-icons/bs";
-import { GiRoundStar } from "react-icons/gi";
+import { Fragment, useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link"; // Import Link
 import { useSession } from "next-auth/react";
@@ -159,7 +157,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             )}
             <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
               {UserPalateNames?.map((tag, index) => (
-                <>
+                <Fragment key={tag}>
                   <span
                     key={index}
                     className="review-block__palate-tag"
@@ -178,7 +176,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                   {index == 0 && index != UserPalateNames.length -1 && 
                     <span className="text-[8px]">·</span>
                   }
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
@@ -197,8 +195,8 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
             </div>
           </div>
         </div>
-        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
-        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
+        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1 break-words">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
+        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0 break-words">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>

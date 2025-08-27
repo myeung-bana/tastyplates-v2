@@ -1,5 +1,4 @@
 // repositories/restaurant/restaurantRepository.ts
-import { gql } from "@apollo/client";
 import client from "@/app/graphql/client";
 import {
     GET_LISTINGS,
@@ -9,7 +8,6 @@ import {
     GET_RECENTLY_VISITED_RESTAURANTS,
     GET_LISTINGS_NAME,
 } from "@/app/graphql/Restaurant/restaurantQueries";
-import { user } from "@heroui/theme";
 import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
 import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";

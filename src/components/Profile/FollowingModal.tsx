@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import Image from "next/image";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE } from "@/lib/utils";
-import { ca } from "date-fns/locale";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 

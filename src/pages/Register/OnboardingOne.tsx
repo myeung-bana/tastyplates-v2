@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import "@/styles/pages/_auth.scss";
-import CustomSelect from "@/components/ui/Select/Select";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import {
   Modal,

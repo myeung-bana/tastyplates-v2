@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { FiHeart, FiMessageCircle, FiStar, FiThumbsUp } from "react-icons/fi";
 import { BiLike } from "react-icons/bi";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
@@ -11,7 +10,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { capitalizeWords, formatDate, formatDateT, PAGE, stripTags, truncateText } from "@/lib/utils";
+import { capitalizeWords, formatDate, PAGE, stripTags, truncateText } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewDetailModal from "./ReviewDetailModal";
@@ -335,7 +334,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs font-semibold md:text-base mb-2">
+        <h3 className="text-xs font-semibold md:text-base mb-2 break-words">
           {stripTags(review?.title || "").length > reviewTitleDisplayLimit ? (
             <>
               {expandedTitle
@@ -352,7 +351,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             stripTags(review?.title || "")
           )}
         </h3>
-        <p className="review-block__text">
+        <p className="review-block__text break-words">
           {stripTags(review?.comment || "").length > reviewDescriptionDisplayLimit ? (
             <>
               {expandedComment

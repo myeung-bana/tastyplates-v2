@@ -1,11 +1,9 @@
 "use client";
-import { FiSearch, FiMapPin, FiNavigation } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import { MdStore } from "react-icons/md";
 import { useEffect, useRef, useState } from "react";
 import "@/styles/components/_hero.scss";
-import Image from "next/image";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
-import CustomSelect from "@/components/ui/Select/Select";
 import { palateOptions } from "@/constants/formOptions";
 import { Key } from "@react-types/shared";
 import SelectOptions from "@/components/ui/Options/SelectOptions";

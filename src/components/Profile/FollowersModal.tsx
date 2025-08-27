@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Image from "next/image";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import { useSession } from "next-auth/react";

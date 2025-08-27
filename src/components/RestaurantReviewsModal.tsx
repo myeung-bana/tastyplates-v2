@@ -7,7 +7,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
-import { commentLikedSuccess, commentUnlikedSuccess, signInReview, updateLikeFailed } from "@/constants/messages";
+import { commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
@@ -273,7 +273,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                   <div className="font-semibold mt-2 text-[#31343F]">{reviewTitle}</div>
                 )} */}
                 {reviewTitle && (
-                  <div className="text-sm font-semibold mt-2 text-[#31343F]">
+                  <div className="text-sm font-semibold mt-2 text-[#31343F] break-words">
                     {expandedTitles[review.id]
                       ? capitalizeWords(reviewTitle)
                       : capitalizeWords(truncateText(reviewTitle, reviewTitleDisplayLimit)) + "… "}
@@ -288,7 +288,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     )}
                   </div>
                 )}
-                <div className="text-[#31343F] mt-1 leading-[1.5]">
+                <div className="text-[#31343F] mt-1 leading-[1.5] break-words">
                   {review.content.length > reviewDescriptionDisplayLimit ? (
                     <>
                       <div

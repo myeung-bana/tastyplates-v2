@@ -1,8 +1,6 @@
 // tastyplates-frontend/src/app/dashboard/lists/page.tsx
 "use client";
 import { useParams } from "next/navigation";
-import { lists } from "@/data/dummyList";
-import { restaurants } from "@/data/dummyRestaurants";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_lists.scss";
 import { useEffect, useRef, useState } from "react";

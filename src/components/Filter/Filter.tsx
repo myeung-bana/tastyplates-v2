@@ -1,6 +1,6 @@
 import "@/styles/components/filter.scss";
 import CustomModal from "../ui/Modal/Modal";
-import { Key, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";
@@ -283,11 +283,13 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               onClick={() => onClickFilter("badges")}
             >
               <span className="filter__label">{badge !== "All" ? badge : "Badges"}</span>
-              <img
-                src={ARROW_WARM_UP}
-                className="size-4 sm:size-5"
-                alt="arrow up"
-              />
+              {sortOption != "None" &&
+                <img
+                  src={ARROW_WARM_UP}
+                  className={`${sortOption == "ASC" ? 'rotate-0' : 'rotate-180'} size-4 sm:size-5`}
+                  alt="arrow up"
+                />
+              }
             </button>
           </div>
 

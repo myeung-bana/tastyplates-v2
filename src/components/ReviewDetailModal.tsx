@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { FiX, FiStar, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
 import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
@@ -12,7 +11,6 @@ import { useFollowContext } from "./FollowContext";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { BsStarFill, BsStarHalf, BsStar } from "react-icons/bs";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import toast from 'react-hot-toast';
 
@@ -21,13 +19,13 @@ import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
 import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, maximumReviewDescription, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
+import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
-import { reviewDescriptionDisplayLimit, reviewDescriptionLimit, reviewTitleDisplayLimit } from "@/constants/validation";
+import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { UserService } from "@/services/user/userService";
 import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from "@/constants/session";
 
@@ -814,7 +812,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
-                        <p className="text-sm font-semibold line-clamp-1 max-w-[450px]">
+                        <p className="text-sm font-semibold max-w-[450px] break-words">
                           {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
                             <>
                               {showFullTitle
@@ -832,24 +830,26 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           )}
                         </p>
 
-                        <p className="review-card__text w-full mt-2 text-sm font-normal">
-                          {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
-                            <>
-                              {showFullContent
-                                ? capitalizeWords(stripTags(data.content || ""))
-                                : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
-                              {" "}
-                              <button
-                                className="text-xs hover:underline inline font-bold"
-                                onClick={() => setShowFullContent(!showFullContent)}
-                              >
-                                {showFullContent ? "[Show Less]" : "[See More]"}
-                              </button>
-                            </>
-                          ) : (
-                            capitalizeWords(stripTags(data.content || ""))
-                          )}
-                        </p>
+                        <div className="h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[380px] overflow-y-auto">
+                          <p className="review-card__text w-full mt-2 text-sm font-normal break-words">
+                            {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
+                              <>
+                                {showFullContent
+                                  ? capitalizeWords(stripTags(data.content || ""))
+                                  : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                                {" "}
+                                <button
+                                  className="text-xs hover:underline inline font-bold"
+                                  onClick={() => setShowFullContent(!showFullContent)}
+                                >
+                                  {showFullContent ? "[Show Less]" : "[See More]"}
+                                </button>
+                              </>
+                            ) : (
+                              capitalizeWords(stripTags(data.content || ""))
+                            )}
+                          </p>
+                        </div>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
                             const full = i + 1 <= data.reviewStars;
@@ -999,7 +999,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px] break-words">
                                       {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
                                         <>
                                           {expandedReplies[reply.id]

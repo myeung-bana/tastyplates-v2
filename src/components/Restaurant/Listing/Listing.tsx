@@ -4,7 +4,6 @@ import React, { FormEvent, useEffect, useState } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
-import { cuisines } from "@/data/dummyCuisines"; // Import cuisines for filtering
 import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";

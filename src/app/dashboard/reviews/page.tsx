@@ -2,7 +2,6 @@
 "use client";
 import { useParams } from "next/navigation";
 import { reviewlist } from "@/data/dummyReviews";
-import ReviewBlock from "@/components/ReviewBlock";
 import "@/styles/pages/_lists.scss";
 
 const CURRENT_USER_ID = "123e4567-e89b-12d3-a456-426614174000";
