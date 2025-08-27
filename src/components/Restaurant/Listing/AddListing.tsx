@@ -613,7 +613,7 @@ const AddListingPage = (props: any) => {
                 </div>
                 <div className="listing__form-group">
                   <label className="listing__label">
-                    Category
+                    Category (Select up to 3 categories)
                   </label>
                   <div className="listing__input-group">
                     <Select
@@ -748,7 +748,6 @@ const AddListingPage = (props: any) => {
                       closeMenuOnSelect={false}
                       isSearchable
                       placeholder="Select your palate"
-                      
                       className="text-sm"
                       styles={{
                         control: (base) => ({
