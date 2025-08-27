@@ -621,25 +621,96 @@ const AddListingPage = (props: any) => {
                         value: c.slug || c.name,
                         label: c.name,
                       }))}
-                      value={listing.listingCategories.map((cat) => ({
-                        label: cat,
-                        value: cat,
-                      }))}
+                      value={listing.listingCategories}
                       onChange={(selected: any) => {
-                        const selectedValues = selected.map((item: any) => item.value);
+                        // const selectedValues = selected.map((item: any) => item.value);
 
-                        if (selectedValues.length > 3) {
-                          setCategoryError("You can select a maximum of 3 categories.");
-                          const trimmed = selected.slice(0, 3).map((item: any) => item.value);
-                          setListing({ ...listing, listingCategories: trimmed });
-                        } else {
-                          setListing({ ...listing, listingCategories: selectedValues });
-                          setCategoryError("");
-                        }
+                        // if (selectedValues.length > 3) {
+                        //   setCategoryError("You can select a maximum of 3 categories.");
+                        //   const trimmed = selected.slice(0, 3).map((item: any) => item.value);
+                        //   setListing({ ...listing, listingCategories: trimmed });
+                        // } else {
+                        //   setListing({ ...listing, listingCategories: selectedValues });
+                        //   setCategoryError("");
+                        // }
+                        setListing({ ...listing, listingCategories: selected });
+                        setCategoryError("");
                       }}
-                      isMulti
+                      isClearable
                       placeholder="Select a category"
-                      className="!rounded-[10px] text-sm"
+                      className="text-sm"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          borderRadius: "10px",
+                          border: "1px solid #797979", // gray-200
+                          padding: "7px 16px",
+                          height: "48px",
+                          boxShadow: "none",
+                          "&:hover": {
+                            borderColor: "#31343F", // gray-300
+                            backgroundColor: "#F1F1F1",
+                          },
+                          "&:focus": {
+                            borderColor: "#31343F", // gray-300
+                            backgroundColor: "#F1F1F1",
+                          },
+                        }),
+                        valueContainer: (base) => ({
+                          ...base,
+                          gap: "8px",
+                          flexWrap: "nowrap",
+                          overflowX: "auto",
+                          scrollbarWidth: "none",
+                          padding: "0"
+                        }),
+                        singleValue: (base) => ({
+                          ...base,
+                          color: "#31343F", // gray-900
+                          fontSize: "1rem",
+                          fontWeight: 400,
+                          padding: 0,
+                          paddingLeft: 0,
+                        }),
+                        multiValueLabel: (base) => ({
+                          ...base,
+                          color: "#111827", // gray-900
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          padding: 0,
+                          paddingLeft: 0,
+                          lineHeight: "17px",
+                        }),
+                        option: (base, { isFocused }) => ({
+                          ...base,
+                          fontSize: "0.875rem",
+                          padding: "8px 12px",
+                          backgroundColor: isFocused ? "#f3f4f6" : "white",
+                          color: "#111827",
+                          cursor: "pointer",
+                        }),
+                        dropdownIndicator: (base) => ({
+                          ...base,
+                          color: "#9ca3af",
+                          padding: "0 4px",
+                          "&:hover": {
+                            color: "#6b7280",
+                          },
+                        }),
+                        placeholder: (base) => ({
+                          ...base,
+                          color: "#9ca3af",
+                          fontSize: "1rem",
+                        }),
+                        clearIndicator: (base) => ({
+                          ...base,
+                          padding: "0 4px",
+                          color: "#9ca3af",
+                          "&:hover": {
+                            color: "#6b7280",
+                          },
+                        }),
+                      }}
                       hideSelectedOptions={false}
                       closeMenuOnSelect={false}
                       components={{
@@ -665,7 +736,91 @@ const AddListingPage = (props: any) => {
                       closeMenuOnSelect={false}
                       isSearchable
                       placeholder="Select your palate"
-                      className="!rounded-[10px] text-sm"
+                      
+                      className="text-sm"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          borderRadius: "10px",
+                          border: "1px solid #797979", // gray-200
+                          padding: "7px 16px",
+                          height: "48px",
+                          boxShadow: "none",
+                          "&:hover": {
+                            borderColor: "#31343F", // gray-300
+                            backgroundColor: "#F1F1F1",
+                          },
+                          "&:focus": {
+                            borderColor: "#31343F", // gray-300
+                            backgroundColor: "#F1F1F1",
+                          },
+                        }),
+                        valueContainer: (base) => ({
+                          ...base,
+                          gap: "8px",
+                          flexWrap: "nowrap",
+                          overflowX: "auto",
+                          scrollbarWidth: "none",
+                          padding: "0"
+                        }),
+                        multiValue: (base) => ({
+                          ...base,
+                          backgroundColor: "#F1F1F1", // gray-100
+                          borderRadius: "50px",
+                          padding: "8px 16px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          margin: "0"
+                        }),
+                        multiValueLabel: (base) => ({
+                          ...base,
+                          color: "#111827", // gray-900
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          padding: 0,
+                          paddingLeft: 0,
+                          lineHeight: "17px",
+                        }),
+                        multiValueRemove: (base) => ({
+                          ...base,
+                          color: "#6b7280", // gray-500
+                          cursor: "pointer",
+                          "&:hover": {
+                            backgroundColor: "transparent",
+                            color: "#111827",
+                          },
+                        }),
+                        option: (base, { isFocused }) => ({
+                          ...base,
+                          fontSize: "0.875rem",
+                          padding: "8px 12px",
+                          backgroundColor: isFocused ? "#f3f4f6" : "white",
+                          color: "#111827",
+                          cursor: "pointer",
+                        }),
+                        dropdownIndicator: (base) => ({
+                          ...base,
+                          color: "#9ca3af",
+                          padding: "0 4px",
+                          "&:hover": {
+                            color: "#6b7280",
+                          },
+                        }),
+                        placeholder: (base) => ({
+                          ...base,
+                          color: "#9ca3af",
+                          fontSize: "0.875rem",
+                        }),
+                        clearIndicator: (base) => ({
+                          ...base,
+                          padding: "0 4px",
+                          color: "#9ca3af",
+                          "&:hover": {
+                            color: "#6b7280",
+                          },
+                        }),
+                      }}
                       hideSelectedOptions={false}
                       components={{
                         Option: CustomOption,
