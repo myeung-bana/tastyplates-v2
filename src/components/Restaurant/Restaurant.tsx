@@ -68,11 +68,22 @@ const RestaurantPage = () => {
   const [showListingModal, setShowListingModal] = useState(false);
   const [listingLoading, setListingLoading] = useState(false);
   const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
+  const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
+  const [listingHasNextPage, setListingHasNextPage] = useState(false);
+  const [listingCurrentPage, setListingCurrentPage] = useState(1);
   const fetchListingsDebouncedRef = useRef<(input: string) => void>();
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
   const searchForm = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    // Initialize debounced functions once
+    const [debouncedListing] = debounce(fetchListingsName, 500);
+
+    fetchListingsDebouncedRef.current = debouncedListing;
+    fetchListingsDebouncedRef.current?.('');
+  }, []);
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -219,6 +230,30 @@ const RestaurantPage = () => {
       }));
   }, []);
 
+    const fetchListingsName = async (search: string = '', page = 1) => {
+    try {
+      setListingLoading(true);
+      const result = await restaurantService.fetchListingsName(
+        search,
+        32,
+        page === 1 ? null : listingEndCursor
+      );
+      const formatted = result.nodes.map((item: any) => ({
+        key: item.slug,
+        label: item.title,
+      }));
+      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
+      setListingCurrentPage(page);
+      setListingEndCursor(result.pageInfo.endCursor);
+      setListingHasNextPage(result.pageInfo.hasNextPage);
+    } catch (err) {
+      console.error("Error loading listing options", err);
+      setListingOptions([]);
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
   useEffect(() => {
     setRestaurants([]);
     setEndCursor(null);
@@ -330,6 +365,8 @@ const RestaurantPage = () => {
                     isLoading={listingLoading}
                     options={listingOptions}
                     searchValue={listing}
+                    hasNextPage={listingHasNextPage}
+                    onLoadMore={() => fetchListingsName(listing.trim(), listingCurrentPage + 1)}
                     onSelect={(label) => {
                       if (width > 767) {
                         setListing(label);
