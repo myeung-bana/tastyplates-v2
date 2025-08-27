@@ -334,7 +334,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs font-semibold md:text-base mb-2">
+        <h3 className="text-xs font-semibold md:text-base mb-2 break-words">
           {stripTags(review?.title || "").length > reviewTitleDisplayLimit ? (
             <>
               {expandedTitle
@@ -351,7 +351,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             stripTags(review?.title || "")
           )}
         </h3>
-        <p className="review-block__text">
+        <p className="review-block__text break-words">
           {stripTags(review?.comment || "").length > reviewDescriptionDisplayLimit ? (
             <>
               {expandedComment

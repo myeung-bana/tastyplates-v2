@@ -812,7 +812,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                   <div className="h-full">
                     <div className="overflow-y-auto grow pr-1">
                       <div className="shrink-0">
-                        <p className="text-sm font-semibold line-clamp-1 max-w-[450px]">
+                        <p className="text-sm font-semibold max-w-[450px] break-words">
                           {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
                             <>
                               {showFullTitle
@@ -830,24 +830,26 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           )}
                         </p>
 
-                        <p className="review-card__text w-full mt-2 text-sm font-normal">
-                          {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
-                            <>
-                              {showFullContent
-                                ? capitalizeWords(stripTags(data.content || ""))
-                                : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
-                              {" "}
-                              <button
-                                className="text-xs hover:underline inline font-bold"
-                                onClick={() => setShowFullContent(!showFullContent)}
-                              >
-                                {showFullContent ? "[Show Less]" : "[See More]"}
-                              </button>
-                            </>
-                          ) : (
-                            capitalizeWords(stripTags(data.content || ""))
-                          )}
-                        </p>
+                        <div className="h-full md:max-h-[280px] lg:max-h-[370px] xl:max-h-[380px] overflow-y-auto">
+                          <p className="review-card__text w-full mt-2 text-sm font-normal break-words">
+                            {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
+                              <>
+                                {showFullContent
+                                  ? capitalizeWords(stripTags(data.content || ""))
+                                  : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                                {" "}
+                                <button
+                                  className="text-xs hover:underline inline font-bold"
+                                  onClick={() => setShowFullContent(!showFullContent)}
+                                >
+                                  {showFullContent ? "[Show Less]" : "[See More]"}
+                                </button>
+                              </>
+                            ) : (
+                              capitalizeWords(stripTags(data.content || ""))
+                            )}
+                          </p>
+                        </div>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
                             const full = i + 1 <= data.reviewStars;
@@ -997,7 +999,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px]">
+                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px] break-words">
                                       {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
                                         <>
                                           {expandedReplies[reply.id]
