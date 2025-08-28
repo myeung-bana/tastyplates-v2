@@ -1,20 +1,11 @@
-// app/terms-of-service/page.tsx
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
 
-// Fetch from your WordPress API
+const termsOfServiceService = new TermsOfServiceService();
+
 async function getTermsOfService() {
-  const baseUrl = process.env.NEXT_PUBLIC_WP_API_URL;
-
-  const res = await fetch(`${baseUrl}/wp-json/v1/terms-of-service`, {
-    next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch Terms of Service");
-  }
-
-  return res.json();
+  return termsOfServiceService.getTermsOfService();
 }
 
 export default async function TermsOfService() {

@@ -1,20 +1,11 @@
-// app/privacy-policy/page.tsx
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyService";
 
-// Fetch from your WordPress API
+const privacyPolicyService = new PrivacyPolicyService();
+
 async function getPrivacyPolicy() {
-  const baseUrl = process.env.NEXT_PUBLIC_WP_API_URL;
-
-  const res = await fetch(`${baseUrl}/wp-json/v1/privacy-policy`, {
-    next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch Privacy Policy");
-  }
-
-  return res.json();
+  return privacyPolicyService.getPrivacyPolicy();
 }
 
 export default async function PrivacyPolicy() {

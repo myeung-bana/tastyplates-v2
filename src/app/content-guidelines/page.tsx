@@ -1,20 +1,11 @@
-// app/content-guidelines/page.tsx
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { ContentGuidelinesService } from "@/services/ContentGuidelines/contentGuidelinesService";
 
-// Fetch from your WordPress API
+const contentGuidelinesService = new ContentGuidelinesService();
+
 async function getContentGuidelines() {
-  const baseUrl = process.env.NEXT_PUBLIC_WP_API_URL;
-
-  const res = await fetch(`${baseUrl}/wp-json/v1/content-guidelines`, {
-    next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch Content Guidelines");
-  }
-
-  return res.json();
+  return contentGuidelinesService.getContentGuidelines();
 }
 
 export default async function ContentGuidelines() {
