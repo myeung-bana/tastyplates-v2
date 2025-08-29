@@ -73,11 +73,14 @@
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Suspense } from "react";
 
 export default function TermsOfService() {
   return (
     <>
-      <Navbar />
+      <Suspense fallback={<div></div>}>
+        <Navbar />
+      </Suspense>
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="text-[32px] font-bold text-center text-[#31343F] mb-8 max-w-3xl w-full">
