@@ -304,34 +304,40 @@ const RestaurantPage = () => {
         <div className="flex flex-row items-center justify-between overflow-x-auto">
           {/* Pass the `filters.palates` state to the Filter component, which is not updated from the URL */}
           <Filter onFilterChange={handleFilterChange} />
-            <div className="max-w-[218px] md:max-w-[345px] flex gap-2.5 md:gap-2 justify-between items-center border shrink-0 border-[#494D5D] bg-[#FCFCFC] px-4 py-2 md:px-6 md:py-[15px] rounded-[50px] relative">
-              <FiSearch className="hero__search-icon shrink-0 !mr-0" />
-              <input
-                type="text"
-                placeholder="Search by Listing Name"
-                value={listing}
-                onChange={(e) => {
-                  handleListingChange(e)
-                }}
-                onClick={() => setIsShowPopup(!isShowPopup)}
-                className="search-bar__input !border-none text-sm md:text-base !text-left bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => {
-                    setListing("")
-                    setSearchTerm("")
-                  }}
-                  className="absolute right-2 top-2 bg-[#FCFCFC] px-1 md:top-4 text-sm text-[#494D5D] hover:text-black"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
           <CustomModal
             isOpen={isShowPopup}
             setIsOpen={setIsShowPopup}
+            onOpenChange={() => {
+              setIsShowPopup(!isShowPopup)
+            }}
             header={<></>}
+            hasTrigger
+            trigger={
+              <div className="max-w-[218px] md:max-w-[345px] flex gap-2.5 md:gap-2 justify-between items-center border shrink-0 border-[#494D5D] bg-[#FCFCFC] px-4 py-2 md:px-6 md:py-[15px] rounded-[50px] relative">
+                <FiSearch className="hero__search-icon shrink-0 !mr-0" />
+                <input
+                  type="text"
+                  placeholder="Search by Listing Name"
+                  value={listing}
+                  onChange={(e) => {
+                    handleListingChange(e)
+                  }}
+                  onClick={() => setIsShowPopup(!isShowPopup)}
+                  className="search-bar__input !border-none text-sm md:text-base !text-left bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => {
+                      setListing("")
+                      setSearchTerm("")
+                    }}
+                    className="absolute right-2 top-2 bg-[#FCFCFC] px-1 md:top-4 text-sm text-[#494D5D] hover:text-black"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            }
             content={
               <>
                 <div className="flex flex-row gap-3 items-center py-7 px-3 md:p-0">

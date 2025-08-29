@@ -225,7 +225,16 @@ export default function Navbar(props: any) {
             </div>
             {(navBg && isLandingPage) || hasSearchBar && (
               <>
-                <div className={`hidden ${!isShowPopup ? 'md:block' : 'md:hidden'}`} onClick={() => setIsShowPopup(true)}>
+                <CustomModal
+                  isOpen={isShowPopup}
+                  setIsOpen={setIsShowPopup}
+                  onOpenChange={() => {
+                    setIsShowPopup(!isShowPopup)
+                  }}
+                  header={<></>}
+                  hasTrigger
+                  trigger={
+                                    <div className={`hidden ${!isShowPopup ? 'md:block' : 'md:hidden'}`} onClick={() => setIsShowPopup(true)}>
                     <div className="max-w-[400px] flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 h-[56px] !rounded-[50px] shadow-[0_0_10px_#E5E5E5]">
                       <div className="hero__search-restaurant !bg-transparent !flex-none max-w-[108px]">
                         <input
@@ -256,10 +265,7 @@ export default function Navbar(props: any) {
                       </button>
                     </div>
                 </div>
-                <CustomModal
-                  isOpen={isShowPopup}
-                  setIsOpen={setIsShowPopup}
-                  header={<></>}
+                  }
                   content={
                     <>
                       <div className="flex gap-2.5 items-center h-[76px] bg-white border border-[#E5E5E5] pl-6 pr-4 py-3.5 !rounded-[50px]">

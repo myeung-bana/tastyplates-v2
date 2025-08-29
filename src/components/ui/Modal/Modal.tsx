@@ -5,6 +5,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  useDisclosure,
 } from "@heroui/modal";
 import { MdClose } from "react-icons/md";
 import { useRouter } from "next/navigation";
@@ -28,13 +29,21 @@ export default function CustomModal(props: any) {
     closeButtonClass = "",
     backdropClass = "",
     wrapperClass = "",
-    customButton
+    customButton,
+    hasTrigger = false,
+    trigger,
   } = props;
 
+  const {onOpen} = useDisclosure();
   const router = useRouter();
 
   return (
     <>
+      {hasTrigger &&
+        <div onClick={onOpen}>
+          {trigger}
+        </div>
+      }
       <Modal
         isOpen={isOpen}
         onOpenChange={onOpenChange}
@@ -53,6 +62,8 @@ export default function CustomModal(props: any) {
         placement="center"
         closeButton={false}
         disableAnimation
+        isDismissable={true}
+        isKeyboardDismissDisabled={false}
       >
         <ModalContent>
           <ModalHeader>
