@@ -27,7 +27,7 @@ export default async function TermsOfService() {
           <div className="w-full max-w-xl">
             <section>
               <div
-                className="prose prose-xs max-w-none text-[#31343F]"
+                className="prose prose-xs max-w-none text-[#31343F] text-justify"
                 dangerouslySetInnerHTML={{ __html: data.content }}
               />
             </section>
