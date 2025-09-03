@@ -4,7 +4,6 @@ import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceS
 
 const termsOfServiceService = new TermsOfServiceService();
 
-
 async function getTermsOfService() {
   return termsOfServiceService.getTermsOfService();
 }
@@ -14,7 +13,6 @@ export default async function TermsOfService() {
 
   return (
     <>
-      <Navbar />
       <Navbar />
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
