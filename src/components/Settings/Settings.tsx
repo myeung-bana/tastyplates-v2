@@ -79,7 +79,7 @@ const Settings = (props: any) => {
   };
 
   const validatePasswords = () => {
-    let errors = { current: "", new: "", confirm: "" };
+    const errors = { current: "", new: "", confirm: "" };
     if (editable === Field.Password) {
       if (passwordFields.current.length == 0) {
         errors.current = currentPasswordRequired;

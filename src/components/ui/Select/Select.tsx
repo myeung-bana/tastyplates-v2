@@ -4,7 +4,7 @@ const CustomSelect = (props: any) => {
   const defaultProps = {
     onChange: () => {},
     mode: "single",
-    // eslint-disable-next-line no-unused-vars
+     
     customOnChange: (name: string, value: string) => {},
   };
 

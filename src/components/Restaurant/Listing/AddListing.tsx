@@ -473,7 +473,7 @@ const AddListingPage = (props: any) => {
         setUploadedImageError("");
       }
 
-      let imageList: string[] = [];
+      const imageList: string[] = [];
       let filesProcessed = 0;
 
       for (let i = 0; i < files.length; i++) {
@@ -564,7 +564,7 @@ const AddListingPage = (props: any) => {
 
   return (
     <>
-      <div className="font-inter mt-16 md:mt-20 max-w-[82rem] mx-auto px-3 md:px-6 lg:p-0">
+      <div className="font-inter mt-16 md:mt-20 max-w-7xl mx-auto px-3 md:px-6 lg:p-0">
         <div className="flex flex-col justify-center items-center">
           <h1 className="mt-8 text-lg leading-[22px] md:text-2xl md:leading-[27px] text-[#31343F] text font-medium">
             Add Listing

@@ -293,7 +293,7 @@ export class RestaurantRepository implements RestaurantRepo {
         after: string | null = null,
     ) {
         const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
-        let variables: any = { searchTerm, first, after };
+        const variables: any = { searchTerm, first, after };
 
         if (hasTaxQuery) {
             variables.taxQuery = taxQuery;

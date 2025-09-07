@@ -17,6 +17,7 @@ import {
   imageMBLimit,
   imageSizeLimit,
   palateLimit,
+  aboutMeMaxLimit,
 } from "@/constants/validation";
 import {
   palateMaxLimit,
@@ -24,6 +25,7 @@ import {
   profileImageSizeLimit,
   profileImageTypeError,
   profileUpdateFailed,
+  maximumBioLength,
 } from "@/constants/messages";
 import { MdOutlineEdit } from "react-icons/md";
 import { PiCaretLeftBold } from "react-icons/pi";
@@ -36,13 +38,38 @@ import toast from "react-hot-toast";
 import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
+import PhotoCropModal from "../PhotoCropModal";
 
 const userService = new UserService()
+
+interface FormContentProps {
+  isSubmitted: boolean;
+  setIsSubmitted: (value: boolean) => void;
+  isLoading: boolean;
+  profilePreview: string;
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  profileError: string;
+  aboutMe: string;
+  handleTextAreaChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  palateError: string;
+  selectedPalates: Set<Key>;
+  handlePalateChange: (keys: Set<Key>) => void;
+  palateLimit: number;
+  submitReview: (e: React.FormEvent) => void;
+  router: { push: (path: string) => void; back: () => void };
+  bioError: string;
+  bioCharacterCount: number;
+  showCropModal: boolean;
+  setShowCropModal: (value: boolean) => void;
+  tempImageSrc: string;
+  setProfilePreview: (value: string) => void;
+  setProfile: (value: string | null) => void;
+}
 
 const FormContent = memo(({
   isSubmitted,
   setIsSubmitted,
-  isMobile,
   isLoading,
   profilePreview,
   handleFileChange,
@@ -56,7 +83,15 @@ const FormContent = memo(({
   palateLimit,
   submitReview,
   router,
-}: any) => (
+  bioError,
+  bioCharacterCount,
+  showCropModal,
+  setShowCropModal,
+  tempImageSrc,
+  setProfilePreview,
+  setProfile,
+}: FormContentProps) => {
+  return (
   <>
     {isSubmitted && (
       <>
@@ -144,19 +179,30 @@ const FormContent = memo(({
 
         {/* About Me */}
         <div className="listing__form-group">
-          <label className="listing__label">About Me</label>
+          <label className="listing__label">Bio</label>
           <div className="listing__input-group">
             <textarea
               ref={textareaRef}
               name="aboutMe"
-              className={`listing__input resize-none ${isLoading ? "opacity-50" : ""
-                }`}
-              placeholder="About Me"
+              className={`listing__input resize-none min-h-[120px] ${isLoading ? "opacity-50" : ""
+                } ${bioError ? "border-red-500 focus:border-red-500" : ""}`}
+              placeholder="Tell us about yourself... Share your food journey, favorite cuisines, or what makes you passionate about dining!"
               value={aboutMe}
               onChange={handleTextAreaChange}
-              rows={5}
+              rows={4}
               disabled={isLoading}
+              maxLength={aboutMeMaxLimit}
             />
+            <div className="flex justify-between items-center mt-2">
+              <div className="text-xs text-gray-500">
+                {bioCharacterCount}/{aboutMeMaxLimit} characters
+              </div>
+              {bioError && (
+                <div className="text-xs text-red-600">
+                  {bioError}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -229,9 +275,22 @@ const FormContent = memo(({
           </button>
         </div>
       </form>
+
+      {/* Photo Crop Modal */}
+      <PhotoCropModal
+        isOpen={showCropModal}
+        onClose={() => setShowCropModal(false)}
+        onCrop={(croppedImage) => {
+          setProfilePreview(croppedImage);
+          setProfile(croppedImage);
+          setShowCropModal(false);
+        }}
+        imageSrc={tempImageSrc}
+      />
     </div>
   </>
-));
+  );
+});
 
 const Form = () => {
   const router = useRouter();
@@ -240,17 +299,31 @@ const Form = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [aboutMe, setAboutMe] = useState(session?.user?.about_me ?? "");
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState(
     session?.user?.image ?? DEFAULT_USER_ICON
   );
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState("");
   const [profileError, setProfileError] = useState("");
+  const [bioError, setBioError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState("");
 
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAboutMe(e.target.value);
+    const value = e.target.value;
+    setAboutMe(value);
+    
+    // Clear bio error when user starts typing
+    if (bioError) {
+      setBioError("");
+    }
+    
+    // Validate character limit
+    if (value.length > aboutMeMaxLimit) {
+      setBioError(maximumBioLength(aboutMeMaxLimit));
+    }
   };
 
   const handlePalateChange = (keys: Set<Key>) => {
@@ -274,8 +347,8 @@ const Form = () => {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProfilePreview(reader.result as string);
-      setProfile(reader.result as string);
+      setTempImageSrc(reader.result as string);
+      setShowCropModal(true);
     };
     reader.readAsDataURL(file);
   };
@@ -283,6 +356,13 @@ const Form = () => {
   const submitReview = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Validate bio length
+    if (aboutMe.length > aboutMeMaxLimit) {
+      setBioError(maximumBioLength(aboutMeMaxLimit));
+      setIsLoading(false);
+      return;
+    }
 
     if (
       selectedPalates.size === 0 ||
@@ -311,7 +391,7 @@ const Form = () => {
         .map((p) => String(p).trim())
         .join("|");
 
-      const updateData: Record<string, any> = {};
+      const updateData: Record<string, string> = {};
       if (profile) updateData.profile_image = profile;
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (formattedPalates) updateData.palates = formattedPalates;
@@ -350,7 +430,6 @@ const Form = () => {
     <FormContent
       isSubmitted={isSubmitted}
       setIsSubmitted={setIsSubmitted}
-      isMobile={isMobile}
       isLoading={isLoading}
       profilePreview={profilePreview}
       handleFileChange={handleFileChange}
@@ -364,6 +443,13 @@ const Form = () => {
       palateLimit={palateLimit}
       submitReview={submitReview}
       router={router}
+      bioError={bioError}
+      bioCharacterCount={aboutMe.length}
+      showCropModal={showCropModal}
+      setShowCropModal={setShowCropModal}
+      tempImageSrc={tempImageSrc}
+      setProfilePreview={setProfilePreview}
+      setProfile={setProfile}
     />
   );
 
@@ -397,7 +483,7 @@ const Form = () => {
         content={formContent}
         isOpen={isMobile}
         backdropClass="bg-white backdrop-opacity-100"
-        baseClass="h-full md:h-3/4 !max-w-[1060px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
+        baseClass="h-full md:h-3/4 !max-w-[1280px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
         closeButtonClass="!top-5 md:!top-6 !right-unset !left-3 z-10"
         headerClass="border-b border-[#CACACA] h-16"
         contentClass="!p-0"
@@ -415,9 +501,11 @@ const Form = () => {
           </button>
         }
       />
-      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}</div>
-    </>
+      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}    </div>
+  </>
   );
 };
+
+FormContent.displayName = 'FormContent';
 
 export default Form;

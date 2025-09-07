@@ -137,6 +137,7 @@ export default function PhotoSlider({
     <>
       {
         <div className={"w-full"}>
+          {/* @ts-expect-error react-slick Slider component type issue */}
           <Slider
             {...settings}
             nextArrow={<NextArrow length={reviewPhotos.length} />}

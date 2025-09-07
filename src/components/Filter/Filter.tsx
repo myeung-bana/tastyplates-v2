@@ -409,7 +409,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         <div
                           onClick={(e: any) => {
                             e.stopPropagation();
-                            let newSet = new Set(selectedPalates);
+                            const newSet = new Set(selectedPalates);
                             if (isAllSelected) {
                               newSet.clear();
                             } else {

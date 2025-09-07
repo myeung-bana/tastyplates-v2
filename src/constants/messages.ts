@@ -31,6 +31,7 @@ export const maximumListingTitle = (max: number) => `Listing title must be ${max
 export const maximumReviewTitle = (max: number) => `Review title must be ${max} characters or less.`;
 export const maximumReviewDescription = (max: number) => `Review description must be ${max} characters or less.`;
 export const maximumCommentReplies = (max: number) => `Comment must be ${max} characters or less.`;
+export const maximumBioLength = (max: number) => `Bio must be ${max} characters or less.`;
 export const requiredRating = "Rating is required.";
 export const minimumImageLimit = (min: number) => `You must upload at least ${min} image.`;
 export const maximumImageLimit = (max: number) => `You can upload a maximum of ${max} images.`;

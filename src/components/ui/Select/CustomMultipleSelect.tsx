@@ -235,7 +235,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
 
     const handleHeaderCheckboxChange = (item: ItemInterface) => {
         const currentSelection = new Set(props.value);
-        let newSelection = new Set(currentSelection); // Start with current selection
+        const newSelection = new Set(currentSelection); // Start with current selection
         let selectedLabel: string | null = null;
 
         const headerIsCurrentlySelected = currentSelection.has(item.key);
@@ -282,7 +282,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         e.stopPropagation();
 
         const currentSelection = new Set(props.value);
-        let newSelection = new Set(currentSelection);
+        const newSelection = new Set(currentSelection);
         let selectedLabel: string | null = null;
 
         const isCurrentlyLogicallySelected = isChildLogicallySelected(childKey, parentHeader);

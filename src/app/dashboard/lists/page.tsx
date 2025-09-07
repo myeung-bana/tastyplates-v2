@@ -9,14 +9,14 @@ import "@/styles/pages/_lists.scss";
 import { PAGE } from "@/lib/utils";
 import { DASHBOARD_LISTS } from "@/constants/pages";
 
-interface Restaurant {
-  id: string;
-  name: string;
-  image: string;
-  description: string;
-  cuisine: string;
-  rating?: number;
-}
+// interface Restaurant {
+//   id: string;
+//   name: string;
+//   image: string;
+//   description: string;
+//   cuisine: string;
+//   rating?: number;
+// }
 
 interface List {
   id: string;

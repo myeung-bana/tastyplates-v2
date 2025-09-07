@@ -1,4 +1,4 @@
-import { FiStar, FiClock, FiHeart, FiMessageCircle } from "react-icons/fi";
+import { FiStar, FiHeart, FiMessageCircle } from "react-icons/fi";
 
 const DashboardPage = () => {
   return (

@@ -42,6 +42,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "backend.tastyplates.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "www.staging.tastyplates.co",
         pathname: "/**",
       },

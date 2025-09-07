@@ -3,7 +3,7 @@ import React  from "react";
 const RestaurantDetailSkeleton = () => {
     return (
         <div className="restaurant-detail mt-32 md:mt-20 animate-pulse">
-            <div className="restaurant-detail__container">
+            <div className="restaurant-detail__container !max-w-7xl !pt-0">
                 <div className="restaurant-detail__header">
                     <div className="restaurant-detail__info">
                         <div className="flex flex-col-reverse md:flex-col">

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export default withAuth(
   function middleware(req) {
     if (!req.nextauth.token) {
-      let loginUrl = new URL('/', req.url);
+      const loginUrl = new URL('/', req.url);
       loginUrl.searchParams.set('callbackUrl', req.nextUrl.href);
       return NextResponse.redirect(loginUrl);
     }

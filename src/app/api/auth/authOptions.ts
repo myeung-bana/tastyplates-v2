@@ -98,7 +98,7 @@ export const authOptions: AuthOptions = {
             let type: string | null = null;
 
             try {
-                let cookieStore = await cookies();
+                const cookieStore = await cookies();
                 type = cookieStore.get('auth_type')?.value || null;
 
                 if (account?.provider === sessionProvider.google) {

@@ -255,12 +255,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   return (
     <div className="review-modal-overlay">
-      <div className="review-modal !max-w-[1060px] h-[520px] lg:h-[640px] xl:h-[720px] !p-0 !rounded-3xl overflow-hidden font-inter">
+      <div className="review-modal !max-w-[1280px] h-[520px] lg:h-[640px] xl:h-[720px] !p-0 !rounded-3xl overflow-hidden font-inter">
         <button className="review-modal__close !top-6" onClick={onClose}>
           <FiX />
         </button>
         <div className="grid grid-cols-1 sm:grid-cols-2 !h-[520px] lg:h-[640px]  xl:!h-[720px] w-full">
           <div className="review-card__image-container overflow-hidden">
+            {/* @ts-expect-error react-slick Slider component type issue */}
             <Slider
               {...settings}
               nextArrow={<NextArrow length={data?.reviewImages?.length || 0} />}

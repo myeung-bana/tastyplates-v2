@@ -615,6 +615,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
               <div className="review-card__image-container relative bg-black overflow-hidden hidden md:block">
                 <span className="absolute top-4 right-4 md:top-5 md:right-5 z-10 bg-[#F1F1F1] px-3 py-2 rounded-[50px] text-sm leading-[17px] font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
+                {/* @ts-expect-error react-slick Slider component type issue */}
                 <Slider
                   ref={sliderRef}
                   {...settings}
@@ -656,6 +657,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             <div>
               <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
                 <span className="absolute top-4 right-4 z-10 bg-[#F1F1F1] px-2 py-1 rounded-[50px] text-[10px] leading-3 font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
+                {/* @ts-expect-error react-slick Slider component type issue */}
                 <Slider
                   ref={sliderRef}
                   {...settings}
@@ -999,7 +1001,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         );
                                       })}
                                     </div>
-                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] w-[420px] break-words">
+                                    <p className="review-card__text text-xs font-normal mt-1 text-[#494D5D] leading-[1.5] max-w-[420px] w-full break-words">
                                       {stripTags(reply.content || "").length > reviewDescriptionDisplayLimit ? (
                                         <>
                                           {expandedReplies[reply.id]
@@ -1115,7 +1117,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         }
         isOpen={isOpen}
         setIsOpen={onClose}
-        baseClass="h-full !max-w-[1060px] h-full md:h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
+        baseClass="h-full !max-w-[1280px] h-full md:h-[70vh] md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
         closeButtonClass="!top-5 md:!top-6 !right-3 z-10"
         headerClass="border-none !p-0"
         contentClass="!p-0 overflow-y-auto md:overflow-hidden"

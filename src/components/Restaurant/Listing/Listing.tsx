@@ -198,7 +198,7 @@ const ListingPage = () => {
 
   return (
     <>
-      <div className="font-inter max-w-[82rem] mx-auto mt-16">
+      <div className="font-inter max-w-7xl mx-auto mt-16">
         <div className="py-6 md:py-8 flex flex-col justify-center items-center">
           <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-medium">Find a listing to review</h1>
           <form onSubmit={handleSearch} className="my-6 md:my-10 max-w-[525px] w-full px-6 lg:px-0">

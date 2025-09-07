@@ -443,10 +443,15 @@
   &__text {
     font-size: 1rem; // Standard font size for review text
     color: #31343F; // Dark text color
+    margin-bottom: 1rem;
 
     @media (max-width: 767px) {
       font-size: 0.75rem;
     }
+  }
+
+  &__recognitions {
+    font-size: 0.75rem; // Standard font size for review text
   }
 
   &__timestamp {
@@ -459,7 +464,6 @@
 // _restaurant-details.scss
 
 .review-block__palate-tags {
-  width: fit-content;
   display: flex;
   gap: 4px;
   align-items: center;
@@ -468,6 +472,7 @@
   color: #31343f; // Dark text color
   border-radius: 50px; // Rounded corners
   padding: 4px 8px; // Padding inside the tag
+  font-size: 9px !important; // Smaller font size for tags
 
   @media (max-width: 767px) {
     margin-top: 0;
@@ -481,7 +486,7 @@
   gap: 4px;
   background-color: transparent; // Transparent background for tags
   color: #31343f; // Dark text color
-  font-size: 8px !important; // Smaller font size for tags
+  font-size: 9px !important; // Smaller font size for tags
   font-weight: 500;
   line-height: 10px;
 }

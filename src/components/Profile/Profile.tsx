@@ -7,6 +7,8 @@ import "@/styles/pages/_reviews.scss";
 import { Tab, Tabs } from "@heroui/tabs";
 import Link from "next/link";
 import ReviewCard from "../ReviewCard";
+import ReviewCardSkeleton from "../ReviewCardSkeleton";
+import RestaurantCardSkeleton from "../RestaurantCardSkeleton";
 import { Masonry } from "masonic";
 import { useSession } from "next-auth/react";
 import FollowersModal from "./FollowersModal";
@@ -412,7 +414,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       label: "Reviews",
       content: (
         <>
-          {reviews.length > 0 ? (
+          {loading && reviews.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+              {Array.from({ length: 8 }, (_, i) => (
+                <ReviewCardSkeleton key={`review-skeleton-${i}`} width={304} />
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
             <Masonry
               items={reviews}
               render={ReviewCard}
@@ -432,7 +440,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             ref={observerRef}
             className="flex justify-center text-center mt-6 min-h-[40px]"
           >
-            {loading && (
+            {loading && reviews.length > 0 && (
               <>
                 <svg
                   className="w-5 h-5 text-gray-500 animate-spin mr-2"
@@ -464,7 +472,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       content: (
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {restaurants.length > 0 ? (
+            {listingLoading && restaurants.length === 0 ? (
+              Array.from({ length: 8 }, (_, i) => (
+                <RestaurantCardSkeleton key={`skeleton-${i}`} />
+              ))
+            ) : restaurants.length > 0 ? (
               restaurants.map((rest) => (
                 <RestaurantCard
                   key={rest.id}
@@ -481,7 +493,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
-            {listingLoading && restaurants.length === 0 && (
+            {listingLoading && restaurants.length > 0 && (
               <>
                 <svg
                   className="w-5 h-5 text-gray-500 animate-spin mr-2"
@@ -513,7 +525,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       content: (
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {wishlist.length > 0 ? (
+            {wishlistLoading && wishlist.length === 0 ? (
+              Array.from({ length: 8 }, (_, i) => (
+                <RestaurantCardSkeleton key={`wishlist-skeleton-${i}`} />
+              ))
+            ) : wishlist.length > 0 ? (
               wishlist.map((rest) => (
                 <RestaurantCard
                   key={rest.id}
@@ -532,7 +548,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
-            {wishlistLoading && wishlist.length === 0 && (
+            {wishlistLoading && wishlist.length > 0 && (
               <>
                 <svg
                   className="w-5 h-5 text-gray-500 animate-spin mr-2"
@@ -564,7 +580,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       content: (
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {checkins.length > 0 ? (
+            {checkinsLoading && !hasFetchedCheckins ? (
+              Array.from({ length: 8 }, (_, i) => (
+                <RestaurantCardSkeleton key={`checkin-skeleton-${i}`} />
+              ))
+            ) : checkins.length > 0 ? (
               checkins.map((rest) => (
                 <RestaurantCard
                   key={rest.id}
@@ -583,7 +603,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             )}
           </div>
           <div className="flex justify-center text-center mt-6 min-h-[40px]">
-            {checkinsLoading && !hasFetchedCheckins && (
+            {checkinsLoading && hasFetchedCheckins && checkins.length > 0 && (
               <>
                 <svg
                   className="w-5 h-5 text-gray-500 animate-spin mr-2"
@@ -912,7 +932,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           tabWrapper: "w-full",
           base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",
           panel:
-            "py-0 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-[82rem] mx-auto",
+            "py-0 px-0 justify-start px-3 md:px-4 lg:px-6 xl:px-0 w-full max-w-7xl mx-auto",
           tabList:
             "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
           cursor: "w-full bg-[#31343F]",
