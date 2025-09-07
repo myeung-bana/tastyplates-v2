@@ -16,7 +16,8 @@ const footerLinks = {
   ],
   support: [
     { name: "Help Center", href: HELP },
-    // { name: "Safety Information", href: "/safety" },
+    { name: "Tastyplates for Business", href: "#" },
+    { name: "Claim your Business", href: "#" },
     // { name: "Cancellation Options", href: "/cancellation" },
     // { name: "COVID-19 Response", href: "/covid" },
   ],
@@ -103,7 +104,7 @@ export default function Footer({
 
               {/* Legal Column */}
               <div className="footer__links-column footer__links-column--legal">
-                <h3 className="footer__links-title">About Us and Policies</h3>
+                <h3 className="footer__links-title">About</h3>
                 <ul className="footer__links-list">
                   {footerLinks.legal.map((link) => (
                     <li key={link.name} className="footer__links-item">

@@ -30,7 +30,7 @@ import CustomModal from "./ui/Modal/Modal";
 import { MdArrowBackIos } from "react-icons/md";
 
 const navigationItems = [
-  { name: "Restaurant", href: RESTAURANTS },
+  { name: "Restaurants", href: RESTAURANTS },
   // { name: "Dashboard", href: "/dashboard" },
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];
@@ -234,7 +234,7 @@ export default function Navbar(props: any) {
                   header={<></>}
                   hasTrigger
                   trigger={
-                                    <div className={`hidden ${!isShowPopup ? 'md:block' : 'md:hidden'}`} onClick={() => setIsShowPopup(true)}>
+                   <div className={`hidden ${!isShowPopup ? 'md:block' : 'md:hidden'}`} onClick={() => setIsShowPopup(true)}>
                     <div className="max-w-[400px] flex gap-2.5 items-center border border-[#E5E5E5] pl-6 pr-4 py-2 h-[56px] !rounded-[50px] shadow-[0_0_10px_#E5E5E5]">
                       <div className="hero__search-restaurant !bg-transparent !flex-none max-w-[108px]">
                         <input
