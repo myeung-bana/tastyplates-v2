@@ -10,7 +10,7 @@ interface Props {
 const footerLinks = {
   company: [
     { name: "Home", href: HOME },
-    { name: "Restaurant", href: RESTAURANTS },
+    { name: "Discover Restaurants", href: RESTAURANTS },
     { name: "Add a Listing", href: HOME },
     { name: "Write a Review", href: HOME },
   ],
@@ -21,10 +21,10 @@ const footerLinks = {
     // { name: "COVID-19 Response", href: "/covid" },
   ],
   legal: [
-    { name: "Privacy Policy", href: PRIVACY_POLICY },
     { name: "Terms of Service", href: TERMS_OF_SERVICE },
     { name: "Content Guidelines", href: CONTENT_GUIDELINES },
-    { name: "Cookie Settings", href: "#" },
+    { name: "Cookie Policy", href: "#" },
+    { name: "Privacy Policy", href: PRIVACY_POLICY },
     // { name: "Sitemap", href: "/sitemap" },
   ],
 }
@@ -89,7 +89,7 @@ export default function Footer({
             {/* Links Columns */}
               {/* Company Links */}
               <div className="footer__links-column footer__links-column--company">
-                <h3 className="footer__links-title">Company</h3>
+                <h3 className="footer__links-title">Discover</h3>
                 <ul className="footer__links-list">
                   {footerLinks.company.map((link) => (
                     <li key={link.name} className="footer__links-item">
@@ -103,7 +103,7 @@ export default function Footer({
 
               {/* Legal Column */}
               <div className="footer__links-column footer__links-column--legal">
-                <h3 className="footer__links-title">Legal</h3>
+                <h3 className="footer__links-title">About Us and Policies</h3>
                 <ul className="footer__links-list">
                   {footerLinks.legal.map((link) => (
                     <li key={link.name} className="footer__links-item">

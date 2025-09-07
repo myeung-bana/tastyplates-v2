@@ -138,9 +138,10 @@
       font-weight: 600;
       text-decoration: none;
       transition: color 0.2s;
+      font-size: 0.85rem;
 
       @media (min-width: 640px) {
-        font-size: 1rem;
+        font-size: 0.85rem;
       }
 
       &:hover {

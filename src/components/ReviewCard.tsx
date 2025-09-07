@@ -187,7 +187,7 @@ const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
                   src={STAR_FILLED}
                   width={16}
                   height={16}
-                  className="size-3 md:size-4"
+                  className="star-icon size-3 md:size-4"
                   alt="star icon"
                 />
                 <i className="rating-counter">{data.reviewStars}</i>
