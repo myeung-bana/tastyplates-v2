@@ -352,7 +352,7 @@ const Settings = (props: any) => {
           <form className="settings__form w-full pt-6 sm:pt-8" onSubmit={handleSave}>
             <div className="settings__form-group">
               <label className={`settings__label ${editable != Field.None ? "settings__label__disabled" : ""}`}>
-                Username
+                Display Name
               </label>
               <div className={`settings__input-group ${editable != Field.None ? "settings__input-group__disabled" : ""}`}>
                 {isPersonalInfoLoading ? (
@@ -362,71 +362,6 @@ const Settings = (props: any) => {
                 )
                 }
               </div>
-            </div>
-
-            <div className="settings__form-group">
-              <label
-                className={`settings__label ${editable != Field.None && editable != Field.Birthdate
-                  ? "settings__label__disabled"
-                  : ""
-                  }`}
-              >
-                Birthdate
-              </label>
-              <div className={`settings__input-group ${editable != Field.None && editable != Field.Birthdate
-                ? "settings__input-group__disabled"
-                : ""
-                }`}
-              >
-                {isPersonalInfoLoading ? (
-                  <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
-                ) : editable == Field.Birthdate ? (
-                  <CustomDatePicker
-                    className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
-                    value={setting.birthdate}
-                    onChange={(val) => setSetting({ ...setting, birthdate: val })}
-                    formatValue="MM/dd/yyyy"
-                    disabled={isLoading}
-                  />
-                ) : userData?.birthdate ? (
-                  formatDateForDisplay(userData.birthdate)
-                ) : (
-                  ""
-                )}
-              </div>
-              {birthdateError && editable === Field.Birthdate && (
-                <div className="text-xs text-red-600 mt-1">{birthdateError}</div>
-              )}
-              {editable !== Field.Birthdate ? (
-                <button
-                  type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
-                    ? "settings__input-group__disabled"
-                    : "!text-[#494D5D]"
-                    }`}
-                  onClick={() => setEditable(Field.Birthdate)}
-                  disabled={editable !== Field.None}
-                >
-                  Edit
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
-                    onClick={() => setEditable(Field.None)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="settings__button"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Saving..." : "Save and Continue"}
-                  </button>
-                </>
-              )}
             </div>
             <div className="settings__form-group">
               <label
@@ -504,6 +439,70 @@ const Settings = (props: any) => {
                     Edit
                   </button>
                 ) : null
+              )}
+            </div>
+            <div className="settings__form-group">
+              <label
+                className={`settings__label ${editable != Field.None && editable != Field.Birthdate
+                  ? "settings__label__disabled"
+                  : ""
+                  }`}
+              >
+                Birthdate
+              </label>
+              <div className={`settings__input-group ${editable != Field.None && editable != Field.Birthdate
+                ? "settings__input-group__disabled"
+                : ""
+                }`}
+              >
+                {isPersonalInfoLoading ? (
+                  <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
+                ) : editable == Field.Birthdate ? (
+                  <CustomDatePicker
+                    className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
+                    value={setting.birthdate}
+                    onChange={(val) => setSetting({ ...setting, birthdate: val })}
+                    formatValue="MM/dd/yyyy"
+                    disabled={isLoading}
+                  />
+                ) : userData?.birthdate ? (
+                  formatDateForDisplay(userData.birthdate)
+                ) : (
+                  ""
+                )}
+              </div>
+              {birthdateError && editable === Field.Birthdate && (
+                <div className="text-xs text-red-600 mt-1">{birthdateError}</div>
+              )}
+              {editable !== Field.Birthdate ? (
+                <button
+                  type="button"
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
+                    ? "settings__input-group__disabled"
+                    : "!text-[#494D5D]"
+                    }`}
+                  onClick={() => setEditable(Field.Birthdate)}
+                  disabled={editable !== Field.None}
+                >
+                  Edit
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
+                    onClick={() => setEditable(Field.None)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="settings__button"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : "Save and Continue"}
+                  </button>
+                </>
               )}
             </div>
             <div className="settings__form-group">

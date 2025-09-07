@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { IoClose, IoCheckmark, IoRefresh } from 'react-icons/io5';
+import { FiX } from 'react-icons/fi';
+import { IoCheckmark, IoRefresh } from 'react-icons/io5';
+import { PHOTO_CROP_CONSTANTS } from '@/constants/photoCrop';
+import "@/styles/components/_review-modal.scss";
 
 interface PhotoCropModalProps {
   isOpen: boolean;
@@ -30,6 +33,34 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   const [imagePosition, setImagePosition] = useState<ImagePosition>({ x: 0, y: 0, scale: 1 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
+  const [minScale, setMinScale] = useState(1);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const { MAX_SCALE, CROP_DIAMETER, MIN_IMAGE_REQUIREMENTS } = PHOTO_CROP_CONSTANTS;
+
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+  const getCropMetrics = () => {
+    const width = containerSize.width;
+    const height = containerSize.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = CROP_DIAMETER / 2;
+    const diameter = CROP_DIAMETER;
+    const cropLeft = centerX - radius;
+    const cropTop = centerY - radius;
+    return { centerX, centerY, radius, diameter, cropLeft, cropTop };
+  };
+
+  const getDragBounds = (scaledWidth: number, scaledHeight: number) => {
+    const { cropLeft, cropTop, diameter } = getCropMetrics();
+    // Ensure the crop square is fully covered by the image
+    const minX = cropLeft + diameter - scaledWidth;
+    const maxX = cropLeft;
+    const minY = cropTop + diameter - scaledHeight;
+    const maxY = cropTop;
+    return { minX, maxX, minY, maxY };
+  };
 
   // Initialize image and container
   useEffect(() => {
@@ -40,6 +71,25 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     img.onload = () => {
       setImageLoaded(true);
       setOriginalImageSize({ width: img.width, height: img.height });
+      // Validate image size and aspect ratio
+      const aspect = img.width / img.height;
+      if (
+        img.width < MIN_IMAGE_REQUIREMENTS.width ||
+        img.height < MIN_IMAGE_REQUIREMENTS.height
+      ) {
+        setValidationError(
+          `Image too small. Minimum ${MIN_IMAGE_REQUIREMENTS.width}x${MIN_IMAGE_REQUIREMENTS.height}px`
+        );
+      } else if (
+        aspect < MIN_IMAGE_REQUIREMENTS.aspectRatioMin ||
+        aspect > MIN_IMAGE_REQUIREMENTS.aspectRatioMax
+      ) {
+        setValidationError(
+          "Image aspect ratio is extreme. Please use a more square image."
+        );
+      } else {
+        setValidationError(null);
+      }
       
       // Calculate initial scale and position
       const container = containerRef.current;
@@ -48,23 +98,82 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
         
-        // Calculate scale to fit image in container with some padding
-        const padding = 40;
-        const availableWidth = containerWidth - padding;
-        const availableHeight = containerHeight - padding;
-        
-        const scaleX = availableWidth / img.width;
-        const scaleY = availableHeight / img.height;
-        const initialScale = Math.min(scaleX, scaleY, 1);
-        
         setContainerSize({ width: containerWidth, height: containerHeight });
         
-        // Center the image initially
+        // Detect image orientation
+        const aspectRatio = img.width / img.height;
+        const isPortrait = aspectRatio < 1;
+        const isLandscape = aspectRatio > 1;
+        const isSquare = Math.abs(aspectRatio - 1) < 0.1;
+        
+        // Calculate minimum scale to fully cover the fixed crop circle
+        // For portrait images, we need to ensure width covers the crop diameter
+        // For landscape images, we need to ensure height covers the crop diameter
+        let minScaleToCover;
+        if (isPortrait) {
+          // Portrait: scale based on width to ensure crop circle is covered
+          minScaleToCover = CROP_DIAMETER / img.width;
+        } else if (isLandscape) {
+          // Landscape: scale based on height to ensure crop circle is covered
+          minScaleToCover = CROP_DIAMETER / img.height;
+        } else {
+          // Square: use the smaller dimension
+          minScaleToCover = CROP_DIAMETER / Math.min(img.width, img.height);
+        }
+        
+        const computedMinScale = Math.max(0.1, minScaleToCover); // Allow smaller minimum for better UX
+        setMinScale(computedMinScale);
+
+        // Choose initial scale: for portraits, start a bit larger to show more of the subject
+        let initialScale;
+        if (isPortrait) {
+          // For portraits, start with a scale that shows a good portion of the image
+          initialScale = Math.max(computedMinScale, CROP_DIAMETER / Math.min(img.width, img.height));
+        } else {
+          // For landscape and square, use the minimum scale
+          initialScale = computedMinScale;
+        }
+        
+        initialScale = clamp(initialScale, computedMinScale, MAX_SCALE);
+        
+        // Center the image relative to the crop circle, not the container
         const scaledWidth = img.width * initialScale;
         const scaledHeight = img.height * initialScale;
+        
+        // Get crop area metrics for proper centering
+        const tempContainerSize = { width: containerWidth, height: containerHeight };
+        const { centerX: cropCenterX, centerY: cropCenterY } = (() => {
+          const width = tempContainerSize.width;
+          const height = tempContainerSize.height;
+          return {
+            centerX: width / 2,
+            centerY: height / 2
+          };
+        })();
+        
+        // Position image based on orientation for optimal initial view
+        let centeredX, centeredY;
+        
+        if (isPortrait) {
+          // For portrait images, center horizontally and position vertically to show upper portion (faces usually in upper third)
+          centeredX = cropCenterX - scaledWidth / 2;
+          centeredY = cropCenterY - scaledHeight / 3; // Show upper third of the image
+        } else if (isLandscape) {
+          // For landscape images, center both axes
+          centeredX = cropCenterX - scaledWidth / 2;
+          centeredY = cropCenterY - scaledHeight / 2;
+        } else {
+          // For square images, center both axes
+          centeredX = cropCenterX - scaledWidth / 2;
+          centeredY = cropCenterY - scaledHeight / 2;
+        }
+        
+        // Apply drag bounds to ensure crop area is covered
+        const { minX, maxX, minY, maxY } = getDragBounds(scaledWidth, scaledHeight);
+        
         setImagePosition({
-          x: (containerWidth - scaledWidth) / 2,
-          y: (containerHeight - scaledHeight) / 2,
+          x: clamp(centeredX, minX, maxX),
+          y: clamp(centeredY, minY, maxY),
           scale: initialScale,
         });
       }
@@ -96,6 +205,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       y >= imagePosition.y &&
       y <= imagePosition.y + scaledHeight
     ) {
+      e.preventDefault();
       setIsDragging(true);
       setDragStart({ x: x - imagePosition.x, y: y - imagePosition.y });
     }
@@ -104,6 +214,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging || !imageLoaded) return;
     
+    e.preventDefault();
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     
@@ -113,15 +224,15 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     const newX = x - dragStart.x;
     const newY = y - dragStart.y;
     
-    // Keep image within reasonable bounds (allow some overflow for better UX)
+    // Keep image covering the crop circle fully
     const scaledWidth = originalImageSize.width * imagePosition.scale;
     const scaledHeight = originalImageSize.height * imagePosition.scale;
-    const margin = 50; // Allow 50px overflow on each side
+    const { minX, maxX, minY, maxY } = getDragBounds(scaledWidth, scaledHeight);
     
     setImagePosition(prev => ({
       ...prev,
-      x: Math.max(-scaledWidth + margin, Math.min(newX, containerSize.width - margin)),
-      y: Math.max(-scaledHeight + margin, Math.min(newY, containerSize.height - margin)),
+      x: clamp(newX, minX, maxX),
+      y: clamp(newY, minY, maxY),
     }));
   }, [isDragging, dragStart, imagePosition.scale, originalImageSize, containerSize, imageLoaded]);
 
@@ -129,35 +240,142 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     setIsDragging(false);
   }, []);
 
-  // Handle zoom
-  const handleZoom = useCallback((delta: number) => {
+  // Touch event handlers for mobile support
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!imageLoaded) return;
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Check if touch is on the image
+    const scaledWidth = originalImageSize.width * imagePosition.scale;
+    const scaledHeight = originalImageSize.height * imagePosition.scale;
+    
+    if (
+      x >= imagePosition.x &&
+      x <= imagePosition.x + scaledWidth &&
+      y >= imagePosition.y &&
+      y <= imagePosition.y + scaledHeight
+    ) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({ x: x - imagePosition.x, y: y - imagePosition.y });
+    }
+  }, [imageLoaded, imagePosition, originalImageSize]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !imageLoaded) return;
+    
+    e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    const newX = x - dragStart.x;
+    const newY = y - dragStart.y;
+    
+    // Keep image covering the crop circle fully
+    const scaledWidth = originalImageSize.width * imagePosition.scale;
+    const scaledHeight = originalImageSize.height * imagePosition.scale;
+    const { minX, maxX, minY, maxY } = getDragBounds(scaledWidth, scaledHeight);
+    
     setImagePosition(prev => ({
       ...prev,
-      scale: Math.max(0.5, Math.min(3, prev.scale + delta)),
+      x: clamp(newX, minX, maxX),
+      y: clamp(newY, minY, maxY),
     }));
+  }, [isDragging, dragStart, imagePosition.scale, originalImageSize, containerSize, imageLoaded]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
   }, []);
+
+  // Handle zoom
+  const handleZoom = useCallback((delta: number) => {
+    setImagePosition(prev => {
+      const nextScale = clamp(prev.scale + delta, minScale, MAX_SCALE);
+      
+      // Calculate the center point of the current crop area
+      const { centerX, centerY } = getCropMetrics();
+      
+      // Calculate the current center relative to the image
+      const currentCenterX = centerX - prev.x;
+      const currentCenterY = centerY - prev.y;
+      
+      // Scale the relative center position
+      const scaleFactor = nextScale / prev.scale;
+      const newCenterX = currentCenterX * scaleFactor;
+      const newCenterY = currentCenterY * scaleFactor;
+      
+      // Calculate new position to maintain the same center point
+      const newX = centerX - newCenterX;
+      const newY = centerY - newCenterY;
+      
+      // Apply drag bounds to ensure crop area is covered
+      const scaledWidth = originalImageSize.width * nextScale;
+      const scaledHeight = originalImageSize.height * nextScale;
+      const { minX, maxX, minY, maxY } = getDragBounds(scaledWidth, scaledHeight);
+      
+      return {
+        ...prev,
+        scale: nextScale,
+        x: clamp(newX, minX, maxX),
+        y: clamp(newY, minY, maxY),
+      };
+    });
+  }, [minScale, originalImageSize, containerSize]);
 
   // Reset image position and scale
   const resetCrop = useCallback(() => {
     if (!imageLoaded || !originalImageSize.width) return;
     
-    const padding = 40;
-    const availableWidth = containerSize.width - padding;
-    const availableHeight = containerSize.height - padding;
+    // Detect image orientation
+    const aspectRatio = originalImageSize.width / originalImageSize.height;
+    const isPortrait = aspectRatio < 1;
+    const isLandscape = aspectRatio > 1;
     
-    const scaleX = availableWidth / originalImageSize.width;
-    const scaleY = availableHeight / originalImageSize.height;
-    const initialScale = Math.min(scaleX, scaleY, 1);
+    // Calculate initial scale based on orientation
+    let initialScale;
+    if (isPortrait) {
+      initialScale = Math.max(minScale, CROP_DIAMETER / Math.min(originalImageSize.width, originalImageSize.height));
+    } else {
+      initialScale = minScale;
+    }
+    initialScale = clamp(initialScale, minScale, MAX_SCALE);
     
     const scaledWidth = originalImageSize.width * initialScale;
     const scaledHeight = originalImageSize.height * initialScale;
     
+    // Center the image relative to the crop circle center based on orientation
+    const { centerX: cropCenterX, centerY: cropCenterY } = getCropMetrics();
+    
+    let centeredX, centeredY;
+    if (isPortrait) {
+      // For portrait images, center horizontally and show upper portion
+      centeredX = cropCenterX - scaledWidth / 2;
+      centeredY = cropCenterY - scaledHeight / 3;
+    } else {
+      // For landscape and square images, center both axes
+      centeredX = cropCenterX - scaledWidth / 2;
+      centeredY = cropCenterY - scaledHeight / 2;
+    }
+    
+    // Apply drag bounds to ensure crop area is covered
+    const { minX, maxX, minY, maxY } = getDragBounds(scaledWidth, scaledHeight);
+    
     setImagePosition({
-      x: (containerSize.width - scaledWidth) / 2,
-      y: (containerSize.height - scaledHeight) / 2,
+      x: clamp(centeredX, minX, maxX),
+      y: clamp(centeredY, minY, maxY),
       scale: initialScale,
     });
-  }, [imageLoaded, containerSize, originalImageSize]);
+  }, [imageLoaded, containerSize, originalImageSize, minScale]);
 
   // Crop and process image
   const handleCrop = useCallback(() => {
@@ -167,93 +385,113 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const img = imageRef.current;
+    // Create a new image to ensure we have the original dimensions
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Set canvas size to fixed 240x240 crop
+      const cropSize = CROP_DIAMETER;
+      canvas.width = cropSize;
+      canvas.height = cropSize;
+      
+      // Get the actual crop area metrics using consistent function
+      const { centerX, centerY, radius, diameter } = getCropMetrics();
+      
+      // Calculate the crop area in the container coordinates
+      const cropLeft = centerX - radius;
+      const cropTop = centerY - radius;
+      
+      // Convert container coordinates to image coordinates
+      // When image position is negative, it means the image extends beyond the container
+      // We need to find where the crop area intersects with the actual image
+      const relativeLeft = cropLeft - imagePosition.x;
+      const relativeTop = cropTop - imagePosition.y;
+      
+      // Convert to source image coordinates using original image dimensions
+      const sourceX = relativeLeft / imagePosition.scale;
+      const sourceY = relativeTop / imagePosition.scale;
+      const sourceSize = diameter / imagePosition.scale;
+      // Ensure source coordinates are within image bounds but maintain aspect
+      const clampedSourceX = Math.max(0, Math.min(sourceX, img.width - sourceSize));
+      const clampedSourceY = Math.max(0, Math.min(sourceY, img.height - sourceSize));
+      const clampedSourceSize = Math.min(sourceSize, img.width - clampedSourceX, img.height - clampedSourceY);
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, cropSize, cropSize);
+      
+      // Fill with white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cropSize, cropSize);
+      
+      // Create circular clipping path
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cropSize / 2, cropSize / 2, cropSize / 2, 0, 2 * Math.PI);
+      ctx.clip();
+      
+      // Draw the cropped portion
+      ctx.drawImage(
+        img,
+        clampedSourceX,
+        clampedSourceY,
+        clampedSourceSize,
+        clampedSourceSize,
+        0,
+        0,
+        cropSize,
+        cropSize
+      );
+      
+      ctx.restore();
+      
+      // Convert to base64
+      const croppedImage = canvas.toDataURL('image/jpeg', 0.9);
+      onCrop(croppedImage);
+      onClose();
+    };
     
-    // Set canvas size for circular crop (256x256 for high quality)
-    const cropSize = 256;
-    canvas.width = cropSize;
-    canvas.height = cropSize;
+    img.onerror = () => {
+      console.error('Failed to load image for cropping');
+    };
     
-    // Calculate the circular crop area in the container
-    const centerX = containerSize.width / 2;
-    const centerY = containerSize.height / 2;
-    const radius = Math.min(containerSize.width, containerSize.height) / 2 - 20; // 20px margin
-    
-    // Calculate the source coordinates in the original image
-    const sourceX = (centerX - radius - imagePosition.x) / imagePosition.scale;
-    const sourceY = (centerY - radius - imagePosition.y) / imagePosition.scale;
-    const sourceSize = (radius * 2) / imagePosition.scale;
-    
-    // Ensure source coordinates are within image bounds
-    const clampedSourceX = Math.max(0, Math.min(sourceX, img.width - sourceSize));
-    const clampedSourceY = Math.max(0, Math.min(sourceY, img.height - sourceSize));
-    const clampedSourceSize = Math.min(sourceSize, img.width - clampedSourceX, img.height - clampedSourceY);
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, cropSize, cropSize);
-    
-    // Create circular clipping path
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cropSize / 2, cropSize / 2, cropSize / 2, 0, 2 * Math.PI);
-    ctx.clip();
-    
-    // Draw the cropped portion
-    ctx.drawImage(
-      img,
-      clampedSourceX,
-      clampedSourceY,
-      clampedSourceSize,
-      clampedSourceSize,
-      0,
-      0,
-      cropSize,
-      cropSize
-    );
-    
-    ctx.restore();
-    
-    // Convert to base64
-    const croppedImage = canvas.toDataURL('image/jpeg', 0.9);
-    onCrop(croppedImage);
-    onClose();
-  }, [imagePosition, containerSize, onCrop, onClose]);
+    img.src = imageSrc;
+  }, [imagePosition, containerSize, onCrop, onClose, imageSrc]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-[2000] flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="review-modal-overlay">
+      <div className="photo-crop-modal__container">
+        <button className="review-modal__close !top-5" onClick={onClose}>
+          <FiX />
+        </button>
+        
         {/* Header */}
-        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Position Your Avatar</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <IoClose className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
+        <div className="photo-crop-modal__header">
+          <h2>Position Your Avatar</h2>
         </div>
+        {validationError && (
+          <div className="photo-crop-modal__validation-error">
+            {validationError}
+          </div>
+        )}
 
         {/* Image Container */}
-        <div className="p-2 sm:p-4 flex-1 flex items-center justify-center">
+        <div className="photo-crop-modal__content">
           <div
             ref={containerRef}
-            className="relative bg-gray-100 rounded-lg overflow-hidden mx-auto"
-            style={{ 
-              width: 'min(400px, 90vw)', 
-              height: 'min(400px, 90vw)',
-              maxWidth: '400px',
-              maxHeight: '400px'
-            }}
+            className="photo-crop-modal__image-container"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              <div className="photo-crop-modal__loading">
+                <div className="spinner"></div>
               </div>
             )}
             
@@ -265,38 +503,34 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                   ref={imageRef}
                   src={imageSrc}
                   alt="Profile preview"
-                  className="absolute cursor-move select-none"
+                  className="photo-crop-modal__image"
                   style={{
                     left: imagePosition.x,
                     top: imagePosition.y,
                     width: originalImageSize.width * imagePosition.scale,
                     height: originalImageSize.height * imagePosition.scale,
-                    transform: 'translateZ(0)', // Hardware acceleration
                   }}
+                  draggable={false}
                 />
                 
-                {/* Circular Crop Overlay */}
-                <div className="absolute inset-0 pointer-events-none">
+                {/* Circular Crop Overlay (fixed 240px) */}
+                <div className="photo-crop-modal__overlay">
                   {/* Dark overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-50" />
+                  <div className="photo-crop-modal__overlay-dark" />
                   
                   {/* Circular cutout */}
                   <div
-                    className="absolute border-4 border-orange-500 rounded-full"
+                    className="photo-crop-modal__overlay-circle"
                     style={{
-                      left: '50%',
-                      top: '50%',
-                      width: Math.min(containerSize.width, containerSize.height) - 40,
-                      height: Math.min(containerSize.width, containerSize.height) - 40,
-                      transform: 'translate(-50%, -50%)',
-                      boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                      width: CROP_DIAMETER,
+                      height: CROP_DIAMETER,
                     }}
                   />
                   
                   {/* Center crosshair */}
-                  <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-8 h-0.5 bg-orange-500 opacity-60" />
-                    <div className="w-0.5 h-8 bg-orange-500 opacity-60 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                  <div className="photo-crop-modal__overlay-crosshair">
+                    <div className="photo-crop-modal__overlay-crosshair-h" />
+                    <div className="photo-crop-modal__overlay-crosshair-v" />
                   </div>
                 </div>
               </>
@@ -304,61 +538,61 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           </div>
 
           {/* Instructions */}
-          <div className="text-center mt-2 px-2">
-            <p className="text-xs sm:text-sm text-gray-600">
-              Drag to position your photo • Use zoom controls to adjust size
+          <div className="photo-crop-modal__instructions">
+            <p>Drag to position your photo • Use zoom controls to adjust size</p>
+            <p className="photo-crop-modal__instructions-size">
+              Final size: 240×240px for high quality
             </p>
           </div>
 
           {/* Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between mt-3 gap-2 px-2">
-            <div className="flex items-center gap-1 sm:gap-2">
+          <div className="photo-crop-modal__controls">
+            <div className="photo-crop-modal__buttons">
               <button
                 onClick={() => handleZoom(-0.1)}
-                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs sm:text-sm font-medium transition-colors"
+                className="photo-crop-modal__button"
                 disabled={!imageLoaded}
               >
                 Zoom Out
               </button>
               <button
                 onClick={() => handleZoom(0.1)}
-                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs sm:text-sm font-medium transition-colors"
+                className="photo-crop-modal__button"
                 disabled={!imageLoaded}
               >
                 Zoom In
               </button>
               <button
                 onClick={resetCrop}
-                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1 transition-colors"
+                className="photo-crop-modal__button"
                 disabled={!imageLoaded}
               >
-                <IoRefresh className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Reset</span>
+                <IoRefresh className="w-4 h-4" />
+                <span>Reset</span>
               </button>
             </div>
             
-            <div className="text-xs sm:text-sm text-gray-500">
+            <div className="photo-crop-modal__scale-info">
               Scale: {Math.round(imagePosition.scale * 100)}%
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-gray-200">
+        <div className="photo-crop-modal__footer">
           <button
             onClick={onClose}
-            className="px-4 sm:px-6 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors text-sm sm:text-base"
+            className="photo-crop-modal__cancel-btn"
           >
             Cancel
           </button>
           <button
             onClick={handleCrop}
-            className="px-4 sm:px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium flex items-center gap-1 sm:gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-            disabled={!imageLoaded}
+            className="photo-crop-modal__apply-btn"
+            disabled={!imageLoaded || !!validationError}
           >
             <IoCheckmark className="w-4 h-4" />
-            <span className="hidden sm:inline">Apply Crop</span>
-            <span className="sm:hidden">Apply</span>
+            <span>Apply Crop</span>
           </button>
         </div>
       </div>

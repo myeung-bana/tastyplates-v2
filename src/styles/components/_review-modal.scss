@@ -106,3 +106,301 @@
     }
   }
 }
+
+// Photo Crop Modal Styles
+.photo-crop-modal {
+  &__container {
+    max-width: 600px;
+    width: calc(100% - 24px);
+    max-height: 90vh;
+    padding: 0;
+    border-radius: 1.5rem;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow-y: auto;
+    background-color: white;
+
+    @media (min-width: 768px) {
+      width: 100%;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #CACACA;
+
+    @media (min-width: 768px) {
+      padding: 1rem 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #31343F;
+
+      @media (min-width: 768px) {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  &__validation-error {
+    padding: 0.75rem 1rem;
+    padding-top: 0.75rem;
+    font-size: 0.8125rem;
+    color: #7a2e00;
+    background-color: #FFF4E8;
+
+    @media (min-width: 768px) {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  &__content {
+    padding: 1rem 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    @media (min-width: 768px) {
+      padding: 1.5rem;
+    }
+  }
+
+  &__image-container {
+    position: relative;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 0 auto;
+    width: min(400px, 80vw);
+    height: min(400px, 80vw);
+    max-width: 400px;
+    max-height: 400px;
+  }
+
+  &__loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      border-radius: 50%;
+      height: 2rem;
+      width: 2rem;
+      border-bottom: 2px solid #f97316;
+    }
+  }
+
+  &__image {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    object-fit: contain;
+    transform: translateZ(0); // Hardware acceleration
+
+    &[draggable="false"] {
+      -webkit-user-drag: none;
+      -khtml-user-drag: none;
+      -moz-user-drag: none;
+      -o-user-drag: none;
+      user-drag: none;
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    &-dark {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    &-circle {
+      position: absolute;
+      border: 4px solid #f97316;
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+
+    &-crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+
+      &-h {
+        width: 2rem;
+        height: 0.125rem;
+        background-color: #f97316;
+        opacity: 0.6;
+      }
+
+      &-v {
+        width: 0.125rem;
+        height: 2rem;
+        background-color: #f97316;
+        opacity: 0.6;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+  }
+
+  &__instructions {
+    text-align: center;
+    margin-top: 1rem;
+    padding: 0 0.5rem;
+
+    p {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    &-size {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+  }
+
+  &__controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    gap: 0.75rem;
+    padding: 0 0.5rem;
+    width: 100%;
+
+    @media (min-width: 640px) {
+      flex-direction: row;
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__button {
+    padding: 0.5rem 0.75rem;
+    background-color: white;
+    border: 1px solid #31343F;
+    color: #31343F;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:hover:not(:disabled) {
+      background-color: #f9fafb;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__scale-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #CACACA;
+
+    @media (min-width: 768px) {
+      padding: 1rem 1.5rem;
+    }
+  }
+
+  &__cancel-btn {
+    padding: 0.75rem 1.5rem;
+    color: #6b7280;
+    font-weight: 500;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      color: #1f2937;
+    }
+  }
+
+  &__apply-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #E36B00;
+    color: white !important;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+
+    span {
+      color: white !important;
+    }
+
+    @media (min-width: 768px) {
+      font-size: 1rem;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: #D15A00;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

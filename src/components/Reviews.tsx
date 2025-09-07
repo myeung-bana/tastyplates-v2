@@ -18,6 +18,10 @@ const Reviews = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 0);
+  
+  // Cap reviews at 25
+  const MAX_REVIEWS = 25;
+  const [hasReachedLimit, setHasReachedLimit] = useState(false);
 
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
@@ -44,14 +48,27 @@ const Reviews = () => {
   };
 
   const loadMore = async () => {
-    if (loading || !hasNextPage) return;
+    if (loading || !hasNextPage || hasReachedLimit) return;
     
     setLoading(true);
     const first = isFirstLoad.current ? 16 : 8;
     const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, session?.accessToken);
-    setReviews(prev => [...prev, ...newReviews]);
+    
+    // Calculate how many reviews we can add without exceeding the limit
+    const currentCount = reviews.length;
+    const remainingSlots = MAX_REVIEWS - currentCount;
+    const reviewsToAdd = newReviews.slice(0, remainingSlots);
+    
+    setReviews(prev => [...prev, ...reviewsToAdd]);
     setEndCursor(pageInfo.endCursor);
     setHasNextPage(pageInfo.hasNextPage);
+    
+    // Check if we've reached the limit
+    if (currentCount + reviewsToAdd.length >= MAX_REVIEWS) {
+      setHasReachedLimit(true);
+      setHasNextPage(false); // Stop further loading
+    }
+    
     setLoading(false);
 
     if (isFirstLoad.current) {
@@ -75,10 +92,10 @@ const Reviews = () => {
 
   // Setup Intersection Observer, but only after initial load
   useEffect(() => {
-    if (!initialLoaded) return;
+    if (!initialLoaded || hasReachedLimit) return;
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasNextPage && !loading) {
+        if (entries[0].isIntersecting && hasNextPage && !loading && !hasReachedLimit) {
           loadMore();
         }
       },
@@ -91,7 +108,7 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, initialLoaded]);
+  }, [hasNextPage, loading, initialLoaded, hasReachedLimit]);
 
   if (!initialLoaded) {
     return (
@@ -113,7 +130,7 @@ const Reviews = () => {
 
         <Masonry items={reviews} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-          {loading && (
+          {loading && !hasReachedLimit && (
             <>
               <svg
                 className="w-5 h-5 text-gray-500 animate-spin"
@@ -135,7 +152,17 @@ const Reviews = () => {
               <span className="text-gray-500 text-sm">Load more content</span>
             </>
           )}
-          {!hasNextPage && !loading && (
+          {hasReachedLimit && (
+            <div className="text-center">
+              <p className="text-gray-400 text-sm mb-2">
+                Showing {reviews.length} of the latest reviews
+              </p>
+              <p className="text-gray-500 text-xs">
+                Visit our restaurants page to see more reviews
+              </p>
+            </div>
+          )}
+          {!hasNextPage && !loading && !hasReachedLimit && (
             <p className="text-gray-400 text-sm">No more content to load.</p>
           )}
         </div>
