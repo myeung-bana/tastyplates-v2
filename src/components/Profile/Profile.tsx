@@ -66,14 +66,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [userReviewCount, setUserReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [afterCursor, setAfterCursor] = useState<string | null>(null);
-  const loaderRef = useRef<HTMLDivElement | null>(null);
+  // Removed unused state variables
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
   const [userData, setUserData] = useState<any>(null);
-  const [palates, setPalates] = useState<string[]>([]);
+  // Removed unused state
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
@@ -286,7 +284,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   }, [targetUserId]);
 
-  const fetchFollowing = async (forceRefresh = false) => {
+  const fetchFollowing = async () => {
     setFollowingLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowingLoading(false);
@@ -301,7 +299,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   };
 
-  const fetchFollowers = async (forceRefresh = false, followingList?: any[]) => {
+  const fetchFollowers = async () => {
     setFollowersLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowersLoading(false);
@@ -358,9 +356,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (response.status == code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      const [newFollowing, newFollowers] = await Promise.all([
-        fetchFollowing(true),
-        fetchFollowers(true)
+      const [newFollowing] = await Promise.all([
+        fetchFollowing(),
+        fetchFollowers()
       ]);
       setFollowers(prev => prev.map(user => ({
         ...user,
@@ -378,9 +376,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (response.status == code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      const [newFollowing, newFollowers] = await Promise.all([
-        fetchFollowing(true),
-        fetchFollowers(true)
+      const [newFollowing] = await Promise.all([
+        fetchFollowing(),
+        fetchFollowers()
       ]);
       setFollowers(prev => prev.map(user => ({
         ...user,

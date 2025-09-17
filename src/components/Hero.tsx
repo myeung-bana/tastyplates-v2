@@ -12,8 +12,7 @@ import { useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
 import { RESTAURANTS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
-import toast from "react-hot-toast";
-import { fetchLocationFailed, geoLocationNotSupported } from "@/constants/messages";
+// Removed unused imports
 import { HERO_BG, HERO_BG_SP } from "@/constants/images";
 
 const restaurantService = new RestaurantService();
@@ -22,7 +21,7 @@ const Hero = () => {
   const router = useRouter();
   const [location, setLocation] = useState("");
   const [cuisine, setCuisine] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // Removed unused state
   const [addressLoading, setAddressLoading] = useState(false);
   const [isSearchListing, setIsSearchListing] = useState(false);
   const [listing, setListing] = useState("");
@@ -57,57 +56,7 @@ const Hero = () => {
     fetchListingsDebouncedRef.current?.('');
   }, []);
 
-  const getCurrentLocation = () => {
-    setIsLoading(true);
-
-    if (!navigator.geolocation) {
-      toast.error(geoLocationNotSupported);
-      setIsLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const response = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-          );
-
-          if (!response.ok) {
-            throw new Error(fetchLocationFailed);
-          }
-
-          const data = await response.json();
-          // Construct address string from response
-          const address = [
-            data.city,
-            data.principalSubdivision,
-            data.countryName,
-          ]
-            .filter(Boolean)
-            .join(", ");
-
-          setLocation(address);
-        } catch (error) {
-          console.error("Error fetching location:", error);
-          toast.error(fetchLocationFailed);
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        toast.error(fetchLocationFailed);
-        setIsLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
-    );
-  };
+  // Removed unused function
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

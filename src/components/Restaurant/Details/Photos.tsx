@@ -8,14 +8,14 @@ import FallbackImage from "@/components/ui/Image/FallbackImage";
 interface PhotosProps {
   data: ReviewedDataProps;
   index: number;
-  width: number;
+  // Removed unused prop
   image: {
     sourceUrl: string;
     id?: string | number;
   };
 }
 
-const Photos = ({ index, data, width, image }: PhotosProps) => {
+const Photos = ({ index, data, image }: PhotosProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (

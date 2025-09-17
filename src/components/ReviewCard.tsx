@@ -21,9 +21,8 @@ import {
   STAR_FILLED,
 } from "@/constants/images";
 
-const ReviewCard = ({ index, data, width }: ReviewCardProps) => {
+const ReviewCard = ({ data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedReview, setSelectedReview] = useState<ReviewedDataProps>();
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
   const UserPalateNames = data?.palates
     ?.split("|")

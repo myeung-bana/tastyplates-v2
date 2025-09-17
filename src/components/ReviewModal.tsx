@@ -13,7 +13,6 @@ interface ReviewModalProps {
 const ReviewModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
-  restaurantId,
   onSubmit,
 }) => {
   const [rating, setRating] = useState(0);

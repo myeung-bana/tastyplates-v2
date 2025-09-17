@@ -44,7 +44,7 @@ export interface RestaurantCardProps {
 
 const restaurantService = new RestaurantService();
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, ratingsCount, onWishlistChange, onClick }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick }: RestaurantCardProps) => {
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -52,7 +52,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,14 +108,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, rating
     }
   }
 
-  const getCuisineNames = (cuisineIds: string[]) => {
-    return cuisineIds
-      .map((id) => {
-        const cuisine = cuisines.find((c) => c.id === id);
-        return cuisine ? cuisine.name : null;
-      })
-      .filter((name) => name);
-  };
+  // Removed unused function
   const cuisineNames = restaurant.palatesNames ?? [];
 
 

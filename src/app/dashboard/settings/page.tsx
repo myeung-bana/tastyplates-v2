@@ -7,7 +7,7 @@ import "@/styles/pages/_lists.scss";
 
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
@@ -30,10 +30,7 @@ const SettingsPage = () => {
 
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [afterCursor, setAfterCursor] = useState<string | null>(null);
-  const loaderRef = useRef<HTMLDivElement | null>(null);
+  // Removed unused state variables
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({

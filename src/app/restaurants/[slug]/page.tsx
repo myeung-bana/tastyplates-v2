@@ -3,10 +3,10 @@ import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { FiMapPin } from "react-icons/fi";
 import { useEffect, useState } from "react";
-import { getRestaurantReviews } from "@/utils/reviewUtils";
+// Removed unused import
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import "@/styles/pages/_restaurant-details.scss";
-import { users } from "@/data/dummyUsers";
+// Removed unused import
 // Removed unused imports
 import ReviewModal from "@/components/ReviewModal";
 import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
@@ -228,7 +228,7 @@ export default function RestaurantDetail() {
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
 
-  const restaurantId = restaurant.id;
+  // Removed unused variable
   // Removed unused variable
 
   // Removed unused variable
@@ -236,11 +236,7 @@ export default function RestaurantDetail() {
 
   // Removed unused rating calculations
 
-  const handleReviewSubmit = (_review: {
-    rating: number;
-    comment: string;
-    date: string;
-  }) => {
+  const handleReviewSubmit = () => {
     // TODO: Implement review submission
   };
 

@@ -75,7 +75,7 @@ const RestaurantPage = () => {
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
-  const searchForm = useRef<HTMLFormElement>(null)
+  // Removed unused ref
 
   useEffect(() => {
     // Initialize debounced functions once
@@ -279,11 +279,7 @@ const RestaurantPage = () => {
     };
   }, [hasNextPage, loading, debouncedSearchTerm, searchEthnic, endCursor, JSON.stringify(filters), searchAddress, session?.accessToken]);
 
-  const handleLoadMore = () => {
-    if (hasNextPage && !loading) {
-      fetchRestaurants(false, endCursor);
-    }
-  };
+  // Removed unused function
 
   const handleRestaurantClick = async (restaurantId: number) => {
     if (!session?.accessToken) {

@@ -1,20 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 
-interface ModalProps {
-  children : ReactNode,
-  modalIsOpen: boolean
-  closeModal: () => void
-  afterOpenModal?: () => {}
-  customStyles?: any
-}
+// Removed unused interface
 
-
-const ModalPopup = ({children, ...props}: ModalProps) => {
-  const {modalIsOpen, afterOpenModal, closeModal} = props
-
-  return (
-    <></>
-  )
-}
+const ModalPopup = () => {
+  return <></>;
+};
 
 export default ModalPopup;

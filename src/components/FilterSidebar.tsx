@@ -1,11 +1,9 @@
 import { FiFilter } from "react-icons/fi";
 import "@/styles/components/_filter-sidebar.scss";
 
-interface FilterSidebarProps {
-  onFilterChange?: (filterType: string, value: string) => void;
-}
+// Removed unused interface
 
-const FilterSidebar = ({ onFilterChange }: FilterSidebarProps) => {
+const FilterSidebar = () => {
   return (
     <aside className="filter">
       <div className="filter__card">
