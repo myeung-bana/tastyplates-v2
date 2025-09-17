@@ -104,7 +104,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         const aspectRatio = img.width / img.height;
         const isPortrait = aspectRatio < 1;
         const isLandscape = aspectRatio > 1;
-        const isSquare = Math.abs(aspectRatio - 1) < 0.1;
+        // Removed unused variable
         
         // Calculate minimum scale to fully cover the fixed crop circle
         // For portrait images, we need to ensure width covers the crop diameter
@@ -339,7 +339,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     // Detect image orientation
     const aspectRatio = originalImageSize.width / originalImageSize.height;
     const isPortrait = aspectRatio < 1;
-    const isLandscape = aspectRatio > 1;
+    // Removed unused variable
     
     // Calculate initial scale based on orientation
     let initialScale;

@@ -3,7 +3,7 @@
 import React from "react";
 import Profile from "@/components/Profile/Profile";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+// Removed unused import
 
 const UserProfilePage = () => {
     const params = useParams();
@@ -25,7 +25,7 @@ const UserProfilePage = () => {
         }
     }
 
-    const { data: session } = useSession();
+    // Removed unused variable
 
     if (!parsedUserId || isNaN(parsedUserId)) {
         return (

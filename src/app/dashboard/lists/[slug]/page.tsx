@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_lists.scss";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { DEFAULT_IMAGE } from "@/constants/images";
@@ -20,7 +20,7 @@ interface Restaurant {
   palatesNames?: string[];
 }
 
-type tParams = { slug: string };
+// Removed unused type
 
 const restaurantService = new RestaurantService()
 
@@ -30,10 +30,7 @@ const ListsDetailPage = () => {
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [afterCursor, setAfterCursor] = useState<string | null>(null);
-  const loaderRef = useRef<HTMLDivElement | null>(null);
+  // Removed unused state variables
 
   const transformNodes = (nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({

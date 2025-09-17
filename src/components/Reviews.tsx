@@ -11,9 +11,8 @@ const reviewService = new ReviewService();
 
 const Reviews = () => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
-  const { data: session, status } = useSession();
-  const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [data, setData] = useState<any>({})
+  const { data: session } = useSession();
+  // Removed unused state variables
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

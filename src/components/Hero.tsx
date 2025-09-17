@@ -280,9 +280,9 @@ const Hero = () => {
             className="absolute inset-0 w-full h-[466px] -z-10 object-left-top object-cover sm:hidden"
             alt="Hero background"
           />
-          <h1 className="hero__title">Discover & Share Amazing Restaurant</h1>
+          <h1 className="hero__title">Discover the Meal that fits Your Taste</h1>
           <p className="hero__description">
-            Find and share your favourite restaurants based on your palate.
+          Dine like a Brazilian in Tokyo - or Korean in New York?
           </p>
           <form onSubmit={handleSearch} className="hero__search">
             <div className="hero__search-wrapper relative">

@@ -18,7 +18,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
   const [error, setError] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
-  const [showUncheckModal, setShowUncheckModal] = useState(false);
+  // Removed unused state
 
   useEffect(() => {
     let isMounted = true;
@@ -70,7 +70,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
       }
       if (!res.ok) throw new Error(checkInStatusError);
-    } catch (err) {
+    } catch {
       toast.error(checkInStatusError);
       setCheckedIn(prevCheckedIn);
       window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));

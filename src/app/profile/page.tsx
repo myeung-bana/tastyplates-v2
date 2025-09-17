@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import Footer from "@/components/Footer";
+// Removed unused import
 import Profile from "@/components/Profile/Profile";
 
 const ProfilePage = () => {

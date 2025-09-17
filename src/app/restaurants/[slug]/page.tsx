@@ -7,8 +7,7 @@ import { getRestaurantReviews } from "@/utils/reviewUtils";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import "@/styles/pages/_restaurant-details.scss";
 import { users } from "@/data/dummyUsers";
-import { palates } from "@/data/dummyPalate";
-import { Review } from "@/data/dummyReviews";
+// Removed unused imports
 import ReviewModal from "@/components/ReviewModal";
 import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
 import RestaurantReviews from "@/components/RestaurantReviews";
@@ -26,30 +25,16 @@ import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, DEFAULT_IMAGE, FLAG, HELMET, PHONE } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
+import { Listing } from "@/interfaces/restaurant/restaurant";
 
-type tParams = { slug: string };
+// Removed unused type
 
-const calculateAverageRating = (reviews: Review[]) => {
-  if (reviews.length === 0) return 0;
-  const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-  return (sum / reviews.length).toFixed(1);
-};
+// Removed unused function
 
-const filterReviewsByPalate = (reviews: Review[], targetPalates: string[]) => {
-  return reviews.filter((review) => {
-    // Find the user who wrote the review
-    const user = users.find((user) => user.id === review.authorId);
-    if (!user) return false;
-
-    return user.palateIds.some((palateId) => {
-      const palate = palates.find((p) => p.id === palateId);
-      return palate && targetPalates.includes(palate.name);
-    });
-  });
-};
+// Removed unused function
 
 function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -108,7 +93,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
         setError(favoriteStatusError);
       }
       if (!res.ok) throw new Error("Failed to update favorite status");
-    } catch (err) {
+    } catch {
       toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: prevSaved } }));
@@ -177,7 +162,7 @@ export default function RestaurantDetail() {
   const { data: session } = useSession();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
-  const [restaurant, setRestaurant] = useState<any | null>(null);
+  const [restaurant, setRestaurant] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const router = useRouter();
@@ -234,7 +219,7 @@ export default function RestaurantDetail() {
 
   const searchRatingStats = restaurant?.searchPalateStats;
   const myPreferenceStats = restaurant?.palateStats?.find(
-    (stat: any) => stat.name === "My Preference"
+    (stat: { name: string }) => stat.name === "My Preference"
   );
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
@@ -244,37 +229,19 @@ export default function RestaurantDetail() {
   if (!restaurant) return notFound();
 
   const restaurantId = restaurant.id;
-  const restaurantReviews = {
-    reviews: getRestaurantReviews(restaurantId).map((review) => ({
-      ...review,
-      id: review.id,
-      content: review.comment,
-      likes: 0,
-      comments: [],
-      user: review.authorId,
-      userImage: users.find((u) => u.id === review.authorId)?.image || "",
-      timestamp: review.date,
-    })),
-  };
+  // Removed unused variable
 
-  const allReviews = restaurantReviews.reviews;
-  const japanesePalateReviews = filterReviewsByPalate(allReviews, ["Japanese"]);
-  const italianMexicanPalateReviews = filterReviewsByPalate(allReviews, [
-    "Italian",
-    "Mexican",
-  ]);
+  // Removed unused variable
+  // Removed unused review filtering
 
-  const japaneseAvgRating = calculateAverageRating(japanesePalateReviews);
-  const overallAvgRating = calculateAverageRating(allReviews);
-  const italianMexicanAvgRating = calculateAverageRating(
-    italianMexicanPalateReviews
-  );
+  // Removed unused rating calculations
 
-  const handleReviewSubmit = (review: {
+  const handleReviewSubmit = (_review: {
     rating: number;
     comment: string;
     date: string;
   }) => {
+    // TODO: Implement review submission
   };
 
   const addReview = () => {
