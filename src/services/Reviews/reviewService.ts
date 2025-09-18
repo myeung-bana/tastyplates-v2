@@ -35,7 +35,7 @@ export class ReviewService {
         }
     }
 
-    async postReview(reviewData: any, accessToken: string): Promise<{ status: number; data: any }> {
+    async postReview(reviewData: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: Record<string, unknown> }> {
         const formattedData = {
             post: reviewData.restaurantId,
             parent: reviewData.parent || 0,
@@ -51,7 +51,7 @@ export class ReviewService {
         return await reviewRepo.createReview(formattedData, accessToken);
     }
 
-    async fetchReviewDrafts(accessToken?: string): Promise<any[]> {
+    async fetchReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
         try {
             const drafts = await reviewRepo.getReviewDrafts(accessToken);
             return drafts;
@@ -90,7 +90,7 @@ export class ReviewService {
         }
     }
 
-    async unlikeComment(commentId: number, accessToken: string): Promise<{ status: number; data: any }> {
+    async unlikeComment(commentId: number, accessToken: string): Promise<{ status: number; data: Record<string, unknown> }> {
         try {
             // Return the backend response so the component receives it!
             return await reviewRepo.unlikeComment(commentId, accessToken);

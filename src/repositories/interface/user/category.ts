@@ -1,3 +1,3 @@
 export interface CategoryRepo {
-    getCategories(): Promise<any>;
+    getCategories(): Promise<Record<string, unknown>>;
 }

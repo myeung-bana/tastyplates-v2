@@ -107,7 +107,7 @@ const OnboardingOnePage = () => {
       // Safely parse the stored data
       try {
         existingData = storedDataStr ? JSON.parse(storedDataStr) : {};
-      } catch (err) {
+      } catch {
         existingData = {};
       }
 
@@ -177,7 +177,7 @@ const OnboardingOnePage = () => {
           setIsLoading(false);
           return;
         }
-      } catch (error) {
+      } catch {
         setUsernameError(usernameCheckError);
         setIsLoading(false);
         return;
@@ -312,7 +312,7 @@ const OnboardingOnePage = () => {
             className="auth__form max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
-            {formFields.map((field: any, index: number) => {
+            {formFields.map((field: Record<string, unknown>, index: number) => {
               // Check if current field is custom gender and previous field was gender
               const isCustomGenderField = gender === "custom" && field.label === "";
               const groupClassName = isCustomGenderField
@@ -337,10 +337,10 @@ const OnboardingOnePage = () => {
                         />
                     ) : field.type === "select" ? (
                       // <CustomSelect {...field} />
-                      <select className={field.className} value={field.value} onChange={(e: any) => field.onChange(e.target.value)} disabled={field.disabled}>
+                      <select className={field.className} value={field.value} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => field.onChange(e.target.value)} disabled={field.disabled}>
                         <option value="">{field.placeholder}</option>
-                        {field.items.map((option: any) =>
-                          <option key={option.key} value={option.value}>{option.content}</option>
+                        {field.items.map((option: Record<string, unknown>) =>
+                          <option key={option.key as string} value={option.value as string}>{option.content as string}</option>
                         )}
                       </select>
                     ) : field.type === "multiple-select" ? (
@@ -385,7 +385,7 @@ const OnboardingOnePage = () => {
       </div>
       <Modal isOpen={isOpen} onOpenChange={setIsOpen}>
         <ModalContent>
-          {(onClose) => (
+          {() => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 Modal Title

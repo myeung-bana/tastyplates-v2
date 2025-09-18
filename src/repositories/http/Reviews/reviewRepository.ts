@@ -34,7 +34,7 @@ export class ReviewRepository implements ReviewRepo {
     return data?.comment?.replies?.nodes || [];
   }
 
-  async createReview<T>(form: any, accessToken: string): Promise<any> {
+  async createReview(form: Record<string, unknown>, accessToken: string): Promise<Record<string, unknown>> {
     const response: Response = await request.POST('/wp-json/wp/v2/api/comments', {
       body: JSON.stringify(form),
       headers: {
@@ -49,7 +49,7 @@ export class ReviewRepository implements ReviewRepo {
     }
   }
 
-  async getReviewDrafts(accessToken?: string): Promise<any> {
+  async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>> {
     try {
       const response = await request.GET('/wp-json/wp/v2/api/comments?type=listing_draft&status=hold', {
         headers: {
@@ -93,7 +93,7 @@ export class ReviewRepository implements ReviewRepo {
     };
   }
 
-  async likeComment(commentId: number, accessToken: string): Promise<any> {
+  async likeComment(commentId: number, accessToken: string): Promise<Record<string, unknown>> {
     const body = JSON.stringify({
       comment_id: commentId,
     });
@@ -111,7 +111,7 @@ export class ReviewRepository implements ReviewRepo {
     }
   }
 
-  async unlikeComment(commentId: number, accessToken: string): Promise<any> {
+  async unlikeComment(commentId: number, accessToken: string): Promise<Record<string, unknown>> {
     const body = JSON.stringify({
       comment_id: commentId,
     });
@@ -158,7 +158,7 @@ export class ReviewRepository implements ReviewRepo {
       if (data?.reviews?.nodes?.length) {
         return { reviews: data.reviews.nodes };
       }
-    } catch (e) {
+    } catch {
     }
     const response: Response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
     if (!response.ok) throw new Error('Failed to fetch from WordPress');

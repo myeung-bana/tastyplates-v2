@@ -1,3 +1,3 @@
 export interface ContentGuidelinesRepo {
-    fetchContentGuidelines(): Promise<any>;
+    fetchContentGuidelines(): Promise<Record<string, unknown>>;
 }

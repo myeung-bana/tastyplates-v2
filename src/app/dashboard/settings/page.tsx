@@ -7,7 +7,7 @@ import "@/styles/pages/_lists.scss";
 
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DEFAULT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
@@ -46,11 +46,10 @@ const SettingsPage = () => {
     }));
   };
 
-  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
-    setLoading(true);
+  const fetchRestaurants = useCallback(async (search: string, first = 8, after: string | null = null) => {
     try {
       const data = await restaurantService.fetchAllRestaurants(search, first, after);
-      const transformed = transformNodes(data.nodes);
+      const transformed = transformNodes(data.nodes as unknown as Listing[]);
 
       setRestaurants(prev => {
         if (!after) {
@@ -62,19 +61,14 @@ const SettingsPage = () => {
         const uniqueMap = new Map(all.map(r => [r.id, r]));
         return Array.from(uniqueMap.values());
       });
-
-      setAfterCursor(data.pageInfo.endCursor);
-      setHasMore(data.pageInfo.hasNextPage);
     } catch (error) {
       console.error(error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRestaurants("", 8, null);
-  }, []);
+  }, [fetchRestaurants]);
 
 
   const currentList = lists.find((list) => list.id === slug);

@@ -1,3 +1,3 @@
 export interface PrivacyPolicyRepo {
-    fetchPrivacyPolicy(): Promise<any>;
+    fetchPrivacyPolicy(): Promise<Record<string, unknown>>;
 }

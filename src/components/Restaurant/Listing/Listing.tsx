@@ -1,6 +1,6 @@
 // Listing.tsx
 "use client";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState, useCallback } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
@@ -52,46 +52,46 @@ const ListingPage = () => {
   const [recentlyVisitedRestaurants, setRecentlyVisitedRestaurants] = useState<Restaurant[]>([]);
 
   // Helper: transform GraphQL node to Restaurant
-  const transformNodes = (nodes: any[]): Restaurant[] => {
-    return nodes.map((item: any) => ({
-      id: item.id,
-      databaseId: item.databaseId || 0, // Default to 0 if not present
-      slug: item.slug,
-      name: item.title,
-      image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
-      rating: item.averageRating || "", // Default to 0 if not present
-      cuisineNames: item.palates || [],
-      countries: item.countries?.nodes.map((c: any) => c.name).join(", ") || "Default Location",
-      priceRange: item.priceRange // Default price range
+  const transformNodes = useCallback((nodes: Record<string, unknown>[]): Restaurant[] => {
+    return nodes.map((item: Record<string, unknown>) => ({
+      id: item.id as string,
+      databaseId: (item.databaseId as number) || 0, // Default to 0 if not present
+      slug: item.slug as string,
+      name: item.title as string,
+      image: ((item.featuredImage as Record<string, unknown>)?.node as Record<string, unknown>)?.sourceUrl as string || DEFAULT_IMAGE,
+      rating: parseFloat(item.averageRating as string) || 0, // Default to 0 if not present
+      cuisineNames: (item.palates as string[]) || [],
+      countries: ((item.countries as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.map((c: Record<string, unknown>) => c.name as string).join(", ") || "Default Location",
+      priceRange: (item.priceRange as string) || "" // Default price range
     }));
-  };
+  }, []);
 
-  const transformReviewDrafts = (nodes: any[]): ReviewDraft[] => {
-    return nodes.map((item: any) => ({
-      id: item.id,
-      post: item.post,
-      author: item.author,
-      authorName: item.author_name,
+  const transformReviewDrafts = useCallback((nodes: Record<string, unknown>[]): ReviewDraft[] => {
+    return nodes.map((item: Record<string, unknown>) => ({
+      id: item.id as number,
+      post: item.post as number,
+      author: item.author as number,
+      authorName: item.author_name as string,
       content: {
-        rendered: item.content?.rendered || "",
-        raw: item.content?.raw || ""
+        rendered: (item.content as Record<string, unknown>)?.rendered as string || "",
+        raw: (item.content as Record<string, unknown>)?.raw as string || ""
       },
-      date: item.date,
-      link: item.link,
-      status: item.status,
-      type: item.type,
-      recognitions: item.recognitions || item.meta?.recognitions || [],
-      reviewImages: item.review_images?.map((img: any) => ({
-        databaseId: parseInt(img.id),
-        id: img.id.toString(),
-        sourceUrl: img.sourceUrl,
-      })) || [],
-      reviewMainTitle: item.review_main_title,
-      reviewStars: item.review_stars,
+      date: item.date as string,
+      link: item.link as string,
+      status: item.status as string,
+      type: item.type as string,
+      recognitions: (item.recognitions as string[]) || ((item.meta as Record<string, unknown>)?.recognitions as string[]) || [],
+      reviewImages: ((item.review_images as Record<string, unknown>[]) || []).map((img: Record<string, unknown>) => ({
+        databaseId: parseInt(img.id as string),
+        id: (img.id as string).toString(),
+        sourceUrl: img.sourceUrl as string,
+      })),
+      reviewMainTitle: item.review_main_title as string,
+      reviewStars: item.review_stars as string,
     }));
-  };
+  }, []);
 
-  const fetchRestaurants = async (search: string, first = 8, after: string | null = null) => {
+  const fetchRestaurants = useCallback(async (search: string, first = 8, after: string | null = null) => {
     setLoading(true);
     try {
       const data = await restaurantService.fetchAllRestaurants(search, first, after);
@@ -111,7 +111,7 @@ const ListingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [transformNodes]);
 
   useEffect(() => {
     if (debouncedSearchTerm) {
@@ -119,9 +119,9 @@ const ListingPage = () => {
     } else {
       setRestaurants([]);
     }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, fetchRestaurants]);
 
-  const fetchReviewDrafts = async () => {
+  const fetchReviewDrafts = useCallback(async () => {
     setLoadingDrafts(true);
     try {
       if (!session?.accessToken) return;
@@ -134,13 +134,13 @@ const ListingPage = () => {
     } finally {
       setLoadingDrafts(false);
     }
-  };
+  }, [session?.accessToken, transformReviewDrafts]);
 
   useEffect(() => {
     if (!debouncedSearchTerm) {
       fetchReviewDrafts();
     }
-  }, [session?.accessToken, debouncedSearchTerm]);
+  }, [session?.accessToken, debouncedSearchTerm, fetchReviewDrafts]);
 
   const confirmDeleteDraft = async (draftId: number) => {
     if (!session?.accessToken) return;
@@ -170,14 +170,14 @@ const ListingPage = () => {
     setIsShowDelete(true);
   }
 
-  const fetchRecentlyVisited = async () => {
+  const fetchRecentlyVisited = useCallback(async () => {
     if (!session?.accessToken) return;
 
     setLoadingVisited(true);
     try {
       const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
-      const restaurantPromises = visitedIds.map((id: any) =>
-        restaurantService.fetchRestaurantById(id)
+      const restaurantPromises = (visitedIds as unknown as (string | number)[]).map((id: string | number) =>
+        restaurantService.fetchRestaurantById(String(id))
       );
       const restaurants = await Promise.all(restaurantPromises);
       const transformed = transformNodes(restaurants);
@@ -187,13 +187,13 @@ const ListingPage = () => {
     } finally {
       setLoadingVisited(false);
     }
-  };
+  }, [session?.accessToken, transformNodes]);
 
   useEffect(() => {
     if (session?.accessToken && !debouncedSearchTerm) {
       fetchRecentlyVisited();
     }
-  }, [session?.accessToken, debouncedSearchTerm]);
+  }, [session?.accessToken, debouncedSearchTerm, fetchRecentlyVisited]);
 
 
   return (
@@ -312,7 +312,7 @@ const ListingPage = () => {
         header="Delete this Draft?"
         content="Your draft will be removed."
         isOpen={isShowDelete}
-        setIsOpen={(open: any) => {
+        setIsOpen={(open: boolean) => {
           if (!isLoadingDelete) setIsShowDelete(open);
         }}
         onConfirm={async () => {

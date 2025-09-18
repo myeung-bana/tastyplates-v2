@@ -1,6 +1,6 @@
 import {Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 
-export default function CustomDropdown(props: any) {
+export default function CustomDropdown(props: Record<string, unknown>) {
   return (
     <Dropdown>
       <DropdownTrigger>

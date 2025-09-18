@@ -1,7 +1,7 @@
 "use client";
 import { FiSearch } from "react-icons/fi";
 import { MdStore } from "react-icons/md";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "@/styles/components/_hero.scss";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import { palateOptions } from "@/constants/formOptions";
@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
 import { RESTAURANTS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
+import Image from "next/image";
 // Removed unused imports
 import { HERO_BG, HERO_BG_SP } from "@/constants/images";
 
@@ -31,7 +32,7 @@ const Hero = () => {
   const [locationOptions, setLocationOptions] = useState<{
     key: string;
     label: string;
-    children?: any[];
+    children?: Record<string, unknown>[];
   }[]>([]);
   const [showListingModal, setShowListingModal] = useState(false);
   const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
@@ -45,16 +46,7 @@ const Hero = () => {
   const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const [listingCurrentPage, setListingCurrentPage] = useState(1);
 
-  useEffect(() => {
-    // Initialize both debounced functions once
-    const [debouncedPalate] = debounce(fetchAddressByPalate, 500);
-    const [debouncedListing] = debounce(fetchListingsName, 500);
-
-    fetchPalatesDebouncedRef.current = debouncedPalate;
-    fetchListingsDebouncedRef.current = debouncedListing;
-    fetchPalatesDebouncedRef.current?.(new Set<Key>());
-    fetchListingsDebouncedRef.current?.('');
-  }, []);
+  // Moved this useEffect after function declarations
 
   // Removed unused function
 
@@ -95,14 +87,14 @@ const Hero = () => {
     setShowLocationModal(true)
   };
 
-  const fetchAddressByPalate = async (values: Set<Key>, page = 1) => {
+  const fetchAddressByPalate = useCallback(async (values: Set<Key>, page = 1) => {
     try {
       setAddressLoading(true);
       const slugs = Array.from(values).map((val) => val.toString());
 
       const result = await restaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
       const uniqueLocations = Array.from(
-        new Set(result.nodes.map((r: any) => r.listingDetails?.googleMapUrl?.streetAddress?.toLowerCase().trim()))
+        new Set(result.nodes.map((r: Record<string, unknown>) => (((r.listingDetails as Record<string, unknown>)?.googleMapUrl as Record<string, unknown>)?.streetAddress as string)?.toLowerCase().trim()))
       ).filter(Boolean);
 
       const locationOptionsFormatted = uniqueLocations.map((loc) => ({
@@ -119,9 +111,9 @@ const Hero = () => {
       console.error("Failed to fetch restaurant locations by palate:", error);
       setAddressLoading(false);
     }
-  }
+  }, [endCursor]);
 
-  const fetchListingsName = async (search: string = '', page = 1) => {
+  const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
     try {
       setListingLoading(true);
       const result = await restaurantService.fetchListingsName(
@@ -129,21 +121,36 @@ const Hero = () => {
         32,
         page === 1 ? null : listingEndCursor
       );
-      const formatted = result.nodes.map((item: any) => ({
-        key: item.slug,
-        label: item.title,
+      const formatted = result.nodes.map((item: Record<string, unknown>) => ({
+        key: item.slug as string,
+        label: item.title as string,
       }));
       setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
       setListingCurrentPage(page);
-      setListingEndCursor(result.pageInfo.endCursor);
-      setListingHasNextPage(result.pageInfo.hasNextPage);
+      setListingEndCursor(result.pageInfo.endCursor as string | null);
+      setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
     } catch (err) {
       console.error("Error loading listing options", err);
       setListingOptions([]);
     } finally {
       setListingLoading(false);
     }
-  };
+  }, [listingEndCursor]);
+
+  useEffect(() => {
+    // Initialize both debounced functions once
+    const [debouncedPalate] = debounce((...args: unknown[]) => {
+      fetchAddressByPalate(args[0] as Set<Key>, args[1] as number);
+    }, 500);
+    const [debouncedListing] = debounce((...args: unknown[]) => {
+      fetchListingsName(args[0] as string, args[1] as number);
+    }, 500);
+
+    fetchPalatesDebouncedRef.current = debouncedPalate;
+    fetchListingsDebouncedRef.current = debouncedListing;
+    fetchPalatesDebouncedRef.current?.(new Set<Key>());
+    fetchListingsDebouncedRef.current?.('');
+  }, [fetchAddressByPalate, fetchListingsName]);
 
   const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
     setLocation('');
@@ -215,14 +222,14 @@ const Hero = () => {
     <section className="hero mx-auto">
       <div className="hero__container mx-auto">
         <div className="hero__content mx-auto">
-          <img
+          <Image
             src={HERO_BG}
             width={1980}
             height={538}
             className="absolute inset-0 w-full -z-10 h-[538px] object-cover object-[70%] hidden sm:block"
             alt="Hero background"
           />
-          <img
+          <Image
             src={HERO_BG_SP}
             width={640}
             height={466}

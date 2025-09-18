@@ -42,7 +42,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
     fetchCheckIn();
     return () => { isMounted = false; };
-  }, [restaurantSlug, session]);
+  }, [restaurantSlug, session, initialized]);
 
   const handleToggle = async () => {
     if (!session) return;
@@ -53,7 +53,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: !checkedIn } }));
     const action = checkedIn ? "uncheckin" : "checkin";
     try {
-      const res: Response = await restaurantService.createCheckIn(
+      const res: Record<string, unknown> = await restaurantService.createCheckIn(
         { restaurant_slug: restaurantSlug, action },
         session?.accessToken,
         false
@@ -61,7 +61,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
       if (res.status == code.success) {
         toast.success(checkedIn ? uncheckInRestaurantSuccess : checkInRestaurantSuccess);
-        const data = await res.json();
+        const data = res as { status: string };
         setCheckedIn(data.status === "checkedin");
         window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: data.status === "checkedin" } }));
       } else {

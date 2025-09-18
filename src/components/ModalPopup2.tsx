@@ -33,17 +33,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   onClose,
 }) => {
   const { data: session } = useSession();
-  const { getFollowState, setFollowState } = useFollowContext();
-  const [replies, setReplies] = useState<any[]>([]);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [hoveredRating, setHoveredRating] = useState(0);
+  const { setFollowState } = useFollowContext();
+  const [replies, setReplies] = useState<Record<string, unknown>[]>([]);
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [width, setWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
-  );
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   useEffect(() => {
@@ -64,7 +58,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data?.id) {
-      reviewService.fetchCommentReplies(data.id).then(setReplies);
+      reviewService.fetchCommentReplies(data.id as string).then(setReplies);
     }
   }, [isOpen, data?.id]);
 
@@ -74,7 +68,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     if (!isOpen) return;
     if (!session?.accessToken) return;
     // prefer `data.author.node.databaseId`, fallback to data.author.databaseId
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = ((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId || (data.author as Record<string, unknown>)?.databaseId;
     if (!authorUserId) {
       setIsFollowing(false);
       return;
@@ -82,27 +76,27 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     (async () => {
       try {
-        const result = await userService.isFollowingUser(authorUserId, session.accessToken);        
+        const result = await userService.isFollowingUser(authorUserId as number, session.accessToken);        
         setIsFollowing(!!result.is_following);
-        setFollowState(authorUserId, !!result.is_following);
+        setFollowState(authorUserId as number, !!result.is_following);
       } catch (err) {
         console.error('Error fetching follow state:', err);
         setIsFollowing(false);
       }
     })();
-  }, [isOpen, session?.accessToken, data.author]);
+  }, [isOpen, session?.accessToken, data.author, setFollowState]);
 
   const handleResize = () => {
-    setWidth(window.innerWidth);
+    // Handle resize logic if needed
   };
-  const NextArrow = (props: any) => {
-    const { className, style, onClick, length } = props;
-    const display = activeSlide === length - 1 ? "none" : "block";
+  const NextArrow = (props: Record<string, unknown>) => {
+    const { onClick, length } = props;
+    const display = activeSlide === (length as number) - 1 ? "none" : "block";
 
     return (
       <div
         className={`absolute !right-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
-        onClick={onClick}
+        onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
         style={{ display: display }}
       >
         <RxCaretRight className="h-11 w-11 stroke-black" />
@@ -110,14 +104,14 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     );
   };
 
-  const PrevArrow = (props: any) => {
-    const { className, style, onClick } = props;
+  const PrevArrow = (props: Record<string, unknown>) => {
+    const { onClick } = props;
     const display = activeSlide === 0 ? "none" : "block";
 
     return (
       <div
         className={`absolute !left-0 z-10 top-1/2 h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
-        onClick={onClick}
+        onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
         style={{ display: display }}
       >
         <RxCaretLeft className="h-11 w-11 stroke-black" />
@@ -136,7 +130,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     centerMode: boolean;
     initialSlide: number;
     lazyLoad: boolean;
-    responsive: any;
+    responsive: Record<string, unknown>;
     variableWidth: boolean;
     swipeToSlide: boolean;
   };
@@ -164,13 +158,13 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           centerMode: false,
         },
       },
-    ],
+    ] as unknown as Record<string, unknown>,
   };
 
-  const UserPalateNames = data.author?.node?.palates
+  const UserPalateNames = (((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.palates as string)
     ?.split("|")
-    .map((s: any) => s.trim())
-    .filter((s: any) => s.length > 0);
+    .map((s: string) => s.trim())
+    .filter((s: string) => s.length > 0);
   //   .map((id) => {
   //     const palate = palates.find((p) => p.id === id);
   //     return palate ? palate.name : null;
@@ -184,10 +178,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   //   })
   //   .filter((name) => name); 
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onClose();
-  };
 
   const handleFollowAuthor = async () => {
     if (!session?.accessToken) {
@@ -195,21 +185,21 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
     // Always use the correct user id for the author (databaseId, integer)
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = ((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId || (data.author as Record<string, unknown>)?.databaseId;
     if (!authorUserId) {
       toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
     try {
-      const result = await userService.followUser(authorUserId, session.accessToken);
+      const result = await userService.followUser(authorUserId as number, session.accessToken);
       if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
       } else {
         setIsFollowing(true);
-        setFollowState(authorUserId, true);
+        setFollowState(authorUserId as number, true);
       }
     } catch (err) {
       console.error("Follow error", err);
@@ -226,21 +216,21 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       return;
     }
     // Always use the correct user id for the author (databaseId, integer)
-    const authorUserId = data.author?.node?.databaseId || data.author?.databaseId;
+    const authorUserId = ((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId || (data.author as Record<string, unknown>)?.databaseId;
     if (!authorUserId) {
       toast.error(authorIdMissing);
       return;
     }
     setFollowLoading(true);
     try {
-      const result = await userService.unfollowUser(authorUserId, session.accessToken);
+      const result = await userService.unfollowUser(authorUserId as number, session.accessToken);
       if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);
       } else {
         setIsFollowing(false);
-        setFollowState(authorUserId, false);
+        setFollowState(authorUserId as number, false);
       }
     } catch (err) {
       console.error("Unfollow error", err);
@@ -264,9 +254,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             {/* @ts-expect-error react-slick Slider component type issue */}
             <Slider
               {...settings}
-              nextArrow={<NextArrow length={data?.reviewImages?.length || 0} />}
+              nextArrow={<NextArrow length={(data?.reviewImages as Record<string, unknown>[])?.length || 0} />}
               prevArrow={<PrevArrow />}
-              beforeChange={(current: any) => {
+              beforeChange={(current: number) => {
                 setActiveSlide(current + 1);
               }}
               // afterChange={(current: any) => {
@@ -275,10 +265,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               lazyLoad="progressive"
             >
               {Array.isArray(data?.reviewImages) && data.reviewImages.length > 0 ? (
-                data.reviewImages.map((image: any, index: number) => (
+                data.reviewImages.map((image: Record<string, unknown>, index: number) => (
                   <FallbackImage
                     key={index}
-                    src={image?.sourceUrl}
+                    src={image?.sourceUrl as string}
                     alt="Review"
                     width={400}
                     height={400}
@@ -300,8 +290,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             <div className="flex justify-between pr-10 items-center">
               <div className="review-card__user">
                 <FallbackImage
-                  src={data.author?.node?.avatar?.url || DEFAULT_USER_ICON}
-                  alt={data.author?.node?.name || "User"}
+                  src={((((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.avatar as Record<string, unknown>)?.url as string) || DEFAULT_USER_ICON}
+                  alt={(((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string) || "User"}
                   width={32}
                   height={32}
                   className="review-card__user-image !rounded-2xl"
@@ -309,10 +299,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 />
                 <div className="review-card__user-info">
                   <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                    {data.author?.name || data.author?.node?.name || "Unknown User"}
+                    {((data.author as Record<string, unknown>)?.name as string) || (((data.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string) || "Unknown User"}
                   </h3>
                   <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                    {UserPalateNames?.map((tag: any, index: number) => (
+                    {UserPalateNames?.map((tag: string, index: number) => (
                       <span
                         key={index}
                         className="review-block__palate-tag !text-[8px] text-white px-2 py-1 font-medium !rounded-[50px] bg-[#D56253]"
@@ -364,15 +354,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 <div className="overflow-y-auto grow pr-1">
                   <div className="shrink-0">
                     <p className="text-sm font-semibold w-[304px] line-clamp-1">
-                      {stripTags(data.reviewMainTitle || "") || "Dorem ipsum dolor title."}
+                      {stripTags((data.reviewMainTitle as string) || "") || "Dorem ipsum dolor title."}
                     </p>
                     <p className="review-card__text w-[304] text-sm font-normal">
-                      {stripTags(data.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                      {stripTags((data.content as string) || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
                     </p>
                     <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-1">
                       {Array.from({ length: 5 }, (_, i) => {
-                        const full = i + 1 <= data.reviewStars;
-                        const half = !full && i + 0.5 <= data.reviewStars;
+                        const full = i + 1 <= (data.reviewStars as number);
+                        const half = !full && i + 0.5 <= (data.reviewStars as number);
                         return full ? (
                           <BsStarFill key={i} className="text-[#31343F]" />
                         ) : half ? (
@@ -381,12 +371,12 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           <BsStar key={i} className="text-[#31343F]" />
                         );
                       })}
-                      <span className="review-card__timestamp ml-2">{formatDate(data.date)}</span>
+                      <span className="review-card__timestamp ml-2">{formatDate(data.date as string)}</span>
                     </div>
                     {replies.length > 0 && (
                       <div className="overflow-y-auto grow mt-4 border-t pt-4 pr-1">
                         {replies.map((reply, index) => {
-                          const UserPalateNames = reply.author?.node?.palates
+                          const UserPalateNames = (((reply.author as Record<string, unknown>)?.node as Record<string, unknown>)?.palates as string)
                             ?.split("|")
                             .map((s: string) => s.trim())
                             .filter((s: string) => s.length > 0);
@@ -394,8 +384,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           return (
                             <div key={index} className="reply flex items-start gap-3 mb-3">
                               <FallbackImage
-                                src={reply.author?.node?.avatar?.url || DEFAULT_USER_ICON}
-                                alt={reply.author?.node?.name || "User"}
+                                src={((((reply.author as Record<string, unknown>)?.node as Record<string, unknown>)?.avatar as Record<string, unknown>)?.url as string) || DEFAULT_USER_ICON}
+                                alt={(((reply.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string) || "User"}
                                 width={28}
                                 height={28}
                                 className="rounded-full"
@@ -403,7 +393,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                               />
                               <div className="review-card__user-info">
                                 <h3 className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold">
-                                  {reply.author?.node?.name || "Unknown User"}
+                                  {(((reply.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string) || "Unknown User"}
                                 </h3>
 
                                 <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
@@ -418,7 +408,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                 </div>
 
                                 <p className="review-card__text w-[304] text-sm font-normal">
-                                  {stripTags(reply.content || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
+                                  {stripTags((reply.content as string) || "") || "Dorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis."}
                                 </p>
                               </div>
                             </div>

@@ -14,7 +14,7 @@ import { minimumPassword } from "@/constants/validation";
 import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
 import { FIREBASE_ERRORS, responseStatusCode as code, sessionProvider as provider, sessionType } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
-import { HOME, ONBOARDING_ONE, TERMS_OF_SERVICE, PRIVACY_POLICY } from "@/constants/pages";
+import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 
 interface RegisterPageProps {
@@ -121,7 +121,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       }));
 
       router.push(ONBOARDING_ONE);
-    } catch (error) {
+    } catch {
       setError(emailOccurredError);
       return;
     } finally {
@@ -193,7 +193,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                 <button
                   onClick={e => {
                     e.preventDefault();
-                    onOpenSignin && onOpenSignin();
+                    if (onOpenSignin) onOpenSignin();
                   }}
                   className="text-sm text-[#494D5D] hover:text-[#31343F] underline font-medium"
                 >
@@ -339,7 +339,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   className="auth__link"
                   onClick={e => {
                     e.preventDefault();
-                    onOpenSignin && onOpenSignin();
+                    if (onOpenSignin) onOpenSignin();
                   }}
                 >
                   Log in

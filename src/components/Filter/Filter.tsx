@@ -7,6 +7,7 @@ import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
 import { ARROW_WARM_UP, STAR } from "@/constants/images";
 import { capitalizeFirstLetter } from "@/lib/utils";
+import Image from "next/image";
 
 interface FilterProps {
   onFilterChange: (filters: {
@@ -56,7 +57,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
   useEffect(() => {
     categoryService.fetchCategories()
       .then((data) => {
-        setDbCuisines(data || []);
+        setDbCuisines((data as unknown as { name: string; slug: string; }[]) || []);
       })
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoadingCategories(false));
@@ -66,22 +67,22 @@ const Filter = ({ onFilterChange }: FilterProps) => {
     palateService.fetchPalates()
       .then((data) => {
         const allChildSlugs = new Set<string>();
-        data?.forEach((p: any) => {
-          p.children?.nodes?.forEach((c: any) => {
-            allChildSlugs.add(c.slug || c.databaseId.toString());
+        (data as unknown as Record<string, unknown>[])?.forEach((p: Record<string, unknown>) => {
+          ((p.children as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.forEach((c: Record<string, unknown>) => {
+            allChildSlugs.add((c.slug as string) || (c.databaseId as number).toString());
           });
         });
 
-        const rootPalates = data?.filter((p: any) =>
-          !allChildSlugs.has(p.slug || p.databaseId.toString())
+        const rootPalates = (data as unknown as Record<string, unknown>[])?.filter((p: Record<string, unknown>) =>
+          !allChildSlugs.has((p.slug as string) || (p.databaseId as number).toString())
         ) || [];
 
-        const transformedPalates: Palate[] = rootPalates.map((p: any) => ({
-          key: p.slug || p.databaseId.toString(),
-          label: p.name,
-          children: p.children?.nodes?.map((c: any) => ({
-            key: c.slug || c.databaseId.toString(),
-            label: c.name,
+        const transformedPalates: Palate[] = rootPalates.map((p: Record<string, unknown>) => ({
+          key: (p.slug as string) || (p.databaseId as number).toString(),
+          label: p.name as string,
+          children: ((p.children as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.map((c: Record<string, unknown>) => ({
+            key: (c.slug as string) || (c.databaseId as number).toString(),
+            label: c.name as string,
           })) || [],
         })) || [];
 
@@ -284,10 +285,12 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             >
               <span className="filter__label">{badge !== "All" ? badge : "Badges"}</span>
               {sortOption != "None" &&
-                <img
+                <Image
                   src={ARROW_WARM_UP}
                   className={`${sortOption == "ASC" ? 'rotate-0' : 'rotate-180'} size-4 sm:size-5`}
                   alt="arrow up"
+                  width={20}
+                  height={20}
                 />
               }
             </button>
@@ -298,7 +301,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
               onClick={() => onClickFilter("rating")}
               className="filter__options"
             >
-              <img src={STAR} className="size-4 sm:size-5" alt="star" />
+              <Image src={STAR} className="size-4 sm:size-5" alt="star" width={20} height={20} />
               <span className="filter__label">{rating > 0 ? 'Over ' + rating : "Rating"}</span>
             </button>
           </div>
@@ -407,7 +410,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     content={
                       <div className="bg-white flex flex-col gap-2 py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-full md:w-[440px] max-h-[300px] shadow-[0px_0px_10px_1px_#E5E5E5]">
                         <div
-                          onClick={(e: any) => {
+                          onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             const newSet = new Set(selectedPalates);
                             if (isAllSelected) {
@@ -444,7 +447,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                               >
                                 <div
                                   className="flex items-center gap-2 flex-grow cursor-pointer"
-                                  onClick={(e: any) => {
+                                  onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
                                     const newSelection = new Set(selectedPalates);
                                     // Toggle parent selection
@@ -479,7 +482,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                                   <PiCaretDown
                                     className={`fill-[#494D5D] size-5 cursor-pointer ${expandedPalateItems.has(item.key) ? 'rotate-180' : ''
                                       }`}
-                                    onClick={(e: any) => {
+                                    onClick={(e: React.MouseEvent) => {
                                       e.stopPropagation();
                                       toggleExpansion(item.key);
                                     }}
@@ -537,7 +540,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                         id={`price-${index}`}
                         type="checkbox"
                         name="price"
-                        value={item.value}
+                        value={item.value as string}
                         checked={price === item.value}
                         onChange={handleChangePrice}
                         className="appearance-none size-6 absolute hidden inset-0"
@@ -584,16 +587,16 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                     }
                     content={
                       <div className="bg-white flex flex-col py-2 pr-2 rounded-2xl text-[#494D5D] overflow-y-auto w-[334px] md:w-[440px] max-h-[252px] shadow-[0px_0px_10px_1px_#E5E5E5]">
-                        {badges?.map((item: any, index: number) => (
+                        {badges?.map((item: Record<string, unknown>, index: number) => (
                           <div
-                            onClick={() => selectFilter(item.name, 'badge')}
+                            onClick={() => selectFilter(item.name as string, 'badge')}
                             className={`py-2 px-4 ${badge == item.name
                               ? "bg-[#F1F1F1]"
                               : "bg-transparent"
                               } text-sm md:text-lg font-semibold`}
                             key={index}
                           >
-                            {item.value}
+                            {item.value as string}
                           </div>
                         ))}
                       </div>
@@ -632,7 +635,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                               } text-sm md:text-lg font-semibold`}
                             key={index}
                           >
-                            {item.value}
+                            {item.value as string}
                           </div>
                         ))}
                       </div>

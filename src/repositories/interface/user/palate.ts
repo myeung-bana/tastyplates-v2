@@ -1,3 +1,3 @@
 export interface PalateRepo {
-    getPalates(): Promise<any>;
+    getPalates(): Promise<Record<string, unknown>>;
 }

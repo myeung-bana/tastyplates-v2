@@ -152,7 +152,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       setUserLiked(review.userLiked ?? false);
       setLikesCount(review.commentLikes ?? 0);
     }
-  }, [review.userLiked, review.commentLikes]);
+  }, [review]);
 
   const toggleLike = async () => {
     if (loading) return;
@@ -283,12 +283,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                     className="review-block__palate-tag text-[#31343f] bg-[#f1f1f1] flex items-center gap-1"
                   >
                     {flagSrc && (
-                      <img
+                      <Image
                         src={flagSrc}
                         alt={`${tag} flag`}
                         width={18}
                         height={10}
-                        className="w-[18px] h-[10px] rounded object-cover"
+                        className="rounded object-cover"
                       />
                     )}
                     {capitalizeWords(tag)}

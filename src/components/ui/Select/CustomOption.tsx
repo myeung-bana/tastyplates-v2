@@ -1,5 +1,4 @@
-import { components } from "react-select";
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomOption = (props: any) => {
   const { isSelected, isFocused, label, innerRef, innerProps } = props;
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 
 export interface SelectOptionsProps {
     isOpen: boolean;
-    options: Array<{ key: string; label: string; children?: any[] }>;
+    options: Array<{ key: string; label: string; children?: Record<string, unknown>[] }>;
     searchValue: string;
     onSelect: (label: string) => void;
     onClose: () => void;

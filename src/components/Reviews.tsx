@@ -46,7 +46,7 @@ const Reviews = () => {
     return 2;
   };
 
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     if (loading || !hasNextPage || hasReachedLimit) return;
     
     setLoading(true);
@@ -73,13 +73,13 @@ const Reviews = () => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
     }
-  };
+  }, [loading, hasNextPage, hasReachedLimit, reviews.length, endCursor, session?.accessToken]);
 
   useEffect(() => {
     if (!initialLoaded && status !== "loading") {
       setInitialLoaded(true);
     }
-  }, [session, status]);
+  }, [session, initialLoaded]);
 
   // Call loadMore only when initialLoaded becomes true
   useEffect(() => {
@@ -107,7 +107,7 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, initialLoaded, hasReachedLimit]);
+  }, [hasNextPage, loading, initialLoaded, hasReachedLimit, loadMore]);
 
   if (!initialLoaded) {
     return (

@@ -1,7 +1,6 @@
 import { MdOutlineMessage } from "react-icons/md";
 import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
-import { cuisines } from "@/data/dummyCuisines";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { useSession } from "next-auth/react";
@@ -80,7 +79,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
-      const res: Response = await restaurantService.createFavoriteListing(
+      const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -88,17 +87,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
       
       if (res.status === code.success) {
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
-        const data = await res.json();
-        setSaved(data.status === "saved");
-        onWishlistChange?.(restaurant, data.status === "saved");
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+        setSaved((res.status as unknown as string) === "saved");
+        onWishlistChange?.(restaurant, (res.status as unknown as string) === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: (res.status as unknown as string) === "saved" } }));
       } else {
         toast.error(favoriteStatusError);
         setSaved(prevSaved);
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
         setError(favoriteStatusError);
       }
-    } catch (err) {
+    } catch {
       toast.error(favoriteStatusError);
       setSaved(prevSaved);
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
@@ -132,7 +130,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
     try {
-      const res: Response = await restaurantService.createFavoriteListing(
+      const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action: "unsave" },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -140,17 +138,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
       if (res.status == code.success) {
         toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
-        const data = await res.json();
-        setSaved(data.status === "saved");
-        onWishlistChange?.(restaurant, data.status === "saved");
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: data.status === "saved" } }));
+        setSaved((res.status as unknown as string) === "saved");
+        onWishlistChange?.(restaurant, (res.status as unknown as string) === "saved");
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: (res.status as unknown as string) === "saved" } }));
       } else {
         toast.error(favoriteStatusError);
         setSaved(prevSaved); // Revert on error
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
         setError(favoriteStatusError);
       }
-    } catch (err) {
+    } catch {
       toast.error(favoriteStatusError);
       setSaved(prevSaved); // Revert on error
       window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
@@ -209,7 +206,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /listing page
               if (pathname === "/listing" && clickedElement.dataset.role === "image") {
-                router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId], palateParam ? { ethnic: palateParam } : {}));
+                router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
@@ -272,7 +269,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           onClick={async (e) => {
             e.preventDefault();
             if (pathname === "/listing") {
-              router.push(PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId], palateParam ? { ethnic: palateParam } : {}));
+              router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
               return;
             }
             if (onClick) await onClick(); // Wait for mutation to complete

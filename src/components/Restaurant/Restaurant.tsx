@@ -77,13 +77,45 @@ const RestaurantPage = () => {
   );
   // Removed unused ref
 
+  const handleResize = useCallback(() => {
+    setWidth(window.innerWidth);
+  }, []);
+
+  const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
+    try {
+      setListingLoading(true);
+      const result = await restaurantService.fetchListingsName(
+        search,
+        32,
+        page === 1 ? null : listingEndCursor
+      );
+      const formatted = result.nodes.map((item: Record<string, unknown>) => ({
+        key: item.slug as string,
+        label: item.title as string,
+      }));
+      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
+      setListingCurrentPage(page);
+      setListingEndCursor(result.pageInfo.endCursor as string | null);
+      setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
+    } catch (err) {
+      console.error("Error loading listing options", err);
+      setListingOptions([]);
+    } finally {
+      setListingLoading(false);
+    }
+  }, [listingEndCursor]);
+
   useEffect(() => {
     // Initialize debounced functions once
-    const [debouncedListing] = debounce(fetchListingsName, 500);
+    const [debouncedListing] = debounce((...args: unknown[]) => {
+      const search = args[0] as string | undefined;
+      const page = args[1] as number | undefined;
+      fetchListingsName(search, page);
+    }, 500);
 
     fetchListingsDebouncedRef.current = debouncedListing;
     fetchListingsDebouncedRef.current?.('');
-  }, []);
+  }, [fetchListingsName]);
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -99,11 +131,8 @@ const RestaurantPage = () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("load", handleResize);
     };
-  }, []);
+  }, [handleResize]);
 
-  const handleResize = () => {
-      setWidth(window.innerWidth);
-  };
 
   useEffect(() => {
     setSearchAddress(initialAddressFromUrl);
@@ -124,9 +153,9 @@ const RestaurantPage = () => {
       const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
       router.replace(newUrl);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, initialEthnicFromUrl]);
 
-  const mapListingToRestaurant = (item: Listing): Restaurant => ({
+  const mapListingToRestaurant = useCallback((item: Listing): Restaurant => ({
     id: item.id,
     slug: item.slug,
     name: item.title,
@@ -140,7 +169,7 @@ const RestaurantPage = () => {
     initialSavedStatus: item.isFavorite ?? false,
     streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || item.listingStreet || "",
     ratingsCount: item.ratingsCount ?? 0,
-  });
+  }), []);
 
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -173,7 +202,7 @@ const RestaurantPage = () => {
   }, [initialListingFromUrl, router]);
 
 
-  const fetchRestaurants = async (reset = false, after: string | null = null, firstOverride?: number) => {
+  const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
       const data = await restaurantService.fetchAllRestaurants(
@@ -192,7 +221,7 @@ const RestaurantPage = () => {
         searchAddress,
         searchEthnic
       );
-      const transformed = data.nodes.map(mapListingToRestaurant);
+      const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
       setRestaurants((prev: Restaurant[]) => {
         if (reset || !after) return transformed;
         const uniqueMap = new Map<string, Restaurant>();
@@ -200,14 +229,14 @@ const RestaurantPage = () => {
         transformed.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
         return Array.from(uniqueMap.values());
       });
-      setEndCursor(data.pageInfo.endCursor);
-      setHasNextPage(data.pageInfo.hasNextPage);
+      setEndCursor(data.pageInfo.endCursor as string | null);
+      setHasNextPage(data.pageInfo.hasNextPage as boolean);
     } catch (error) {
       console.error("Failed to fetch restaurants:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearchTerm, filters.cuisine, filters.palates, filters.price, filters.badges, filters.sortOption, filters.rating, searchAddress, searchEthnic, mapListingToRestaurant]);
 
   const handleFilterChange = useCallback((
     newFilters:
@@ -230,29 +259,6 @@ const RestaurantPage = () => {
       }));
   }, []);
 
-    const fetchListingsName = async (search: string = '', page = 1) => {
-    try {
-      setListingLoading(true);
-      const result = await restaurantService.fetchListingsName(
-        search,
-        32,
-        page === 1 ? null : listingEndCursor
-      );
-      const formatted = result.nodes.map((item: any) => ({
-        key: item.slug,
-        label: item.title,
-      }));
-      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
-      setListingCurrentPage(page);
-      setListingEndCursor(result.pageInfo.endCursor);
-      setListingHasNextPage(result.pageInfo.hasNextPage);
-    } catch (err) {
-      console.error("Error loading listing options", err);
-      setListingOptions([]);
-    } finally {
-      setListingLoading(false);
-    }
-  };
 
   useEffect(() => {
     setRestaurants([]);
@@ -261,7 +267,7 @@ const RestaurantPage = () => {
     isFirstLoad.current = true;
     fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, JSON.stringify(filters), searchAddress, searchEthnic, session?.accessToken]);
+  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, session?.accessToken, fetchRestaurants]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -277,7 +283,7 @@ const RestaurantPage = () => {
     return () => {
       if (currentObserverRef) observer.unobserve(currentObserverRef);
     };
-  }, [hasNextPage, loading, debouncedSearchTerm, searchEthnic, endCursor, JSON.stringify(filters), searchAddress, session?.accessToken]);
+  }, [hasNextPage, loading, endCursor, fetchRestaurants]);
 
   // Removed unused function
 

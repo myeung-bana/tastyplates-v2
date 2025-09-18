@@ -3,7 +3,6 @@ import Image from "next/image";
 import ReviewDetailModal from "./ReviewDetailModal";
 import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
 import {
-  ReviewedDataProps,
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
 import { Fragment, useState } from "react";

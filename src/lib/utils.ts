@@ -73,8 +73,8 @@ export function capitalizeWords(str: string): string {
 //ex: PAGE(DASHBOARD, ["path", "list"], { status: true }) returns "/dashboard/path/list?status=true"
 export const PAGE = (
   basePath: string,
-  subPaths: any[] = [],
-  params?: Record<string, any> | string
+  subPaths: string[] = [],
+  params?: Record<string, unknown> | string
 ): string => {
   const path = [basePath, ...subPaths].join("/").replace(/\/+/g, "/");
 

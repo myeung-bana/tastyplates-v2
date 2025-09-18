@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Spinner from "@/components/LoadingSpinner";
 import { UserService } from "@/services/user/userService";
 import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved, welcomeProfile } from "@/constants/messages";
@@ -162,10 +163,11 @@ const OnboardingTwoPage = () => {
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 overflow-hidden">
                 <div className="w-full h-full flex items-center justify-center">
                   {profileImage ? (
-                    <img
+                    <Image
                       src={profileImage}
                       alt="Profile"
-                      className={`w-full h-full object-cover ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none opacity-50' : ''}`}
+                      fill
+                      className={`object-cover ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none opacity-50' : ''}`}
                     />
                   ) : (
                     <svg

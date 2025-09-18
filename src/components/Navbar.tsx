@@ -35,13 +35,17 @@ const navigationItems = [
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];
 
-export default function Navbar(props: any) {
+export default function Navbar(props: Record<string, unknown>) {
   const { data: session, status } = useSession();
   const [ethnicSearch, setEthnicSearch] = useState("");
   const [addressSearch, setAddressSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
-  const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props;
+  const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
+    isLandingPage?: boolean;
+    hasSearchBar?: boolean;
+    hasSearchBarMobile?: boolean;
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [isOpenSignup, setIsOpenSignup] = useState(false);
   const [isOpenSignin, setIsOpenSignin] = useState(false);
@@ -60,7 +64,7 @@ export default function Navbar(props: any) {
   };
 
   const changeNavBg = () => {
-    window.scrollY > 64 ? setNavBg(true) : setNavBg(false);
+    setNavBg(window.scrollY > 64);
   };
 
   const handleSearch = () => {

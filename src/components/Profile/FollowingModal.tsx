@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE } from "@/lib/utils";
@@ -42,7 +43,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
     if (open) {
       setLocalFollowing(following);
     }
-  }, [open]);
+  }, [open, following]);
 
   const handleToggleFollow = async (id: string, isFollowing: boolean) => {
     setLoadingMap((prev) => ({ ...prev, [id]: true }));
@@ -114,10 +115,12 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                         className="flex items-center gap-1 bg-[#f1f1f1] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#31343f]"
                       >
                         {flagUrl && (
-                          <img
+                          <Image
                             src={flagUrl}
                             alt={`${cuisine} flag`}
-                            className="w-[18px] h-[10px] rounded object-cover"
+                            width={18}
+                            height={10}
+                            className="rounded object-cover"
                           />
                         )}
                         {capitalizeWords(cuisine)}

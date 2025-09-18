@@ -26,7 +26,7 @@ export default class HttpMethods {
         options: RequestInit,
         jsonResponse = false,
         jsonContentType = true
-    ): Promise<any> {
+    ): Promise<Record<string, unknown>> {
         const headers = {
             ...(jsonContentType && { 'Content-Type': 'application/json' }),
             ...options.headers,

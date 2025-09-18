@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Key } from "@react-types/shared";
 import { FiChevronDown } from "react-icons/fi";
+import Image from "next/image";
 
 interface ItemChild {
     key: string;
@@ -75,7 +76,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, props.showModal]);
+    }, [isOpen, props.showModal, props]);
 
     useEffect(() => {
         setIsOpen(props.showModal || false);
@@ -329,7 +330,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                 onClick={!hideDropdownLabel ? handleClick : undefined}
             >
                 {!hideTagRendering && (<div className="flex-1">{renderTags()}</div>)}
-                {!hideDropdownLabel ? (<div onClick={(e) => {
+                {!hideDropdownLabel ? (<div onClick={() => {
                     toggleDropdown();
                 }}>
                     <FiChevronDown className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -348,7 +349,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                         />
                     </div>) : ''}
                     <div className="overflow-y-auto">
-                        {filteredItems.map((item, index) => (
+                        {filteredItems.map((item) => (
                             <div
                                 key={item.key}
                                 className={`border-b border-[#E5E5E5] last:border-b-0`}
@@ -399,10 +400,12 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                                     readOnly
                                                 />
                                                 {child.flag && (
-                                                    <img
+                                                    <Image
                                                         src={child.flag}
                                                         alt={`${child.label} flag`}
-                                                        className="w-6 h-4 rounded-md"
+                                                        width={24}
+                                                        height={16}
+                                                        className="rounded-md"
                                                     />
                                                 )}
                                                 <span className="font-medium">{child.label}</span>

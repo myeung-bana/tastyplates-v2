@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSearchParams } from 'next/navigation';
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
@@ -21,7 +20,7 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword }) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // Removed unused variable
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -93,7 +92,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       } else if (result?.ok) {
         router.push(HOME);
       }
-    } catch (error: any) {
+    } catch (error) {
       setMessage(error.message || unexpectedError);
       setMessageType(responseStatus.error);
     } finally {
@@ -110,7 +109,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
         redirect: true,
         callbackUrl: HOME
       });
-    } catch (error: any) {
+    } catch {
       setMessage(googleLoginFailed);
       setMessageType(responseStatus.error);
     } finally {
@@ -227,7 +226,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
             className="auth__link"
             onClick={e => {
               e.preventDefault();
-              onOpenSignup && onOpenSignup();
+              if (onOpenSignup) onOpenSignup();
             }}
           >
             Sign Up

@@ -9,12 +9,11 @@ import ForgotPassLinkModal from "./ui/Modal/ForgotPassLinkModal";
 interface SigninModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data?: any;
+  data?: Record<string, unknown>;
   onOpenSignup?: () => void;
 }
 
 const SigninModal: React.FC<SigninModalProps> = ({
-  data = [],
   isOpen,
   onClose,
   onOpenSignup,

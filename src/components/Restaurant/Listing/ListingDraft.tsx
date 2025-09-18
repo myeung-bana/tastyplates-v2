@@ -1,7 +1,7 @@
 // ListingDraft.tsx
 'use client'
 import Link from "next/link"
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useCallback } from "react"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
@@ -33,7 +33,7 @@ const ListingDraftPage = () => {
     const [error, setError] = useState<string | null>(null);
     const { data: session, status } = useSession();
     const userId = session?.user?.id || null;
-    const getPendingListings = async () => {
+    const getPendingListings = useCallback(async () => {
 
         if (status !== sessionStatus.authenticated || !userId) {
             setLoading(false);
@@ -43,18 +43,18 @@ const ListingDraftPage = () => {
         try {
             setLoading(true);
             const data = await restaurantService.fetchAllRestaurants("", 10, null, [], [], "", "PENDING", userId);
-            setPendingListings(data.nodes);
+            setPendingListings(data.nodes as unknown as FetchedRestaurant[]);
         } catch (err) {
             console.error("Failed to fetch pending listings:", err);
             setError("Failed to load pending listings. Please ensure you are logged in.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [status, userId]);
 
     useEffect(() => {
         getPendingListings();
-    }, [status, userId]);
+    }, [status, userId, getPendingListings]);
 
     const handleListingDeleted = (deletedRestaurantId: string) => {
         setPendingListings(prevListings =>

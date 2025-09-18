@@ -41,7 +41,7 @@ export default function CustomDatePicker({
         if (value && !selectedDate) {
             setSelectedDate(parseISO(value))
         }
-    }, [value])
+    }, [value, selectedDate])
 
     const handleDateSelect = (date?: Date) => {
         setSelectedDate(date)

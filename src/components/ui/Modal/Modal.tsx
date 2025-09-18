@@ -11,7 +11,7 @@ import { MdClose } from "react-icons/md";
 import { useRouter } from "next/navigation";
 import { HOME } from "@/constants/pages";
 
-export default function CustomModal(props: any) {
+export default function CustomModal(props: Record<string, unknown>) {
   const {
     isOpen,
     setIsOpen,
@@ -21,7 +21,6 @@ export default function CustomModal(props: any) {
     footer,
     footerClass = "",
     onOpenChange,
-    classNames,
     baseClass = "",
     headerClass = "",
     contentClass = "",

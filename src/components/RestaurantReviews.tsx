@@ -1,7 +1,7 @@
 import "@/styles/pages/_restaurant-details.scss";
 import { Tab, Tabs } from "@heroui/tabs";
 import { Masonry } from "masonic";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
@@ -25,7 +25,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const currentUserId = session?.user?.id || null;
 
   // Review and filter state
-  const [allReviews, setAllReviews] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
@@ -49,8 +49,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const PHOTOS_PER_PAGE = 18;
   // Flattened photo items from allReviews
   const allPhotoItems = allReviews.flatMap((review) => {
-    if (!review.reviewImages || review.reviewImages.length === 0) return [];
-    return review.reviewImages.map((img: any, imgIndex: number) => ({
+    if (!review.reviewImages || (review.reviewImages as Record<string, unknown>[]).length === 0) return [];
+    return (review.reviewImages as Record<string, unknown>[]).map((img: Record<string, unknown>, imgIndex: number) => ({
       image: img,
       review,
       imageIndex: imgIndex,
@@ -64,9 +64,9 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const totalPhotoPages = Math.ceil(allPhotoItems.length / PHOTOS_PER_PAGE);
 
   // Fetch all reviews for the restaurant (all pages)
-  const fetchAllReviews = async () => {
+  const fetchAllReviews = useCallback(async () => {
     setLoading(true);
-    let allFetched: any[] = [];
+    let allFetched: Record<string, unknown>[] = [];
     let after: string | undefined = undefined;
     let hasNext = true;
     try {
@@ -78,16 +78,16 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
           after
         );
         allFetched = allFetched.concat(data.reviews);
-        hasNext = data.pageInfo.hasNextPage;
-        after = data.pageInfo.endCursor;
+        hasNext = data.pageInfo.hasNextPage as boolean;
+        after = data.pageInfo.endCursor as string | undefined;
       }
       setAllReviews(allFetched);
-    } catch (err) {
+    } catch {
       setAllReviews([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId, session?.accessToken]);
 
   // Fetch following user IDs on mount/session change
   useEffect(() => {
@@ -95,19 +95,19 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
       if (!session?.user?.id || !session?.accessToken) return;
       try {
         const followingList = await userService.getFollowingList(session.user.id, session.accessToken);
-        setFollowingUserIds(followingList.map((u: any) => String(u.id)));
-      } catch (e) {
+        setFollowingUserIds(followingList.map((u: Record<string, unknown>) => String(u.id)));
+      } catch {
         setFollowingUserIds([]);
       }
     };
     fetchFollowing();
-  }, [session]);
+  }, [session, fetchAllReviews]);
 
   // Fetch reviews on restaurant, tab, or session change
   useEffect(() => {
     fetchAllReviews();
     setCurrentPage(1);
-  }, [restaurantId, currentTab, session]);
+  }, [restaurantId, currentTab, session, fetchAllReviews]);
 
   // Tab change handler
   const handleTabChange = (tabId: "all" | "photos") => {
@@ -116,7 +116,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   };
 
   // Helper: Ensure rating is always a number for filtering/sorting
-  const getNumericRating = (review: any) => {
+  const getNumericRating = (review: Record<string, unknown>) => {
     if (typeof review.rating === 'number') return review.rating;
     if (typeof review.rating === 'string' && !isNaN(Number(review.rating))) return Number(review.rating);
     if (typeof review.reviewStars === 'number') return review.reviewStars;
@@ -128,20 +128,20 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const filteredReviews = allReviews.filter((review) => {
     if (!selectedReviewFilter?.value) return true;
     if (selectedReviewFilter?.value === 'following') {
-      const authorId = String(review?.author?.node?.databaseId ?? review?.authorId ?? '');
+      const authorId = String(((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId ?? review?.authorId ?? '');
       return followingUserIds.includes(authorId);
     }
     if (selectedReviewFilter?.value === 'mine') {
-      return String(review?.author?.node?.databaseId) === String(currentUserId);
+      return String(((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId) === String(currentUserId);
     }
     return true;
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     if (sortOrder?.value === "newest") {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      return new Date(b.date as string).getTime() - new Date(a.date as string).getTime();
     } else if (sortOrder?.value === "oldest") {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+      return new Date(a.date as string).getTime() - new Date(b.date as string).getTime();
     } else if (sortOrder?.value === "highest") {
       return getNumericRating(b) - getNumericRating(a);
     } else if (sortOrder?.value === "lowest") {
@@ -178,25 +178,25 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
             <>
               {paginatedReviews.map((review) => (
                 <ReviewBlock
-                  key={review.databaseId}
+                  key={review.databaseId as string}
                   review={{
-                    databaseId: review.databaseId,
-                    id: review.id,
-                    authorId: review?.author?.node?.databaseId ?? "",
+                    databaseId: review.databaseId as number,
+                    id: review.id as string,
+                    authorId: ((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId as number ?? 0,
                     restaurantId: restaurantId.toString(),
-                    user: review?.author?.node?.name ?? review?.author?.name ?? "Unknown",
-                    rating: Number(review.reviewStars) || 0,
-                    date: review.date,
-                    title: review.reviewMainTitle,
-                    comment: review.content ?? "",
-                    images: review.reviewImages?.map((img: any) => img.sourceUrl) ?? [],
-                    userImage: review?.userAvatar ?? DEFAULT_USER_ICON,
-                    recognitions: Array.isArray(review.recognitions) ? review.recognitions : [],
+                    user: ((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string ?? (review?.author as Record<string, unknown>)?.name as string ?? "Unknown",
+                    rating: Number(review.reviewStars as string) || 0,
+                    date: review.date as string,
+                    title: review.reviewMainTitle as string,
+                    comment: review.content as string ?? "",
+                    images: (review.reviewImages as Record<string, unknown>[])?.map((img: Record<string, unknown>) => img.sourceUrl as string) ?? [],
+                    userImage: review?.userAvatar as string ?? DEFAULT_USER_ICON,
+                    recognitions: Array.isArray(review.recognitions) ? review.recognitions as string[] : [],
                     palateNames: typeof review.palates === "string"
-                      ? review.palates.split("|").map((p: string) => p.trim()).filter(Boolean)
+                      ? (review.palates as string).split("|").map((p: string) => p.trim()).filter(Boolean)
                       : [],
-                    commentLikes: review.commentLikes ?? 0,
-                    userLiked: review.userLiked ?? false,
+                    commentLikes: review.commentLikes as number ?? 0,
+                    userLiked: review.userLiked as boolean ?? false,
                   }}
                 />
               ))}
@@ -234,8 +234,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                 items={paginatedPhotoItems}
                 render={({ data }) => (
                   <Photos
-                    key={data.image.id || `${data.review.databaseId}-${data.imageIndex}`}
-                    data={data.review}
+                    key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
+                    data={data.review as unknown as Record<string, unknown>}
                     image={data.image}
                     index={data.imageIndex}
                     width={304}

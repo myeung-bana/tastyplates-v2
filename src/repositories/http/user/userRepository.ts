@@ -50,7 +50,6 @@ export class UserRepository implements UserRepo {
 
     async getUserById(
         id: number | null,
-        accessToken?: string,
     ) {
         const { data } = await client.query({
             query: GET_USER_BY_ID,
@@ -61,7 +60,7 @@ export class UserRepository implements UserRepo {
         return data.user;
     }
 
-    async updateUserFields<T>(
+    async updateUserFields(
         data: Partial<IUserUpdate>,
         token: string
     ): Promise<IUserUpdateResponse> {
@@ -75,7 +74,7 @@ export class UserRepository implements UserRepo {
         }, true);
     }
 
-    async validatePassword(password: string, token?: string): Promise<any> {
+    async validatePassword(password: string, token?: string): Promise<Record<string, unknown>> {
         const headers: HeadersInit = {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };

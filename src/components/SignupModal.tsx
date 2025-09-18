@@ -7,12 +7,11 @@ import RegisterPage from "@/pages/Register/Register";
 interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data?: any;
+  data?: Record<string, unknown>;
   onOpenSignin?: () => void;
 }
 
 const SignupModal: React.FC<SignupModalProps> = ({
-  data = [],
   isOpen,
   onClose,
   onOpenSignin,

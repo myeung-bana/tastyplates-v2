@@ -19,9 +19,9 @@ export interface UserRepo {
     checkEmailExists<T>(email: string): Promise<T>;
     checkUsernameExists(username: string): Promise<CheckEmailExistResponse>;
     getCurrentUser(token?: string): Promise<CurrentUserResponse>;
-    getUserById(id: number | null, accessToken?: string): Promise<any>;
+    getUserById(id: number | null, accessToken?: string): Promise<Record<string, unknown>>;
     updateUserFields(data: Partial<IUserUpdate>, token: string): Promise<IUserUpdateResponse>;
-    validatePassword(password: string, token?: string): Promise<any>;
+    validatePassword(password: string, token?: string): Promise<Record<string, unknown>>;
     getUserPalates<T>(userId: number, token?: string): Promise<T>;
     getFollowingList<T>(userId: number, token?: string): Promise<T>;
     getFollowersList<T>(userId: number, token?: string): Promise<T>;

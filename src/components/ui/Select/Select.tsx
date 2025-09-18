@@ -1,16 +1,16 @@
 import {Select, SelectItem} from "@heroui/select";
 
-const CustomSelect = (props: any) => {
+const CustomSelect = (props: Record<string, unknown>) => {
   const defaultProps = {
     onChange: () => {},
     mode: "single",
      
-    customOnChange: (name: string, value: string) => {},
+    customOnChange: () => {},
   };
 
   props = { ...defaultProps, ...props };
 
-  const handleChange = (selectedOption: any) => {
+  const handleChange = (selectedOption: Record<string, unknown>) => {
     if (props.onChange) {
       // Extract the value from the selected option
       const selectedValue = selectedOption.currentKey || selectedOption.target?.value;
@@ -38,7 +38,7 @@ const CustomSelect = (props: any) => {
         selectedKeys={props.value ? [props.value] : undefined}
         onChange={handleChange}
       >
-        {(item: any) => (
+        {(item: Record<string, unknown>) => (
           <SelectItem 
             key={item.key}
             className="hover:bg-gray-100 rounded-lg px-2 py-1 cursor-pointer"

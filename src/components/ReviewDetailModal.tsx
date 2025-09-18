@@ -42,7 +42,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   onLikeChange,
 }) => {
   const { data: session } = useSession();
-  const { getFollowState, setFollowState } = useFollowContext();
+  const { setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [pendingShowSignin, setPendingShowSignin] = useState(false);
@@ -58,7 +58,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   }, [pendingShowSignin]);
 
   // Handler for profile image click (author or commenter)
-  const handleProfileClick = (userId: number) => {
+  const handleProfileClick = () => {
     if (!session?.user) {
       setPendingShowSignin(true);
     }
@@ -71,11 +71,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [replies, setReplies] = useState<any[]>([]);
+  const [replies, setReplies] = useState<Record<string, unknown>[]>([]);
   const [cooldown, setCooldown] = useState(0);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [hoveredRating, setHoveredRating] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
   const [commentReply, setCommentReply] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -83,11 +80,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [likesCount, setLikesCount] = useState(data.commentLikes ?? 0);
   const [loading, setLoading] = useState(false);
   const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
-  const [width, setWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
-  );
   const authorUserId = data.userId;
-  const sliderRef = useRef<any>(null);
+  const sliderRef = useRef<Record<string, unknown>>(null);
 
   useEffect(() => {
     window.addEventListener("load", () => {
@@ -112,7 +106,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   }, [isOpen, data?.id]);
 
   useEffect(() => {
-    let timer: any;
+    let timer: NodeJS.Timeout;
     if (cooldown > 0) {
       timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
     }
@@ -160,7 +154,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         setIsFollowing(false);
       }
     })();
-  }, [isOpen, session?.accessToken, data.author]);
+  }, [isOpen, session?.accessToken, data.author, authorUserId, session?.user?.id, setFollowState]);
 
   const handleFollowAuthor = async () => {
     if (!session?.accessToken) {
@@ -250,8 +244,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     setWidth(window.innerWidth);
   };
 
-  const NextArrow = (props: any) => {
-    const { className, style, onClick, length } = props;
+  const NextArrow = (props: Record<string, unknown>) => {
+    const { onClick, length } = props;
     const display = activeSlide === length - 1 ? "none" : "block";
 
     return (
@@ -265,8 +259,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     );
   };
 
-  const PrevArrow = (props: any) => {
-    const { className, style, onClick } = props;
+  const PrevArrow = (props: Record<string, unknown>) => {
+    const { onClick } = props;
     const display = activeSlide === 0 ? "none" : "block";
 
     return (
@@ -291,7 +285,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     centerMode: boolean;
     initialSlide: number;
     lazyLoad: boolean;
-    responsive: any;
+    responsive: Record<string, unknown>;
     variableWidth: boolean;
     swipeToSlide: boolean;
     swipe: boolean;
@@ -324,13 +318,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const UserPalateNames = data?.palates
     ?.split("|")
-    .map((s: any) => capitalizeWords(s.trim()))
-    .filter((s: any) => s.length > 0);
+    .map((s: string) => capitalizeWords(s.trim()))
+    .filter((s: string) => s.length > 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onClose();
-  };
 
   const handleCommentReplySubmit = async () => {
     if (!commentReply.trim() || isLoading || cooldown > 0) return;
@@ -378,7 +368,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
           // Merge: add any new replies from server not already in the list
           const merged = updatedReplies.concat(
             withoutOptimistic.filter(
-              (local) => !updatedReplies.some((server: any) => server.id === local.id)
+              (local) => !updatedReplies.some((server: Record<string, unknown>) => server.id === local.id)
             )
           );
         setCooldown(5);
@@ -394,7 +384,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         toast.error(errorOccurred);
         setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       }
-    } catch (err: any) {
+    } catch {
       console.error("Failed to post reply", err);
       toast.error(errorOccurred);
       setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
@@ -487,7 +477,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
     try {
-      let response: any;
+      let response: Record<string, unknown>;
       if (reply?.userLiked) {
         response = await reviewService.unlikeComment(dbId, session.accessToken ?? "");
         if (response?.status === code.success) {
@@ -558,7 +548,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       {data.author?.name || "Unknown User"}
                     </h3>
                     <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                      {UserPalateNames?.map((tag: any, index: number) => (
+                      {UserPalateNames?.map((tag: string, index: number) => (
                         <span
                           key={index}
                           className="review-block__palate-tag"
@@ -632,7 +622,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 >
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
-                    data.reviewImages.map((image: any, index: number) => (
+                    data.reviewImages.map((image: Record<string, unknown>, index: number) => (
                       <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
@@ -674,7 +664,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 >
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
-                    data.reviewImages.map((image: any, index: number) => (
+                    data.reviewImages.map((image: Record<string, unknown>, index: number) => (
                       <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
@@ -754,7 +744,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         </span>
                       )}
                       <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-                        {UserPalateNames?.map((tag: any, index: number) => (
+                        {UserPalateNames?.map((tag: string, index: number) => (
                           <span
                             key={index}
                             className="review-block__palate-tag"
@@ -890,10 +880,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                             {replies.map((reply, index) => {
                               const replyUserLiked = reply.userLiked ?? false;
                               const replyUserLikedCounts = reply.commentLikes ?? 0;
-                              const UserPalateNames = reply?.palates
-                                ?.split("|")
-                                .map((s: string) => s.trim())
-                                .filter((s: string) => s.length > 0);
 
                               return (
                                 <div key={index} className="flex items-start gap-2 mb-4">

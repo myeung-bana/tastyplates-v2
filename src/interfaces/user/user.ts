@@ -20,12 +20,12 @@ export interface IRegisterData {
     gender?: string,
     customGender?: string,
     pronoun?: string,
-    palates?: any,
-    profileImage?: any,
+    palates?: string[],
+    profileImage?: string,
     aboutMe?: string,
     is_google_user?: boolean,
-    googleToken: any,
-    googleAuth: any
+    googleToken: string,
+    googleAuth: string
 }
 
 export interface IUserUpdate {
@@ -48,7 +48,7 @@ export interface IUserUpdateResponse {
     profile_image: string;
     message: string;
     status: number;
-    code?: any;
+    code?: string | number;
     data?: {
         status?: number;
     }
@@ -81,7 +81,7 @@ export interface CheckEmailExistResponse {
 }
 
 export interface followUserResponse {
-    result: any;
+    result: string;
     following: number | string;
     followers: number | string;
     status?: number;

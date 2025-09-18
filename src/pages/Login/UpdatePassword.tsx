@@ -79,13 +79,13 @@ const UpdatePassword = () => {
       try {
         const res = await userService.verifyResetToken(token);
         setIsTokenValid(res?.status || false);
-      } catch (e) {
+      } catch {
         setIsTokenValid(false);
       }
     };
 
     verifyToken();
-  }, []);
+  }, [searchParams]);
 
   if (isTokenValid === null) {
     return (

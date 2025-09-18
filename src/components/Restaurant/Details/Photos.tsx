@@ -21,7 +21,7 @@ const Photos = ({ index, data, image }: PhotosProps) => {
   return (
     <div className="review-card relative overflow-hidden" style={{ height: "180px" }}>
       <ReviewDetailModal
-        data={data}
+        data={data as unknown as Record<string, unknown>}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         initialPhotoIndex={index}

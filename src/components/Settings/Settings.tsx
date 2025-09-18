@@ -32,11 +32,11 @@ const formatDateForDisplay = (dateString: string) => {
 
 const userService = new UserService()
 
-const Settings = (props: any) => {
+const Settings = () => {
   const { data: session, status, update } = useSession(); // Add status from useSession
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [isPersonalInfoLoading, setIsPersonalInfoLoading] = useState(true);
-  const [setting, setSetting] = useState<any>([]);
+  const [setting, setSetting] = useState<Record<string, unknown>[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [editable, setEditable] = useState<Field>(Field.None);
@@ -107,7 +107,7 @@ const Settings = (props: any) => {
     try {
       const response = await userService.validatePassword(password, session?.accessToken);
       return response.valid && response.status === code.success;
-    } catch (error) {
+    } catch {
       return false;
     }
   };
@@ -167,7 +167,7 @@ const Settings = (props: any) => {
         throw new Error('User session not found');
       }
 
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
 
       // Add fields based on what's being edited
       if (editable === Field.Birthdate) {
@@ -231,7 +231,7 @@ const Settings = (props: any) => {
     }
   };
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     // Don't fetch if session is still loading
     if (status === "loading") return;
 
@@ -243,7 +243,7 @@ const Settings = (props: any) => {
       if (cached) {
         const parsedData = JSON.parse(cached);
         setUserData(parsedData);
-        setSetting((prev: any) => ({
+        setSetting((prev: Record<string, unknown>) => ({
           ...prev,
           email: parsedData.email || parsedData.user_email || "",
           language: parsedData.language || "en",
@@ -260,7 +260,7 @@ const Settings = (props: any) => {
 
         setUserData(data);
         // Initialize setting with formatted date
-        setSetting((prev: any) => ({
+        setSetting((prev: Record<string, unknown>) => ({
           ...prev,
           email: data.user_email || "",
           language: data.language || "en",
@@ -275,11 +275,11 @@ const Settings = (props: any) => {
         setIsPersonalInfoLoading(false);
       }
     }
-  };
+  }, [status, session?.user?.email, session?.accessToken]);
 
   useEffect(() => {
     fetchUserData();
-  }, [session?.user?.email, session?.accessToken, status]); // Add status dependency
+  }, [session?.user?.email, session?.accessToken, status, fetchUserData]); // Add status dependency
 
   const toggleCurrentPassword = () => setShowCurrentPassword(!showCurrentPassword);
   const toggleNewPassword = () => setShowNewPassword(!showNewPassword);

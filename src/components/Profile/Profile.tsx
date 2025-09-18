@@ -1,17 +1,18 @@
 // app/components/Profile.tsx (or wherever you place your reusable components)
 "use client";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_reviews.scss";
 import { Tab, Tabs } from "@heroui/tabs";
 import Link from "next/link";
+import Image from "next/image";
 import ReviewCard from "../ReviewCard";
 import ReviewCardSkeleton from "../ReviewCardSkeleton";
 import RestaurantCardSkeleton from "../RestaurantCardSkeleton";
 import { Masonry } from "masonic";
 import { useSession } from "next-auth/react";
-import FollowersModal from "./FollowersModal";
+import FollowersModal, { Follower } from "./FollowersModal";
 import FollowingModal from "./FollowingModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { Listing } from "@/interfaces/restaurant/restaurant";
@@ -59,8 +60,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [palatesLoading, setPalatesLoading] = useState(true);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
-  const [followers, setFollowers] = useState<any[]>([]);
-  const [following, setFollowing] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<Record<string, unknown>[]>([]);
+  const [following, setFollowing] = useState<Record<string, unknown>[]>([]);
   const [followingLoading, setFollowingLoading] = useState(true);
   const [followersLoading, setFollowersLoading] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -70,7 +71,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
   );
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   // Removed unused state
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
@@ -84,7 +85,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
   const isViewingOwnProfile = session?.user?.id === targetUserId;
 
-  const transformNodes = (nodes: Listing[]): Restaurant[] => {
+  const transformNodes = useCallback((nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
       id: item.id,
       slug: item.slug,
@@ -95,23 +96,60 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       databaseId: item.databaseId || 0,
       palatesNames:
         Array.isArray(item?.palates?.nodes)
-          ? item.palates.nodes.map((p: any) => p?.name ?? "Unknown")
+          ? item.palates.nodes.map((p: Record<string, unknown>) => (p?.name as string) ?? "Unknown")
           : [],
       streetAddress:
         item?.listingDetails?.googleMapUrl?.streetAddress || "",
       countries:
         Array.isArray(item?.countries?.nodes)
-          ? item.countries.nodes.map((c) => c?.name ?? "Unknown").join(", ")
+          ? item.countries.nodes.map((c: Record<string, unknown>) => (c?.name as string) ?? "Unknown").join(", ")
           : "Default Location",
       priceRange: item.priceRange ?? "N/A",
       averageRating: item.averageRating ?? 0,
       ratingsCount: item.ratingsCount ?? 0,
       status: item.status || "",
     }));
-  };
+  }, []);
 
-  const statuses = isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"];
-  const fetchRestaurants = async (
+  const statuses = useMemo(() => isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"], [isViewingOwnProfile]);
+  
+  const loadMore = useCallback(async () => {
+    if (loading || !hasNextPage || !targetUserId || status === "loading")
+      return;
+    setLoading(true);
+
+    try {
+      const first = isFirstLoad.current ? 16 : 8;
+      const { reviews: newReviews, pageInfo, userCommentCount } =
+        await reviewService.fetchUserReviews(targetUserId, first, endCursor);
+
+      if (isFirstLoad.current) {
+        setReviews([]);
+        setTimeout(() => {
+          setReviews(newReviews as unknown as ReviewedDataProps[]);
+        }, 0);
+      } else {
+        const existingIds = new Set(reviews.map((review) => review.id));
+        const uniqueNewReviews = newReviews.filter(
+          (review: Record<string, unknown>) => !existingIds.has(review.id as string)
+        );
+        setReviews((prev) => [...prev, ...(uniqueNewReviews as unknown as ReviewedDataProps[])]);
+      }
+
+      setUserReviewCount(userCommentCount);
+      setEndCursor(pageInfo.endCursor as string | null);
+      setHasNextPage(pageInfo.hasNextPage as boolean);
+    } catch (error) {
+      console.error("Error loading reviews:", error);
+    } finally {
+      setLoading(false);
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
+    }
+  }, [loading, hasNextPage, targetUserId, status, endCursor, reviews]);
+
+  const fetchRestaurants = useCallback(async (
     first = 8,
     after: string | null = null,
     userId: number | undefined
@@ -133,7 +171,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         null,
         statuses
       );
-      const transformed = transformNodes(data.nodes);
+      const transformed = transformNodes(data.nodes as unknown as Listing[]);
 
       setRestaurants((prev) => {
         if (!after) {
@@ -144,15 +182,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         return Array.from(uniqueMap.values());
       });
 
-      setAfterCursor(data.pageInfo.endCursor);
-      setHasMore(data.pageInfo.hasNextPage);
+      setEndCursor(data.pageInfo.endCursor as string | null);
+      setHasNextPage(data.pageInfo.hasNextPage as boolean);
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
       setlistingLoading(false);
     }
-  };
+  }, [statuses, transformNodes]);
 
   useEffect(() => {
     if (targetUserId) {
@@ -161,7 +199,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       setRestaurants([]);
     };
-  }, [targetUserId]);
+  }, [targetUserId, fetchRestaurants]);
 
   useEffect(() => {
     const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
@@ -201,7 +239,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (status !== "loading" && targetUserId) {
       loadMore();
     }
-  }, [status, targetUserId]);
+  }, [status, targetUserId, loadMore]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -219,43 +257,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading]);
-
-  const loadMore = async () => {
-    if (loading || !hasNextPage || !targetUserId || status === "loading")
-      return;
-    setLoading(true);
-
-    try {
-      const first = isFirstLoad.current ? 16 : 8;
-      const { reviews: newReviews, pageInfo, userCommentCount } =
-        await reviewService.fetchUserReviews(targetUserId, first, endCursor);
-
-      if (isFirstLoad.current) {
-        setReviews([]);
-        setTimeout(() => {
-          setReviews(newReviews);
-        }, 0);
-      } else {
-        const existingIds = new Set(reviews.map((review) => review.id));
-        const uniqueNewReviews = newReviews.filter(
-          (review: any) => !existingIds.has(review.id)
-        );
-        setReviews((prev) => [...prev, ...uniqueNewReviews]);
-      }
-
-      setUserReviewCount(userCommentCount);
-      setEndCursor(pageInfo.endCursor);
-      setHasNextPage(pageInfo.hasNextPage);
-    } catch (error) {
-      console.error("Error loading reviews:", error);
-    } finally {
-      setLoading(false);
-      if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-      }
-    }
-  };
+  }, [hasNextPage, loading, loadMore]);
 
   useEffect(() => {
     const fetchPublicUserData = async () => {
@@ -282,9 +284,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setAboutMeLoading(false);
       setPalatesLoading(false);
     }
-  }, [targetUserId]);
+  }, [targetUserId, isViewingOwnProfile]);
 
-  const fetchFollowing = async () => {
+  const fetchFollowing = useCallback(async () => {
     setFollowingLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowingLoading(false);
@@ -297,9 +299,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowingLoading(false);
     }
-  };
+  }, [session?.accessToken, targetUserId]);
 
-  const fetchFollowers = async () => {
+  const fetchFollowers = useCallback(async () => {
     setFollowersLoading(true);
     if (!session?.accessToken || !targetUserId) {
       setFollowersLoading(false);
@@ -308,7 +310,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     try {
       const followersList = await userService.getFollowersList(
         targetUserId,
-        followingList || following,
+        following,
         session.accessToken
       );
       setFollowers(followersList);
@@ -316,7 +318,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowersLoading(false);
     }
-  };
+  }, [session?.accessToken, targetUserId, following]);
 
   useEffect(() => {
     // Only set userData from session.user if viewing own profile
@@ -334,8 +336,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setFollowingLoading(true);
       setFollowersLoading(true);
       try {
-        const followingList = await fetchFollowing();
-        await fetchFollowers(false, followingList);
+        await fetchFollowing();
+        await fetchFollowers();
       } finally {
         setFollowingLoading(false);
         setFollowersLoading(false);
@@ -343,7 +345,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       }
     };
     loadFollowData();
-  }, [session?.accessToken, targetUserId]);
+  }, [session?.accessToken, targetUserId, fetchFollowers, fetchFollowing]);
   useEffect(() => {
     // No cache sync needed, always fetch fresh
   }, [targetUserId]);
@@ -362,7 +364,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       ]);
       setFollowers(prev => prev.map(user => ({
         ...user,
-        isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
+        isFollowing: (newFollowing || []).some((f: Record<string, unknown>) => f.id === user.id)
       })));
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
@@ -382,7 +384,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       ]);
       setFollowers(prev => prev.map(user => ({
         ...user,
-        isFollowing: (newFollowing || []).some((f: any) => f.id === user.id)
+        isFollowing: (newFollowing || []).some((f: Record<string, unknown>) => f.id === user.id)
       })));
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
@@ -636,7 +638,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setWishlistLoading(true);
       try {
         const data = await restaurantService.fetchFavoritingListing(targetUserId, session?.accessToken);
-        const favoriteIds = data.favorites || [];
+        const favoriteIds = Array.isArray(data.favorites) ? data.favorites : [];
         if (favoriteIds.length === 0) {
           setWishlist([]);
         } else {
@@ -646,7 +648,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             )
           );
           const validResults = results.filter(r => r && typeof r === "object" && r.id);
-          const transformed = transformNodes(validResults);
+          const transformed = transformNodes(validResults as unknown as Listing[]);
           setWishlist(transformed);
         }
         setHasFetchedWishlist(true);
@@ -662,7 +664,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setWishlist([]);
       setHasFetchedWishlist(false);
     }
-  }, [session, targetUserId, hasFetchedWishlist]);
+  }, [session, targetUserId, hasFetchedWishlist, transformNodes]);
 
   useEffect(() => {
     let didCancel = false;
@@ -675,7 +677,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           session?.accessToken
         );
 
-        const checkinIds = data.checkins || [];
+        const checkinIds = Array.isArray(data.checkins) ? data.checkins : [];
         if (!didCancel) {
           if (checkinIds.length === 0) {
             setCheckins([]);
@@ -686,12 +688,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               )
             );
             const validResults = results.filter(r => r && typeof r === "object" && r.id);
-            const transformed = transformNodes(validResults);
+            const transformed = transformNodes(validResults as unknown as Listing[]);
             setCheckins(transformed);
           }
           setHasFetchedCheckins(true);
         }
-      } catch (e) {
+      } catch {
         if (!didCancel) setCheckins([]);
       } finally {
         if (!didCancel) setCheckinsLoading(false);
@@ -706,7 +708,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       didCancel = true;
     };
-  }, [session, targetUserId, hasFetchedCheckins]);
+  }, [session, targetUserId, hasFetchedCheckins, transformNodes]);
 
   // Reset all relevant state when targetUserId changes
   useEffect(() => {
@@ -729,7 +731,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setAboutMeLoading(true);
       setPalatesLoading(true);
     }
-  }, [targetUserId]);
+  }, [targetUserId, isViewingOwnProfile]);
 
   // Removed window focus refetch effect. User data is now only fetched on targetUserId change.
 
@@ -739,8 +741,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         <div className="w-20 h-20 sm:w-[120px] sm:h-[120px] relative">
           <FallbackImage
             src={
-              userData?.image ||
-              (userData?.userProfile?.profileImage?.node?.mediaItemUrl ?? DEFAULT_USER_ICON)
+              (userData?.image as string) ||
+              (() => {
+                const userProfile = userData?.userProfile as Record<string, unknown> | undefined;
+                const profileImage = userProfile?.profileImage as Record<string, unknown> | undefined;
+                const node = profileImage?.node as Record<string, unknown> | undefined;
+                const mediaItemUrl = node?.mediaItemUrl as string | undefined;
+                return mediaItemUrl ?? DEFAULT_USER_ICON;
+              })()
             }
             fill
             className="rounded-full object-cover"
@@ -755,7 +763,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                 {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  userData?.display_name || userData?.name || ""
+                  (userData?.display_name as string) || (userData?.name as string) || ""
                 )}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap justify-start">
@@ -765,8 +773,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                     <span className="inline-block w-20 h-5 bg-gray-200 rounded-[50px] animate-pulse" />
                   </>
                 ) : (
-                  (userData?.userProfile?.palates || userData?.palates) ? (
-                    (userData.userProfile?.palates || userData.palates)
+                  ((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string) ? (
+                    (((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string))
                       .split(/[|,]\s*/)
                       .filter((palate: string) => palate.trim().length > 0)
                       .map((palate: string, index: number) => {
@@ -786,12 +794,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                             className="bg-[#f1f1f1] py-1 px-2 rounded-[50px] text-xs font-medium text-[#31343f] flex items-center gap-1"
                           >
                             {flagSrc && (
-                              <img
+                              <Image
                                 src={flagSrc}
                                 alt={`${capitalizedPalate} flag`}
                                 width={18}
                                 height={10}
-                                className="w-[18px] h-[10px] rounded object-cover"
+                                className="rounded object-cover"
                               />
                             )}
                             {capitalizedPalate}
@@ -819,7 +827,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             {aboutMeLoading ? (
               <span className="inline-block w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              userData?.userProfile?.aboutMe || userData?.about_me || <span className="text-gray-400">No bio set</span>
+              ((userData?.userProfile as Record<string, unknown>)?.aboutMe as string) || (userData?.about_me as string) || <span className="text-gray-400">No bio set</span>
             )}
           </p>
           <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-4 text-base sm:text-lg items-center justify-start">
@@ -888,18 +896,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               </span>
             </button>
           </div>
-          {!isViewingOwnProfile && userData?.databaseId && session?.accessToken && (
+          {!isViewingOwnProfile && userData && (userData.databaseId as number) && session?.accessToken && (
             <div className="mt-4">
-              {following.some((f: any) => f.id === userData.databaseId) ? (
+              {following.some((f: Record<string, unknown>) => f.id === (userData.databaseId as number)) ? (
                 <button
-                  onClick={() => handleUnfollow(String(userData.databaseId))}
+                  onClick={() => handleUnfollow(String(userData.databaseId as number))}
                   className="py-2 px-4 rounded-[50px] border-[1.2px] border-red-500 text-red-500 font-semibold text-sm whitespace-nowrap"
                 >
                   Unfollow
                 </button>
               ) : (
                 <button
-                  onClick={() => handleFollow(String(userData.databaseId))}
+                  onClick={() => handleFollow(String(userData.databaseId as number))}
                   className="py-2 px-4 rounded-[50px] bg-blue-500 text-white font-semibold text-sm whitespace-nowrap"
                 >
                   Follow
@@ -912,14 +920,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       <FollowersModal
         open={showFollowers}
         onClose={() => setShowFollowers(false)}
-        followers={followers}
+        followers={followers as unknown as Follower[]}
         onFollow={handleFollow}
         onUnfollow={handleUnfollow}
       />
       <FollowingModal
         open={showFollowing}
         onClose={() => setShowFollowing(false)}
-        following={following}
+        following={following as unknown as Follower[]}
         onUnfollow={handleUnfollow}
         onFollow={handleFollow}
       />

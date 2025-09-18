@@ -9,7 +9,7 @@ import { UserRepo } from '@/repositories/interface/user/user';
 const userRepo: UserRepo = new UserRepository()
 
 export class UserService {
-    async registerUser(userData: Partial<IRegisterData>): Promise<any> {
+    async registerUser(userData: Partial<IRegisterData>): Promise<Record<string, unknown>> {
         const formattedData = {
             username: userData.username,
             email: userData.email,
@@ -25,7 +25,7 @@ export class UserService {
             google_token: userData.googleToken || null
         };
 
-        await userRepo.registerUser<any>(formattedData);
+        await userRepo.registerUser<Record<string, unknown>>(formattedData);
     }
 
     async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
@@ -53,9 +53,9 @@ export class UserService {
         }
     }
 
-    async checkEmailExists(email: string): Promise<any> {
+    async checkEmailExists(email: string): Promise<Record<string, unknown>> {
         try {
-            const res = await userRepo.checkEmailExists<any>(email);
+            const res = await userRepo.checkEmailExists<Record<string, unknown>>(email);
             return res;
         } catch (error) {
             console.error('Check email error:', error);
@@ -92,7 +92,7 @@ export class UserService {
         }
     }
 
-    async updateUserFields(data: Partial<IUserUpdate>, token?: any): Promise<IUserUpdateResponse> {
+    async updateUserFields(data: Partial<IUserUpdate>, token?: string): Promise<IUserUpdateResponse> {
         try {
             const res = await userRepo.updateUserFields(data, token);
             return res;
@@ -102,7 +102,7 @@ export class UserService {
         }
     }
 
-    async validatePassword(password: string, token?: any): Promise<any> {
+    async validatePassword(password: string, token?: string): Promise<Record<string, unknown>> {
         try {
             const res = await userRepo.validatePassword(password, token);
             return res;
@@ -112,9 +112,9 @@ export class UserService {
         }
     }
 
-    async getUserPalates(userId: number, token?: string): Promise<any> {
+    async getUserPalates(userId: number, token?: string): Promise<Record<string, unknown>> {
         try {
-            const res = await userRepo.getUserPalates<any>(userId, token);
+            const res = await userRepo.getUserPalates<Record<string, unknown>>(userId, token);
             return res;
         } catch (error) {
             console.error('Get user palates error:', error);
@@ -122,9 +122,9 @@ export class UserService {
         }
     }
 
-    async getFollowingList(userId: number, token?: string): Promise<any[]> {
+    async getFollowingList(userId: number, token?: string): Promise<Record<string, unknown>[]> {
         try {
-            const res = await userRepo.getFollowingList<any>(userId, token);
+            const res = await userRepo.getFollowingList<Record<string, unknown>>(userId, token);
             return Array.isArray(res) ? res.map(user => ({
                 id: user.id,
                 name: user.name,
@@ -138,9 +138,9 @@ export class UserService {
         }
     }
 
-    async getFollowersList(userId: number, followingList: any[], token?: string): Promise<any[]> {
+    async getFollowersList(userId: number, followingList: Record<string, unknown>[], token?: string): Promise<Record<string, unknown>[]> {
         try {
-            const res = await userRepo.getFollowersList<any>(userId, token);
+            const res = await userRepo.getFollowersList<Record<string, unknown>>(userId, token);
             return Array.isArray(res) ? res.map(user => ({
                 id: user.id,
                 name: user.name,

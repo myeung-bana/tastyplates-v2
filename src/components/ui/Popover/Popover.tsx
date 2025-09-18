@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import {Popover, PopoverTrigger, PopoverContent} from "@heroui/popover";
 import { useState } from "react";
 
-export default function CustomPopover(props: any) {
+export default function CustomPopover(props: Record<string, unknown>) {
   const [isOpen, setIsOpen] = useState(props.isOpen);
 
   // const handleOpenChange = (open) => {

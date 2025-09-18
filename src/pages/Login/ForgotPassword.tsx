@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import "@/styles/pages/_auth.scss";
-import { useRouter } from 'next/navigation';
 import Spinner from "@/components/LoadingSpinner";
 import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
@@ -16,7 +15,7 @@ interface ForgotPasswordPageProps {
 const userService = new UserService()
 
 const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
-    const router = useRouter();
+    // Removed unused variable
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);

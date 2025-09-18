@@ -61,11 +61,11 @@ export interface GetListingBySlugData {
 }
 
 export interface FavoriteListingData {
-    restaurant_slug: any;
+    restaurant_slug: string;
     action: string;
 }
 
 export interface CheckInData {
-    restaurant_slug: any;
+    restaurant_slug: string;
     action: string;
 }

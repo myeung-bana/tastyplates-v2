@@ -59,9 +59,9 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
             toast.success(deleteDraftSuccess);
             onDeleteSuccess();
             setIsShowDelete(false);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to delete listing:", error);
-            toast.error(error.message || deleteDraftError);
+            toast.error((error as Error).message || deleteDraftError);
         } finally {
             setIsLoadingDelete(false);
         }

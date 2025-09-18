@@ -32,7 +32,7 @@ export class RestaurantRepository implements RestaurantRepo {
         searchTerm: string,
         first = 8,
         after: string | null = null,
-        taxQuery: any = {},
+        taxQuery: Record<string, unknown> = {},
         priceRange?: string | null,
         status: string | null = null,
         userId?: number | null,
@@ -87,7 +87,7 @@ export class RestaurantRepository implements RestaurantRepo {
         return data.listing;
     }
 
-    async createListingAndReview(payload: any, token: string): Promise<any> {
+    async createListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
         const headers: HeadersInit = {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
@@ -105,7 +105,7 @@ export class RestaurantRepository implements RestaurantRepo {
     async getFavoriteListing(
         userId: number,
         accessToken?: string
-    ): Promise<any> {
+    ): Promise<Record<string, unknown>> {
         const headers: HeadersInit = {
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
         };
@@ -121,9 +121,9 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async updateListing(
         id: number,
-        listingUpdateData: Record<string, any>, // Changed to accept a plain object
+        listingUpdateData: Record<string, unknown>, // Changed to accept a plain object
         accessToken?: string
-    ): Promise<any> {
+    ): Promise<Record<string, unknown>> {
         try {
             const response: Response = await request.PUT(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
@@ -146,7 +146,7 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async deleteListing(id: number, accessToken?: string): Promise<any> {
+    async deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
         try {
             const response: Response = await request.DELETE(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
@@ -161,7 +161,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 try {
                     const errorData = JSON.parse(errorText);
                     throw new Error(errorData.message || "Failed to delete restaurant listing");
-                } catch (jsonError) {
+                } catch {
                     throw new Error(`Failed to delete restaurant listing: Server responded with non-JSON content or error. Response: ${errorText}`);
                 }
             }
@@ -176,7 +176,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 }
                 // Try parsing as JSON
                 return JSON.parse(text);
-            } catch (jsonParseError) {
+            } catch {
                 // If parsing fails, it means even a successful response contained non-JSON
                 const rawResponseText = await response.text(); // Re-read if needed, or use the `text` from above
                 console.error('Raw server response on delete (ok but not JSON):', rawResponseText);
@@ -189,7 +189,7 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async getlistingDrafts(token: string): Promise<any> {
+    async getlistingDrafts(token: string): Promise<Record<string, unknown>> {
         try {
             const response = await request.GET('/wp-json/wp/v2/listings?status=pending', {
                 headers: {
@@ -203,7 +203,7 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
@@ -215,7 +215,7 @@ export class RestaurantRepository implements RestaurantRepo {
         return response;
     }
 
-    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
@@ -226,7 +226,7 @@ export class RestaurantRepository implements RestaurantRepo {
         return response;
     }
 
-    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<any> {
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
@@ -288,12 +288,12 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getAddressByPalate(
         searchTerm: string,
-        taxQuery: any,
+        taxQuery: Record<string, unknown>,
         first = 32,
         after: string | null = null,
     ) {
         const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
-        const variables: any = { searchTerm, first, after };
+        const variables: Record<string, unknown> = { searchTerm, first, after };
 
         if (hasTaxQuery) {
             variables.taxQuery = taxQuery;

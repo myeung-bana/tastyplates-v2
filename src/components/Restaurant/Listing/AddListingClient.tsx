@@ -10,7 +10,7 @@ const AddListingPage = dynamic(() => import("./AddListing"), {
   loading: () => <div className="flex items-center justify-center min-h-screen">Loading form...</div>,
 });
 
-const AddListingWrapper = (props: any) => {
+const AddListingWrapper = () => {
   return <LoadScript
     googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
     libraries={['places']}

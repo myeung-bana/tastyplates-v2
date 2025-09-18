@@ -82,7 +82,7 @@ export class RestaurantService {
         }
     }
 
-    async createRestaurantListingAndReview(payload: any, token: string): Promise<any> {
+    async createRestaurantListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.createListingAndReview(payload, token);
         } catch (error) {
@@ -92,7 +92,7 @@ export class RestaurantService {
     }
 
 
-    async fetchPendingRestaurants(token: string): Promise<any> {
+    async fetchPendingRestaurants(token: string): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.getlistingDrafts(token);
         } catch (error) {
@@ -101,7 +101,7 @@ export class RestaurantService {
         }
     }
 
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.createFavoriteListing(data, accessToken, jsonResponse);
         }
@@ -120,7 +120,7 @@ export class RestaurantService {
         }
     }
 
-    async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+    async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.getCheckInRestaurant(userId, accessToken, jsonResponse);
         } catch (error) {
@@ -129,7 +129,7 @@ export class RestaurantService {
         }
     }
 
-    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<any> {
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.createCheckIn(data, accessToken, jsonResponse);
         } catch (error) {
@@ -140,7 +140,7 @@ export class RestaurantService {
 
     async updateRestaurantListing(
         id: number,
-        listingUpdateData: Record<string, any>,
+        listingUpdateData: Record<string, unknown>,
         accessToken?: string
     ) {
         try {
@@ -152,7 +152,7 @@ export class RestaurantService {
         }
     }
 
-    async deleteRestaurantListing(id: number, accessToken?: string): Promise<any> {
+    async deleteRestaurantListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
         try {
             return await restaurantRepo.deleteListing(id, accessToken);
         } catch (error) {

@@ -76,7 +76,7 @@ const ReviewSubmissionPage = () => {
 
       try {
         const data = await restaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
-        setRestaurantName(data.title);
+        setRestaurantName(data.title as string);
       } catch (error) {
         console.error(error);
       } finally {
@@ -130,7 +130,7 @@ const ReviewSubmissionPage = () => {
 
       files.forEach((file) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = () => {
           if (reader.result) {
             imageList.push(reader.result as string);
           }
@@ -146,31 +146,7 @@ const ReviewSubmissionPage = () => {
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
 
-    if (name === "cuisineIds" && e.target instanceof HTMLSelectElement) {
-      const selectedOptions = Array.from(e.target.selectedOptions).map(
-        (option) => option.value
-      );
-      setRestaurant((prev: any) => ({
-        ...prev,
-        cuisineIds: selectedOptions,
-      }));
-    } else {
-      setRestaurant((prev: any) => ({
-        ...prev,
-        [name]:
-          name === "rating" || name === "deliveryTime" ? Number(value) : value,
-      }));
-    }
-  };
-
-  const handleChangeCheckbox = (e: any) => {
-    setRestaurant({ ...restaurant, cuisineIds: e });
-  };
 
   const handleRating = (rate: number) => {
     setReviewStars(rate);
@@ -407,7 +383,7 @@ const ReviewSubmissionPage = () => {
                 <div className="flex flex-wrap gap-2">
                   {/* {selectedFiles} */}
                   {isDoneSelecting &&
-                    selectedFiles.map((item: any, index: number) => (
+                    selectedFiles.map((item: string, index: number) => (
                       <div className="rounded-2xl relative" key={index}>
                         <button
                           type="button"
@@ -416,9 +392,12 @@ const ReviewSubmissionPage = () => {
                         >
                           <MdClose className="size-3 md:size-4" />
                         </button>
-                        <img
+                        <Image
                           src={item}
-                          className="rounded-2xl h-[140px] w-[187px] object-cover"
+                          alt="Review image"
+                          width={187}
+                          height={140}
+                          className="rounded-2xl object-cover"
                         />
                       </div>
                     ))}

@@ -23,7 +23,7 @@ import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
-import { CASH, DEFAULT_IMAGE, FLAG, HELMET, PHONE } from "@/constants/images";
+import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 
@@ -64,7 +64,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 
     fetchFavoriteListing();
     return () => { isMounted = false; };
-  }, [restaurantSlug, session]);
+  }, [restaurantSlug, session, initialized]);
 
   const handleToggle = async () => {
     if (!session) return;
@@ -75,7 +75,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: !saved } }));
     const action = saved ? "unsave" : "save";
     try {
-      const res: Response = await restaurantService.createFavoriteListing(
+      const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurantSlug, action },
         session?.accessToken, // can be undefined
         false // do not return JSON response
@@ -83,7 +83,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       
       if (res.status === code.success) {
         toast.success(action === "save" ? savedToWishlistSuccess : removedFromWishlistSuccess);
-        const data = await res.json();
+        const data = res as { status: string };
         setSaved(data.status === "saved");
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurantSlug, status: data.status === "saved" } }));
       } else {
@@ -177,36 +177,43 @@ export default function RestaurantDetail() {
     restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? '') )
       .then((data) => {
         if (!data) return notFound();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const restaurantData = data as any;
         const transformed = {
-          id: data.id,
-          slug: data.slug,
-          name: data.title,
-          databaseId: data.databaseId,
-          image: data.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
-          palates: data.palates?.nodes || [],
-          countries: data.countries?.nodes.map((l: { name: string }) => l.name).join(", ") || "location",
-          priceRange: data.priceRange || "$$",
-          phone: data.phone || "Not provided",
-          description: data.content || "",
-          listingStreet: data.listingStreet || "",
-          listingCategories: data.listingCategories?.nodes?.map((c: { name: string }) => c.name) || [],
+          id: restaurantData.id,
+          slug: restaurantData.slug,
+          title: restaurantData.title,
+          content: restaurantData.content || "",
+          averageRating: restaurantData.averageRating || 0,
+          status: "published",
+          listingStreet: restaurantData.listingStreet || "",
+          priceRange: restaurantData.priceRange || "$$",
+          palates: {
+            nodes: restaurantData.palates?.nodes || []
+          },
+          databaseId: restaurantData.databaseId,
           listingDetails: {
             googleMapUrl: {
-              latitude: data.listingDetails?.googleMapUrl?.latitude || "",
-              longitude: data.listingDetails?.googleMapUrl?.longitude || "",
-              streetAddress: data.listingDetails?.googleMapUrl?.streetAddress || "",
+              latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+              longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+              streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
             },
-            latitude: data.listingDetails?.latitude || "",
-            longitude: data.listingDetails?.longitude || "",
-            menuUrl: data.listingDetails?.menuUrl || "",
-            openingHours: data.listingDetails?.openingHours || "",
-            phone: data.listingDetails?.phone || "",
+            latitude: restaurantData.listingDetails?.latitude || "",
+            longitude: restaurantData.listingDetails?.longitude || "",
+            menuUrl: restaurantData.listingDetails?.menuUrl || "",
+            openingHours: restaurantData.listingDetails?.openingHours || "",
+            phone: restaurantData.listingDetails?.phone || "",
           },
-          overAllRating: data.averageRating,
-          overAllReviewCount: data.ratingsCount,
-          recognitionCounts: data.recognitionCounts,
-          palateStats: data.palateStats,
-          searchPalateStats: data.searchPalateStats,
+          featuredImage: restaurantData.featuredImage,
+          listingCategories: {
+            nodes: restaurantData.listingCategories?.nodes || []
+          },
+          countries: {
+            nodes: restaurantData.countries?.nodes || []
+          },
+          cuisines: restaurantData.cuisines || [],
+          isFavorite: restaurantData.isFavorite || false,
+          ratingsCount: restaurantData.ratingsCount || 0,
         };
         setRestaurant(transformed);
         setLoading(false);
@@ -215,14 +222,11 @@ export default function RestaurantDetail() {
         console.error("Error fetching restaurant:", err);
         setLoading(false);
       });
-  }, [slug]);
+  }, [slug, palatesParam]);
 
-  const searchRatingStats = restaurant?.searchPalateStats;
-  const myPreferenceStats = restaurant?.palateStats?.find(
-    (stat: { name: string }) => stat.name === "My Preference"
-  );
-  const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude);
-  const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude);
+  // Removed searchPalateStats and palateStats as they don't exist in Listing interface
+  const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude || "0");
+  const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude || "0");
   const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
 
   if (loading) return <RestaurantDetailSkeleton />;
@@ -246,7 +250,7 @@ export default function RestaurantDetail() {
       return;
     }
     router.push(
-      PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId])
+      PAGE(ADD_REVIEW, [restaurant.slug, restaurant.databaseId?.toString() || "0"])
     );
   }
 
@@ -258,10 +262,10 @@ export default function RestaurantDetail() {
             <div className="flex flex-col-reverse md:flex-col">
               <div className="flex flex-col md:flex-row justify-between px-4 md:px-0">
                 <div className="mt-6 md:mt-0">
-                  <h1 className="restaurant-detail__name leading-7">{restaurant.name}</h1>
+                  <h1 className="restaurant-detail__name leading-7">{restaurant.title}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
-                      {restaurant.palates.map((palate: { name: string }, index: number) => (
+                      {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
                         <div className="flex items-center gap-2" key={`palate-${index}`}>
                           {index > 0 && <span>&#8226;</span>}
                           <span className="cuisine-tag hover:!bg-transparent">{palate.name}</span>
@@ -302,8 +306,8 @@ export default function RestaurantDetail() {
               <div className="flex flex-row gap-6">
                 <div className="md:rounded-l-3xl relative restaurant-detail__hero w-full max-h-[307px] !h-auto">
                   <FallbackImage
-                    src={restaurant.image}
-                    alt={restaurant.name}
+                    src={restaurant.featuredImage?.node.sourceUrl || ""}
+                    alt={restaurant.title}
                     fill
                     className="restaurant-detail__image md:rounded-3xl w-full"
                     priority
@@ -338,11 +342,7 @@ export default function RestaurantDetail() {
                         <span>🕒 {restaurant.listingDetails?.openingHours}</span>
                       </div>
                     )}
-                    {restaurant.fieldMultiCheck90 && restaurant.fieldMultiCheck90.length > 0 && (
-                      <div className="restaurant-detail__detail-item" key="field-multi-check">
-                        <span>🏷️ {restaurant.fieldMultiCheck90.join(" | ")}</span>
-                      </div>
-                    )}
+                    {/* Removed fieldMultiCheck90 as it doesn't exist in Listing interface */}
                   </div>
                 </div>
               </div>
@@ -356,56 +356,23 @@ export default function RestaurantDetail() {
                       <div className="rating-value">
                         {/* <FiStar className="fill-yellow-500" /> */}
                         <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {restaurant.overAllReviewCount > 0
-                            ? (Number(restaurant.overAllRating) % 1 === 0
-                              ? Number(restaurant.overAllRating).toFixed(0)
-                              : restaurant.overAllRating.toFixed(2))
+                          {(restaurant.ratingsCount || 0) > 0
+                            ? (Number(restaurant.averageRating) % 1 === 0
+                              ? Number(restaurant.averageRating).toFixed(0)
+                              : restaurant.averageRating.toFixed(2))
                             : "0"}
                         </span>
                       </div>
                       <span className="review-count">
-                        {restaurant.overAllReviewCount > 0
-                          ? `${restaurant.overAllReviewCount} reviews`
+                        {(restaurant.ratingsCount || 0) > 0
+                          ? `${restaurant.ratingsCount} reviews`
                           : "No reviews yet"}
                       </span>
                     </div>
                     <div className="h-[85%] border-l border-[#CACACA]"></div>
-                    <div className="rating-column">
-                      <h3>Search Rating</h3>
-                      <div className="rating-value">
-                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {searchRatingStats && searchRatingStats.count > 0
-                            ? (searchRatingStats.avg % 1 === 0
-                              ? searchRatingStats.avg.toFixed(0)
-                              : searchRatingStats.avg.toFixed(2))
-                            : "0"}
-                        </span>
-                      </div>
-                      <span className="review-count">
-                        {searchRatingStats && searchRatingStats.count > 0
-                          ? `${searchRatingStats.count} reviews`
-                          : "No matching palate reviews"}
-                      </span>
-                    </div>
+                    {/* Removed Search Rating section as searchPalateStats doesn't exist in Listing interface */}
                     <div className="h-[85%] border-l border-[#CACACA]"></div>
-                    <div className="rating-column">
-                      <h3>My Preference</h3>
-                      <div className="rating-value">
-                        {/* <FiStar className="fill-yellow-500" /> */}
-                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {myPreferenceStats?.count > 0
-                            ? (myPreferenceStats.avg % 1 === 0
-                              ? myPreferenceStats.avg.toFixed(0)
-                              : myPreferenceStats.avg.toFixed(2))
-                            : "0"}
-                        </span>
-                      </div>
-                      <span className="review-count">
-                        {myPreferenceStats?.count > 0
-                          ? `${myPreferenceStats.count} reviews`
-                          : "No matching palate reviews"}
-                      </span>
-                    </div>
+                    {/* Removed My Preference section as palateStats doesn't exist in Listing interface */}
                   </div>
                 </div>
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
@@ -423,7 +390,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitionCounts?.mustRevisit || 0}
+                            0
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
@@ -440,7 +407,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitionCounts?.instaWorthy || 0}
+                            0
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
@@ -458,7 +425,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitionCounts?.valueForMoney || 0}
+                            0
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
@@ -475,7 +442,7 @@ export default function RestaurantDetail() {
                         <div className="rating-value">
                           {/* <FiStar className="fill-yellow-500" /> */}
                           <span className="text-lg md:text-xl font-medium">
-                            {restaurant.recognitionCounts?.bestService || 0}
+                            0
                           </span>
                         </div>
                         <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>
@@ -524,7 +491,7 @@ export default function RestaurantDetail() {
             ))}
           </div> */}
             <div className="restaurant-detail__reviews">
-              <RestaurantReviews restaurantId={restaurant.databaseId} />
+              <RestaurantReviews restaurantId={restaurant.databaseId || 0} />
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
 
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-  const getCropMetrics = () => {
+  const getCropMetrics = useCallback(() => {
     const width = containerSize.width;
     const height = containerSize.height;
     const centerX = width / 2;
@@ -50,9 +50,9 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     const cropLeft = centerX - radius;
     const cropTop = centerY - radius;
     return { centerX, centerY, radius, diameter, cropLeft, cropTop };
-  };
+  }, [containerSize, CROP_DIAMETER]);
 
-  const getDragBounds = (scaledWidth: number, scaledHeight: number) => {
+  const getDragBounds = useCallback((scaledWidth: number, scaledHeight: number) => {
     const { cropLeft, cropTop, diameter } = getCropMetrics();
     // Ensure the crop square is fully covered by the image
     const minX = cropLeft + diameter - scaledWidth;
@@ -60,7 +60,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     const minY = cropTop + diameter - scaledHeight;
     const maxY = cropTop;
     return { minX, maxX, minY, maxY };
-  };
+  }, [getCropMetrics]);
 
   // Initialize image and container
   useEffect(() => {
@@ -183,7 +183,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       setImageLoaded(false);
     };
     img.src = imageSrc;
-  }, [isOpen, imageSrc]);
+  }, [isOpen, imageSrc, CROP_DIAMETER, MAX_SCALE, MIN_IMAGE_REQUIREMENTS.aspectRatioMax, MIN_IMAGE_REQUIREMENTS.aspectRatioMin, MIN_IMAGE_REQUIREMENTS.height, MIN_IMAGE_REQUIREMENTS.width, getDragBounds]);
 
   // Handle mouse events for dragging image
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -234,7 +234,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       x: clamp(newX, minX, maxX),
       y: clamp(newY, minY, maxY),
     }));
-  }, [isDragging, dragStart, imagePosition.scale, originalImageSize, containerSize, imageLoaded]);
+  }, [isDragging, dragStart, imagePosition.scale, originalImageSize, imageLoaded, getDragBounds]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -291,7 +291,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       x: clamp(newX, minX, maxX),
       y: clamp(newY, minY, maxY),
     }));
-  }, [isDragging, dragStart, imagePosition.scale, originalImageSize, containerSize, imageLoaded]);
+  }, [isDragging, dragStart, imagePosition.scale, originalImageSize, imageLoaded, getDragBounds]);
 
   const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
@@ -330,7 +330,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         y: clamp(newY, minY, maxY),
       };
     });
-  }, [minScale, originalImageSize, containerSize]);
+  }, [minScale, originalImageSize, getDragBounds, MAX_SCALE, getCropMetrics]);
 
   // Reset image position and scale
   const resetCrop = useCallback(() => {
@@ -375,7 +375,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       y: clamp(centeredY, minY, maxY),
       scale: initialScale,
     });
-  }, [imageLoaded, containerSize, originalImageSize, minScale]);
+  }, [imageLoaded, originalImageSize, minScale, getDragBounds, CROP_DIAMETER, MAX_SCALE, getCropMetrics]);
 
   // Crop and process image
   const handleCrop = useCallback(() => {
@@ -455,7 +455,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     };
     
     img.src = imageSrc;
-  }, [imagePosition, containerSize, onCrop, onClose, imageSrc]);
+  }, [imagePosition, onCrop, onClose, imageSrc, CROP_DIAMETER, getCropMetrics]);
 
   if (!isOpen) return null;
 

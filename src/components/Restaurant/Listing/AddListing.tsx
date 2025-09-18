@@ -35,7 +35,7 @@ const categoryService = new CategoryService();
 const palateService = new PalatesService();
 const restaurantService = new RestaurantService();
 
-const AddListingPage = (props: any) => {
+const AddListingPage = () => {
   const [listing, setListing] = useState({
     address: "",
     latitude: 0,
@@ -47,25 +47,24 @@ const AddListingPage = (props: any) => {
     content: "",
     phone: "",
     openingHours: "",
-    palates: [],
-    listingCategories: [],
-    countries: [],
+    palates: [] as string[],
+    listingCategories: [] as string[],
+    countries: [] as string[],
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoadingDraft, setIsLoadingDraft] = useState<boolean>(false);
-  const [step, setStep] = useState<number>(props.step ?? 1);
-  const [isDoneSelecting, setIsDoneSelecting] = useState(false);
+  const [step, setStep] = useState<number>(1);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedrecognition, setSelectedRecognition] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const router = useRouter();
-  const [categories, setCategories] = useState([]);
-  const [palates, setPalates] = useState([]);
+  const [categories, setCategories] = useState<Record<string, unknown>[]>([]);
+  const [palates, setPalates] = useState<Record<string, unknown>[]>([]);
   const [selectedPalates, setSelectedPalates] = useState<
     { label: string; value: string }[]
   >([]);
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const sess = session?.accessToken || "";
   const [reviewMainTitle, setReviewMainTitle] = useState("");
   const [content, setContent] = useState("");
@@ -119,17 +118,18 @@ const AddListingPage = (props: any) => {
     }
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CustomGroupHeading = (props: any) => (
     <components.GroupHeading {...props}>
       <span className="font-bold text-black text-[13px]">{props.children}</span>
     </components.GroupHeading>
   );
 
-  const palateOptions = palates.map((group: any) => ({
-    label: group.name,
-    options: group.children.nodes.map((cuisine: any) => ({
-      value: cuisine.databaseId,
-      label: cuisine.name,
+  const palateOptions = palates.map((group: Record<string, unknown>) => ({
+    label: group.name as string,
+    options: ((group.children as Record<string, unknown>).nodes as Record<string, unknown>[]).map((cuisine: Record<string, unknown>) => ({
+      value: cuisine.databaseId as string,
+      label: cuisine.name as string,
     })),
   }));
 
@@ -212,26 +212,26 @@ const AddListingPage = (props: any) => {
     });
   };
 
-  const handleChange = (selected: any) => {
+  const handleChange = (selected: readonly { label: string; value: string }[]) => {
     if (selected.length <= 2) {
-      setSelectedPalates(selected);
+      setSelectedPalates(selected as { label: string; value: string }[]);
       setPalatesError("");
     } else {
       setPalatesError("You can select a maximum of 2 cuisines.");
-      setSelectedPalates(selected.slice(0, 2));
+      setSelectedPalates(selected.slice(0, 2) as { label: string; value: string }[]);
     }
   };
 
   useEffect(() => {
     categoryService.fetchCategories()
-      .then(setCategories)
+      .then((data) => setCategories(data as unknown as Record<string, unknown>[]))
       .catch((error) => console.error("Error fetching categories:", error))
       .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
     palateService.fetchPalates()
-      .then(setPalates)
+      .then((data) => setPalates(data as unknown as Record<string, unknown>[]))
       .catch((error) => console.error("Error fetching palates:", error))
       .finally(() => setIsLoading(false));
   }, []);
@@ -283,27 +283,27 @@ const AddListingPage = (props: any) => {
             localStorage.setItem('restID', currentResId.toString());
 
             if (restaurantData) {
-              const initialSelectedPalates = restaurantData.palates?.nodes?.map((palate: any) => ({
-                label: palate.name,
-                value: palate.databaseId,
+              const initialSelectedPalates = ((restaurantData.palates as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.map((palate: Record<string, unknown>) => ({
+                label: palate.name as string,
+                value: palate.databaseId as string,
               })) || [];
-              const initialCategory = restaurantData.listingCategories?.nodes?.[0]?.name || "";
+              const initialCategory = ((restaurantData.listingCategories as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.[0]?.name as string || "";
 
               setListing((prevListing) => ({
                 ...prevListing,
-                name: restaurantData.title || "",
-                title: restaurantData.title || "",
-                content: restaurantData.content || "",
-                address: restaurantData.listingDetails?.googleMapUrl?.streetAddress || restaurantData.listingStreet || "",
-                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || 0,
-                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || 0,
-                phone: restaurantData.listingDetails?.phone || "",
-                openingHours: restaurantData.listingDetails?.openingHours || "",
-                priceRange: restaurantData.priceRange || "",
+                name: (restaurantData.title as string) || "",
+                title: (restaurantData.title as string) || "",
+                content: (restaurantData.content as string) || "",
+                address: ((restaurantData.listingDetails as Record<string, unknown>)?.googleMapUrl as Record<string, unknown>)?.streetAddress as string || (restaurantData.listingStreet as string) || "",
+                latitude: ((restaurantData.listingDetails as Record<string, unknown>)?.googleMapUrl as Record<string, unknown>)?.latitude as number || 0,
+                longitude: ((restaurantData.listingDetails as Record<string, unknown>)?.googleMapUrl as Record<string, unknown>)?.longitude as number || 0,
+                phone: ((restaurantData.listingDetails as Record<string, unknown>)?.phone as string) || "",
+                openingHours: ((restaurantData.listingDetails as Record<string, unknown>)?.openingHours as string) || "",
+                priceRange: (restaurantData.priceRange as string) || "",
                 category: initialCategory,
               }));
               setSelectedPalates(initialSelectedPalates);
-              setCurrentRestaurantDbId(restaurantData.databaseId || 0);
+              setCurrentRestaurantDbId((restaurantData.databaseId as number) || 0);
               setStep(1);
             } else {
               console.warn("No data returned for resId:", currentResId);
@@ -393,11 +393,15 @@ const AddListingPage = (props: any) => {
     if (hasError) return;
 
     // ✅ Loading states
-    isSaveAndExit || action === "saveDraft" ? setIsLoadingDraft(true) : setIsLoading(true);
+    if (isSaveAndExit || action === "saveDraft") {
+      setIsLoadingDraft(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       // ✅ Prepare payload
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         listing: {
           id: currentRestaurantDbId || 0,
           name: listing.name,
@@ -431,8 +435,8 @@ const AddListingPage = (props: any) => {
       // ✅ API call
       const response = await restaurantService.createRestaurantListingAndReview(payload, sess);
 
-      if (response?.listing?.id || response?.id) {
-        setCurrentRestaurantDbId(response.listing?.id || response.id);
+      if ((response?.listing as Record<string, unknown>)?.id || (response?.id as number)) {
+        setCurrentRestaurantDbId(((response.listing as Record<string, unknown>)?.id as number) || (response.id as number));
       }
 
       setIsSubmitted(true);
@@ -450,7 +454,6 @@ const AddListingPage = (props: any) => {
         setReviewMainTitle("");
         setContent("");
         setSelectedFiles([]);
-        setIsDoneSelecting(false);
         setSelectedRecognition([]);
       }
     } catch (error) {
@@ -485,7 +488,6 @@ const AddListingPage = (props: any) => {
           filesProcessed++;
           if (filesProcessed === files.length) {
             setSelectedFiles((prevFiles) => [...prevFiles, ...imageList]);
-            setIsDoneSelecting(true);
           }
         };
         reader.readAsDataURL(file);
@@ -496,13 +498,12 @@ const AddListingPage = (props: any) => {
   const deleteSelectedFile = (fileToDelete: string) => {
     setSelectedFiles(selectedFiles.filter((item: string) => item !== fileToDelete));
     if (selectedFiles.length - 1 === 0) {
-      setIsDoneSelecting(false);
     }
   };
 
   // Function to fetch address predictions using AutocompleteService
   const fetchAddressPredictions = useCallback(
-    debounce(async (input: string) => {
+    (input: string) => {
       if (!autocompleteService || input.length < 3) {
         setAddressPredictions([]);
         setShowPredictions(false);
@@ -522,8 +523,8 @@ const AddListingPage = (props: any) => {
           }
         }
       );
-    }, 500),
-    [autocompleteService] // Recreate debounce if autocompleteService changes
+    },
+    [autocompleteService]
   );
 
   // Handle address input change
@@ -531,7 +532,10 @@ const AddListingPage = (props: any) => {
     const value = e.target.value;
     setListing({ ...listing, address: value });
     setAddressError("");
-    fetchAddressPredictions(value);
+    
+    // Debounce the address predictions
+    const debouncedFetch = debounce(fetchAddressPredictions, 500);
+    debouncedFetch(value);
   };
 
   // Handle selecting an address prediction
@@ -617,20 +621,20 @@ const AddListingPage = (props: any) => {
                   </label>
                   <div className="listing__input-group">
                     <Select
-                      options={categories.map((c: any) => ({
-                        value: c.slug || c.name,
-                        label: c.name,
+                      options={categories.map((c: Record<string, unknown>) => ({
+                        value: (c.slug as string) || (c.name as string),
+                        label: c.name as string,
                       }))}
                       value={listing.listingCategories.map((cat) => ({
                         label: cat,
                         value: cat,
                       }))}
-                      onChange={(selected: any) => {
-                        const selectedValues = selected.map((item: any) => item.value);
+                      onChange={(selected: readonly Record<string, unknown>[]) => {
+                        const selectedValues = selected.map((item: Record<string, unknown>) => item.value as string);
 
                         if (selectedValues.length > 3) {
                           setCategoryError("You can select a maximum of 3 categories.");
-                          const trimmed = selected.slice(0, 3).map((item: any) => item.value);
+                          const trimmed = selected.slice(0, 3).map((item: Record<string, unknown>) => item.value as string);
                           setListing({ ...listing, listingCategories: trimmed });
                         } else {
                           setListing({ ...listing, listingCategories: selectedValues });

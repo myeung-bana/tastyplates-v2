@@ -34,15 +34,15 @@ export default function PhotoSlider({
   const handleResize = () => {
     setWidth(window.innerWidth);
   };
-  const NextArrow = (props: any) => {
-    const { className, style, onClick, length } = props;
+  const NextArrow = (props: Record<string, unknown>) => {
+    const { onClick, length } = props;
     const slides = width > 1435 ? 4 : width > 1100 ? 3 : 2;
-    const display = activeSlide === length - slides ? "none" : "block";
+    const display = activeSlide === (length as number) - slides ? "none" : "block";
 
     return (
         <div
             className={`absolute !right-0 z-10 top-[92px] h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
-            onClick={onClick}
+            onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
             style={{ display: display }}
         >
             <RxCaretRight className="h-11 w-11 stroke-black"/>
@@ -50,14 +50,14 @@ export default function PhotoSlider({
     );
   };
 
-  const PrevArrow = (props: any) => {
-    const { className, style, onClick } = props;
+  const PrevArrow = (props: Record<string, unknown>) => {
+    const { onClick } = props;
     const display = activeSlide === 0 ? "none" : "block";
 
     return (
         <div
             className={`absolute !left-0 z-10 top-[92px] h-[44px!important] w-[44px!important] transform bg-white rounded-full`}
-            onClick={onClick}
+            onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
             style={{ display: display }}
         >
             <RxCaretLeft className="h-11 w-11 stroke-black"/>
@@ -76,7 +76,7 @@ export default function PhotoSlider({
     centerMode: boolean
     initialSlide: number
     lazyLoad: boolean
-    responsive: any
+    responsive: Array<Record<string, unknown>>
     variableWidth: boolean
     swipeToSlide: boolean
 
@@ -142,15 +142,15 @@ export default function PhotoSlider({
             {...settings}
             nextArrow={<NextArrow length={reviewPhotos.length} />}
             prevArrow={<PrevArrow />}
-            beforeChange={(current: any) => {
+            beforeChange={(current: number) => {
               setActiveSlide(current);
             }}
-            afterChange={(current: any) => {
+            afterChange={(current: number) => {
               setActiveSlide(current);
             }}
             lazyLoad="progressive"
           >
-            {reviewPhotos.map((photo: string, index: any) => (
+            {reviewPhotos.map((photo: string, index: number) => (
               //   <Link
               //     href={''}
               //     key={index}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE } from "@/lib/utils";
@@ -17,7 +18,7 @@ const encodeRelayId = (type: string, id: string) => {
   return `${type}:${id}`;
 };
 
-interface Follower {
+export interface Follower {
   id: string;
   name: string;
   cuisines: string[];
@@ -112,10 +113,12 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                         className="flex items-center gap-1 bg-[#f1f1f1] py-0.5 px-2 rounded-[50px] text-xs font-medium text-[#31343f]"
                       >
                         {flagUrl && (
-                          <img
+                          <Image
                             src={flagUrl}
                             alt={`${cuisine} flag`}
-                            className="w-[18px] h-[10px] rounded object-cover"
+                            width={18}
+                            height={10}
+                            className="rounded object-cover"
                           />
                         )}
                         {capitalizeWords(cuisine)}

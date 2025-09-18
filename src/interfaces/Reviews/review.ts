@@ -55,7 +55,7 @@ export interface ReviewCardProps {
 export interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: any;
+  data: Record<string, unknown>;
   initialPhotoIndex?: number;
   userLiked?: boolean;
   likesCount?: number;
@@ -64,5 +64,5 @@ export interface ReviewModalProps {
 
 export interface CreateReviewResponse {
   status: number;
-  data: any;
+  data: Record<string, unknown>;
 }

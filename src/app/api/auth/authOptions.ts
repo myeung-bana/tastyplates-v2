@@ -1,7 +1,17 @@
-import { AuthOptions } from "next-auth";
+import { AuthOptions, User, Account } from "next-auth";
 import { cookies } from "next/headers";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+
+// Extended user type for our application - using intersection to add custom properties
+type ExtendedUser = User & {
+    email?: string;
+    name?: string;
+    token?: string;
+    userId?: string; // Custom property for our app
+    birthdate?: string;
+    provider?: string;
+}
 import { UserService } from '@/services/user/userService';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
 import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
@@ -93,7 +103,7 @@ export const authOptions: AuthOptions = {
         }),
     ],
     callbacks: {
-        async signIn(params: any) {
+        async signIn(params: { user: User; account: Account | null }) {
             const { user, account } = params;
             let type: string | null = null;
 
@@ -102,7 +112,8 @@ export const authOptions: AuthOptions = {
                 type = cookieStore.get('auth_type')?.value || null;
 
                 if (account?.provider === sessionProvider.google) {
-                    const { email = "", name = "" } = user;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const { email = "", name = "" } = user as any;
 
                     if (type === sessionType.signup) {
                         // set the cookie to be use in the onboarding page
@@ -116,7 +127,7 @@ export const authOptions: AuthOptions = {
                         if (status === code.badRequest || exists) {
                             await setCookies({
                                 googleErrorType: sessionType.signup,
-                                googleError: encodeURIComponent(message),
+                                googleError: encodeURIComponent(message as string),
                             });
                             return HOME;
                         }
@@ -124,7 +135,8 @@ export const authOptions: AuthOptions = {
                         return ONBOARDING_ONE;
                     }
 
-                    const res = await userService.handleGoogleAuth(user.email);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const res = await userService.handleGoogleAuth((user as any).email || "");
                     if (res.status !== code.success) {
                         await setCookies({
                             googleErrorType: sessionType.login,
@@ -133,14 +145,18 @@ export const authOptions: AuthOptions = {
                         return HOME;
                     }
 
-                    user.token = res.token;
-                    user.userId = res.id;
-                    user.birthdate = '';
-                    user.provider = sessionProvider.google;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (user as any).token = res.token;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (user as any).userId = res.id?.toString();
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (user as any).birthdate = '';
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (user as any).provider = sessionProvider.google;
                     await setCookies({ logInMessage: logInSuccessfull });
                     return true;
                 }
-            } catch (error) {
+            } catch {
                 return PAGE(HOME, [], { error: authenticationFailed });
             }
 
@@ -148,30 +164,31 @@ export const authOptions: AuthOptions = {
         },
         async jwt({ token, user, account, trigger, session }) {
             if (user) {
+                const extendedUser = user as ExtendedUser;
                 token.user = {
                     ...user,
                     provider: account?.provider || sessionProvider.credentials,
-                    userId: user.userId || user.id // Handle both Google and credentials cases
+                    userId: extendedUser.userId || extendedUser.id // Handle both Google and credentials cases
                 };
-                token.accessToken = user.token;
+                token.accessToken = extendedUser.token;
 
-                if (user.email && token.accessToken) {
+                if (extendedUser.email && token.accessToken) {
                     try {
                         const userData = await userService.getCurrentUser(token.accessToken as string);
                         if (userData) {
-                            (token.user as any).userId = userData.ID || userData.id;
-                            (token.user as any).id = userData.ID || userData.id;
+                            (token.user as Record<string, unknown>).userId = userData.ID || userData.id;
+                            (token.user as Record<string, unknown>).id = userData.ID || userData.id;
                             if (userData.profile_image) {
-                                (token.user as any).image = userData.profile_image;
+                                (token.user as Record<string, unknown>).image = userData.profile_image;
                             }
                             if (userData.palates) {
-                                (token.user as any).palates = userData.palates;
+                                (token.user as Record<string, unknown>).palates = userData.palates;
                             }
                             if (userData.about_me) {
-                                (token.user as any).about_me = userData.about_me;
+                                (token.user as Record<string, unknown>).about_me = userData.about_me;
                             }
                             if (userData.display_name) {
-                                (token.user as any).name = userData.display_name;
+                                (token.user as Record<string, unknown>).name = userData.display_name;
                             }
                         }
                     } catch {
@@ -197,7 +214,7 @@ export const authOptions: AuthOptions = {
         },
         async session({ session, token }) {
             if (token) {
-                session.user = token.user as any;
+                session.user = token.user as Record<string, unknown>;
                 session.accessToken = token.accessToken as string | undefined;
             }
             return session;

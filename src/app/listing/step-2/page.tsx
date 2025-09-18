@@ -11,7 +11,7 @@ const AddReviewPage = () => {
   return (
     <section>
       <Suspense fallback={<div></div>}>
-        <AddListingPage step={2} />
+        <AddListingPage />
       </Suspense>
     </section>
   );

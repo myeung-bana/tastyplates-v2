@@ -36,13 +36,11 @@ interface RestaurantReviewsModalProps {
 const reviewService = new ReviewService();
 
 const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen, setIsOpen, restaurant }) => {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState<{ [key: string]: boolean }>({});
-  const [userLikes, setUserLikes] = useState<{ [key: string]: boolean }>({});
   const { data: session } = useSession();
-  const [likesCount, setLikesCount] = useState<{ [key: string]: number }>({});
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [expandedTitles, setExpandedTitles] = useState<{ [id: string]: boolean }>({});
@@ -58,7 +56,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
         // Initialize likes count and userLikes
         const likes: { [key: string]: number } = {};
         const userLiked: { [key: string]: boolean } = {};
-        (data.reviews || []).forEach((review: any) => {
+        (data.reviews || []).forEach((review: Record<string, unknown>) => {
           likes[review.id] = review.likes || review.commentLikes || 0;
           // If backend provides info if user liked, set here. Otherwise, default to false.
           userLiked[review.id] = !!review.userHasLiked;
@@ -70,7 +68,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       .finally(() => setLoading(false));
   }, [isOpen, restaurant.databaseId, session?.accessToken]);
 
-  const handleLike = async (review: any) => {
+  const handleLike = async (review: Record<string, unknown>) => {
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -105,7 +103,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           ? { ...r, userLiked: response.data?.userLiked, commentLikes: response.data?.likesCount }
           : r
       ));
-    } catch (e) {
+    } catch {
       toast.error(updateLikeFailed);
     } finally {
       setLikeLoading((prev) => ({ ...prev, [review.id]: false }));
@@ -151,7 +149,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.length === 0 && (
             <div className="text-center text-gray-400">No reviews</div>
           )}
-          {!loading && !error && reviews.map((review: any) => {
+          {!loading && !error && reviews.map((review: Record<string, unknown>) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = review.reviewStars ?? 0;
             const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
@@ -159,7 +157,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
               ? review.palates
                 .split("|")
                 .map((s: string) => ({ name: capitalizeWords(s.trim()) }))
-                .filter((s: any) => s.name)
+                .filter((s: Record<string, unknown>) => s.name)
               : [];
             return (
               <div key={review.id || review.databaseId} className="mb-8 pb-0 last:border-b-0 last:pb-0">
@@ -233,7 +231,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                       </div>
                     )}
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      {palatesArr.map((p: any, idx: number) => {
+                      {palatesArr.map((p: Record<string, unknown>, idx: number) => {
                         const lowerName = p.name.toLowerCase();
                         return (
                           <span
