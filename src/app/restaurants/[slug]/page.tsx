@@ -29,7 +29,6 @@ import { Listing } from "@/interfaces/restaurant/restaurant";
 import { 
   calculateRatingMetrics, 
   formatRating, 
-  getRatingDisplayText,
   RatingMetrics 
 } from "@/utils/reviewUtils";
 import { GraphQLReview } from "@/types/graphql";

@@ -38,7 +38,7 @@ export function calculateOverallRating(reviews: GraphQLReview[]): { rating: numb
   }
 
   const validReviews = reviews.filter(review => {
-    const rating = parseFloat(review.reviewStars || "0");
+    const rating = parseFloat(String(review.reviewStars || "0"));
     return !isNaN(rating) && rating > 0;
   });
 
@@ -47,7 +47,7 @@ export function calculateOverallRating(reviews: GraphQLReview[]): { rating: numb
   }
 
   const totalRating = validReviews.reduce((sum, review) => {
-    return sum + parseFloat(review.reviewStars || "0");
+    return sum + parseFloat(String(review.reviewStars || "0"));
   }, 0);
 
   const averageRating = totalRating / validReviews.length;
@@ -87,7 +87,7 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
   }
 
   const validReviews = matchingReviews.filter(review => {
-    const rating = parseFloat(review.reviewStars || "0");
+    const rating = parseFloat(String(review.reviewStars || "0"));
     return !isNaN(rating) && rating > 0;
   });
 
@@ -96,7 +96,7 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
   }
 
   const totalRating = validReviews.reduce((sum, review) => {
-    return sum + parseFloat(review.reviewStars || "0");
+    return sum + parseFloat(String(review.reviewStars || "0"));
   }, 0);
 
   const averageRating = totalRating / validReviews.length;
