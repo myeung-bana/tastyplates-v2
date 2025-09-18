@@ -129,11 +129,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           setReviews(newReviews as unknown as ReviewedDataProps[]);
         }, 0);
       } else {
-        const existingIds = new Set(reviews.map((review) => review.id));
-        const uniqueNewReviews = newReviews.filter(
-          (review) => !existingIds.has(review.id)
-        );
-        setReviews((prev) => [...prev, ...(uniqueNewReviews as unknown as ReviewedDataProps[])]);
+        // Use functional update to avoid dependency on reviews
+        setReviews((prev) => {
+          const existingIds = new Set(prev.map((review) => review.id));
+          const uniqueNewReviews = newReviews.filter(
+            (review) => !existingIds.has(review.id)
+          );
+          return [...prev, ...(uniqueNewReviews as unknown as ReviewedDataProps[])];
+        });
       }
 
       setUserReviewCount(userCommentCount);
@@ -147,7 +150,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         isFirstLoad.current = false;
       }
     }
-  }, [loading, hasNextPage, targetUserId, status, endCursor, reviews]);
+  }, [loading, hasNextPage, targetUserId, status, endCursor]);
 
   const fetchRestaurants = useCallback(async (
     first = 8,
@@ -308,6 +311,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       return [];
     }
     try {
+      // Use current following state instead of dependency
       const followersList = await userService.getFollowersList(
         targetUserId,
         following,
@@ -318,7 +322,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowersLoading(false);
     }
-  }, [session?.accessToken, targetUserId, following]);
+  }, [session?.accessToken, targetUserId]);
 
   useEffect(() => {
     // Only set userData from session.user if viewing own profile
