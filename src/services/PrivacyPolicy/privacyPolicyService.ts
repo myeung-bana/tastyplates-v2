@@ -5,13 +5,12 @@ const privacyPolicyRepo: PrivacyPolicyRepo = new PrivacyPolicyRepository()
 
 export class PrivacyPolicyService {
   async getPrivacyPolicy() {
-    const res = await privacyPolicyRepo.fetchPrivacyPolicy();
+    const data = await privacyPolicyRepo.fetchPrivacyPolicy();
 
-    if (!res.ok) throw new Error("Failed to fetch Privacy Policy");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((data as any).error) throw new Error((data as any).error);
 
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    return { title: data.title, content: data.content };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { title: (data as any).title, content: (data as any).content };
   }
 }

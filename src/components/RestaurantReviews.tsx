@@ -5,33 +5,143 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
-import ReviewBlock, { mapToReviewedDataProps } from "./ReviewBlock";
-
-// Helper to map Record<string, unknown> to ReviewBlockProps["review"]
-function toReviewBlockReview(raw: Record<string, unknown>): any {
-  return {
-    databaseId: raw.databaseId as number,
-    id: raw.id as string,
-    authorId: (raw.author as any)?.node?.databaseId ?? raw.authorId ?? 0,
-    restaurantId: (raw.commentedOn as any)?.node?.databaseId ?? raw.restaurantId ?? '',
-    user: (raw.author as any)?.node?.name ?? raw.user ?? '',
-    rating: Number(raw.reviewStars ?? raw.rating ?? 0),
-    date: raw.date as string,
-    title: raw.reviewMainTitle as string,
-    comment: raw.content as string,
-    images: Array.isArray(raw.reviewImages) ? (raw.reviewImages as any[]).map(img => img.sourceUrl) : [],
-    userImage: (raw.author as any)?.node?.avatar?.url ?? raw.userAvatar ?? '',
-    recognitions: raw.recognitions as string[] | undefined,
-    palateNames: typeof raw.palates === 'string' ? (raw.palates as string).split('|') : [],
-    commentLikes: Number(raw.commentLikes ?? 0),
-    userLiked: Boolean(raw.userLiked),
-  };
-}
+import ReviewBlock from "./ReviewBlock";
+import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/user/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import CustomPopover from "./ui/Popover/Popover";
-import { ReviewedDataProps } from "@/interfaces/Reviews/review";
+import { GraphQLReview } from "@/types/graphql";
+
+// Type definitions for raw review data from API
+interface RawReviewAuthor {
+  node?: {
+    databaseId?: number;
+    name?: string;
+    avatar?: {
+      url?: string;
+    };
+  };
+  name?: string;
+}
+
+interface RawReviewCommentedOn {
+  node?: {
+    databaseId?: number;
+  };
+}
+
+interface RawReviewImage {
+  sourceUrl: string;
+  id?: string | number;
+}
+
+interface RawReview {
+  databaseId: number;
+  id: string;
+  author?: RawReviewAuthor;
+  authorId?: number;
+  commentedOn?: RawReviewCommentedOn;
+  restaurantId?: string;
+  user?: string;
+  reviewStars?: string | number;
+  rating?: string | number;
+  date: string;
+  reviewMainTitle: string;
+  content: string;
+  reviewImages?: RawReviewImage[];
+  userAvatar?: string;
+  recognitions?: string[];
+  palates?: string;
+  commentLikes?: number;
+  userLiked?: boolean;
+}
+
+// Helper to map RawReview to ReviewBlockProps["review"]
+function toReviewBlockReview(raw: RawReview) {
+  return {
+    databaseId: raw.databaseId,
+    id: raw.id,
+    authorId: raw.author?.node?.databaseId ?? raw.authorId ?? 0,
+    restaurantId: raw.commentedOn?.node?.databaseId?.toString() ?? raw.restaurantId ?? '',
+    user: raw.author?.node?.name ?? raw.user ?? '',
+    rating: Number(raw.reviewStars ?? raw.rating ?? 0),
+    date: raw.date,
+    title: raw.reviewMainTitle,
+    comment: raw.content,
+    images: Array.isArray(raw.reviewImages) ? raw.reviewImages.map(img => img.sourceUrl) : [],
+    userImage: raw.author?.node?.avatar?.url ?? raw.userAvatar ?? '',
+    recognitions: raw.recognitions,
+    palateNames: typeof raw.palates === 'string' ? raw.palates.split('|') : [],
+    commentLikes: raw.commentLikes ?? 0,
+    userLiked: Boolean(raw.userLiked),
+  };
+}
+
+// Helper to map ReviewBlockProps["review"] to ReviewedDataProps
+const mapToReviewedDataProps = (review: ReturnType<typeof toReviewBlockReview>): ReviewedDataProps => {
+  const reviewImages: ReviewedDataProps["reviewImages"] = review.images.map((src, index) => ({
+    databaseId: index,
+    id: `${review.id}-${index}`,
+    sourceUrl: src,
+  }));
+
+  // Encode relay global ID for user
+  const encodeRelayId = (type: string, id: number) => {
+    if (typeof window !== 'undefined' && window.btoa) {
+      return window.btoa(`${type}:${id}`);
+    } else if (typeof Buffer !== 'undefined') {
+      return Buffer.from(`${type}:${id}`).toString('base64');
+    }
+    return `${type}:${id}`;
+  };
+
+  const userRelayId = encodeRelayId('user', review.authorId);
+
+  return {
+    databaseId: review.databaseId,
+    id: review.id,
+    reviewMainTitle: review.title || "",
+    commentLikes: String(review.commentLikes ?? 0),
+    userLiked: review.userLiked ?? false,
+    content: review.comment,
+    uri: "",
+    reviewStars: String(review.rating),
+    date: review.date,
+    reviewImages,
+    palates: review.palateNames?.join("|") ?? "",
+    userAvatar: review.userImage || DEFAULT_USER_ICON,
+    author: {
+      name: review.user,
+      node: {
+        id: userRelayId,
+        databaseId: review.authorId,
+        name: review.user,
+        avatar: {
+          url: review.userImage || DEFAULT_USER_ICON,
+        },
+      },
+    },
+    userId: review.authorId,
+    commentedOn: {
+      node: {
+        databaseId: parseInt(review.restaurantId),
+        title: "",
+        slug: "",
+        fieldMultiCheck90: "",
+        featuredImage: {
+          node: {
+            databaseId: "",
+            altText: "",
+            mediaItemUrl: "",
+            mimeType: "",
+            mediaType: "",
+          },
+        },
+      },
+    },
+  };
+};
 
 interface CustomType {
   text: string,
@@ -47,7 +157,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const currentUserId = session?.user?.id || null;
 
   // Review and filter state
-  const [allReviews, setAllReviews] = useState<Record<string, unknown>[]>([]);
+  const [allReviews, setAllReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
@@ -72,10 +182,10 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   // Flattened photo items from allReviews
   const allPhotoItems = allReviews.flatMap((review) => {
     if (!review.reviewImages || !Array.isArray(review.reviewImages) || review.reviewImages.length === 0) return [];
-    return (review.reviewImages as { sourceUrl: string; id?: string | number }[]).map((img, imgIndex) => ({
+    return review.reviewImages.map((img, imgIndex) => ({
       image: {
-        sourceUrl: String(img.sourceUrl ?? ''),
-        id: img.id ?? undefined,
+        sourceUrl: img.sourceUrl,
+        id: img.id,
       },
       review,
       imageIndex: imgIndex,
@@ -91,7 +201,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   // Fetch all reviews for the restaurant (all pages)
   const fetchAllReviews = useCallback(async () => {
     setLoading(true);
-    let allFetched: Record<string, unknown>[] = [];
+    let allFetched: GraphQLReview[] = [];
     let after: string | undefined = undefined;
     let hasNext = true;
     try {
@@ -103,8 +213,8 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
           after
         );
         allFetched = allFetched.concat(data.reviews);
-        hasNext = data.pageInfo.hasNextPage as boolean;
-        after = data.pageInfo.endCursor as string | undefined;
+        hasNext = data.pageInfo.hasNextPage;
+        after = data.pageInfo.endCursor ?? undefined;
       }
       setAllReviews(allFetched);
     } catch {
@@ -141,9 +251,7 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   };
 
   // Helper: Ensure rating is always a number for filtering/sorting
-  const getNumericRating = (review: Record<string, unknown>) => {
-    if (typeof review.rating === 'number') return review.rating;
-    if (typeof review.rating === 'string' && !isNaN(Number(review.rating))) return Number(review.rating);
+  const getNumericRating = (review: GraphQLReview) => {
     if (typeof review.reviewStars === 'number') return review.reviewStars;
     if (typeof review.reviewStars === 'string' && !isNaN(Number(review.reviewStars))) return Number(review.reviewStars);
     return 0;
@@ -153,20 +261,20 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const filteredReviews = allReviews.filter((review) => {
     if (!selectedReviewFilter?.value) return true;
     if (selectedReviewFilter?.value === 'following') {
-      const authorId = String(((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId ?? review?.authorId ?? '');
+      const authorId = String(review.author?.node?.databaseId ?? '');
       return followingUserIds.includes(authorId);
     }
     if (selectedReviewFilter?.value === 'mine') {
-      return String(((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId) === String(currentUserId);
+      return String(review.author?.node?.databaseId) === String(currentUserId);
     }
     return true;
   });
 
   const sortedReviews = [...filteredReviews].sort((a, b) => {
     if (sortOrder?.value === "newest") {
-      return new Date(b.date as string).getTime() - new Date(a.date as string).getTime();
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
     } else if (sortOrder?.value === "oldest") {
-      return new Date(a.date as string).getTime() - new Date(b.date as string).getTime();
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
     } else if (sortOrder?.value === "highest") {
       return getNumericRating(b) - getNumericRating(a);
     } else if (sortOrder?.value === "lowest") {
@@ -203,25 +311,25 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
             <>
               {paginatedReviews.map((review) => (
                 <ReviewBlock
-                  key={review.databaseId as string}
+                  key={review.databaseId.toString()}
                   review={{
-                    databaseId: review.databaseId as number,
-                    id: review.id as string,
-                    authorId: ((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.databaseId as number ?? 0,
+                    databaseId: review.databaseId,
+                    id: review.id,
+                    authorId: review.author?.node?.databaseId ?? 0,
                     restaurantId: restaurantId.toString(),
-                    user: ((review?.author as Record<string, unknown>)?.node as Record<string, unknown>)?.name as string ?? (review?.author as Record<string, unknown>)?.name as string ?? "Unknown",
-                    rating: Number(review.reviewStars as string) || 0,
-                    date: review.date as string,
-                    title: review.reviewMainTitle as string,
-                    comment: review.content as string ?? "",
-                    images: (review.reviewImages as Record<string, unknown>[])?.map((img: Record<string, unknown>) => img.sourceUrl as string) ?? [],
-                    userImage: review?.userAvatar as string ?? DEFAULT_USER_ICON,
-                    recognitions: Array.isArray(review.recognitions) ? review.recognitions as string[] : [],
+                    user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
+                    rating: Number(review.reviewStars) || 0,
+                    date: review.date,
+                    title: review.reviewMainTitle,
+                    comment: review.content,
+                    images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
+                    userImage: review.userAvatar ?? DEFAULT_USER_ICON,
+                    recognitions: review.recognitions ?? [],
                     palateNames: typeof review.palates === "string"
-                      ? (review.palates as string).split("|").map((p: string) => p.trim()).filter(Boolean)
+                      ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
                       : [],
-                    commentLikes: review.commentLikes as number ?? 0,
-                    userLiked: review.userLiked as boolean ?? false,
+                    commentLikes: review.commentLikes ?? 0,
+                    userLiked: review.userLiked ?? false,
                   }}
                 />
               ))}

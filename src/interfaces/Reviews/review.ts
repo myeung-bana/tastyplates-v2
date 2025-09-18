@@ -1,3 +1,5 @@
+import { GraphQLReview } from "@/types/graphql";
+
 export interface ReviewedDataProps {
   databaseId: number;
   id: string;
@@ -55,7 +57,7 @@ export interface ReviewCardProps {
 export interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: Record<string, unknown>;
+  data: GraphQLReview;
   initialPhotoIndex?: number;
   userLiked?: boolean;
   likesCount?: number;

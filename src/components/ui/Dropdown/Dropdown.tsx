@@ -1,6 +1,12 @@
 import {Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { ReactNode } from "react";
 
-export default function CustomDropdown(props: Record<string, unknown>) {
+interface CustomDropdownProps {
+  trigger: ReactNode;
+  item: ReactNode;
+}
+
+export default function CustomDropdown(props: CustomDropdownProps) {
   return (
     <Dropdown>
       <DropdownTrigger>

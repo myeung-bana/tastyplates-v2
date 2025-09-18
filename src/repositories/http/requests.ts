@@ -24,7 +24,6 @@ export default class HttpMethods {
     private async request(
         endpoint: string,
         options: RequestInit,
-        jsonResponse = false,
         jsonContentType = true
     ): Promise<Record<string, unknown>> {
         const headers = {
@@ -49,37 +48,30 @@ export default class HttpMethods {
             }
         }
 
-        if (jsonResponse) {
-            try {
-                return response.json();
-            } catch (error) {
-                console.error('Failed to parse JSON response:', error);
-                throw new Error('Invalid JSON response');
-            }
+        try {
+            return await response.json() as Record<string, unknown>;
+        } catch (error) {
+            console.error('Failed to parse JSON response:', error);
+            throw new Error('Invalid JSON response');
         }
-
-        return response;
     }
 
     async GET(
         endpoint: string,
-        options: Omit<RequestInit, "method"> = {},
-        jsonResponse = false
+        options: Omit<RequestInit, "method"> = {}
     ) {
         return this.request(
             endpoint,
             {
                 ...options,
                 method: HTTP_METHODS.GET,
-            },
-            jsonResponse
+            }
         );
     }
 
     async POST(
         endpoint: string,
-        options: Omit<RequestInit, "method"> = {},
-        jsonResponse = false
+        options: Omit<RequestInit, "method"> = {}
     ) {
         const { body, ...restOptions } = options;
         const isJsonBody = body && !(body instanceof FormData);
@@ -91,15 +83,13 @@ export default class HttpMethods {
                 method: HTTP_METHODS.POST,
                 body,
             },
-            jsonResponse,
             isJsonBody as boolean
         );
     }
 
     async PUT(
         endpoint: string,
-        options: Omit<RequestInit, "method"> = {},
-        jsonResponse = false
+        options: Omit<RequestInit, "method"> = {}
     ) {
         const { body, ...restOptions } = options;
         const isJsonBody = body && !(body instanceof FormData);
@@ -111,23 +101,20 @@ export default class HttpMethods {
                 method: HTTP_METHODS.PUT,
                 body,
             },
-            jsonResponse,
             isJsonBody as boolean
         );
     }
 
     async DELETE(
         endpoint: string,
-        options: Omit<RequestInit, "method"> = {},
-        jsonResponse = false
+        options: Omit<RequestInit, "method"> = {}
     ) {
         return this.request(
             endpoint,
             {
                 ...options,
                 method: HTTP_METHODS.DELETE,
-            },
-            jsonResponse
+            }
         );
     }
 }

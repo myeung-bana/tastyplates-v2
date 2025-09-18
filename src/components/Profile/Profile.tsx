@@ -131,7 +131,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       } else {
         const existingIds = new Set(reviews.map((review) => review.id));
         const uniqueNewReviews = newReviews.filter(
-          (review: Record<string, unknown>) => !existingIds.has(review.id as string)
+          (review) => !existingIds.has(review.id)
         );
         setReviews((prev) => [...prev, ...(uniqueNewReviews as unknown as ReviewedDataProps[])]);
       }

@@ -7,7 +7,21 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 import { MdClose } from "react-icons/md";
-export default function CustomModal(props: Record<string, unknown>) {
+import { ReactNode } from "react";
+
+interface ReviewModalProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  header: ReactNode;
+  content: ReactNode;
+  hasFooter?: boolean;
+  footer?: ReactNode;
+  onOpenChange?: (isOpen: boolean) => void;
+  onConfirm?: () => void;
+  loading?: boolean;
+}
+
+export default function CustomModal(props: ReviewModalProps) {
   const {
     isOpen,
     setIsOpen,

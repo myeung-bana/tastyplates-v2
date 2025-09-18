@@ -321,39 +321,46 @@ const OnboardingOnePage = () => {
 
               return (
                 <div key={index} className={groupClassName}>
-                  <label htmlFor={field.label?.toLowerCase()} className="font-semibold text-sm sm:text-base">
-                    {field.label}
+                  <label htmlFor={String(field.label || "").toLowerCase()} className="font-semibold text-sm sm:text-base">
+                    {String(field.label || "")}
                   </label>
                   <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
                     {field.type === "date" ? (
                         <CustomDatePicker
-                          id={field.label?.toLowerCase()}
+                          id={String(field.label || "").toLowerCase()}
                           className={`!w-full text-sm sm:text-base !rounded-[10px] ${!field.value ? '[&::-webkit-datetime-edit]:opacity-0' : ''} ${field.className || ''}`}
                           buttonClassName="!h-10 md:!h-[48px] text-[#31343f] text-xs md:text-base border border-solid !border-[#797979] hover:border-[#31343f] hover:bg-[#F1F1F1] placeholder:text-[#797979]"
-                          value={field.value}
-                          onChange={field.onChange}
+                          value={String(field.value || "")}
+                          onChange={field.onChange as (val: string) => void}
                           formatValue="MM/dd/yyyy"
-                          disabled={field.disabled}
+                          disabled={Boolean(field.disabled)}
                         />
                     ) : field.type === "select" ? (
                       // <CustomSelect {...field} />
-                      <select className={field.className} value={field.value} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => field.onChange(e.target.value)} disabled={field.disabled}>
-                        <option value="">{field.placeholder}</option>
-                        {field.items.map((option: Record<string, unknown>) =>
-                          <option key={option.key as string} value={option.value as string}>{option.content as string}</option>
+                      <select className={String(field.className || "")} value={String(field.value || "")} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => (field.onChange as (val: string) => void)(e.target.value)} disabled={Boolean(field.disabled)}>
+                        <option value="">{String(field.placeholder || "")}</option>
+                        {(field.items as Array<Record<string, unknown>> || []).map((option: Record<string, unknown>) =>
+                          <option key={String(option.key || "")} value={String(option.value || "")}>{String(option.content || "")}</option>
                         )}
                       </select>
                     ) : field.type === "multiple-select" ? (
-                      <CustomMultipleSelect {...field} />
+                      <CustomMultipleSelect 
+                        items={field.items as Array<{ key: string; label: string }> || []}
+                        value={new Set([String(field.value || "")])}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        onChange={(keys: Set<any>) => (field.onChange as (val: string) => void)(String(Array.from(keys)[0] || ""))}
+                        placeholder={String(field.placeholder || "")}
+                        className={String(field.className || "")}
+                      />
                     ) : (
                       <input
-                        type={field.type}
-                        id={field.label?.toLowerCase()}
-                        className={`auth__input text-sm sm:text-base ${field.className || ''}`}
-                        placeholder={field.placeholder}
-                        value={field.value}
-                        onChange={field.onChange}
-                        disabled={field.disabled}
+                        type={String(field.type || "text")}
+                        id={String(field.label || "").toLowerCase()}
+                        className={`auth__input text-sm sm:text-base ${String(field.className || '')}`}
+                        placeholder={String(field.placeholder || "")}
+                        value={String(field.value || "")}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => (field.onChange as (val: string) => void)(e.target.value)}
+                        disabled={Boolean(field.disabled)}
                       />
                     )}
                   </div>

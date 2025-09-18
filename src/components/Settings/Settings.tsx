@@ -1,5 +1,5 @@
 "use client";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState, useCallback } from "react";
 import "@/styles/pages/_settings.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import { languageOptions } from "@/constants/formOptions";
@@ -36,7 +36,7 @@ const Settings = () => {
   const { data: session, status, update } = useSession(); // Add status from useSession
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [isPersonalInfoLoading, setIsPersonalInfoLoading] = useState(true);
-  const [setting, setSetting] = useState<Record<string, unknown>[]>([]);
+  const [setting, setSetting] = useState<Record<string, unknown>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [editable, setEditable] = useState<Field>(Field.None);
@@ -106,7 +106,7 @@ const Settings = () => {
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
       const response = await userService.validatePassword(password, session?.accessToken);
-      return response.valid && response.status === code.success;
+      return Boolean(response.valid) && response.status === code.success;
     } catch {
       return false;
     }
@@ -121,7 +121,7 @@ const Settings = () => {
 
     // Birthdate validation
     if (editable === Field.Birthdate) {
-      const err = validateBirthdate(setting.birthdate);
+      const err = validateBirthdate(String(setting.birthdate || ""));
       setBirthdateError(err);
       if (err) hasError = true;
     } else {
@@ -130,7 +130,7 @@ const Settings = () => {
 
     // Email validation
     if (editable === Field.Email) {
-      const err = validateEmail(setting.email);
+      const err = validateEmail(String(setting.email || ""));
       setEmailError(err);
       if (err) hasError = true;
     } else {
@@ -207,14 +207,19 @@ const Settings = () => {
         ...updateData,
       }));
 
+      const updatedUser: Record<string, unknown> = {
+        ...session.user,
+        language: updateData.language,
+        birthdate: updateData.birthdate,
+      };
+      
+      if (!isGoogleAuth && updateData.email) {
+        updatedUser.email = updateData.email;
+      }
+      
       await update({
         ...session,
-        user: {
-          ...session.user,
-          ...(!isGoogleAuth && updateData.email && { email: updateData.email }),
-          language: updateData.language,
-          birthdate: updateData.birthdate,
-        }
+        user: updatedUser,
       });
 
       setIsSubmitted(true);
@@ -258,7 +263,7 @@ const Settings = () => {
           session.accessToken as string
         );
 
-        setUserData(data);
+        setUserData(data as unknown as Record<string, unknown>);
         // Initialize setting with formatted date
         setSetting((prev: Record<string, unknown>) => ({
           ...prev,
@@ -358,9 +363,8 @@ const Settings = () => {
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : (
-                  userData?.display_name || ""
-                )
-                }
+                  <span>{String(userData?.display_name || "")}</span>
+                )}
               </div>
             </div>
             <div className="settings__form-group">
@@ -385,12 +389,12 @@ const Settings = () => {
                     type="text"
                     name="email"
                     className="settings__input min-h-[48px]"
-                    value={setting.email}
+                    value={String(setting.email || "")}
                     onChange={(e) => setSetting({ ...setting, email: e.target.value })}
                     disabled={isLoading}
                   />
                 ) : (
-                  userData?.email || userData?.user_email || ""
+                  String(userData?.email || userData?.user_email || "")
                 )}
               </div>
               {emailError && editable === Field.Email && (
@@ -460,13 +464,13 @@ const Settings = () => {
                 ) : editable == Field.Birthdate ? (
                   <CustomDatePicker
                     className={`!w-full text-sm sm:text-base !rounded-[10px] min-h-[48px] ${!setting.birthdate ? '[&::-webkit-datetime-edit]:opacity-0' : ''}`}
-                    value={setting.birthdate}
+                    value={String(setting.birthdate || "")}
                     onChange={(val) => setSetting({ ...setting, birthdate: val })}
                     formatValue="MM/dd/yyyy"
                     disabled={isLoading}
                   />
                 ) : userData?.birthdate ? (
-                  formatDateForDisplay(userData.birthdate)
+                  formatDateForDisplay(String(userData.birthdate || ""))
                 ) : (
                   ""
                 )}
@@ -524,7 +528,7 @@ const Settings = () => {
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : editable == Field.Language ? (
                   <CustomSelect
-                    value={setting.language}
+                    value={String(setting.language || "")}
                     onChange={(val: string) =>
                       setSetting({ ...setting, language: val })
                     }

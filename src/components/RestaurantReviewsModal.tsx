@@ -8,7 +8,6 @@ import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
 import { commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
-import { responseStatusCode as code } from "@/constants/response";
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
@@ -27,6 +26,31 @@ interface Restaurant {
   priceRange: string;
 }
 
+interface ReviewAuthor {
+  name?: string;
+  node?: {
+    id?: string;
+    name?: string;
+  };
+}
+
+interface ReviewData {
+  id: string;
+  databaseId: number;
+  reviewMainTitle?: string;
+  reviewStars?: string | number;
+  userAvatar?: string;
+  palates?: string;
+  author?: ReviewAuthor;
+  userId?: string;
+  date: string;
+  content: string;
+  commentLikes?: number;
+  userLiked?: boolean;
+  likes?: number;
+  userHasLiked?: boolean;
+}
+
 interface RestaurantReviewsModalProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -36,7 +60,7 @@ interface RestaurantReviewsModalProps {
 const reviewService = new ReviewService();
 
 const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen, setIsOpen, restaurant }) => {
-  const [reviews, setReviews] = useState<Record<string, unknown>[]>([]);
+  const [reviews, setReviews] = useState<ReviewData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState<{ [key: string]: boolean }>({});
@@ -52,23 +76,14 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     setError(null);
     reviewService.getRestaurantReviews(restaurant.databaseId, session?.accessToken)
       .then((data) => {
-        setReviews(data.reviews || []);
-        // Initialize likes count and userLikes
-        const likes: { [key: string]: number } = {};
-        const userLiked: { [key: string]: boolean } = {};
-        (data.reviews || []).forEach((review: Record<string, unknown>) => {
-          likes[review.id] = review.likes || review.commentLikes || 0;
-          // If backend provides info if user liked, set here. Otherwise, default to false.
-          userLiked[review.id] = !!review.userHasLiked;
-        });
-        setLikesCount(likes);
-        setUserLikes(userLiked);
+        const reviewsData = (data.reviews || []) as unknown as ReviewData[];
+        setReviews(reviewsData);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [isOpen, restaurant.databaseId, session?.accessToken]);
 
-  const handleLike = async (review: Record<string, unknown>) => {
+  const handleLike = async (review: ReviewData) => {
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -82,25 +97,15 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       const accessToken = session.accessToken || "";
       if (alreadyLiked) {
         response = await reviewService.unlikeComment(commentId, accessToken);
-        if (response.status === code.success) {
-          toast.success(commentUnlikedSuccess);
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentUnlikedSuccess);
       } else {
         response = await reviewService.likeComment(commentId, accessToken);
-        if (response.status === code.success) {
-          toast.success(commentLikedSuccess);
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentLikedSuccess);
       }
       // Update the review in the reviews array with the new like state/count
       setReviews((prevReviews) => prevReviews.map((r) =>
         (r.id === review.id || r.databaseId === review.databaseId)
-          ? { ...r, userLiked: response.data?.userLiked, commentLikes: response.data?.likesCount }
+          ? { ...r, userLiked: response.userLiked, commentLikes: response.likesCount }
           : r
       ));
     } catch {
@@ -149,15 +154,15 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           {!loading && !error && reviews.length === 0 && (
             <div className="text-center text-gray-400">No reviews</div>
           )}
-          {!loading && !error && reviews.map((review: Record<string, unknown>) => {
+          {!loading && !error && reviews.map((review) => {
             const reviewTitle = review.reviewMainTitle || '';
-            const reviewStars = review.reviewStars ?? 0;
+            const reviewStars = Number(review.reviewStars) || 0;
             const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
             const palatesArr = review.palates
               ? review.palates
                 .split("|")
                 .map((s: string) => ({ name: capitalizeWords(s.trim()) }))
-                .filter((s: Record<string, unknown>) => s.name)
+                .filter((s) => s.name)
               : [];
             return (
               <div key={review.id || review.databaseId} className="mb-8 pb-0 last:border-b-0 last:pb-0">
@@ -174,7 +179,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         />
                       </a>
                     ) : session ? (
-                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId || '')])}>
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
@@ -212,7 +217,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                           </div>
                         </a>
                       ) : session ? (
-                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId)])}>
+                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId || '')])}>
                           <div className="font-semibold text-[#31343F] cursor-pointer">
                             {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>
@@ -231,7 +236,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                       </div>
                     )}
                     <div className="flex gap-2 mt-1 flex-wrap">
-                      {palatesArr.map((p: Record<string, unknown>, idx: number) => {
+                      {palatesArr.map((p, idx: number) => {
                         const lowerName = p.name.toLowerCase();
                         return (
                           <span
@@ -239,10 +244,12 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                             className="flex items-center gap-1 bg-[#f1f1f1] text-xs text-[#31343f] rounded-full px-2 py-1 font-medium"
                           >
                             {palateFlagMap[lowerName] && (
-                              <img
+                              <Image
                                 src={palateFlagMap[lowerName]}
                                 alt={`${p.name} flag`}
-                                className="w-[18px] h-[10px] rounded object-cover"
+                                width={18}
+                                height={10}
+                                className="rounded object-cover"
                               />
                             )}
                             {p.name}

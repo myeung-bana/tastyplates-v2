@@ -25,7 +25,7 @@ export class UserService {
             google_token: userData.googleToken || null
         };
 
-        await userRepo.registerUser<Record<string, unknown>>(formattedData);
+        return await userRepo.registerUser<Record<string, unknown>>(formattedData);
     }
 
     async login(credentials: ILoginCredentials): Promise<IJWTResponse> {
@@ -94,6 +94,9 @@ export class UserService {
 
     async updateUserFields(data: Partial<IUserUpdate>, token?: string): Promise<IUserUpdateResponse> {
         try {
+            if (!token) {
+                throw new Error('Token is required for updating user fields');
+            }
             const res = await userRepo.updateUserFields(data, token);
             return res;
         } catch (error) {

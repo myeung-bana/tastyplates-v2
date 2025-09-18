@@ -93,7 +93,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
         router.push(HOME);
       }
     } catch (error) {
-      setMessage(error.message || unexpectedError);
+      setMessage((error as { message?: string })?.message || unexpectedError);
       setMessageType(responseStatus.error);
     } finally {
       setIsLoading(false);

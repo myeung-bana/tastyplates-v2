@@ -12,6 +12,7 @@ import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
+import { GraphQLReview } from "@/types/graphql";
 import toast from 'react-hot-toast';
 
 //styles
@@ -71,7 +72,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [replies, setReplies] = useState<Record<string, unknown>[]>([]);
+  const [replies, setReplies] = useState<GraphQLReview[]>([]);
   const [cooldown, setCooldown] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
   const [commentReply, setCommentReply] = useState("");
@@ -81,23 +82,8 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [replyLoading, setReplyLoading] = useState<{ [id: string]: boolean }>({});
   const authorUserId = data.userId;
-  const sliderRef = useRef<Record<string, unknown>>(null);
+  const sliderRef = useRef<Slider | null>(null);
 
-  useEffect(() => {
-    window.addEventListener("load", () => {
-      if (typeof window !== "undefined") {
-        handleResize();
-      }
-    });
-    window.addEventListener("resize", () => {
-      handleResize();
-    });
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("load", handleResize);
-    };
-  }, [data]);
 
   useEffect(() => {
     if (isOpen && data?.id) {
@@ -116,7 +102,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   useEffect(() => {
     if (isOpen && data) {
       setUserLiked(data.userLiked ?? false);
-      setLikesCount(data.likesCount ?? data.commentLikes ?? 0);
+      setLikesCount(data.commentLikes ?? 0);
     }
   }, [isOpen, data]);
 
@@ -140,15 +126,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
       setIsFollowing(false);
       return;
     }
-    if (authorUserId === session?.user?.id) {
+    if (String(authorUserId) === String(session?.user?.id)) {
       setIsFollowing(false);
       return;
     }
     (async () => {
       try {
-        const result = await userService.isFollowingUser(authorUserId, session.accessToken);
+        const result = await userService.isFollowingUser(Number(authorUserId), session.accessToken);
         setIsFollowing(!!result.is_following);
-        setFollowState(authorUserId, !!result.is_following);
+        setFollowState(Number(authorUserId), !!result.is_following);
       } catch (err) {
         console.error("Error fetching follow state:", err);
         setIsFollowing(false);
@@ -167,14 +153,14 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await userService.followUser(authorUserId, session.accessToken);
+      const result = await userService.followUser(Number(authorUserId), session.accessToken);
       if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
         setIsFollowing(false);
       } else {
         setIsFollowing(true);
-        setFollowState(authorUserId, true);
+        setFollowState(Number(authorUserId), true);
         // Invalidate cache and trigger sync for current user
         const currentUserId = session?.user?.id;
         if (currentUserId) {
@@ -203,14 +189,14 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await userService.unfollowUser(authorUserId, session.accessToken);
+      const result = await userService.unfollowUser(Number(authorUserId), session.accessToken);
       if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
         setIsFollowing(true);
       } else {
         setIsFollowing(false);
-        setFollowState(authorUserId, false);
+        setFollowState(Number(authorUserId), false);
         // Invalidate cache and trigger sync for current user
         const currentUserId = session?.user?.id;
         if (currentUserId) {
@@ -240,18 +226,15 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
   };
 
-  const handleResize = () => {
-    setWidth(window.innerWidth);
-  };
 
   const NextArrow = (props: Record<string, unknown>) => {
     const { onClick, length } = props;
-    const display = activeSlide === length - 1 ? "none" : "block";
+    const display = activeSlide === (length as number) - 1 ? "none" : "block";
 
     return (
       <div
         className={`absolute !right-3 md:!right-6 z-10 top-1/2 size-8 md:h-[44px!important] md:w-[44px!important] transform bg-white rounded-full`}
-        onClick={onClick}
+        onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
         style={{ display: display }}
       >
         <RxCaretRight className="size-8 md:h-11 md:w-11 stroke-[#31343F]" />
@@ -266,7 +249,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     return (
       <div
         className={`absolute !left-3 md:!left-6 z-10 top-1/2 size-8 md:h-[44px!important] md:w-[44px!important] transform bg-white rounded-full`}
-        onClick={onClick}
+        onClick={onClick as React.MouseEventHandler<HTMLDivElement>}
         style={{ display: display }}
       >
         <RxCaretLeft className="size-8 md:h-11 md:w-11 stroke-[#31343F]" />
@@ -285,7 +268,10 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     centerMode: boolean;
     initialSlide: number;
     lazyLoad: boolean;
-    responsive: Record<string, unknown>;
+    responsive: Array<{
+      breakpoint: number;
+      settings: Record<string, unknown>;
+    }>;
     variableWidth: boolean;
     swipeToSlide: boolean;
     swipe: boolean;
@@ -336,16 +322,46 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     setIsLoading(true); // Ensure loading is set before optimistic update
     // Optimistically add reply at the top
-    const optimisticReply = {
+    const optimisticReply: GraphQLReview & { isOptimistic: boolean } = {
       id: `optimistic-${Date.now()}`,
-      content: commentReply,
-      author: { node: { name: session.user.name, databaseId: session.user.userId } },
-      userAvatar: session.user.image || DEFAULT_USER_ICON,
-      createdAt: new Date().toISOString(),
-      userLiked: false,
+      databaseId: 0, // Temporary ID for optimistic updates
+      reviewMainTitle: "",
       commentLikes: 0,
+      userLiked: false,
+      reviewStars: "0",
+      date: new Date().toISOString(),
+      content: commentReply,
+      reviewImages: [],
+      palates: session.user.palates || "",
+      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      author: {
+        name: session.user.name || "Unknown User",
+        node: {
+          id: String(session.user.id || ""),
+          databaseId: session.user.userId ? parseInt(String(session.user.userId)) : 0,
+          name: session.user.name || "Unknown User",
+          avatar: {
+            url: session.user.image || DEFAULT_USER_ICON,
+          },
+        },
+      },
+      commentedOn: {
+        node: {
+          databaseId: 0,
+          title: "",
+          slug: "",
+          featuredImage: {
+            node: {
+              databaseId: "",
+              altText: "",
+              mediaItemUrl: "",
+              mimeType: "",
+              mediaType: "",
+            },
+          },
+        },
+      },
       isOptimistic: true,
-      palates: session.user.palates || ""
     };
     setReplies(prev => [optimisticReply, ...prev]);
     setCommentReply("");
@@ -364,11 +380,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         const updatedReplies = await reviewService.fetchCommentReplies(data.id);
         setReplies(prev => {
           // Remove optimistic reply
-          const withoutOptimistic = prev.filter(r => !r.isOptimistic);
+          const withoutOptimistic = prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic);
           // Merge: add any new replies from server not already in the list
           const merged = updatedReplies.concat(
             withoutOptimistic.filter(
-              (local) => !updatedReplies.some((server: Record<string, unknown>) => server.id === local.id)
+              (local) => !updatedReplies.some((server) => server.id === local.id)
             )
           );
         setCooldown(5);
@@ -384,7 +400,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         toast.error(errorOccurred);
         setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
       }
-    } catch {
+    } catch (err) {
       console.error("Failed to post reply", err);
       toast.error(errorOccurred);
       setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
@@ -424,37 +440,27 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     setLoading(true);
     try {
-      let response;
+      let response: { userLiked: boolean; likesCount: number };
       if (userLiked) {
         // Already liked, so unlike
         response = await reviewService.unlikeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response?.status === code.success) {
-          toast.success(commentUnlikedSuccess)
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentUnlikedSuccess);
       } else {
         // Not liked yet, so like
         response = await reviewService.likeComment(
           data.databaseId,
           session.accessToken ?? ""
         );
-        if (response?.status === code.success) {
-          toast.success(commentLikedSuccess)
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentLikedSuccess);
       }
 
-      setUserLiked(response.data?.userLiked);
-      setLikesCount(response.data?.likesCount);
+      setUserLiked(response.userLiked);
+      setLikesCount(response.likesCount);
       if (onLikeChange) {
-        onLikeChange(response.data?.userLiked, response.data?.likesCount);
+        onLikeChange(response.userLiked, response.likesCount);
       }
     } catch (error) {
       console.error(error);
@@ -466,7 +472,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   const toggleReplyLike = async (replyId: number) => {
     // Find the reply by id or databaseId
-    const reply = replies.find(r => r.id === replyId || r.databaseId === replyId);
+    const reply = replies.find(r => r.id === String(replyId) || r.databaseId === replyId);
     const dbId = reply?.databaseId || replyId;
 
     if (replyLoading[dbId]) return;
@@ -477,31 +483,21 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setReplyLoading((prev) => ({ ...prev, [dbId]: true }));
     try {
-      let response: Record<string, unknown>;
+      let response: { userLiked: boolean; likesCount: number };
       if (reply?.userLiked) {
         response = await reviewService.unlikeComment(dbId, session.accessToken ?? "");
-        if (response?.status === code.success) {
-          toast.success(commentUnlikedSuccess)
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentUnlikedSuccess);
       } else {
         response = await reviewService.likeComment(dbId, session.accessToken ?? "");
-        if (response?.status === code.success) {
-          toast.success(commentLikedSuccess)
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentLikedSuccess);
       }
       setReplies(prev =>
         prev.map(r =>
-          (r.id === replyId || r.databaseId === dbId)
+          (r.id === String(replyId) || r.databaseId === dbId)
             ? {
               ...r,
-              userLiked: response.data?.userLiked,
-              commentLikes: response.data?.likesCount
+              userLiked: response.userLiked,
+              commentLikes: response.likesCount
             }
             : r
         )
@@ -539,7 +535,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       width={32}
                       height={32}
                       className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                      onClick={() => handleProfileClick(data.author?.node?.databaseId)}
+                      onClick={handleProfileClick}
                       type={FallbackImageType.Icon}
                     />
                   )}
@@ -622,7 +618,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 >
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
-                    data.reviewImages.map((image: Record<string, unknown>, index: number) => (
+                    data.reviewImages.map((image, index: number) => (
                       <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
@@ -664,7 +660,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 >
                   {Array.isArray(data?.reviewImages) &&
                     data.reviewImages.length > 0 ? (
-                    data.reviewImages.map((image: Record<string, unknown>, index: number) => (
+                    data.reviewImages.map((image, index: number) => (
                       <FallbackImage
                         key={index}
                         src={image?.sourceUrl}
@@ -711,7 +707,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                           width={32}
                           height={32}
                           className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                          onClick={() => handleProfileClick(data.author?.node?.id)}
+                          onClick={handleProfileClick}
                           type={FallbackImageType.Icon}
                         />
                       )
@@ -738,7 +734,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                       ) : (
                         <span
                           className="review-card__username !text-['Inter,_sans-serif'] !text-base !font-bold cursor-pointer hover:underline"
-                          onClick={() => handleProfileClick(data.author?.node?.id)}
+                          onClick={handleProfileClick}
                         >
                           {data.author?.name || data.author?.node?.name || "Unknown User"}
                         </span>
@@ -844,8 +840,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                         </div>
                         <div className="review-card__rating pb-4 border-b border-[#CACACA] flex items-center gap-2">
                           {Array.from({ length: 5 }, (_, i) => {
-                            const full = i + 1 <= data.reviewStars;
-                            const half = !full && i + 0.5 <= data.reviewStars;
+                            const rating = typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars;
+                            const full = i + 1 <= rating;
+                            const half = !full && i + 0.5 <= rating;
                             return full ? (
                               <Image
                                 src={STAR_FILLED}
@@ -905,7 +902,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                                        onClick={() => handleProfileClick(reply.author.node.id)}
+                                        onClick={handleProfileClick}
                                         type={FallbackImageType.Icon}
                                       />
                                     )
@@ -931,7 +928,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                         width={44}
                                         height={44}
                                         className="review-card__user-image !size-8 md:!size-11 cursor-pointer"
-                                        onClick={() => handleProfileClick(reply.id)}
+                                        onClick={handleProfileClick}
                                         type={FallbackImageType.Icon}
                                       />
                                     )
@@ -959,7 +956,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                                       ) : (
                                         <span
                                           className="review-card__username !text-xs md:!text-sm !font-semibold cursor-pointer hover:underline"
-                                          onClick={() => handleProfileClick(reply.author?.node?.id)}
+                                          onClick={handleProfileClick}
                                         >
                                           {reply.author?.node?.name || "Unknown User"}
                                         </span>
@@ -1110,7 +1107,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         hasFooter={true}
         footer={<></>}
         footerClass="!p-0 hidden"
-        overlayClass="!z-[1010]"
         wrapperClass="!z-[1010]"
         backdropClass="!z-[1010]"
       />

@@ -53,12 +53,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const checkEmailExists = async (email: string) => {
     const checkEmail = await userService.checkEmailExists(email);
     if (checkEmail.status == code.badRequest) {
-      setError(checkEmail.message);
+      setError(String(checkEmail.message || ""));
       return false;
     }
 
     if (checkEmail.exists) {
-      setError(checkEmail.message);
+      setError(String(checkEmail.message || ""));
       return false;
     }
 

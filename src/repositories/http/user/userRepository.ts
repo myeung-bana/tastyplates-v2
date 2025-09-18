@@ -9,9 +9,10 @@ const request = new HttpMethods();
 
 export class UserRepository implements UserRepo {
     async registerUser<T>(data: Partial<IRegisterData>): Promise<T> {
-        return request.POST('/wp-json/wp/v2/api/users', {
+        const response = await request.POST('/wp-json/wp/v2/api/users', {
             body: JSON.stringify(data)
         });
+        return response as T;
     }
 
     async login(credentials: { email: string; password: string }): Promise<IJWTResponse> {
@@ -21,31 +22,52 @@ export class UserRepository implements UserRepo {
                     username: credentials.email,
                     password: credentials.password
                 })
-            }, true);
+            });
     }
 
     async checkGoogleUser(email: string): Promise<CheckGoogleUserResponse> {
-        return request.POST('/wp-json/wp/v2/api/users/google-check',
-            { body: JSON.stringify({ email }) }, true);
+        const response = await request.POST('/wp-json/wp/v2/api/users/google-check',
+            { body: JSON.stringify({ email }) });
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            status: (response as any)?.status || 200,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            message: (response as any)?.message,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            token: (response as any)?.token,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            id: (response as any)?.id
+        };
     }
 
     async checkEmailExists<T>(email: string): Promise<T> {
-        return request.POST('/wp-json/wp/v2/api/users/check-email', {
+        const response = await request.POST('/wp-json/wp/v2/api/users/check-email', {
             body: JSON.stringify({ email })
-        }, true);
+        });
+        return response as T;
     }
 
     async checkUsernameExists(username: string): Promise<CheckEmailExistResponse> {
-        return request.POST('/wp-json/wp/v2/api/users/check-username', {
+        const response = await request.POST('/wp-json/wp/v2/api/users/check-username', {
             body: JSON.stringify({ username }),
-        }, true);
+        });
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            exists: (response as any)?.exists || false,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            status: (response as any)?.status || 200,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            message: (response as any)?.message
+        };
     }
 
     async getCurrentUser(token?: string): Promise<CurrentUserResponse> {
         const headers: HeadersInit = {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
-        return request.GET('/wp-json/wp/v2/api/users/current', { headers: headers }, true);
+        const response = await request.GET('/wp-json/wp/v2/api/users/current', { headers: headers });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async getUserById(
@@ -68,10 +90,12 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.PUT(`/wp-json/wp/v2/api/users/update-fields`, {
+        const response = await request.PUT(`/wp-json/wp/v2/api/users/update-fields`, {
             body: JSON.stringify(data),
             headers: headers
-        }, true);
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async validatePassword(password: string, token?: string): Promise<Record<string, unknown>> {
@@ -79,7 +103,7 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.POST('/wp-json/wp/v2/api/users/validate-password', { body: JSON.stringify({ password }), headers: headers }, true);
+        return request.POST('/wp-json/wp/v2/api/users/validate-password', { body: JSON.stringify({ password }), headers: headers });
     }
 
     async getUserPalates<T>(userId: number, token?: string): Promise<T> {
@@ -87,7 +111,8 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.GET(`/wp-json/restaurant/v1/user-palates?user_id=${userId}`, { headers: headers }, true);
+        const response = await request.GET(`/wp-json/restaurant/v1/user-palates?user_id=${userId}`, { headers: headers });
+        return response as T;
     }
 
     async getFollowingList<T>(userId: number, token?: string): Promise<T> {
@@ -95,7 +120,8 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.GET(`/wp-json/v1/following-list?user_id=${userId}`, { headers: headers }, true);
+        const response = await request.GET(`/wp-json/v1/following-list?user_id=${userId}`, { headers: headers });
+        return response as T;
     }
 
     async getFollowersList<T>(userId: number, token?: string): Promise<T> {
@@ -103,7 +129,8 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.GET(`/wp-json/v1/followers-list?user_id=${userId}`, { headers: headers }, true);
+        const response = await request.GET(`/wp-json/v1/followers-list?user_id=${userId}`, { headers: headers });
+        return response as T;
     }
 
     async followUser(userId: number, token?: string): Promise<followUserResponse> {
@@ -111,7 +138,9 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.POST(`/wp-json/v1/follow`, { body: JSON.stringify({ user_id: userId }), headers: headers }, true);
+        const response = await request.POST(`/wp-json/v1/follow`, { body: JSON.stringify({ user_id: userId }), headers: headers });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
@@ -119,7 +148,9 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.POST('/wp-json/v1/unfollow', { body: JSON.stringify({ user_id: userId }), headers: headers }, true);
+        const response = await request.POST('/wp-json/v1/unfollow', { body: JSON.stringify({ user_id: userId }), headers: headers });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
@@ -127,26 +158,32 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        return request.POST('/wp-json/v1/is-following', { body: JSON.stringify({ user_id: userId }), headers: headers }, true);
+        const response = await request.POST('/wp-json/v1/is-following', { body: JSON.stringify({ user_id: userId }), headers: headers });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
-        return request.POST(`/wp-json/wp/v2/api/users/forgot-password`, { body: formData, }, true);
+        const response = await request.POST(`/wp-json/wp/v2/api/users/forgot-password`, { body: formData, });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async verifyResetToken(token?: string): Promise<HttpResponse> {
-        return request.GET(`/wp-json/wp/v2/api/users/verify-reset-token?token=${token}`, {}, true);
+        const response = await request.GET(`/wp-json/wp/v2/api/users/verify-reset-token?token=${token}`, {});
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 
     async resetPassword(token: string, password: string): Promise<HttpResponse> {
-        return request.POST(
+        const response = await request.POST(
             '/wp-json/wp/v2/api/users/reset-password', {
             body: JSON.stringify({
                 token,
                 password,
             })
-        },
-            true
-        );
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return response as any;
     }
 }

@@ -4,6 +4,7 @@ import { BiLike } from "react-icons/bi";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import PhotoSlider from "./Restaurant/Details/PhotoSlider";
+import { GraphQLReview } from "@/types/graphql";
 
 // Styles
 import "@/styles/pages/_restaurant-details.scss";
@@ -17,7 +18,6 @@ import ReviewDetailModal from "./ReviewDetailModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
-import { responseStatusCode as code } from "@/constants/response";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
@@ -164,35 +164,25 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
 
     setLoading(true);
     try {
-      let response;
+      let response: { userLiked: boolean; likesCount: number };
       if (userLiked) {
         // Already liked, so unlike
         response = await reviewService.unlikeComment(
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response?.status === code.success) {
-          toast.success(commentUnlikedSuccess);
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success(commentUnlikedSuccess);
       } else {
         // Not liked yet, so like
         response = await reviewService.likeComment(
           review.databaseId,
           session.accessToken ?? ""
         );
-        if (response?.status === code.success) {
-          toast.success("Liked comment successfully!");
-        } else {
-          toast.error(updateLikeFailed);
-          return;
-        }
+        toast.success("Liked comment successfully!");
       }
 
-      setUserLiked(response.data?.userLiked);
-      setLikesCount(response.data?.likesCount);
+      setUserLiked(response.userLiked);
+      setLikesCount(response.likesCount);
     } catch (error) {
       console.error(error);
       toast.error(updateLikeFailed);
@@ -388,7 +378,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
               setIsModalOpen(false);
               setSelectedPhotoIndex(0);
             }}
-            data={mapToReviewedDataProps(review)}
+            data={mapToReviewedDataProps(review) as unknown as GraphQLReview}
             initialPhotoIndex={selectedPhotoIndex}
             userLiked={userLiked}
             likesCount={likesCount}

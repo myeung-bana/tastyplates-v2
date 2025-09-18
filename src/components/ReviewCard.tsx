@@ -5,6 +5,7 @@ import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
 import {
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
+import { GraphQLReview } from "@/types/graphql";
 import { Fragment, useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link"; // Import Link
@@ -33,7 +34,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
       <ReviewDetailModal
-        data={data}
+        data={data as unknown as GraphQLReview}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />

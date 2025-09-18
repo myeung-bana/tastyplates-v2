@@ -1,16 +1,38 @@
 'use client'
 import { ReviewService } from "@/services/Reviews/reviewService";
+import { GraphQLReview } from "@/types/graphql";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard from "./ReviewCard";
 import "@/styles/pages/_reviews.scss";
 import { Masonry } from "masonic";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 const reviewService = new ReviewService();
 
+// Helper function to convert GraphQLReview to ReviewedDataProps
+const mapToReviewedDataProps = (review: GraphQLReview): ReviewedDataProps => {
+  return {
+    databaseId: review.databaseId,
+    id: review.id,
+    reviewMainTitle: review.reviewMainTitle,
+    commentLikes: String(review.commentLikes),
+    userLiked: review.userLiked,
+    content: review.content,
+    uri: "", // Not available in GraphQLReview
+    reviewStars: String(review.reviewStars),
+    date: review.date,
+    reviewImages: review.reviewImages,
+    palates: review.palates,
+    userAvatar: review.userAvatar,
+    author: review.author,
+    userId: review.author.node.databaseId,
+    commentedOn: review.commentedOn,
+  };
+};
+
 const Reviews = () => {
-  const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
+  const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const { data: session } = useSession();
   // Removed unused state variables
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -127,7 +149,7 @@ const Reviews = () => {
           See what others are saying about their dining experiences
         </p>
 
-        <Masonry items={reviews} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
+        <Masonry items={reviews.map(mapToReviewedDataProps)} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && !hasReachedLimit && (
             <>

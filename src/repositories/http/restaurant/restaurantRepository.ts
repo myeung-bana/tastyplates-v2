@@ -92,13 +92,15 @@ export class RestaurantRepository implements RestaurantRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        const res: Response = await request.POST('/wp-json/custom/v1/listing', { body: JSON.stringify(payload), headers: headers });
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || "Failed to submit listing and review");
+        const res = await request.POST('/wp-json/custom/v1/listing', { body: JSON.stringify(payload), headers: headers });
+        
+        // Check if the response indicates an error
+        if (res.error || Number(res.status) >= 400) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            throw new Error((res as any).error || "Failed to submit listing and review");
         }
 
-        return res.json();
+        return res;
     }
 
 
@@ -114,8 +116,7 @@ export class RestaurantRepository implements RestaurantRepo {
             {
                 headers: headers,
                 credentials: "include",
-            },
-            true
+            }
         );
     }
 
@@ -125,20 +126,20 @@ export class RestaurantRepository implements RestaurantRepo {
         accessToken?: string
     ): Promise<Record<string, unknown>> {
         try {
-            const response: Response = await request.PUT(`/wp-json/custom/v1/listing/${id}`, {
+            const response = await request.PUT(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
                 },
                 body: JSON.stringify(listingUpdateData),
             });
 
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Backend error during update:', errorData);
-                throw new Error(errorData.message || "Failed to update restaurant listing");
+            // Check if the response indicates an error
+            if (response.error || Number(response.status) >= 400) {
+                console.error('Backend error during update:', response);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                throw new Error((response as any).message || "Failed to update restaurant listing");
             }
-            return await response.json();
+            return response;
 
         } catch (error) {
             console.error('Error updating restaurant listing in repository:', error);
@@ -148,39 +149,25 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
         try {
-            const response: Response = await request.DELETE(`/wp-json/custom/v1/listing/${id}`, {
+            const response = await request.DELETE(`/wp-json/custom/v1/listing/${id}`, {
                 headers: {
                     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
                 },
             });
 
-            if (!response.ok) {
-                // If response is not ok, still try to get text to see error details
-                const errorText = await response.text();
-                console.error('Raw server error response on delete (not ok):', errorText);
-                try {
-                    const errorData = JSON.parse(errorText);
-                    throw new Error(errorData.message || "Failed to delete restaurant listing");
-                } catch {
-                    throw new Error(`Failed to delete restaurant listing: Server responded with non-JSON content or error. Response: ${errorText}`);
-                }
+            // Check if the response indicates an error
+            if (response.error || Number(response.status) >= 400) {
+                console.error('Backend error during delete:', response);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                throw new Error((response as any).message || "Failed to delete restaurant listing");
             }
 
-            // If response is ok, attempt to parse JSON, but catch if it's not JSON
-            try {
-                // Check if the response actually has content before trying to parse as JSON
-                const text = await response.text();
-                if (!text) {
-                    // If the response is empty, assume success without JSON content
-                    return { success: true, deleted: id }; // Return a custom success object
-                }
-                // Try parsing as JSON
-                return JSON.parse(text);
-            } catch {
-                // If parsing fails, it means even a successful response contained non-JSON
-                const rawResponseText = await response.text(); // Re-read if needed, or use the `text` from above
-                console.error('Raw server response on delete (ok but not JSON):', rawResponseText);
-                throw new Error(`Delete successful but server response was not valid JSON. Please check server logs for warnings/notices. Raw response: ${rawResponseText}`);
+            // If response is ok, return the response or a success object
+            if (response && Object.keys(response).length > 0) {
+                return response;
+            } else {
+                // If the response is empty, assume success without JSON content
+                return { success: true, deleted: id }; // Return a custom success object
             }
 
         } catch (error) {
@@ -195,7 +182,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 headers: {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
-            }, true);
+            });
             return response;
         } catch (error) {
             console.error("Failed to fetch listing pending", error);
@@ -203,47 +190,48 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string): Promise<Record<string, unknown>> {
         const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
             },
             body: JSON.stringify(data),
             credentials: "include",
-        }, jsonResponse);
+        });
 
         return response;
     }
 
-    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+    async getCheckInRestaurant(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
         const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
             },
             credentials: "include",
-        }, jsonResponse);
+        });
 
         return response;
     }
 
-    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+    async createCheckIn(data: CheckInData, accessToken?: string): Promise<Record<string, unknown>> {
         const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
             headers: {
                 ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
             },
             body: JSON.stringify(data),
             credentials: "include",
-        }, jsonResponse);
+        });
 
         return response;
     }
 
     async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
         try {
-            const res: Response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
-            const data = await res.json();
-            if (data && Array.isArray(data.reviews)) {
-                return data.reviews.length;
+            const data = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (data && Array.isArray((data as any).reviews)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                return (data as any).reviews.length;
             }
             return 0;
         } catch (error) {

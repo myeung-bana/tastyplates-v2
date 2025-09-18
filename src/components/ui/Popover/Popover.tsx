@@ -1,20 +1,26 @@
 import { cn } from "@/lib/utils";
 import {Popover, PopoverTrigger, PopoverContent} from "@heroui/popover";
 import { useState } from "react";
+import { ReactNode } from "react";
 
-export default function CustomPopover(props: Record<string, unknown>) {
-  const [isOpen, setIsOpen] = useState(props.isOpen);
+interface CustomPopoverProps {
+  align?: string;
+  isOpen?: boolean;
+  setIsOpen?: (isOpen: boolean) => void;
+  onClose?: () => void;
+  trigger: ReactNode;
+  content: ReactNode;
+}
 
-  // const handleOpenChange = (open) => {
-  //   setIsOpen(open);
-  // };
+export default function CustomPopover(props: CustomPopoverProps) {
+  const [localIsOpen, setLocalIsOpen] = useState(props.isOpen);
+  const isOpen = props.isOpen !== undefined ? props.isOpen : localIsOpen;
+  const setIsOpen = props.setIsOpen || setLocalIsOpen;
 
-  // const handleClose = () => {
-  //   setIsOpen(false);
-  // };
   return (
     <Popover
-      placement={props.align}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      placement={props.align as unknown as any}
       classNames={{
         content: cn("flex"),
       }}

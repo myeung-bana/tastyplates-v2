@@ -1,0 +1,174 @@
+// Centralized GraphQL type definitions for type consistency
+
+export interface GraphQLResponse<T> {
+  data: T;
+  errors?: GraphQLError[];
+}
+
+export interface GraphQLError {
+  message: string;
+  locations?: Array<{
+    line: number;
+    column: number;
+  }>;
+  path?: string[];
+}
+
+export interface PageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+// Review Types
+export interface GraphQLReview {
+  id: string;
+  databaseId: number;
+  reviewMainTitle: string;
+  commentLikes: number;
+  userLiked: boolean;
+  reviewStars: string | number;
+  date: string;
+  content: string;
+  reviewImages: GraphQLReviewImage[];
+  palates: string;
+  userAvatar?: string;
+  author: GraphQLAuthor;
+  commentedOn: GraphQLCommentedOn;
+  recognitions?: string[];
+  userId?: string;
+}
+
+export interface GraphQLReviewImage {
+  databaseId: number;
+  id: string;
+  sourceUrl: string;
+}
+
+export interface GraphQLAuthor {
+  name: string;
+  node: {
+    id: string;
+    databaseId: number;
+    name: string;
+    avatar: {
+      url: string;
+    };
+  };
+}
+
+export interface GraphQLCommentedOn {
+  node: {
+    databaseId: number;
+    title: string;
+    slug: string;
+    fieldMultiCheck90?: string;
+    featuredImage: {
+      node: {
+        databaseId: string;
+        altText: string;
+        mediaItemUrl: string;
+        mimeType: string;
+        mediaType: string;
+      };
+    };
+  };
+}
+
+// Restaurant Types
+export interface GraphQLRestaurant {
+  id: string;
+  databaseId: number;
+  title: string;
+  slug: string;
+  content: string;
+  priceRange: string;
+  averageRating: number;
+  listingStreet: string;
+  status: string;
+  palates: {
+    nodes: Array<{
+      name: string;
+      slug: string;
+    }>;
+  };
+  featuredImage?: {
+    node: {
+      sourceUrl: string;
+    };
+  };
+  listingCategories: {
+    nodes: Array<{
+      id: number;
+      name: string;
+      slug: string;
+    }>;
+  };
+  listingDetails: {
+    googleMapUrl: {
+      streetAddress: string;
+    };
+  };
+  isFavorite?: boolean;
+  ratingsCount?: number;
+}
+
+// User Types
+export interface GraphQLUser {
+  id: string;
+  databaseId: number;
+  name: string;
+  nicename: string;
+  avatar: {
+    url: string;
+  };
+}
+
+// API Response Types
+export interface ReviewsResponse {
+  reviews: GraphQLReview[];
+  pageInfo: PageInfo;
+}
+
+export interface RestaurantsResponse {
+  nodes: GraphQLRestaurant[];
+  pageInfo: PageInfo;
+}
+
+// Component Props Types
+export interface ReviewBlockProps {
+  review: {
+    databaseId: number;
+    id: string;
+    authorId: number;
+    restaurantId: string;
+    user: string;
+    rating: number;
+    date: string;
+    title?: string;
+    comment: string;
+    images: string[];
+    userImage: string;
+    recognitions?: string[];
+    palateNames?: string[];
+    commentLikes?: number;
+    userLiked?: boolean;
+  };
+}
+
+export interface RestaurantCardProps {
+  restaurant: {
+    id: string;
+    databaseId: number;
+    slug: string;
+    name: string;
+    image: string;
+    rating: number;
+    palatesNames?: string[];
+    streetAddress?: string;
+    countries: string;
+    priceRange: string;
+    averageRating?: number;
+    ratingsCount?: number;
+    status?: string;
+  };
+}

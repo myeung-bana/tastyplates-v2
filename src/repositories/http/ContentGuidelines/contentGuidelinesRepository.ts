@@ -2,9 +2,10 @@ import { ContentGuidelinesRepo } from "@/repositories/interface/user/contentGuid
 
 export class ContentGuidelinesRepository implements ContentGuidelinesRepo {
   async fetchContentGuidelines() {
-    return fetch(
+    const response = await fetch(
       `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/content-guidelines`,
       { cache: "no-store" }
     );
+    return await response.json() as Record<string, unknown>;
   }
 }

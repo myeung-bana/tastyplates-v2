@@ -482,6 +482,7 @@ const Form = () => {
         header={<></>}
         content={formContent}
         isOpen={isMobile}
+        setIsOpen={setIsMobile}
         backdropClass="bg-white backdrop-opacity-100"
         baseClass="h-full md:h-3/4 !max-w-[1280px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
         closeButtonClass="!top-5 md:!top-6 !right-unset !left-3 z-10"

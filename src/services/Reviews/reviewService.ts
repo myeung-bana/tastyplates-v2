@@ -54,7 +54,7 @@ export class ReviewService {
     async fetchReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
         try {
             const drafts = await reviewRepo.getReviewDrafts(accessToken);
-            return drafts;
+            return drafts as unknown as Record<string, unknown>[];
         } catch (error) {
             console.error("Failed to fetch review drafts", error);
             throw new Error('Failed to fetch review drafts');
@@ -80,7 +80,7 @@ export class ReviewService {
         }
     }
 
-    async likeComment(commentId: number, accessToken: string) {
+    async likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
         try {
             // Return the backend response so the component receives it!
             return await reviewRepo.likeComment(commentId, accessToken);
@@ -90,7 +90,7 @@ export class ReviewService {
         }
     }
 
-    async unlikeComment(commentId: number, accessToken: string): Promise<{ status: number; data: Record<string, unknown> }> {
+    async unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
         try {
             // Return the backend response so the component receives it!
             return await reviewRepo.unlikeComment(commentId, accessToken);

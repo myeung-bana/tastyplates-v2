@@ -10,8 +10,30 @@ import {
 import { MdClose } from "react-icons/md";
 import { useRouter } from "next/navigation";
 import { HOME } from "@/constants/pages";
+import { ReactNode } from "react";
 
-export default function CustomModal(props: Record<string, unknown>) {
+interface CustomModalProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  header: ReactNode;
+  content: ReactNode;
+  hasFooter?: boolean;
+  footer?: ReactNode;
+  footerClass?: string;
+  onOpenChange?: (isOpen: boolean) => void;
+  baseClass?: string;
+  headerClass?: string;
+  contentClass?: string;
+  hasCustomCloseButton?: boolean;
+  closeButtonClass?: string;
+  backdropClass?: string;
+  wrapperClass?: string;
+  customButton?: ReactNode;
+  hasTrigger?: boolean;
+  trigger?: ReactNode;
+}
+
+export default function CustomModal(props: CustomModalProps) {
   const {
     isOpen,
     setIsOpen,
