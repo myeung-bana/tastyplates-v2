@@ -446,4 +446,5 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   );
 };
 
+export { mapToReviewedDataProps };
 export default ReviewBlock;

@@ -5,11 +5,33 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
-import ReviewBlock from "./ReviewBlock";
+import ReviewBlock, { mapToReviewedDataProps } from "./ReviewBlock";
+
+// Helper to map Record<string, unknown> to ReviewBlockProps["review"]
+function toReviewBlockReview(raw: Record<string, unknown>): any {
+  return {
+    databaseId: raw.databaseId as number,
+    id: raw.id as string,
+    authorId: (raw.author as any)?.node?.databaseId ?? raw.authorId ?? 0,
+    restaurantId: (raw.commentedOn as any)?.node?.databaseId ?? raw.restaurantId ?? '',
+    user: (raw.author as any)?.node?.name ?? raw.user ?? '',
+    rating: Number(raw.reviewStars ?? raw.rating ?? 0),
+    date: raw.date as string,
+    title: raw.reviewMainTitle as string,
+    comment: raw.content as string,
+    images: Array.isArray(raw.reviewImages) ? (raw.reviewImages as any[]).map(img => img.sourceUrl) : [],
+    userImage: (raw.author as any)?.node?.avatar?.url ?? raw.userAvatar ?? '',
+    recognitions: raw.recognitions as string[] | undefined,
+    palateNames: typeof raw.palates === 'string' ? (raw.palates as string).split('|') : [],
+    commentLikes: Number(raw.commentLikes ?? 0),
+    userLiked: Boolean(raw.userLiked),
+  };
+}
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/user/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import CustomPopover from "./ui/Popover/Popover";
+import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 
 interface CustomType {
   text: string,
@@ -49,9 +71,12 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
   const PHOTOS_PER_PAGE = 18;
   // Flattened photo items from allReviews
   const allPhotoItems = allReviews.flatMap((review) => {
-    if (!review.reviewImages || (review.reviewImages as Record<string, unknown>[]).length === 0) return [];
-    return (review.reviewImages as Record<string, unknown>[]).map((img: Record<string, unknown>, imgIndex: number) => ({
-      image: img,
+    if (!review.reviewImages || !Array.isArray(review.reviewImages) || review.reviewImages.length === 0) return [];
+    return (review.reviewImages as { sourceUrl: string; id?: string | number }[]).map((img, imgIndex) => ({
+      image: {
+        sourceUrl: String(img.sourceUrl ?? ''),
+        id: img.id ?? undefined,
+      },
       review,
       imageIndex: imgIndex,
     }));
@@ -235,10 +260,9 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
                 render={({ data }) => (
                   <Photos
                     key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
-                    data={data.review as unknown as Record<string, unknown>}
+                    data={mapToReviewedDataProps(toReviewBlockReview(data.review))}
                     image={data.image}
                     index={data.imageIndex}
-                    width={304}
                   />
                 )}
                 columnGutter={32}
