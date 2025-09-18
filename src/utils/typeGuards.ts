@@ -45,23 +45,30 @@ export function isGraphQLCommentedOn(data: unknown): data is GraphQLCommentedOn 
 }
 
 export function isGraphQLReview(data: unknown): data is GraphQLReview {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('id' in data) ||
+    !('databaseId' in data) ||
+    !('reviewMainTitle' in data) ||
+    !('date' in data) ||
+    !('content' in data) ||
+    !('author' in data) ||
+    !('commentedOn' in data)
+  ) {
+    return false;
+  }
+
+  const review = data as GraphQLReview;
+  
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    'id' in data &&
-    'databaseId' in data &&
-    'reviewMainTitle' in data &&
-    'date' in data &&
-    'content' in data &&
-    'author' in data &&
-    'commentedOn' in data &&
-    typeof (data as GraphQLReview).id === 'string' &&
-    typeof (data as GraphQLReview).databaseId === 'number' &&
-    typeof (data as GraphQLReview).reviewMainTitle === 'string' &&
-    typeof (data as GraphQLReview).date === 'string' &&
-    typeof (data as GraphQLReview).content === 'string' &&
-    isGraphQLAuthor((data as GraphQLReview).author) &&
-    isGraphQLCommentedOn((data as GraphQLReview).commentedOn)
+    typeof review.id === 'string' &&
+    typeof review.databaseId === 'number' &&
+    typeof review.reviewMainTitle === 'string' &&
+    typeof review.date === 'string' &&
+    typeof review.content === 'string' &&
+    isGraphQLAuthor(review.author) &&
+    isGraphQLCommentedOn(review.commentedOn)
   );
 }
 

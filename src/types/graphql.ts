@@ -23,6 +23,7 @@ export interface PageInfo {
 export interface GraphQLReview {
   id: string;
   databaseId: number;
+  uri?: string;
   reviewMainTitle: string;
   commentLikes: number;
   userLiked: boolean;
@@ -50,6 +51,7 @@ export interface GraphQLAuthor {
     id: string;
     databaseId: number;
     name: string;
+    nicename?: string;
     avatar: {
       url: string;
     };
