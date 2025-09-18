@@ -151,7 +151,12 @@ interface CustomType {
 const userService = new UserService()
 const reviewService = new ReviewService();
 
-export default function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
+interface RestaurantReviewsProps {
+  restaurantId: number;
+  onReviewsUpdate?: (reviews: GraphQLReview[]) => void;
+}
+
+export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: RestaurantReviewsProps) {
   // Session and user state
   const { data: session } = useSession();
   const currentUserId = session?.user?.id || null;
@@ -243,6 +248,13 @@ export default function RestaurantReviews({ restaurantId }: { restaurantId: numb
     fetchAllReviews();
     setCurrentPage(1);
   }, [restaurantId, currentTab, session, fetchAllReviews]);
+
+  // Notify parent component when reviews are updated
+  useEffect(() => {
+    if (onReviewsUpdate && allReviews.length > 0) {
+      onReviewsUpdate(allReviews);
+    }
+  }, [allReviews, onReviewsUpdate]);
 
   // Tab change handler
   const handleTabChange = (tabId: "all" | "photos") => {

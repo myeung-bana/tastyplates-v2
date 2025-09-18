@@ -1,9 +1,9 @@
+@import "./base/variables";
+@import "./base/typography";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "base/variables";
-@import "base/typography";
 
 :root {
   --background: #ffffff;

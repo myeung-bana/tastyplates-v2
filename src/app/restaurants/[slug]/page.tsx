@@ -26,6 +26,13 @@ import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { responseStatusCode as code } from "@/constants/response";
 import { Listing } from "@/interfaces/restaurant/restaurant";
+import { 
+  calculateRatingMetrics, 
+  formatRating, 
+  getRatingDisplayText,
+  RatingMetrics 
+} from "@/utils/reviewUtils";
+import { GraphQLReview } from "@/types/graphql";
 
 // Removed unused type
 
@@ -165,12 +172,21 @@ export default function RestaurantDetail() {
   const [restaurant, setRestaurant] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [restaurantReviews, setRestaurantReviews] = useState<GraphQLReview[]>([]);
+  const [allReviews, setAllReviews] = useState<GraphQLReview[]>([]);
+  const [ratingMetrics, setRatingMetrics] = useState<RatingMetrics>({
+    overallRating: 0,
+    overallCount: 0,
+    searchRating: 0,
+    searchCount: 0
+  });
   const router = useRouter();
   const searchParams = useSearchParams();
   const palatesParam = searchParams?.get("ethnic") || null;
 
   const params = useParams();
   const slug = params?.slug as string;
+
 
   useEffect(() => {
     if (!slug) return;
@@ -224,6 +240,18 @@ export default function RestaurantDetail() {
       });
   }, [slug, palatesParam]);
 
+  // Calculate rating metrics when data changes
+  useEffect(() => {
+    if (restaurant && restaurantReviews.length > 0) {
+      const metrics = calculateRatingMetrics(
+        restaurantReviews,
+        allReviews,
+        palatesParam
+      );
+      setRatingMetrics(metrics);
+    }
+  }, [restaurant, restaurantReviews, allReviews, palatesParam]);
+
   // Removed searchPalateStats and palateStats as they don't exist in Listing interface
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude || "0");
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude || "0");
@@ -232,13 +260,6 @@ export default function RestaurantDetail() {
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
 
-  // Removed unused variable
-  // Removed unused variable
-
-  // Removed unused variable
-  // Removed unused review filtering
-
-  // Removed unused rating calculations
 
   const handleReviewSubmit = () => {
     // TODO: Implement review submission
@@ -354,25 +375,34 @@ export default function RestaurantDetail() {
                     <div className="rating-column">
                       <h3>Overall Rating</h3>
                       <div className="rating-value">
-                        {/* <FiStar className="fill-yellow-500" /> */}
                         <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                          {(restaurant.ratingsCount || 0) > 0
-                            ? (Number(restaurant.averageRating) % 1 === 0
-                              ? Number(restaurant.averageRating).toFixed(0)
-                              : restaurant.averageRating.toFixed(2))
-                            : "0"}
+                          {formatRating(ratingMetrics.overallRating)}
                         </span>
                       </div>
                       <span className="review-count">
-                        {(restaurant.ratingsCount || 0) > 0
-                          ? `${restaurant.ratingsCount} reviews`
+                        {ratingMetrics.overallCount > 0
+                          ? `${ratingMetrics.overallCount} reviews`
                           : "No reviews yet"}
                       </span>
                     </div>
+                    
                     <div className="h-[85%] border-l border-[#CACACA]"></div>
-                    {/* Removed Search Rating section as searchPalateStats doesn't exist in Listing interface */}
-                    <div className="h-[85%] border-l border-[#CACACA]"></div>
-                    {/* Removed My Preference section as palateStats doesn't exist in Listing interface */}
+                    
+                    <div className="rating-column">
+                      <h3>Search Rating</h3>
+                      <div className="rating-value">
+                        <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
+                          {formatRating(ratingMetrics.searchRating)}
+                        </span>
+                      </div>
+                      <span className="review-count">
+                        {palatesParam 
+                          ? (ratingMetrics.searchCount > 0
+                              ? `${ratingMetrics.searchCount} reviews from ${palatesParam}`
+                              : `No reviews from ${palatesParam}`)
+                          : "No search term provided"}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col justify-center items-center border border-[#CACACA] rounded-b-2xl lg:rounded-none lg:rounded-r-3xl pt-4 pb-2">
@@ -491,7 +521,15 @@ export default function RestaurantDetail() {
             ))}
           </div> */}
             <div className="restaurant-detail__reviews">
-              <RestaurantReviews restaurantId={restaurant.databaseId || 0} />
+              <RestaurantReviews 
+                restaurantId={restaurant.databaseId || 0} 
+                onReviewsUpdate={(reviews) => {
+                  setRestaurantReviews(reviews);
+                  // For now, we'll use the same reviews for allReviews
+                  // In a real implementation, you'd fetch all reviews from the system
+                  setAllReviews(reviews);
+                }}
+              />
             </div>
           </div>
         </div>
