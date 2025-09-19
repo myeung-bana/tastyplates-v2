@@ -1,0 +1,486 @@
+// Restaurant Details V2 - Airbnb-inspired layout
+.restaurant-detail-v2 {
+  // Hero section
+  .hero-section {
+    position: relative;
+    overflow: hidden;
+    
+    .hero-image {
+      transition: transform 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+  }
+
+  // Image gallery
+  .image-gallery {
+    .gallery-main {
+      position: relative;
+      border-radius: 1rem 1rem 0 0;
+      overflow: hidden;
+      
+      .gallery-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.1) 0%,
+          transparent 20%,
+          transparent 80%,
+          rgba(0, 0, 0, 0.2) 100%
+        );
+        pointer-events: none;
+      }
+      
+      .gallery-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        cursor: pointer;
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.7);
+        }
+        
+        &.nav-left {
+          left: 1rem;
+        }
+        
+        &.nav-right {
+          right: 1rem;
+        }
+      }
+      
+      &:hover .gallery-nav {
+        opacity: 1;
+      }
+    }
+    
+    .gallery-thumbnails {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: white;
+      border-radius: 0 0 1rem 1rem;
+      overflow-x: auto;
+      
+      .thumbnail {
+        flex-shrink: 0;
+        width: 4rem;
+        height: 4rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.3s ease;
+        
+        &.active {
+          border-color: #000;
+        }
+        
+        &:hover {
+          border-color: #666;
+        }
+      }
+    }
+  }
+
+  // Rating metrics
+  .rating-metrics {
+    .metric-card {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      
+      .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+      }
+      
+      .metric-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+      }
+      
+      .metric-icon {
+        color: #f59e0b;
+        margin-right: 0.5rem;
+      }
+    }
+  }
+
+  // Restaurant info
+  .restaurant-info {
+    .info-header {
+      margin-bottom: 1.5rem;
+      
+      .restaurant-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+        line-height: 1.2;
+      }
+      
+      .restaurant-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+        
+        .meta-item {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          
+          .meta-icon {
+            color: #f59e0b;
+          }
+        }
+      }
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      
+      .btn-primary {
+        background: #000;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        
+        &:hover {
+          background: #374151;
+        }
+      }
+      
+      .btn-secondary {
+        background: white;
+        color: #374151;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        border: 1px solid #d1d5db;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+      }
+    }
+  }
+
+  // Details sections
+  .details-section {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 1rem;
+    }
+    
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f3f4f6;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .detail-icon {
+        color: #6b7280;
+        flex-shrink: 0;
+      }
+      
+      .detail-text {
+        color: #374151;
+        font-size: 0.875rem;
+      }
+    }
+    
+    .cuisine-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      
+      .cuisine-tag {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  // Map section
+  .map-section {
+    .map-container {
+      height: 16rem;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+  }
+
+  // Reviews section
+  .reviews-section {
+    .reviews-header {
+      display: flex;
+      align-items: center;
+      justify-content: between;
+      margin-bottom: 1.5rem;
+      
+      .reviews-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+      }
+    }
+  }
+
+  // Sticky sidebar
+  .sticky-sidebar {
+    .sidebar-card {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      margin-bottom: 1.5rem;
+      
+      .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 1rem;
+      }
+      
+      .quick-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        
+        .action-btn {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border-radius: 0.75rem;
+          border: none;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          
+          &.btn-primary {
+            background: #000;
+            color: white;
+            
+            &:hover {
+              background: #374151;
+            }
+          }
+          
+          &.btn-secondary {
+            background: #f9fafb;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            
+            &:hover {
+              background: #f3f4f6;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Responsive design
+  @media (max-width: 768px) {
+    .restaurant-info {
+      .info-header {
+        .restaurant-title {
+          font-size: 1.5rem;
+        }
+        
+        .restaurant-meta {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+        
+        .btn-primary,
+        .btn-secondary {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    }
+    
+    .rating-metrics {
+      .metric-card {
+        padding: 1rem;
+        
+        .metric-value {
+          font-size: 2rem;
+        }
+      }
+    }
+  }
+}
+
+// Full screen gallery modal
+.gallery-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: black;
+  
+  .modal-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .modal-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .modal-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 3rem;
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      
+      &:hover {
+        background: rgba(0, 0, 0, 0.7);
+      }
+      
+      &.nav-left {
+        left: 1rem;
+      }
+      
+      &.nav-right {
+        right: 1rem;
+      }
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      
+      &:hover {
+        background: rgba(0, 0, 0, 0.7);
+      }
+    }
+    
+    .modal-thumbnails {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 0 1rem;
+      
+      .thumbnail {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.3s ease;
+        flex-shrink: 0;
+        
+        &.active {
+          border-color: white;
+        }
+        
+        &:hover {
+          border-color: #ccc;
+        }
+      }
+    }
+    
+    .modal-counter {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      color: white;
+      font-size: 1.125rem;
+      font-weight: 500;
+    }
+  }
+}

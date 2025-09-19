@@ -321,29 +321,33 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
             </div>
           ) : paginatedReviews.length ? (
             <>
-              {paginatedReviews.map((review) => (
-                <ReviewBlock
-                  key={review.databaseId.toString()}
-                  review={{
-                    databaseId: review.databaseId,
-                    id: review.id,
-                    authorId: review.author?.node?.databaseId ?? 0,
-                    restaurantId: restaurantId.toString(),
-                    user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
-                    rating: Number(review.reviewStars) || 0,
-                    date: review.date,
-                    title: review.reviewMainTitle,
-                    comment: review.content,
-                    images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
-                    userImage: review.userAvatar ?? DEFAULT_USER_ICON,
-                    recognitions: review.recognitions ?? [],
-                    palateNames: typeof review.palates === "string"
-                      ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
-                      : [],
-                    commentLikes: review.commentLikes ?? 0,
-                    userLiked: review.userLiked ?? false,
-                  }}
-                />
+              {paginatedReviews.map((review, index) => (
+                <div key={review.databaseId.toString()}>
+                  <ReviewBlock
+                    review={{
+                      databaseId: review.databaseId,
+                      id: review.id,
+                      authorId: review.author?.node?.databaseId ?? 0,
+                      restaurantId: restaurantId.toString(),
+                      user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
+                      rating: Number(review.reviewStars) || 0,
+                      date: review.date,
+                      title: review.reviewMainTitle,
+                      comment: review.content,
+                      images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
+                      userImage: review.userAvatar ?? DEFAULT_USER_ICON,
+                      recognitions: review.recognitions ?? [],
+                      palateNames: typeof review.palates === "string"
+                        ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
+                        : [],
+                      commentLikes: review.commentLikes ?? 0,
+                      userLiked: review.userLiked ?? false,
+                    }}
+                  />
+                  {index < paginatedReviews.length - 1 && (
+                    <div className="border-t border-gray-200 my-6"></div>
+                  )}
+                </div>
               ))}
               <Pagination
                 currentPage={currentPage}

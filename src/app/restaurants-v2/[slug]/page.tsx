@@ -2,10 +2,10 @@
 import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { FiMapPin } from "react-icons/fi";
-import { useEffect, useState } from "react";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
-import "@/styles/pages/_restaurant-details.scss";
 import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { RestaurantService } from "@/services/restaurant/restaurantService";
+import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/RestaurantReviews";
 import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
@@ -18,16 +18,19 @@ import { ADD_REVIEW } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
-import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { 
   calculateRatingMetrics, 
-  RatingMetrics 
+  type RatingMetrics,
+  calculateCommunityRecognitionMetrics,
+  type CommunityRecognitionMetrics
 } from "@/utils/reviewUtils";
 import { GraphQLReview } from "@/types/graphql";
+import ImageGallery from "@/components/Restaurant/ImageGallery";
+import RatingSection from "@/components/Restaurant/RatingSection";
+import CommunityRecognitionSection from "@/components/Restaurant/CommunityRecognitionSection";
 
-
-
+// Save Restaurant Button Component
 function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const { data: session } = useSession();
   const [saved, setSaved] = useState(false);
@@ -35,31 +38,19 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    if (!session || !restaurantSlug || initialized || !session.user?.id) return;
-    const fetchFavoriteListing = async () => {
-      try {
-        const restaurantService = new RestaurantService();
-        const response = await restaurantService.fetchFavoritingListing(session.user!.id as number, session.accessToken);
-        if (isMounted) {
-          setSaved(Boolean((response as { isFavorite?: boolean }).isFavorite));
-          setInitialized(true);
-        }
-      } catch (error) {
-        console.error("Error checking favorite status:", error);
-        if (isMounted) {
-          setInitialized(true);
-        }
-      }
-    };
-    fetchFavoriteListing();
-    return () => {
-      isMounted = false;
-    };
-  }, [session, restaurantSlug, initialized]);
+  const restaurantService = useMemo(() => new RestaurantService(), []);
 
-  const toggleFavorite = async () => {
+  const checkFavoriteStatus = useCallback(async () => {
+    if (!session?.accessToken || !session?.user?.id) return;
+    try {
+      const response = await restaurantService.fetchFavoritingListing(session.user.id, session.accessToken);
+      setSaved(Boolean((response as { isFavorite?: boolean }).isFavorite));
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+    }
+  }, [session?.accessToken, session?.user?.id, restaurantService]);
+
+  const toggleFavorite = useCallback(async () => {
     if (!session?.user) {
       // Redirect to signin or show signin modal
       window.location.href = '/auth/signin';
@@ -75,7 +66,6 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     setError(null);
 
     try {
-      const restaurantService = new RestaurantService();
       if (saved) {
         await restaurantService.createFavoriteListing(
           { restaurant_slug: restaurantSlug, action: "remove" },
@@ -97,7 +87,14 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [saved, session?.user, session?.accessToken, restaurantSlug, restaurantService]);
+
+  useEffect(() => {
+    if (session?.user && !initialized) {
+      checkFavoriteStatus();
+      setInitialized(true);
+    }
+  }, [session?.user, initialized, checkFavoriteStatus]);
 
   if (error) {
     return (
@@ -127,10 +124,28 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   );
 }
 
+// Helper function to get restaurant images
+function getRestaurantImages(restaurant: Listing): string[] {
+  const images: string[] = [];
+  
+  // Add featured image if available
+  if (restaurant.featuredImage?.node?.sourceUrl) {
+    images.push(restaurant.featuredImage.node.sourceUrl);
+  }
+  
+  // Add placeholder images for demonstration
+  for (let i = 1; i <= 6; i++) {
+    images.push(`/placeholder-restaurant-${i}.jpg`);
+  }
+  
+  return images;
+}
+
+
 // Main Component
 const restaurantService = new RestaurantService();
 
-export default function RestaurantDetail() {
+export default function RestaurantDetailV2() {
   const { data: session } = useSession();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
@@ -145,6 +160,12 @@ export default function RestaurantDetail() {
     searchCount: 0,
     myPreferenceRating: 0,
     myPreferenceCount: 0
+  });
+  const [communityRecognitionMetrics, setCommunityRecognitionMetrics] = useState<CommunityRecognitionMetrics>({
+    mustRevisit: 0,
+    instaWorthy: 0,
+    valueForMoney: 0,
+    bestService: 0
   });
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -230,6 +251,10 @@ export default function RestaurantDetail() {
         userPalates
       );
       setRatingMetrics(metrics);
+
+      // Calculate community recognition metrics
+      const recognitionMetrics = calculateCommunityRecognitionMetrics(restaurantReviews);
+      setCommunityRecognitionMetrics(recognitionMetrics);
     }
   }, [restaurant, restaurantReviews, allReviews, palatesParam, session?.user?.palates]);
 
@@ -288,161 +313,124 @@ export default function RestaurantDetail() {
           </div>
         </div>
 
-        <div className="restaurant-detail__content">
-          <div className="restaurant-detail__description">
-            <h2>About</h2>
-            <p>{restaurant.content}</p>
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          {/* Left Column - Main Content (3/5 width) */}
+          <div className="lg:col-span-3 space-y-8">
+            {/* Featured Image */}
+            <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden">
+              <Image
+                src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
+                alt={restaurant.title}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+
+            {/* Image Gallery */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <ImageGallery 
+                images={getRestaurantImages(restaurant)} 
+                restaurantTitle={restaurant.title} 
+              />
+            </div>
+
+            {/* Description Section */}
+            {restaurant.content && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                <h3 className="text-lg font-semibold mb-4">About</h3>
+                <div className="text-gray-700 leading-relaxed">
+                  {restaurant.content}
+                </div>
+              </div>
+            )}
+
+            {/* Rating Section */}
+            <div>
+              <RatingSection ratingMetrics={ratingMetrics} palatesParam={palatesParam} />
+            </div>
+
+            {/* Community Recognition Section */}
+            <div>
+              <CommunityRecognitionSection metrics={communityRecognitionMetrics} />
+            </div>
           </div>
 
-          <div className="restaurant-detail__rating">
-            <h2>Rating</h2>
-            <div className="rating-summary">
-              <div className="rating-column">
-                <h3>Overall Rating</h3>
-                <div className="rating-value">
-                  <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                    {ratingMetrics.overallRating.toFixed(1)}
-                  </span>
-                </div>
-                <span className="review-count">
-                  {ratingMetrics.overallCount > 0
-                    ? `${ratingMetrics.overallCount} reviews`
-                    : "No reviews yet"}
-                </span>
-              </div>
-              
-              <div className="h-[85%] border-l border-[#CACACA]"></div>
-              
-              <div className="rating-column">
-                <h3>Search Rating</h3>
-                <div className="rating-value">
-                  <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                    {ratingMetrics.searchRating.toFixed(1)}
-                  </span>
-                </div>
-                <span className="review-count">
-                  {palatesParam 
-                    ? (ratingMetrics.searchCount > 0
-                        ? `${ratingMetrics.searchCount} reviews from ${palatesParam}`
-                        : `No reviews from ${palatesParam}`)
-                    : "No search term provided"}
-                </span>
-              </div>
-
-              {/* My Preference - Only show when user is logged in */}
-              {session?.user && session?.user?.palates && (
-                <>
-                  <div className="h-[85%] border-l border-[#CACACA]"></div>
-                  
-                  <div className="rating-column">
-                    <h3>My Preference</h3>
-                    <div className="rating-value">
-                      <span className="text-[#E36B00] text-lg md:text-2xl font-medium">
-                        {ratingMetrics.myPreferenceRating.toFixed(1)}
-                      </span>
-                    </div>
-                    <span className="review-count">
-                      {ratingMetrics.myPreferenceCount > 0
-                        ? `${ratingMetrics.myPreferenceCount} reviews from similar palates`
-                        : "No reviews from similar palates"}
-                    </span>
+          {/* Right Column - Sticky Sidebar (2/5 width) */}
+          <div className="lg:col-span-2">
+            <div className="lg:sticky lg:top-24 space-y-6">
+            {/* Map and Address */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Location</h3>
+              <div className="space-y-4">
+                {address && (
+                  <div className="flex items-start gap-3">
+                    <FiMapPin className="text-gray-500 mt-1" />
+                    <span className="text-gray-700">{address}</span>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="restaurant-detail__recognition">
-            <h2>Community Recognition</h2>
-            <div className="recognition-grid">
-              <div className="recognition-item">
-                <Image
-                  src={FLAG}
-                  height={40}
-                  width={40}
-                  className="size-6 md:size-10"
-                  alt="flag icon"
-                />
-                <div className="recognition-value">
-                  <span className="text-lg md:text-xl font-medium">
-                    0
-                  </span>
-                </div>
-                <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
-              </div>
-              <div className="recognition-item">
-                <Image
-                  src={PHONE}
-                  height={40}
-                  width={40}
-                  className="size-6 md:size-10"
-                  alt="phone icon"
-                />
-                <div className="recognition-value">
-                  <span className="text-lg md:text-xl font-medium">
-                    0
-                  </span>
-                </div>
-                <span className="text-[10px] lg:text-sm whitespace-pre">Insta-worthy</span>
-              </div>
-              <div className="recognition-item">
-                <Image
-                  src={CASH}
-                  height={40}
-                  width={40}
-                  className="size-6 md:size-10"
-                  alt="cash icon"
-                />
-                <div className="recognition-value">
-                  <span className="text-lg md:text-xl font-medium">
-                    0
-                  </span>
-                </div>
-                <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
-              </div>
-              <div className="recognition-item">
-                <Image
-                  src={HELMET}
-                  height={40}
-                  width={40}
-                  className="size-6 md:size-10"
-                  alt="helmet icon"
-                />
-                <div className="recognition-value">
-                  <span className="text-lg md:text-xl font-medium">
-                    0
-                  </span>
-                </div>
-                <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>
+                )}
+                
+                {lat && lng ? (
+                  <div className="h-64 rounded-xl overflow-hidden">
+                    <RestaurantMap lat={lat} lng={lng} />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl">
+                    <FiMapPin className="w-5 h-5 mr-2" />
+                    <span>Map location not available</span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
 
-          <div className="restaurant-detail__location">
-            <h2>Location</h2>
-            <div className="location-info">
-              {address && (
-                <div className="flex items-start gap-3 mb-4">
-                  <FiMapPin className="text-gray-500 mt-1" />
-                  <span className="text-gray-700">{address}</span>
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <div className="space-y-3">           
+                <button 
+                  onClick={addReview}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors"
+                >
+                  <FaPen className="w-4 h-4" />
+                  <span className="text-white">Write a Review</span>
+                </button>
+                
+              </div>
+            </div>
+
+            {/* Restaurant Details */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Restaurant Details</h3>
+              <div className="space-y-3">
+                {restaurant.listingDetails?.openingHours && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-500">🕒</span>
+                    <span className="text-gray-700">{restaurant.listingDetails.openingHours}</span>
+                  </div>
+                )}
+                
+                {restaurant.listingDetails?.phone && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-500">📞</span>
+                    <span className="text-gray-700">{restaurant.listingDetails.phone}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-500">💰</span>
+                  <span className="text-gray-700">{restaurant.priceRange}</span>
                 </div>
-              )}
-              
-              {lat && lng ? (
-                <div className="h-64 rounded-xl overflow-hidden">
-                  <RestaurantMap lat={lat} lng={lng} />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl">
-                  <FiMapPin className="w-5 h-5 mr-2" />
-                  <span>Map location not available</span>
-                </div>
-              )}
+              </div>
+            </div>
             </div>
           </div>
+        </div>
 
-          <div className="restaurant-detail__reviews">
-            <h2>Reviews</h2>
+        {/* Full-Width Reviews Section */}
+        <div className="mt-12">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+            <h3 className="text-2xl font-bold mb-6">Reviews</h3>
             <RestaurantReviews 
               restaurantId={restaurant.databaseId || 0} 
               onReviewsUpdate={(reviews) => {
