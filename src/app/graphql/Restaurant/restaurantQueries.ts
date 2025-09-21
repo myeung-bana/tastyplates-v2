@@ -15,6 +15,8 @@ export const GET_LISTINGS = gql`
     $statuses: [PostStatusEnum]
     $streetAddress: String
     $ethnicSearch: String
+    $palates: String
+    $orderBy: [PostObjectsConnectionOrderbyInput]
   ) {
     listings(
         where: {
@@ -29,6 +31,7 @@ export const GET_LISTINGS = gql`
             statusIn: $statuses
             streetAddress: $streetAddress
             palateReviewedBy: $ethnicSearch
+            orderby: $orderBy
         }, 
         first: $first
         after: $after
@@ -54,6 +57,10 @@ export const GET_LISTINGS = gql`
                     name
                     slug 
                 }
+            }
+            searchPalateStats(palates: $palates) {
+                avg
+                count
             }
             featuredImage {
                 node {
@@ -130,9 +137,19 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                     longitude
                     latitude
                     googleMapUrl {
+                        streetAddress
+                        streetNumber
+                        streetName
+                        city
+                        state
+                        stateShort
+                        country
+                        countryShort
+                        postCode
                         latitude
                         longitude
-                        streetAddress
+                        placeId
+                        zoom
                     }
                 }
             featuredImage {
@@ -175,9 +192,19 @@ export const GET_RESTAURANT_BY_ID = gql`
                     longitude
                     latitude
                     googleMapUrl {
+                        streetAddress
+                        streetNumber
+                        streetName
+                        city
+                        state
+                        stateShort
+                        country
+                        countryShort
+                        postCode
                         latitude
                         longitude
-                        streetAddress
+                        placeId
+                        zoom
                     }
                 }
             featuredImage {

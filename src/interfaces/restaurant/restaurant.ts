@@ -53,6 +53,10 @@ export interface Listing {
     cuisines?: string[];
     isFavorite?: boolean;
     ratingsCount?: number;
+    searchPalateStats?: {
+        avg: number;
+        count: number;
+    };
 }
 
 

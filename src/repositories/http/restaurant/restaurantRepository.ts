@@ -41,25 +41,33 @@ export class RestaurantRepository implements RestaurantRepo {
         rating: number | null = null,
         statuses: string[] | null = null,
         address: string | null = null,
-        ethnicSearch: string | null = null
+        ethnicSearch: string | null = null,
+        palates?: string,
+        orderBy?: any[]
     ) {
+        const variables = {
+            searchTerm,
+            first,
+            after,
+            taxQuery,
+            priceRange,
+            status,
+            userId,
+            recognition,
+            recognitionSort: sortOption,
+            minAverageRating: rating,
+            statuses: statuses || [],
+            streetAddress: address || "",
+            ethnicSearch: ethnicSearch || "",
+            palates: palates || "",
+            orderBy: orderBy || null,
+        };
+
+        console.log('🔍 GraphQL query variables:', variables);
+
         const { data } = await client.query({
             query: GET_LISTINGS,
-            variables: {
-                searchTerm,
-                first,
-                after,
-                taxQuery,
-                priceRange,
-                status,
-                userId,
-                recognition,
-                recognitionSort: sortOption,
-                minAverageRating: rating,
-                statuses: statuses || [],
-                streetAddress: address || "",
-                ethnicSearch: ethnicSearch || "",
-            },
+            variables,
         });
         return {
             nodes: data.listings.nodes,

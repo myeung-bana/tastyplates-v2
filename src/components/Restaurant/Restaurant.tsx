@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
-import Filter from "@/components/Filter/Filter";
+import Filter2 from "@/components/Filter/Filter2";
 import SkeletonCard from "@/components/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
@@ -33,7 +33,26 @@ interface Restaurant {
   recognitions?: string[];
   recognitionCount?: number;
   streetAddress?: string;
+  googleMapUrl?: {
+    city?: string;
+    country?: string;
+    countryShort?: string;
+    streetAddress?: string;
+    streetNumber?: string;
+    streetName?: string;
+    state?: string;
+    stateShort?: string;
+    postCode?: string;
+    latitude?: string;
+    longitude?: string;
+    placeId?: string;
+    zoom?: number;
+  };
   ratingsCount?: number;
+  searchPalateStats?: {
+    avg: number;
+    count: number;
+  };
 }
 
 const restaurantService = new RestaurantService();
@@ -56,9 +75,23 @@ const RestaurantPage = () => {
   const [searchTerm, setSearchTerm] = useState(initialListingFromUrl);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
+  // Convert ethnic URL parameter to palates array
+  const getInitialPalatesFromUrl = () => {
+    if (!initialEthnicFromUrl) return [];
+    
+    // Split by comma and clean up the values
+    const ethnicValues = initialEthnicFromUrl.split(',').map(val => val.trim()).filter(val => val);
+    
+    console.log('🌐 URL ethnic parameter:', initialEthnicFromUrl);
+    console.log('🍽️ Converted to palates:', ethnicValues);
+    
+    // Map ethnic values to palate names (this might need adjustment based on your data structure)
+    return ethnicValues;
+  };
+
   const [filters, setFilters] = useState({
     cuisine: null as string[] | null,
-    palates: [] as string[],
+    palates: getInitialPalatesFromUrl(),
     price: null as string | null,
     rating: null as number | null,
     badges: null as string | null,
@@ -173,7 +206,9 @@ const RestaurantPage = () => {
       item.listingStreet, 
       'No address available'
     ),
+    googleMapUrl: item.listingDetails?.googleMapUrl,
     ratingsCount: item.ratingsCount ?? 0,
+    searchPalateStats: item.searchPalateStats,
   }), []);
 
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,6 +241,35 @@ const RestaurantPage = () => {
     }
   }, [initialListingFromUrl, router]);
 
+  // Client-side sorting function for both palate-based and regular sorting
+  const sortRestaurants = (restaurants: Restaurant[], selectedPalates: string[], sortOption: string | null) => {
+    if (!restaurants || restaurants.length === 0) return restaurants;
+    
+    return [...restaurants].sort((a, b) => {
+      // If palates are selected, prioritize palate-based sorting
+      if (selectedPalates && selectedPalates.length > 0) {
+        const aPalateRating = a.searchPalateStats?.avg || 0;
+        const bPalateRating = b.searchPalateStats?.avg || 0;
+        
+        // Sort by palate rating (descending), then by regular rating
+        if (bPalateRating !== aPalateRating) {
+          return bPalateRating - aPalateRating;
+        }
+        
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      
+      // Regular sorting based on sortOption
+      if (sortOption === 'ASC') {
+        return (a.rating || 0) - (b.rating || 0);
+      } else if (sortOption === 'DESC') {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      
+      // Default: no sorting
+      return 0;
+    });
+  };
 
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
@@ -227,11 +291,15 @@ const RestaurantPage = () => {
         searchEthnic
       );
       const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
+      
+      // Apply client-side sorting (palate-based or regular)
+      const sortedRestaurants = sortRestaurants(transformed, filters.palates, filters.sortOption);
+      
       setRestaurants((prev: Restaurant[]) => {
-        if (reset || !after) return transformed;
+        if (reset || !after) return sortedRestaurants;
         const uniqueMap = new Map<string, Restaurant>();
         prev.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
-        transformed.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
+        sortedRestaurants.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
         return Array.from(uniqueMap.values());
       });
       setEndCursor(data.pageInfo.endCursor as string | null);
@@ -254,9 +322,17 @@ const RestaurantPage = () => {
         palates?: string[] | null;
       }
   ) => {
+    console.log('🔄 Restaurant handleFilterChange called with:', newFilters);
+    
+    // Update searchEthnic when palates are selected
+    if (newFilters.palates && newFilters.palates.length > 0) {
+      setSearchEthnic(newFilters.palates.join(','));
+    } else {
+      setSearchEthnic("");
+    }
+    
     setFilters(
       prev => ({
-
         ...prev,
         ...newFilters,
         cuisine: Array.isArray(newFilters.cuisine) ? newFilters.cuisine : prev.cuisine,
@@ -309,8 +385,12 @@ const RestaurantPage = () => {
     <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
       <div className="restaurants__container !px-0 !gap-3 md:!gap-8">
         <div className="flex flex-row items-center justify-between overflow-x-auto">
-          {/* Pass the `filters.palates` state to the Filter component, which is not updated from the URL */}
-          <Filter onFilterChange={handleFilterChange} />
+          {/* Pass the `filters.palates` state to the Filter2 component, which is not updated from the URL */}
+          <Filter2 
+            onFilterChange={handleFilterChange} 
+            initialCuisines={filters.cuisine || []}
+            initialPalates={filters.palates}
+          />
           <CustomModal
             isOpen={isShowPopup}
             setIsOpen={setIsShowPopup}

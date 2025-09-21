@@ -38,19 +38,25 @@ export class RestaurantService {
                 });
             }
 
-            if (palateSlugs && palateSlugs.length > 0 && palateSlugs[0] !== 'all') {
-                taxArray.push({
-                    taxonomy: 'PALATE',
-                    field: 'SLUG',
-                    terms: palateSlugs,
-                    operator: 'IN',
-                });
-            }
+            // Note: Palate filtering is now handled via palateReviewedBy parameter
+            // instead of taxQuery to find restaurants reviewed by users with specific palates
 
             const taxQuery = taxArray.length > 0 ? {
                 relation: 'AND',
                 taxArray: taxArray,
             } : {};
+
+            // Disable backend ordering and rely on client-side sorting for better control
+            // This ensures palate-based ranking works correctly
+            let orderBy = null;
+
+            console.log('🔍 RestaurantService parameters:', {
+                searchTerm,
+                taxQuery,
+                ethnicSearch,
+                palates: palateSlugs.join(','),
+                palateSlugs
+            });
 
             return await restaurantRepo.getAllRestaurants(
                 searchTerm,
@@ -65,7 +71,9 @@ export class RestaurantService {
                 rating,
                 statuses,
                 address,
-                ethnicSearch
+                ethnicSearch,
+                palateSlugs.join(','), // Pass palates as comma-separated string
+                orderBy
             );
         } catch (error) {
             console.error('Error fetching list:', error);

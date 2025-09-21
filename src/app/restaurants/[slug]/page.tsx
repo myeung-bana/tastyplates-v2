@@ -184,9 +184,19 @@ export default function RestaurantDetail() {
           palates?: { nodes?: Array<{ name: string }> };
           listingDetails?: {
             googleMapUrl?: {
+              streetAddress?: string;
+              streetNumber?: string;
+              streetName?: string;
+              city?: string;
+              state?: string;
+              stateShort?: string;
+              country?: string;
+              countryShort?: string;
+              postCode?: string;
               latitude?: string;
               longitude?: string;
-              streetAddress?: string;
+              placeId?: string;
+              zoom?: number;
             };
             phone?: string;
             openingHours?: string;
@@ -211,9 +221,19 @@ export default function RestaurantDetail() {
           databaseId: restaurantData.databaseId,
           listingDetails: {
             googleMapUrl: {
+              streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
+              streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
+              streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
+              city: restaurantData.listingDetails?.googleMapUrl?.city || "",
+              state: restaurantData.listingDetails?.googleMapUrl?.state || "",
+              stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
+              country: restaurantData.listingDetails?.googleMapUrl?.country || "",
+              countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
+              postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
               latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
               longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-              streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
+              placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
+              zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
             },
             latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
             longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
@@ -369,13 +389,6 @@ export default function RestaurantDetail() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h3 className="text-lg font-semibold mb-4">Location</h3>
               <div className="space-y-4">
-                {address && address !== 'No address available' && (
-                  <div className="flex items-start gap-3">
-                    <FiMapPin className="text-gray-500 mt-1" />
-                    <span className="text-gray-700">{address}</span>
-                  </div>
-                )}
-                
                 {lat && lng ? (
                   <div className="h-64 rounded-xl overflow-hidden">
                     <RestaurantMap lat={lat} lng={lng} />
@@ -384,6 +397,13 @@ export default function RestaurantDetail() {
                   <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl">
                     <FiMapPin className="w-5 h-5 mr-2" />
                     <span>Map location not available</span>
+                  </div>
+                )}
+                
+                {address && address !== 'No address available' && (
+                  <div className="flex items-start gap-3 pt-2">
+                    <FiMapPin className="text-gray-500 mt-1" />
+                    <span className="text-gray-700">{address}</span>
                   </div>
                 )}
               </div>

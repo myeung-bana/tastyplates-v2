@@ -1,0 +1,571 @@
+// Filter2 Component Styles
+.filter2 {
+  &__buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  &__button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 50px;
+    border: 1.5px solid #494D5D;
+    padding: 12px 32px;
+    background: none;
+    background-repeat: no-repeat;
+    background-position-x: 90%;
+    background-position-y: 12px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    -webkit-padding-end: 32px;
+    -moz-padding-end: 32px;
+    -webkit-padding-start: 24px;
+    -moz-padding-start: 24px;
+    background-color: #0000;
+    font-weight: 600;
+    color: #494D5D;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #F1F1F1;
+    }
+
+    &-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    &--secondary {
+      background: white;
+      color: #494D5D;
+      border: 1.5px solid #494D5D;
+
+      &:hover {
+        background-color: #F1F1F1;
+      }
+    }
+
+    &--primary {
+      background: #E36B00;
+      color: white;
+      border: 1.5px solid #E36B00;
+
+      &:hover {
+        background-color: #d55a00;
+      }
+    }
+  }
+
+  &__badge {
+    background: #E36B00;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  // Modal Styles
+  &__modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    pointer-events: none;
+    transition: all 0.3s ease;
+
+    &--open {
+      pointer-events: all;
+
+      .filter2__overlay {
+        opacity: 1;
+      }
+
+      .filter2__content {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &__content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 600px;
+    height: 100%;
+    background: white;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
+  }
+
+  // Header
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #E5E5E5;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  &__title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #31343F;
+    margin: 0;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    color: #494D5D;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #F1F1F1;
+    }
+  }
+
+  // Body
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  // Section
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  // Checkbox Multi-selector
+  &__checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  &__checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #E36B00;
+      background: #FFF8F5;
+    }
+
+    &--selected {
+      border-color: #E36B00;
+      background: #FFF8F5;
+    }
+  }
+
+  &__checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #E36B00;
+    cursor: pointer;
+  }
+
+  &__checkbox-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #31343F;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  &__palate-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__palate-category {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__palate-category-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #31343F;
+    margin: 0;
+    padding: 8px 0;
+    border-bottom: 1px solid #E5E5E5;
+  }
+
+  &__palate-subcategory {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-left: 16px;
+    margin-top: 8px;
+  }
+
+  &__section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #31343F;
+    margin: 0;
+  }
+
+  &__subsection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #31343F;
+  }
+
+  // Select
+  &__select {
+    width: 100%;
+    border: 1px solid #797979;
+    border-radius: 10px;
+    height: 48px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+
+    &:hover {
+      border-color: #494D5D;
+    }
+  }
+
+  &__select-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #31343F;
+    text-align: left;
+    flex: 1;
+  }
+
+  &__select-icon {
+    color: #494D5D;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  // Dropdown
+  &__dropdown {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0px 0px 10px 1px #E5E5E5;
+    overflow: hidden;
+    max-height: 300px;
+    overflow-y: auto;
+    width: 100%;
+    min-width: 300px;
+
+    &--large {
+      min-width: 400px;
+    }
+  }
+
+  &__option {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 16px;
+    font-weight: 600;
+    color: #494D5D;
+
+    &:hover {
+      background-color: #F8F9FA;
+    }
+
+    &--active {
+      background-color: #F1F1F1;
+    }
+
+    &--checkbox {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+  }
+
+  &__checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: #E36B00;
+    cursor: pointer;
+  }
+
+  &__checkbox-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #494D5D;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  // Palate Groups
+  &__palate-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__palate-parent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__expand-icon {
+    color: #494D5D;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &--expanded {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__palate-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 8px 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+
+    &--expanded {
+      opacity: 1;
+      max-height: 50px;
+    }
+
+    &:hover {
+      background-color: #F8F9FA;
+    }
+  }
+
+  // Price Grid
+  &__price-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1.5px solid #797979;
+    border-radius: 12px;
+    padding: 8px;
+  }
+
+  &__price-item {
+    display: flex;
+    align-items: center;
+    position: relative;
+
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.5px;
+      height: 80%;
+      background: #797979;
+    }
+  }
+
+  &__price-option {
+    width: 100%;
+    border-radius: 8px;
+    padding: 8px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+
+    &--active {
+      background-color: #F1F1F1;
+    }
+  }
+
+  &__price-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &__price-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #494D5D;
+    cursor: pointer;
+  }
+
+  &__price-divider {
+    width: 1.5px;
+    height: 20px;
+    background: #797979;
+    margin: 0 8px;
+  }
+
+  // Rating
+  &__rating {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__rating-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #31343F;
+  }
+
+  &__rating-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #E5E5E5;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #E36B00;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    &::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #E36B00;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  &__rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    color: #494D5D;
+  }
+
+  // Footer
+  &__footer {
+    display: flex;
+    gap: 16px;
+    padding: 20px 24px;
+    border-top: 1px solid #E5E5E5;
+    background: white;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+
+    .filter2__button {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+}
+
+// Mobile Responsive
+@media (max-width: 768px) {
+  .filter2 {
+    &__content {
+      max-width: 100%;
+    }
+
+    &__header {
+      padding: 16px 20px;
+    }
+
+    &__body {
+      padding: 20px;
+      gap: 24px;
+    }
+
+    &__footer {
+      padding: 16px 20px;
+      flex-direction: column;
+
+      .filter2__button {
+        width: 100%;
+      }
+    }
+
+    &__dropdown {
+      min-width: 280px;
+    }
+  }
+}

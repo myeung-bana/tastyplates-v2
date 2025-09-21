@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "./ui/Image/FallbackImage";
 import { responseStatusCode as code } from "@/constants/response";
-import { truncateAddress } from "@/utils/addressUtils";
+import { getCityCountry } from "@/utils/addressUtils";
 
 export interface Restaurant {
   id: string;
@@ -26,6 +26,21 @@ export interface Restaurant {
   rating: number;
   palatesNames?: string[];
   streetAddress?: string;
+  googleMapUrl?: {
+    city?: string;
+    country?: string;
+    countryShort?: string;
+    streetAddress?: string;
+    streetNumber?: string;
+    streetName?: string;
+    state?: string;
+    stateShort?: string;
+    postCode?: string;
+    latitude?: string;
+    longitude?: string;
+    placeId?: string;
+    zoom?: number;
+  };
   countries: string;
   priceRange: string;
   averageRating?: number;
@@ -194,7 +209,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setIsReviewModalOpen(true);
   };
 
-  const address = truncateAddress(restaurant.streetAddress?.trim() || 'No address available', 60);
+  const address = getCityCountry(restaurant.googleMapUrl, 'Location not available');
 
   return (
     <>

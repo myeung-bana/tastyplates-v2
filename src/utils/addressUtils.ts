@@ -102,3 +102,33 @@ export function getCardAddress(
   const address = getBestAddress(googleMapUrl, listingStreet, 'No address available');
   return truncateAddress(address, maxLength);
 }
+
+/**
+ * Get city and country for restaurant cards
+ * @param googleMapUrl - GoogleMapUrl object
+ * @param fallbackText - Default text if no city/country available
+ * @returns City, Country format or fallback text
+ */
+export function getCityCountry(
+  googleMapUrl?: GoogleMapUrl | null,
+  fallbackText: string = 'Location not available'
+): string {
+  if (!googleMapUrl) return fallbackText;
+  
+  const city = googleMapUrl.city?.trim();
+  const country = googleMapUrl.country?.trim() || googleMapUrl.countryShort?.trim();
+  
+  if (city && country) {
+    return `${city}, ${country}`;
+  }
+  
+  if (city) {
+    return city;
+  }
+  
+  if (country) {
+    return country;
+  }
+  
+  return fallbackText;
+}
