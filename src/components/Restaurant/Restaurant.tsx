@@ -17,8 +17,11 @@ import { debounce } from "@/utils/debounce";
 import { MdArrowBackIos } from "react-icons/md";
 import { DEFAULT_IMAGE } from "@/constants/images";
 import { getBestAddress } from "@/utils/addressUtils";
+import SuggestedRestaurants from './SuggestedRestaurants';
+import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
+import '@/styles/components/suggested-restaurants.scss';
 
-interface Restaurant {
+export interface Restaurant {
   id: string;
   slug: string;
   name: string;
@@ -65,6 +68,7 @@ const RestaurantPage = () => {
   const [searchEthnic, setSearchEthnic] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
@@ -276,7 +280,7 @@ const RestaurantPage = () => {
     try {
       const data = await restaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
-        firstOverride ?? (reset && isFirstLoad.current ? 16 : 8),
+        firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE),
         after,
         filters.cuisine,
         filters.palates,
@@ -302,6 +306,11 @@ const RestaurantPage = () => {
         sortedRestaurants.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
         return Array.from(uniqueMap.values());
       });
+      
+      // Check if we should show suggestions
+      const totalResults = sortedRestaurants.length;
+      setShowSuggestions(shouldShowSuggestions(totalResults) && filters.palates && filters.palates.length > 0);
+      
       setEndCursor(data.pageInfo.endCursor as string | null);
       setHasNextPage(data.pageInfo.hasNextPage as boolean);
     } catch (error) {
@@ -502,6 +511,17 @@ const RestaurantPage = () => {
             ))}
             {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
           </div>
+          
+          {/* Suggested Restaurants Section */}
+          {showSuggestions && (
+            <SuggestedRestaurants
+              selectedPalates={filters.palates || []}
+              onRestaurantClick={(restaurant) => {
+                console.log('Suggested restaurant clicked:', restaurant);
+                handleRestaurantClick(restaurant.databaseId);
+              }}
+            />
+          )}
         </div>
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
           {loading && (

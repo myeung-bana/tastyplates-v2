@@ -46,7 +46,22 @@ const ListsDetailPage = () => {
 
   const fetchRestaurants = useCallback(async (search: string, first = 8, after: string | null = null) => {
     try {
-      const data = await restaurantService.fetchAllRestaurants(search, first, after);
+      const data = await restaurantService.fetchAllRestaurants(
+        search, 
+        first, 
+        after, 
+        null, // cuisineSlug
+        [], // palateSlugs
+        null, // priceRange
+        null, // status
+        null, // userId
+        null, // recognition
+        null, // sortOption
+        null, // rating
+        null, // statuses
+        null, // address
+        null // ethnicSearch
+      );
       const transformed = transformNodes(data.nodes as unknown as Listing[]);
 
       setRestaurants(prev => {

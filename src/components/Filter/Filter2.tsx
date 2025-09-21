@@ -3,9 +3,6 @@ import { useEffect, useState } from "react";
 import { PiCaretDown, PiX } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { CategoryService } from "@/services/category/categoryService";
-import { STAR } from "@/constants/images";
-import { capitalizeFirstLetter } from "@/lib/utils";
-import Image from "next/image";
 import CuisineFilter from "./CuisineFilter";
 
 interface Filter2Props {
@@ -21,14 +18,6 @@ interface Filter2Props {
   initialPalates?: string[];
 }
 
-interface Palate {
-  key: string;
-  label: string;
-  children: {
-    key: string;
-    label: string;
-  }[];
-}
 
 const categoryService = new CategoryService();
 
@@ -106,7 +95,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
         } else {
           newSelection.add(value);
         }
-        setSelectedCuisines(newSelection);
+        setSelectedCuisines(Array.from(newSelection));
         setIsCuisineOpen(false);
         break;
     }

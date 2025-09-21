@@ -2,6 +2,7 @@
 import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepository } from "@/repositories/http/restaurant/restaurantRepository";
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
+import { RESTAURANT_CONSTANTS } from '@/constants/utils';
 
 const restaurantRepo: RestaurantRepo = new RestaurantRepository()
 
@@ -12,7 +13,7 @@ export class RestaurantService {
 
     async fetchAllRestaurants(
         searchTerm: string,
-        first = 8,
+        first: number = RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE,
         after: string | null = null,
         cuisineSlug: string[] | null = null,
         palateSlugs: string[] = [],
@@ -48,7 +49,7 @@ export class RestaurantService {
 
             // Disable backend ordering and rely on client-side sorting for better control
             // This ensures palate-based ranking works correctly
-            let orderBy = null;
+            const orderBy = null;
 
             console.log('🔍 RestaurantService parameters:', {
                 searchTerm,
@@ -73,7 +74,7 @@ export class RestaurantService {
                 address,
                 ethnicSearch,
                 palateSlugs.join(','), // Pass palates as comma-separated string
-                orderBy
+                orderBy || undefined
             );
         } catch (error) {
             console.error('Error fetching list:', error);

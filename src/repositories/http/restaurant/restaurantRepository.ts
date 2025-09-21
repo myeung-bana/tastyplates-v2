@@ -43,7 +43,7 @@ export class RestaurantRepository implements RestaurantRepo {
         address: string | null = null,
         ethnicSearch: string | null = null,
         palates?: string,
-        orderBy?: any[]
+        orderBy?: unknown[]
     ) {
         const variables = {
             searchTerm,

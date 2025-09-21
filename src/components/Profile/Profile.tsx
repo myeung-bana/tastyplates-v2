@@ -322,7 +322,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowersLoading(false);
     }
-  }, [session?.accessToken, targetUserId]);
+  }, [session?.accessToken, targetUserId, following]);
 
   useEffect(() => {
     // Only set userData from session.user if viewing own profile

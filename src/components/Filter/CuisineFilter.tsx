@@ -1,16 +1,7 @@
 import "@/styles/components/cuisine-filter.scss";
 import { useEffect, useState } from "react";
-import { CategoryService } from "@/services/category/categoryService";
-import { PalatesService } from "@/services/palates/palatestService";
+import { RESTAURANT_CONSTANTS } from '@/constants/utils';
 
-interface Palate {
-  key: string;
-  label: string;
-  children: {
-    key: string;
-    label: string;
-  }[];
-}
 
 interface CuisineFilterProps {
   onFilterChange: (cuisines: string[], palates: string[]) => void;
@@ -19,78 +10,17 @@ interface CuisineFilterProps {
   onApplyFilters?: () => void;
 }
 
-const categoryService = new CategoryService();
-const palateService = new PalatesService();
 
-// Featured cuisines from homepage
-const featuredCuisines = [
-  "Italian",
-  "Japanese", 
-  "American",
-  "Chinese",
-  "Indian",
-  "Thai"
-];
 
-// Regional palate organization
-const palateRegions = {
-  "East Asian": ["Chinese", "Japanese", "Korean", "Mongolian", "Taiwanese"],
-  "South Asian": ["Indian", "Pakistani", "Bangladeshi", "Sri Lankan", "Nepalese", "Afghan"],
-  "South East Asian": ["Thai", "Vietnamese", "Indonesian", "Malaysian", "Filipino", "Singaporean", "Cambodian", "Laotian", "Myanmar"],
-  "Middle Eastern": ["Turkish", "Lebanese", "Iranian", "Israeli", "Syrian", "Jordanian", "Iraqi", "Egyptian", "Moroccan"],
-  "African": ["Ethiopian", "Nigerian", "South African", "Moroccan", "Egyptian", "Kenyan", "Ghanaian", "Senegalese"],
-  "North American": ["American", "Canadian", "Mexican", "Cuban", "Jamaican", "Haitian", "Dominican"],
-  "European": ["Italian", "French", "Spanish", "German", "British", "Greek", "Portuguese", "Polish", "Russian", "Swedish", "Norwegian", "Dutch", "Belgian", "Swiss", "Austrian"],
-  "Oceanic": ["Australian", "New Zealand", "Fijian", "Tongan", "Samoan", "Hawaiian"]
-};
+// Regional palate organization - using constants
+const palateRegions = RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS;
 
 const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onApplyFilters }: CuisineFilterProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCuisinesSet, setSelectedCuisinesSet] = useState<Set<string>>(new Set(selectedCuisines));
   const [selectedPalatesSet, setSelectedPalatesSet] = useState<Set<string>>(new Set(selectedPalates));
-  const [selectedRegions, setSelectedRegions] = useState<Set<string>>(new Set());
-  const [dbCuisines, setDbCuisines] = useState<{ name: string; slug: string }[]>([]);
-  const [dbPalates, setDbPalates] = useState<Palate[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
-  const [isLoadingPalates, setIsLoadingPalates] = useState<boolean>(true);
 
-  useEffect(() => {
-    categoryService.fetchCategories()
-      .then((data) => {
-        setDbCuisines((data as unknown as { name: string; slug: string; }[]) || []);
-      })
-      .catch((error) => console.error("Error fetching categories:", error))
-      .finally(() => setIsLoadingCategories(false));
-  }, []);
 
-  useEffect(() => {
-    palateService.fetchPalates()
-      .then((data) => {
-        const allChildSlugs = new Set<string>();
-        (data as unknown as Record<string, unknown>[])?.forEach((p: Record<string, unknown>) => {
-          ((p.children as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.forEach((c: Record<string, unknown>) => {
-            allChildSlugs.add((c.slug as string) || (c.databaseId as number).toString());
-          });
-        });
-
-        const rootPalates = (data as unknown as Record<string, unknown>[])?.filter((p: Record<string, unknown>) =>
-          !allChildSlugs.has((p.slug as string) || (p.databaseId as number).toString())
-        ) || [];
-
-        const transformedPalates: Palate[] = rootPalates.map((p: Record<string, unknown>) => ({
-          key: (p.slug as string) || (p.databaseId as number).toString(),
-          label: p.name as string,
-          children: ((p.children as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.map((c: Record<string, unknown>) => ({
-            key: (c.slug as string) || (c.databaseId as number).toString(),
-            label: c.name as string,
-          })) || [],
-        })) || [];
-
-        setDbPalates(transformedPalates);
-      })
-      .catch((error) => console.error("Error fetching palates:", error))
-      .finally(() => setIsLoadingPalates(false));
-  }, []);
 
   // Sync with homepage filter selections
   useEffect(() => {
@@ -98,25 +28,11 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
     setSelectedCuisinesSet(new Set(selectedCuisines));
     setSelectedPalatesSet(new Set(selectedPalates));
     
-    // Update region selection based on palate selection
-    const updatedRegions = new Set<string>();
-    Object.keys(palateRegions).forEach(region => {
-      const regionPalates = getPalatesInRegion(region);
-      if (regionPalates.every(palate => selectedPalates.includes(palate))) {
-        updatedRegions.add(region);
-      }
-    });
-    setSelectedRegions(updatedRegions);
   }, [selectedCuisines, selectedPalates]);
-
-  // Filter cuisines to only show featured ones
-  const featuredCuisineData = dbCuisines.filter(cuisine => 
-    featuredCuisines.includes(cuisine.name)
-  );
 
   // Helper function to get all palates in a region
   const getPalatesInRegion = (region: string): string[] => {
-    return palateRegions[region as keyof typeof palateRegions] || [];
+    return [...(palateRegions[region as keyof typeof palateRegions] || [])];
   };
 
   // Helper function to check if a region is fully selected
@@ -131,22 +47,6 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
     return regionPalates.some(palate => selectedPalatesSet.has(palate)) && !isRegionFullySelected(region);
   };
 
-  const handleCuisineChange = (slug: string) => {
-    setSelectedCuisinesSet((prevSelectedCuisines) => {
-      const newSelection = new Set(prevSelectedCuisines);
-      if (newSelection.has(slug)) {
-        newSelection.delete(slug);
-      } else {
-        newSelection.add(slug);
-      }
-      return newSelection;
-    });
-  };
-
-  const handlePalateChange = (keys: Set<string>) => {
-    setSelectedPalatesSet(keys);
-  };
-
   // Handle region selection - select/deselect all palates in region
   const handleRegionChange = (region: string) => {
     const regionPalates = getPalatesInRegion(region);
@@ -155,19 +55,9 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
     if (isRegionFullySelected(region)) {
       // If region is fully selected, deselect all palates in region
       regionPalates.forEach(palate => newPalatesSet.delete(palate));
-      setSelectedRegions(prev => {
-        const newRegions = new Set(prev);
-        newRegions.delete(region);
-        return newRegions;
-      });
     } else {
       // If region is not fully selected, select all palates in region
       regionPalates.forEach(palate => newPalatesSet.add(palate));
-      setSelectedRegions(prev => {
-        const newRegions = new Set(prev);
-        newRegions.add(region);
-        return newRegions;
-      });
     }
     
     setSelectedPalatesSet(newPalatesSet);
@@ -185,15 +75,6 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
     
     setSelectedPalatesSet(newPalatesSet);
     
-    // Update region selection based on palate selection
-    const updatedRegions = new Set<string>();
-    Object.keys(palateRegions).forEach(region => {
-      const regionPalates = getPalatesInRegion(region);
-      if (regionPalates.every(p => newPalatesSet.has(p))) {
-        updatedRegions.add(region);
-      }
-    });
-    setSelectedRegions(updatedRegions);
   };
 
   const applyFilters = () => {
@@ -219,7 +100,6 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
   const resetFilters = () => {
     setSelectedCuisinesSet(new Set());
     setSelectedPalatesSet(new Set());
-    setSelectedRegions(new Set());
   };
 
   const getActiveFiltersCount = () => {

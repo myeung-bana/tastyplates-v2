@@ -17,7 +17,7 @@ export interface RestaurantRepo {
         address?: string | null,
         ethnicSearch?: string | null,
         palates?: string,
-        orderBy?: any[]
+        orderBy?: unknown[]
     ): Promise<{ nodes: Record<string, unknown>[]; pageInfo: Record<string, unknown> }>;
     getRestaurantById(
         id: string,

@@ -63,7 +63,7 @@ export function getBestAddress(
   }
   
   // Priority 2: Google Map URL composed address
-  const composedAddress = formatAddress(googleMapUrl, { fallbackText: '' });
+  const composedAddress = formatAddress(googleMapUrl || null, { fallbackText: '' });
   if (composedAddress && composedAddress !== 'No address available') {
     return composedAddress;
   }
