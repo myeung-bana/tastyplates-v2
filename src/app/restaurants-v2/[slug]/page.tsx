@@ -25,6 +25,7 @@ import {
   calculateCommunityRecognitionMetrics,
   type CommunityRecognitionMetrics
 } from "@/utils/reviewUtils";
+import { getBestAddress } from "@/utils/addressUtils";
 import { GraphQLReview } from "@/types/graphql";
 import ImageGallery from "@/components/Restaurant/ImageGallery";
 import RatingSection from "@/components/Restaurant/RatingSection";
@@ -271,7 +272,11 @@ export default function RestaurantDetailV2() {
   // Removed searchPalateStats and palateStats as they don't exist in Listing interface
   const lat = parseFloat(restaurant?.listingDetails?.googleMapUrl?.latitude || "0");
   const lng = parseFloat(restaurant?.listingDetails?.googleMapUrl?.longitude || "0");
-  const address = restaurant?.listingDetails?.googleMapUrl?.streetAddress;
+  const address = getBestAddress(
+    restaurant?.listingDetails?.googleMapUrl, 
+    restaurant?.listingStreet, 
+    'No address available'
+  );
 
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
@@ -364,7 +369,7 @@ export default function RestaurantDetailV2() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h3 className="text-lg font-semibold mb-4">Location</h3>
               <div className="space-y-4">
-                {address && (
+                {address && address !== 'No address available' && (
                   <div className="flex items-start gap-3">
                     <FiMapPin className="text-gray-500 mt-1" />
                     <span className="text-gray-700">{address}</span>

@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "./ui/Image/FallbackImage";
 import { responseStatusCode as code } from "@/constants/response";
+import { truncateAddress } from "@/utils/addressUtils";
 
 export interface Restaurant {
   id: string;
@@ -193,7 +194,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setIsReviewModalOpen(true);
   };
 
-  const address = restaurant.streetAddress?.trim() || 'Default Location';
+  const address = truncateAddress(restaurant.streetAddress?.trim() || 'No address available', 60);
 
   return (
     <>

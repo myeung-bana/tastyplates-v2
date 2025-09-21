@@ -15,10 +15,20 @@ export interface Listing {
     databaseId?: number;
     listingDetails: {
         googleMapUrl: {
-            latitude: string
-            longitude: string
-            streetAddress: string
-        }
+            streetAddress?: string;
+            streetNumber?: string;
+            streetName?: string;
+            city?: string;
+            state?: string;
+            stateShort?: string;
+            country?: string;
+            countryShort?: string;
+            postCode?: string;
+            latitude?: string;
+            longitude?: string;
+            placeId?: string;
+            zoom?: number;
+        };
         latitude: string;
         longitude: string;
         menuUrl: string;

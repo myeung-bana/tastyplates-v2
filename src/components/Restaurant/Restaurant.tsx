@@ -16,6 +16,7 @@ import SelectOptions from "../ui/Options/SelectOptions";
 import { debounce } from "@/utils/debounce";
 import { MdArrowBackIos } from "react-icons/md";
 import { DEFAULT_IMAGE } from "@/constants/images";
+import { getBestAddress } from "@/utils/addressUtils";
 
 interface Restaurant {
   id: string;
@@ -167,7 +168,11 @@ const RestaurantPage = () => {
     countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
     priceRange: item.priceRange,
     initialSavedStatus: item.isFavorite ?? false,
-    streetAddress: item.listingDetails?.googleMapUrl?.streetAddress || item.listingStreet || "",
+    streetAddress: getBestAddress(
+      item.listingDetails?.googleMapUrl, 
+      item.listingStreet, 
+      'No address available'
+    ),
     ratingsCount: item.ratingsCount ?? 0,
   }), []);
 

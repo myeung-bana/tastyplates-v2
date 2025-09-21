@@ -70,6 +70,18 @@ export const GET_LISTINGS = gql`
             listingDetails {
                 googleMapUrl {
                     streetAddress
+                    streetNumber
+                    streetName
+                    city
+                    state
+                    stateShort
+                    country
+                    countryShort
+                    postCode
+                    latitude
+                    longitude
+                    placeId
+                    zoom
                 }
             }
             isFavorite
