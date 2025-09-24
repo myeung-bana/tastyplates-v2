@@ -88,6 +88,7 @@ query GetCommentWithReplies($id: ID!) {
       nodes {
         id
         databaseId
+        date
         content(format: RENDERED)
         commentLikes
         userLiked
