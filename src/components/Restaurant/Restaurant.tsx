@@ -5,7 +5,7 @@ import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
 import SkeletonCard from "@/components/SkeletonCard";
-import { RestaurantService } from "@/services/restaurant/restaurantService"
+import { RestaurantService, Restaurant as RestaurantType } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
@@ -64,7 +64,14 @@ const RestaurantPage = () => {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [searchAddress, setSearchAddress] = useState("");
+  
+  // Initialize URL parameters
+  const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
+  const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
+  const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
+  
+  // Initialize state with URL parameters
+  const [searchAddress, setSearchAddress] = useState(initialAddressFromUrl);
   const [searchEthnic, setSearchEthnic] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,9 +80,6 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
-  const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
-  const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
   const [searchTerm, setSearchTerm] = useState(initialListingFromUrl);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
@@ -101,97 +105,15 @@ const RestaurantPage = () => {
     badges: null as string | null,
     sortOption: null as string | null,
   });
-  const [listing, setListing] = useState("");
-  const [isShowPopup, setIsShowPopup] = useState<boolean>(false)
+
+  const [isShowPopup, setIsShowPopup] = useState(false);
   const [showListingModal, setShowListingModal] = useState(false);
-  const [listingLoading, setListingLoading] = useState(false);
   const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
+  const [listingLoading, setListingLoading] = useState(false);
   const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
   const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const [listingCurrentPage, setListingCurrentPage] = useState(1);
   const fetchListingsDebouncedRef = useRef<(input: string) => void>();
-  const [width, setWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
-  );
-  // Removed unused ref
-
-  const handleResize = useCallback(() => {
-    setWidth(window.innerWidth);
-  }, []);
-
-  const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
-    try {
-      setListingLoading(true);
-      const result = await restaurantService.fetchListingsName(
-        search,
-        32,
-        page === 1 ? null : listingEndCursor
-      );
-      const formatted = result.nodes.map((item: Record<string, unknown>) => ({
-        key: item.slug as string,
-        label: item.title as string,
-      }));
-      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
-      setListingCurrentPage(page);
-      setListingEndCursor(result.pageInfo.endCursor as string | null);
-      setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
-    } catch (err) {
-      console.error("Error loading listing options", err);
-      setListingOptions([]);
-    } finally {
-      setListingLoading(false);
-    }
-  }, [listingEndCursor]);
-
-  useEffect(() => {
-    // Initialize debounced functions once
-    const [debouncedListing] = debounce((...args: unknown[]) => {
-      const search = args[0] as string | undefined;
-      const page = args[1] as number | undefined;
-      fetchListingsName(search, page);
-    }, 500);
-
-    fetchListingsDebouncedRef.current = debouncedListing;
-    fetchListingsDebouncedRef.current?.('');
-  }, [fetchListingsName]);
-
-  useEffect(() => {
-    window.addEventListener("load", () => {
-      if (typeof window !== "undefined") {
-        handleResize();
-      }
-    });
-    window.addEventListener("resize", () => {
-      handleResize();
-    });
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("load", handleResize);
-    };
-  }, [handleResize]);
-
-
-  useEffect(() => {
-    setSearchAddress(initialAddressFromUrl);
-    setSearchEthnic(initialEthnicFromUrl);
-  }, [initialListingFromUrl, initialAddressFromUrl, initialEthnicFromUrl]);
-
-  useEffect(() => {
-    const currentSearchParams = new URLSearchParams(searchParams?.toString());
-    let shouldUpdateUrl = false;
-
-    if (currentSearchParams.has("ethnic")) {
-      setSearchEthnic(initialEthnicFromUrl);
-      shouldUpdateUrl = true;
-    }
-
-    if (shouldUpdateUrl) {
-      const newPathname = window.location.pathname;
-      const newUrl = `${newPathname}${currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : ''}`;
-      router.replace(newUrl);
-    }
-  }, [searchParams, router, initialEthnicFromUrl]);
 
   const mapListingToRestaurant = useCallback((item: Listing): Restaurant => ({
     id: item.id,
@@ -217,7 +139,7 @@ const RestaurantPage = () => {
 
   const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    setListing(inputValue);
+    setSearchTerm(inputValue);
     setShowListingModal(true);
     const normalizedSearch = inputValue.trim().toLowerCase();
     const alreadyExists = listingOptions.some(
@@ -233,8 +155,9 @@ const RestaurantPage = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setIsShowPopup(false)
-    setSearchTerm(listing)
+    setSearchTerm(searchTerm)
   };
+
   useEffect(() => {
     if (initialListingFromUrl) {
       const params = new URLSearchParams(window.location.search);
@@ -246,10 +169,17 @@ const RestaurantPage = () => {
   }, [initialListingFromUrl, router]);
 
   // Client-side sorting function for both palate-based and regular sorting
-  const sortRestaurants = (restaurants: Restaurant[], selectedPalates: string[], sortOption: string | null) => {
+  const sortRestaurants = (restaurants: Restaurant[], selectedPalates: string[], sortOption: string | null, locationKeyword?: string) => {
     if (!restaurants || restaurants.length === 0) return restaurants;
     
-    return [...restaurants].sort((a, b) => {
+    let sortedRestaurants = [...restaurants];
+    
+    // First, apply location-based sorting if location keyword is provided
+    if (locationKeyword && locationKeyword.trim()) {
+      sortedRestaurants = restaurantService.sortRestaurantsByLocation(sortedRestaurants, locationKeyword);
+    }
+    
+    return sortedRestaurants.sort((a, b) => {
       // If palates are selected, prioritize palate-based sorting
       if (selectedPalates && selectedPalates.length > 0) {
         const aPalateRating = a.searchPalateStats?.avg || 0;
@@ -278,6 +208,8 @@ const RestaurantPage = () => {
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
+      console.log('🔍 Fetching restaurants with searchAddress:', searchAddress);
+      
       const data = await restaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
         firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE),
@@ -291,13 +223,22 @@ const RestaurantPage = () => {
         filters.sortOption,
         filters.rating,
         null,
-        searchAddress,
+        null, // Remove address from GraphQL query - use client-side filtering
         searchEthnic
       );
       const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
       
-      // Apply client-side sorting (palate-based or regular)
-      const sortedRestaurants = sortRestaurants(transformed, filters.palates, filters.sortOption);
+      // Apply location filtering if searchAddress is provided
+      let filteredRestaurants = transformed;
+      if (searchAddress && searchAddress.trim()) {
+        filteredRestaurants = transformed.filter(restaurant => {
+          const relevance = restaurantService.calculateLocationRelevance(restaurant, searchAddress);
+          return relevance > 0; // Only include restaurants with location relevance
+        });
+      }
+      
+      // Apply client-side sorting (location-based, palate-based, or regular)
+      const sortedRestaurants = sortRestaurants(filteredRestaurants, filters.palates, filters.sortOption, searchAddress);
       
       setRestaurants((prev: Restaurant[]) => {
         if (reset || !after) return sortedRestaurants;
@@ -378,183 +319,122 @@ const RestaurantPage = () => {
   // Removed unused function
 
   const handleRestaurantClick = async (restaurantId: number) => {
-    if (!session?.accessToken) {
-      console.warn("User is not authenticated");
-      return;
-    }
-
+    if (!session?.accessToken) return;
+    
     try {
       await restaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
     } catch (error) {
-      console.error("Failed to record visited restaurant:", error);
+      console.error("Failed to add recently visited restaurant:", error);
     }
   };
 
+  // Handler for suggested restaurants (takes Restaurant object)
+  const handleSuggestedRestaurantClick = async (restaurant: Restaurant) => {
+    await handleRestaurantClick(restaurant.databaseId);
+  };
+
+  const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
+    try {
+      setListingLoading(true);
+      const result = await restaurantService.fetchListingsName(
+        search,
+        32,
+        page === 1 ? null : listingEndCursor
+      );
+      const formatted = result.nodes.map((item: Record<string, unknown>) => ({
+        key: item.slug as string,
+        label: item.title as string,
+      }));
+      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
+      setListingCurrentPage(page);
+      setListingEndCursor(result.pageInfo.endCursor as string | null);
+      setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
+    } catch (err) {
+      console.error("Error loading listing options", err);
+      setListingOptions([]);
+    } finally {
+      setListingLoading(false);
+    }
+  }, [listingEndCursor]);
+
+  useEffect(() => {
+    // Initialize debounced function once
+    const [debouncedListing] = debounce((...args: unknown[]) => {
+      fetchListingsName(args[0] as string, args[1] as number);
+    }, 500);
+
+    fetchListingsDebouncedRef.current = debouncedListing;
+    fetchListingsDebouncedRef.current?.('');
+  }, [fetchListingsName]);
+
   return (
-    <section className="restaurants min-h-screen font-inter !bg-white rounded-t-3xl">
-      <div className="restaurants__container !px-0 !gap-3 md:!gap-8">
-        <div className="flex flex-row items-center justify-between overflow-x-auto">
-          {/* Pass the `filters.palates` state to the Filter2 component, which is not updated from the URL */}
+    <div className="restaurants">
+      <div className="restaurants__container">
+        <div className="restaurants__title">
+          {searchAddress && (
+            <p className="text-sm text-gray-600 mt-1">
+              Showing results for: <span className="font-medium">{searchAddress}</span>
+            </p>
+          )}
+        </div>
+        
+        <div className="restaurants__content">
           <Filter2 
-            onFilterChange={handleFilterChange} 
+            onFilterChange={handleFilterChange}
             initialCuisines={filters.cuisine || []}
-            initialPalates={filters.palates}
+            initialPalates={filters.palates || []}
           />
-          <CustomModal
-            isOpen={isShowPopup}
-            setIsOpen={setIsShowPopup}
-            onOpenChange={() => {
-              setIsShowPopup(!isShowPopup)
-            }}
-            header={<></>}
-            hasTrigger
-            trigger={
-              <div className="max-w-[218px] md:max-w-[345px] flex gap-2.5 md:gap-2 justify-between items-center border shrink-0 border-[#494D5D] bg-[#FCFCFC] px-4 py-2 md:px-6 md:py-[15px] rounded-[50px] relative">
-                <FiSearch className="hero__search-icon shrink-0 !mr-0" />
-                <input
-                  type="text"
-                  placeholder="Search by Listing Name"
-                  value={listing}
-                  onChange={(e) => {
-                    handleListingChange(e)
-                  }}
-                  onClick={() => setIsShowPopup(!isShowPopup)}
-                  className="search-bar__input !border-none text-sm md:text-base !text-left bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => {
-                      setListing("")
-                      setSearchTerm("")
-                    }}
-                    className="absolute right-2 top-2 bg-[#FCFCFC] px-1 md:top-4 text-sm text-[#494D5D] hover:text-black"
-                  >
-                    ✕
-                  </button>
-                )}
+
+          {loading && restaurants.length === 0 ? (
+            <div className="restaurants__grid restaurants__grid--skeleton">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : restaurants.length === 0 ? (
+            <div className="restaurants__no-results">
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-500">
+                  Try adjusting your search criteria or filters to find more restaurants.
+                </p>
               </div>
-            }
-            content={
-              <>
-                <div className="flex flex-row gap-3 items-center py-7 px-3 md:p-0">
-                    <button onClick={() => setIsShowPopup(false) } className="size-8 md:hidden flex justify-center items-center">
-                      <MdArrowBackIos className="size-4" />
-                    </button>
-                  <form id="searchForm" onSubmit={handleSearch} className="w-full flex gap-2.5 md:gap-6 justify-between items-center border border-[#E5E5E5] bg-[#FCFCFC] px-4 py-3 md:px-6 md:py-[15px] rounded-[50px]">
-                    <div className="hero__search-restaurant !bg-transparent w-full">
-                      <FiSearch className="hero__search-icon hidden md:block" />
-                      <input
-                        type="text"
-                        placeholder="Search by Listing Name"
-                        value={listing}
-                        onChange={(e) => {
-                          handleListingChange(e)
-                        }}
-                        className="bg-transparent focus-visible:border-none outline-0 w-full font-semibold"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="hidden md:block rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00] md:leading-none"
-                      disabled={!listing}
-                    >
-                      Search
-                    </button>
-                  </form>
-                </div>
-                <SelectOptions
-                    isOpen={showListingModal}
-                    isLoading={listingLoading}
-                    options={listingOptions}
-                    searchValue={listing}
-                    hasNextPage={listingHasNextPage}
-                    onLoadMore={() => fetchListingsName(listing.trim(), listingCurrentPage + 1)}
-                    onSelect={(label) => {
-                      if (width > 767) {
-                        setListing(label);
-                        setShowListingModal(false);
-                      } else {
-                        setListing(label)
-                        setShowListingModal(false);
-                        setIsShowPopup(false)
-                        setSearchTerm(label)
-                      }
-                    }}
-                    onClose={() => setShowListingModal(false)}
-                    className="!p-2 !w-full z-50 !max-h-[85vh] md:!max-h-[350px] !border-none !shadow-none"
-                  />
-              </>
-            }
-            hasFooter
-            footerClass="!p-0"
-            headerClass="!p-0 !border-none"
-            contentClass="md:!gap-10 !p-0"
-            baseClass="md:!mt-[112px] !rounded-none !bg-transparent !max-w-[700px] !m-0"
-            hasCustomCloseButton
-            customButton={<></>}
-            wrapperClass="!items-start !z-[1010] bg-[#FCFCFC] md:bg-transparent"
-          />
-        </div>
-        <div>
-          <h3 className="pl-3 md:pl-6 xl:pl-0 text-sm md:text-xl">
-            {restaurants.length} {restaurants.length > 1 ? 'results' : 'result'}
-          </h3>
-          <div className="restaurants__grid mt-3 md:mt-4 px-3 md:px-6 xl:px-0">
-            {restaurants.map((rest) => (
-              <RestaurantCard
-                key={rest.id}
-                restaurant={rest}
-                initialSavedStatus={rest.initialSavedStatus}
-                ratingsCount={rest.ratingsCount}
-                onClick={() => handleRestaurantClick(rest.databaseId)}
-              />
-            ))}
-            {loading && [...Array(4)].map((_, i) => <SkeletonCard key={`skeleton-${i}`} />)}
-          </div>
-          
-          {/* Suggested Restaurants Section */}
-          {showSuggestions && (
-            <SuggestedRestaurants
-              selectedPalates={filters.palates || []}
-              onRestaurantClick={(restaurant) => {
-                console.log('Suggested restaurant clicked:', restaurant);
-                handleRestaurantClick(restaurant.databaseId);
-              }}
-            />
-          )}
-        </div>
-        <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-          {loading && (
+            </div>
+          ) : (
             <>
-              <svg
-                className="w-5 h-5 text-gray-500 animate-spin mr-2"
-                viewBox="0 0 100 100"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="35"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="10"
-                  strokeDasharray="164"
-                  strokeDashoffset="40"
+              <div className="restaurants__grid">
+                {restaurants.map((restaurant) => (
+                  <RestaurantCard
+                    key={restaurant.id}
+                    restaurant={restaurant}
+                    onClick={() => handleRestaurantClick(restaurant.databaseId)}
+                  />
+                ))}
+              </div>
+              
+              {showSuggestions && (
+                <SuggestedRestaurants
+                  selectedPalates={filters.palates || []}
+                  onRestaurantClick={handleSuggestedRestaurantClick}
                 />
-              </svg>
-              <span className="text-gray-500 text-sm">Loading more Content</span>
+              )}
+              
+              {hasNextPage && (
+                <div ref={observerRef} className="restaurants__observer">
+                  {loading && (
+                    <div className="restaurants__grid restaurants__grid--skeleton">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <SkeletonCard key={`infinite-${index}`} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
-          )}
-          {!hasNextPage && !loading && restaurants.length > 0 && (
-            <p className="text-gray-400 text-sm">No more content to load.</p>
-          )}
-          {!loading && !hasNextPage && restaurants.length === 0 && (
-            <p className="text-gray-400 text-sm">No restaurants found matching your criteria.</p>
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

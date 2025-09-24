@@ -15,6 +15,7 @@ import { PAGE } from "@/lib/utils";
 import Image from "next/image";
 // Removed unused imports
 import { HERO_BG, HERO_BG_SP } from "@/constants/images";
+import Toast from "@/components/ui/Toast/Toast";
 
 const restaurantService = new RestaurantService();
 
@@ -45,6 +46,12 @@ const Hero = () => {
   const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
   const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const [listingCurrentPage, setListingCurrentPage] = useState(1);
+
+  // Toast state
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
 
   // Moved this useEffect after function declarations
 
@@ -152,6 +159,8 @@ const Hero = () => {
     fetchListingsDebouncedRef.current?.('');
   }, [fetchAddressByPalate, fetchListingsName]);
 
+  // Removed all geolocation functionality
+
   const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
     setLocation('');
     setListing('');
@@ -219,9 +228,17 @@ const Hero = () => {
   };
 
   return (
-    <section className="hero mx-auto">
-      <div className="hero__container mx-auto">
-        <div className="hero__content mx-auto">
+    <>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <section className="hero mx-auto">
+        <div className="hero__container mx-auto">
+          <div className="hero__content mx-auto">
           <Image
             src={HERO_BG}
             width={1980}
@@ -381,6 +398,7 @@ const Hero = () => {
         </div>
       </div>
     </section>
+    </>
   );
 };
 

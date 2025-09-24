@@ -4,6 +4,43 @@ import { RestaurantRepository } from "@/repositories/http/restaurant/restaurantR
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
 import { RESTAURANT_CONSTANTS } from '@/constants/utils';
 
+export interface Restaurant {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  rating: number;
+  countries: string;
+  priceRange: string;
+  databaseId: number;
+  palatesNames?: string[];
+  listingCategories?: { id: number; name: string; slug: string }[];
+  initialSavedStatus?: boolean | null;
+  recognitions?: string[];
+  recognitionCount?: number;
+  streetAddress?: string;
+  googleMapUrl?: {
+    city?: string;
+    country?: string;
+    countryShort?: string;
+    streetAddress?: string;
+    streetNumber?: string;
+    streetName?: string;
+    state?: string;
+    stateShort?: string;
+    postCode?: string;
+    latitude?: string;
+    longitude?: string;
+    placeId?: string;
+    zoom?: number;
+  };
+  ratingsCount?: number;
+  searchPalateStats?: {
+    avg: number;
+    count: number;
+  };
+}
+
 const restaurantRepo: RestaurantRepo = new RestaurantRepository()
 
 export class RestaurantService {
@@ -56,7 +93,8 @@ export class RestaurantService {
                 taxQuery,
                 ethnicSearch,
                 palates: palateSlugs.join(','),
-                palateSlugs
+                palateSlugs,
+                address
             });
 
             return await restaurantRepo.getAllRestaurants(
@@ -82,101 +120,9 @@ export class RestaurantService {
         }
     }
 
-    async fetchRestaurantById(id: string, idType: string = "DATABASE_ID", accessToken?: string, userId?: number | null) {
+    async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
         try {
-            return await restaurantRepo.getRestaurantById(id, idType, accessToken, userId);
-        } catch (error) {
-            console.error('Error fetching restaurant by ID:', error);
-            throw new Error('Failed to fetch restaurant by ID');
-        }
-    }
-
-    async createRestaurantListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.createListingAndReview(payload, token);
-        } catch (error) {
-            console.error("Error creating listing and review:", error);
-            throw new Error("Failed to create listing and review");
-        }
-    }
-
-
-    async fetchPendingRestaurants(token: string): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.getlistingDrafts(token);
-        } catch (error) {
-            console.error('Error fetching pending restaurants:', error);
-            throw new Error('Failed to fetch pending restaurants');
-        }
-    }
-
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.createFavoriteListing(data, accessToken, jsonResponse);
-        }
-        catch (error) {
-            console.error('Error creating favorite listing:', error);
-            throw new Error('Failed to create favorite listing');
-        }
-    }
-
-    async fetchFavoritingListing(userId: number, accessToken?: string) {
-        try {
-            return await restaurantRepo.getFavoriteListing(userId, accessToken);
-        } catch (error) {
-            console.error('Error fetching favoriting list:', error);
-            throw new Error('Failed to fetch favoriting list');
-        }
-    }
-
-    async fetchCheckInRestaurant(userId: number, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.getCheckInRestaurant(userId, accessToken, jsonResponse);
-        } catch (error) {
-            console.error('Error fetching check-in restaurant:', error);
-            throw new Error('Failed to fetch check-in restaurant');
-        }
-    }
-
-    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse: boolean = true): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.createCheckIn(data, accessToken, jsonResponse);
-        } catch (error) {
-            console.error('Error creating check-in:', error);
-            throw new Error('Failed to create check-in');
-        }
-    }
-
-    async updateRestaurantListing(
-        id: number,
-        listingUpdateData: Record<string, unknown>,
-        accessToken?: string
-    ) {
-        try {
-            // Delegate the actual API call to the repository
-            return await restaurantRepo.updateListing(id, listingUpdateData, accessToken);
-        } catch (error) {
-            console.error('Error updating restaurant listing in service:', error);
-            throw new Error('Failed to update restaurant listing');
-        }
-    }
-
-    async deleteRestaurantListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            return await restaurantRepo.deleteListing(id, accessToken);
-        } catch (error) {
-            console.error('Error deleting restaurant listing in service:', error);
-            throw new Error('Failed to delete restaurant listing');
-        }
-    }
-
-    async fetchRestaurantRatingsCount(restaurantId: number): Promise<number> {
-        return await restaurantRepo.getRestaurantRatingsCount(restaurantId);
-    }
-
-    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
-        try {
-            return await restaurantRepo.addRecentlyVisitedRestaurant(postId, accessToken);
+            return await restaurantRepo.addRecentlyVisitedRestaurant(restaurantId, accessToken);
         } catch (error) {
             console.error('Error adding recently visited restaurant:', error);
             throw new Error('Failed to add recently visited restaurant');
@@ -188,7 +134,7 @@ export class RestaurantService {
             return await restaurantRepo.getRecentlyVisitedRestaurants(accessToken);
         } catch (error) {
             console.error('Error fetching recently visited restaurants:', error);
-            throw new Error('Failed to fetching recently visited restaurants');
+            throw new Error('Failed to fetch recently visited restaurants');
         }
     }
 
@@ -224,14 +170,168 @@ export class RestaurantService {
         after: string | null = null,
     ) {
         try {
-            return await restaurantRepo.getListingsName(
-                searchTerm,
-                first,
-                after
-            );
+            return await restaurantRepo.getListingsName(searchTerm, first, after);
         } catch (error) {
-            console.error('Error fetching list:', error);
-            throw new Error('Failed to fetch list');
+            console.error('Error fetching listings name:', error);
+            throw new Error('Failed to fetch listings name');
         }
     }
-};
+
+    /**
+     * Sort restaurants by location relevance with improved algorithm
+     * Prioritizes restaurants whose addresses contain the location keyword
+     */
+    sortRestaurantsByLocation(restaurants: Restaurant[], locationKeyword: string): Restaurant[] {
+        if (!locationKeyword || !locationKeyword.trim()) {
+            return restaurants;
+        }
+
+        const keyword = locationKeyword.toLowerCase().trim();
+        
+        return restaurants.sort((a, b) => {
+            const aRelevance = this.calculateLocationRelevance(a, keyword);
+            const bRelevance = this.calculateLocationRelevance(b, keyword);
+            
+            // Sort by relevance score (higher first)
+            if (bRelevance !== aRelevance) {
+                return bRelevance - aRelevance;
+            }
+            
+            // If relevance is the same, sort by rating
+            return (b.rating || 0) - (a.rating || 0);
+        });
+    }
+
+    /**
+     * Get the best address string from a restaurant
+     * Based on the address formatting documentation
+     */
+    private getRestaurantAddress(restaurant: Restaurant): string {
+        // Priority 1: Use streetAddress if available (most complete)
+        if (restaurant.streetAddress && restaurant.streetAddress.trim().length > 0) {
+            return restaurant.streetAddress;
+        }
+        
+        // Priority 2: Use Google Map URL street address
+        if (restaurant.googleMapUrl?.streetAddress && restaurant.googleMapUrl.streetAddress.trim().length > 0) {
+            return restaurant.googleMapUrl.streetAddress;
+        }
+        
+        // Priority 3: Compose from individual components
+        if (restaurant.googleMapUrl) {
+            const parts = [
+                [restaurant.googleMapUrl.streetNumber, restaurant.googleMapUrl.streetName].filter(Boolean).join(' '),
+                restaurant.googleMapUrl.city,
+                restaurant.googleMapUrl.stateShort || restaurant.googleMapUrl.state,
+                restaurant.googleMapUrl.countryShort || restaurant.googleMapUrl.country,
+                restaurant.googleMapUrl.postCode
+            ].filter(Boolean) as string[];
+            
+            if (parts.length > 0) {
+                return parts.join(', ');
+            }
+        }
+        
+        // Priority 4: Use countries field
+        if (restaurant.countries && restaurant.countries !== "Default Location") {
+            return restaurant.countries;
+        }
+        
+        return '';
+    }
+
+    /**
+     * Calculate location relevance score for a restaurant
+     * Higher score means more relevant to the location
+     */
+    calculateLocationRelevance(restaurant: Restaurant, locationKeyword: string): number {
+        if (!locationKeyword || !locationKeyword.trim()) {
+            return 0;
+        }
+
+        const keyword = locationKeyword.toLowerCase().trim();
+        const keywordWords = keyword.split(/\s+/).filter(word => word.length > 1);
+        
+        let totalScore = 0;
+        
+        // Search across all googleMapUrl fields with different weights
+        if (restaurant.googleMapUrl) {
+            const fieldsToSearch = [
+                { field: restaurant.googleMapUrl.streetAddress, weight: 40, name: 'streetAddress' },
+                { field: restaurant.googleMapUrl.city, weight: 35, name: 'city' },
+                { field: restaurant.googleMapUrl.state, weight: 30, name: 'state' },
+                { field: restaurant.googleMapUrl.stateShort, weight: 30, name: 'stateShort' },
+                { field: restaurant.googleMapUrl.country, weight: 25, name: 'country' },
+                { field: restaurant.googleMapUrl.countryShort, weight: 25, name: 'countryShort' },
+                { field: restaurant.googleMapUrl.streetName, weight: 20, name: 'streetName' },
+                { field: restaurant.googleMapUrl.postCode, weight: 15, name: 'postCode' }
+            ];
+
+            // Check each field for matches
+            for (const { field, weight, name } of fieldsToSearch) {
+                if (field) {
+                    const fieldValue = field.toLowerCase();
+                    
+                    // Check for exact phrase match (highest priority)
+                    if (fieldValue.includes(keyword)) {
+                        totalScore += weight;
+                    }
+                    
+                    // Check each word in the keyword
+                    for (const word of keywordWords) {
+                        if (fieldValue.includes(word)) {
+                            totalScore += Math.floor(weight * 0.7); // Partial word match gets 70% of field weight
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Also check the composed address for additional matches
+        const address = this.getRestaurantAddress(restaurant).toLowerCase();
+        if (address) {
+            // Bonus for full address match
+            if (address.includes(keyword)) {
+                totalScore += 15;
+            }
+            
+            // Check individual words in the composed address
+            for (const word of keywordWords) {
+                const wordScore = this.calculateWordRelevance(address, word);
+                totalScore += Math.floor(wordScore * 0.3); // Reduced weight since we're already checking individual fields
+            }
+        }
+        
+        return totalScore;
+    }
+
+    /**
+     * Calculate relevance score for a single word
+     */
+    private calculateWordRelevance(address: string, word: string): number {
+        // Exact word match (word boundaries) - highest score
+        const exactMatch = new RegExp(`\\b${word}\\b`, 'i').test(address);
+        if (exactMatch) return 25;
+        
+        // Partial word match - medium score
+        if (address.includes(word)) return 15;
+        
+        // No match
+        return 0;
+    }
+
+    /**
+     * Check if address has partial match with keyword
+     * Uses word boundary matching for better accuracy
+     */
+    private hasPartialMatch(address: string, keyword: string): boolean {
+        // Split keyword into words and check if any word appears in address
+        const keywordWords = keyword.split(/\s+/).filter(word => word.length > 2);
+        
+        return keywordWords.some(word => {
+            // Use word boundary regex for better matching
+            const regex = new RegExp(`\\b${word}\\b`, 'i');
+            return regex.test(address);
+        });
+    }
+}

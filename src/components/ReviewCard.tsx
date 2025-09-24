@@ -1,6 +1,6 @@
 // ReviewCard.tsx
 import Image from "next/image";
-import ReviewDetailModal from "./ReviewDetailModal";
+import InstagramReviewModal from "./InstagramReviewModal";
 import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
 import {
   ReviewCardProps,
@@ -33,7 +33,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
 
   return (
     <div className={`review-card !w-[${width}px] !border-none`}>
-      <ReviewDetailModal
+      <InstagramReviewModal
         data={data as unknown as GraphQLReview}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

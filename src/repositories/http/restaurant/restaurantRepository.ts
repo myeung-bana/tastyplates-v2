@@ -45,8 +45,11 @@ export class RestaurantRepository implements RestaurantRepo {
         palates?: string,
         orderBy?: unknown[]
     ) {
+        // Keep search term separate from location filtering
+        const enhancedSearchTerm = searchTerm;
+
         const variables = {
-            searchTerm,
+            searchTerm: enhancedSearchTerm,
             first,
             after,
             taxQuery,
@@ -57,13 +60,15 @@ export class RestaurantRepository implements RestaurantRepo {
             recognitionSort: sortOption,
             minAverageRating: rating,
             statuses: statuses || [],
-            streetAddress: address || "",
-            ethnicSearch: ethnicSearch || "",
-            palates: palates || "",
+            streetAddress: null, // Use client-side filtering for multi-field location search
+            ethnicSearch: ethnicSearch || null, // Don't filter by empty string
+            palates: palates || null, // Don't filter by empty string
             orderBy: orderBy || null,
         };
 
         console.log('🔍 GraphQL query variables:', variables);
+        console.log('📍 Search term:', enhancedSearchTerm);
+        console.log('📍 Location filter (client-side):', address || 'None');
 
         const { data } = await client.query({
             query: GET_LISTINGS,
@@ -83,203 +88,45 @@ export class RestaurantRepository implements RestaurantRepo {
     ) {
         const { data } = await client.query({
             query: GET_RESTAURANT_BY_ID,
-            variables: { id, idType, userId },
-            context: {
-                headers: {
-                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                },
+            variables: {
+                id,
+                idType,
+                accessToken,
+                userId
             },
-            fetchPolicy: "no-cache",
         });
-
         return data.listing;
     }
 
-    async createListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
-        const headers: HeadersInit = {
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-        };
-
-        const res = await request.POST('/wp-json/custom/v1/listing', { body: JSON.stringify(payload), headers: headers });
-        
-        // Check if the response indicates an error
-        if (res.error || Number(res.status) >= 400) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            throw new Error((res as any).error || "Failed to submit listing and review");
-        }
-
-        return res;
-    }
-
-
-    async getFavoriteListing(
-        userId: number,
-        accessToken?: string
-    ): Promise<Record<string, unknown>> {
-        const headers: HeadersInit = {
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        };
-
-        return request.GET(`/wp-json/restaurant/v1/favorites/?user_id=${userId}`,
-            {
-                headers: headers,
-                credentials: "include",
-            }
-        );
-    }
-
-    async updateListing(
-        id: number,
-        listingUpdateData: Record<string, unknown>, // Changed to accept a plain object
-        accessToken?: string
-    ): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.PUT(`/wp-json/custom/v1/listing/${id}`, {
-                headers: {
-                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                },
-                body: JSON.stringify(listingUpdateData),
-            });
-
-            // Check if the response indicates an error
-            if (response.error || Number(response.status) >= 400) {
-                console.error('Backend error during update:', response);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                throw new Error((response as any).message || "Failed to update restaurant listing");
-            }
-            return response;
-
-        } catch (error) {
-            console.error('Error updating restaurant listing in repository:', error);
-            throw new Error('Failed to update restaurant listing');
-        }
-    }
-
-    async deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.DELETE(`/wp-json/custom/v1/listing/${id}`, {
-                headers: {
-                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                },
-            });
-
-            // Check if the response indicates an error
-            if (response.error || Number(response.status) >= 400) {
-                console.error('Backend error during delete:', response);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                throw new Error((response as any).message || "Failed to delete restaurant listing");
-            }
-
-            // If response is ok, return the response or a success object
-            if (response && Object.keys(response).length > 0) {
-                return response;
-            } else {
-                // If the response is empty, assume success without JSON content
-                return { success: true, deleted: id }; // Return a custom success object
-            }
-
-        } catch (error) {
-            console.error('Error deleting restaurant listing in repository:', error);
-            throw new Error('Failed to delete restaurant listing');
-        }
-    }
-
-    async getlistingDrafts(token: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.GET('/wp-json/wp/v2/listings?status=pending', {
-                headers: {
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error("Failed to fetch listing pending", error);
-            throw new Error('Failed to fetch listing pending');
-        }
-    }
-
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string): Promise<Record<string, unknown>> {
-        const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-            headers: {
-                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-            },
-            body: JSON.stringify(data),
-            credentials: "include",
-        });
-
-        return response;
-    }
-
-    async getCheckInRestaurant(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
-        const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
-            headers: {
-                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-            },
-            credentials: "include",
-        });
-
-        return response;
-    }
-
-    async createCheckIn(data: CheckInData, accessToken?: string): Promise<Record<string, unknown>> {
-        const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
-            headers: {
-                ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-            },
-            body: JSON.stringify(data),
-            credentials: "include",
-        });
-
-        return response;
-    }
-
-    async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
-        try {
-            const data = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (data && Array.isArray((data as any).reviews)) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                return (data as any).reviews.length;
-            }
-            return 0;
-        } catch (error) {
-            console.error('Error fetching restaurant ratings count:', error);
-            return 0;
-        }
-    }
-
-    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
+    async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
         try {
             const { data } = await client.mutate({
                 mutation: ADD_RECENTLY_VISITED_RESTAURANT,
-                variables: { postId },
-                context: {
-                    headers: {
-                        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                    },
+                variables: {
+                    restaurantId,
+                    accessToken
                 },
             });
-
-            return data?.addRecentlyVisited ?? false;
+            return data;
         } catch (error) {
-            console.error("Failed to add recently visited restaurant:", error);
-            return false;
+            console.error('Error adding recently visited restaurant:', error);
+            throw error;
         }
     }
 
     async getRecentlyVisitedRestaurants(accessToken?: string,) {
-        const { data } = await client.query({
-            query: GET_RECENTLY_VISITED_RESTAURANTS,
-            context: {
-                headers: {
-                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+        try {
+            const { data } = await client.query({
+                query: GET_RECENTLY_VISITED_RESTAURANTS,
+                variables: {
+                    accessToken
                 },
-            },
-            fetchPolicy: "no-cache",
-        });
-
-        // Return the array of IDs or an empty array if undefined
-        return data?.currentUser?.recentlyVisited || [];
+            });
+            return data.recentlyVisitedRestaurants;
+        } catch (error) {
+            console.error('Error fetching recently visited restaurants:', error);
+            throw error;
+        }
     }
 
     async getAddressByPalate(
@@ -316,20 +163,270 @@ export class RestaurantRepository implements RestaurantRepo {
         first = 32,
         after: string | null = null,
     ) {
-        const { data } = await client.query({
-            query: GET_LISTINGS_NAME,
-            variables: {
-                searchTerm,
-                first,
-                after,
-            },
-            fetchPolicy: 'network-only',
-        });
-        return {
-            nodes: data.listings.nodes,
-            pageInfo: data.listings.pageInfo,
-            hasNextPage: data.listings.pageInfo.hasNextPage,
-            endCursor: data.listings.pageInfo.endCursor,
-        };
+        try {
+            const { data } = await client.query({
+                query: GET_LISTINGS_NAME,
+                variables: {
+                    searchTerm,
+                    first,
+                    after
+                },
+            });
+            return {
+                nodes: data.listings.nodes,
+                pageInfo: data.listings.pageInfo,
+            };
+        } catch (error) {
+            console.error('Error fetching listings name:', error);
+            throw new Error('Failed to fetch listings name');
+        }
+    }
+
+    async checkInRestaurant(restaurantId: number, accessToken: string) {
+        try {
+            const response = await request.post('/api/v1/restaurants/check-in', {
+                restaurantId,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error checking in restaurant:', error);
+            throw error;
+        }
+    }
+
+    async addFavoriteRestaurant(restaurantId: number, accessToken: string) {
+        try {
+            const response = await request.post('/api/v1/restaurants/favorite', {
+                restaurantId,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error adding favorite restaurant:', error);
+            throw error;
+        }
+    }
+
+    async removeFavoriteRestaurant(restaurantId: number, accessToken: string) {
+        try {
+            const response = await request.delete('/api/v1/restaurants/favorite', {
+                restaurantId,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error removing favorite restaurant:', error);
+            throw error;
+        }
+    }
+
+    async getFavoriteRestaurants(accessToken: string) {
+        try {
+            const response = await request.get('/api/v1/restaurants/favorites', {
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching favorite restaurants:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantReviews(restaurantId: number, page = 1, limit = 10) {
+        try {
+            const response = await request.get(`/api/v1/restaurants/${restaurantId}/reviews`, {
+                page,
+                limit
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant reviews:', error);
+            throw error;
+        }
+    }
+
+    async addRestaurantReview(reviewData: any, accessToken: string) {
+        try {
+            const response = await request.post('/api/v1/restaurants/reviews', {
+                ...reviewData,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error adding restaurant review:', error);
+            throw error;
+        }
+    }
+
+    async updateRestaurantReview(reviewId: number, reviewData: any, accessToken: string) {
+        try {
+            const response = await request.put(`/api/v1/restaurants/reviews/${reviewId}`, {
+                ...reviewData,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error updating restaurant review:', error);
+            throw error;
+        }
+    }
+
+    async deleteRestaurantReview(reviewId: number, accessToken: string) {
+        try {
+            const response = await request.delete(`/api/v1/restaurants/reviews/${reviewId}`, {
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error deleting restaurant review:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantStats(restaurantId: number) {
+        try {
+            const response = await request.get(`/api/v1/restaurants/${restaurantId}/stats`);
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant stats:', error);
+            throw error;
+        }
+    }
+
+    async searchRestaurants(query: string, filters: any = {}) {
+        try {
+            const response = await request.get('/api/v1/restaurants/search', {
+                query,
+                ...filters
+            });
+            return response;
+        } catch (error) {
+            console.error('Error searching restaurants:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantCategories() {
+        try {
+            const response = await request.get('/api/v1/restaurants/categories');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant categories:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantCuisines() {
+        try {
+            const response = await request.get('/api/v1/restaurants/cuisines');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant cuisines:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantPriceRanges() {
+        try {
+            const response = await request.get('/api/v1/restaurants/price-ranges');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant price ranges:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantBadges() {
+        try {
+            const response = await request.get('/api/v1/restaurants/badges');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant badges:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantRecognition() {
+        try {
+            const response = await request.get('/api/v1/restaurants/recognition');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant recognition:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantSortOptions() {
+        try {
+            const response = await request.get('/api/v1/restaurants/sort-options');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant sort options:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantFilters() {
+        try {
+            const response = await request.get('/api/v1/restaurants/filters');
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant filters:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantSuggestions(userId: number, accessToken: string) {
+        try {
+            const response = await request.get('/api/v1/restaurants/suggestions', {
+                userId,
+                accessToken
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant suggestions:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantTrending(limit = 10) {
+        try {
+            const response = await request.get('/api/v1/restaurants/trending', {
+                limit
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching trending restaurants:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantNearby(latitude: number, longitude: number, radius = 10) {
+        try {
+            const response = await request.get('/api/v1/restaurants/nearby', {
+                latitude,
+                longitude,
+                radius
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching nearby restaurants:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantRecommendations(userId: number, accessToken: string, limit = 10) {
+        try {
+            const response = await request.get('/api/v1/restaurants/recommendations', {
+                userId,
+                accessToken,
+                limit
+            });
+            return response;
+        } catch (error) {
+            console.error('Error fetching restaurant recommendations:', error);
+            throw error;
+        }
     }
 }
