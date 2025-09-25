@@ -60,11 +60,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         date = new Date(dateString);
         console.log('📅 Parsed regular date:', date);
       }
-      
-      console.log('📅 Date valid:', !isNaN(date.getTime()));
-      console.log('📅 Date in local time:', date.toLocaleString());
-      console.log('📅 Date in UTC:', date.toISOString());
-      
+            
       // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.log('⚠️ Invalid date, trying YYYY-MM-DD format');

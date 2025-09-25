@@ -177,6 +177,15 @@ export class RestaurantService {
         }
     }
 
+    async fetchFavoritingListing(userId: number, accessToken?: string) {
+        try {
+            return await restaurantRepo.getFavoriteListing(userId, accessToken);
+        } catch (error) {
+            console.error('Error fetching favorite listings:', error);
+            throw new Error('Failed to fetch favorite listings');
+        }
+    }
+
     /**
      * Sort restaurants by location relevance with improved algorithm
      * Prioritizes restaurants whose addresses contain the location keyword

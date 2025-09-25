@@ -27,8 +27,6 @@ import toast from 'react-hot-toast';
 import { 
   AiOutlineHeart,
   AiFillHeart,
-  AiOutlineComment,
-  AiOutlineSend,
   AiOutlineMore,
   AiOutlineLeft,
   AiOutlineRight,
@@ -495,10 +493,10 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
               <button
                 onClick={handleFollowClick}
                 disabled={followLoading || !authorUserId}
-                className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
+                className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                   isFollowing 
-                    ? 'bg-[#494D5D] text-white' 
-                    : 'text-[#FCFCFC]'
+                    ? 'bg-white text-black border border-black' 
+                    : 'bg-[#E36B00] text-[#FCFCFC]'
                 } disabled:opacity-50 disabled:pointer-events-none`}
               >
                 {followLoading ? (
@@ -604,9 +602,9 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
                         const full = i + 1 <= rating;
                         const half = !full && i + 0.5 <= rating;
                         return full ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-yellow-400" />
+                          <AiFillStar key={i} className="w-4 h-4 text-black" />
                         ) : half ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-yellow-400 opacity-50" />
+                          <AiFillStar key={i} className="w-4 h-4 text-black opacity-50" />
                         ) : (
                           <AiOutlineStar key={i} className="w-4 h-4 text-gray-300" />
                         );
@@ -651,12 +649,13 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
                     <AiOutlineHeart className="w-6 h-6" />
                   )}
                 </button>
-                <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
+                {/* Chat and Share icons hidden as they are not currently used */}
+                {/* <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
                   <AiOutlineComment className="w-6 h-6" />
                 </button>
                 <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
                   <AiOutlineSend className="w-6 h-6" />
-                </button>
+                </button> */}
               </div>
               
               <button className="text-gray-500 hover:text-gray-700 transition-colors">

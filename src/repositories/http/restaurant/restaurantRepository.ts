@@ -429,4 +429,18 @@ export class RestaurantRepository implements RestaurantRepo {
             throw error;
         }
     }
+
+    async getFavoriteListing(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.GET(`/wp-json/wp/v2/api/favorite-listings/${userId}`, {
+                headers: {
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching favorite listings:', error);
+            throw error;
+        }
+    }
 }
