@@ -9,8 +9,8 @@ import {
     GET_LISTINGS_NAME,
 } from "@/app/graphql/Restaurant/restaurantQueries";
 import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
-import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
+import { FavoriteListingData, CheckInData } from "@/interfaces/restaurant/restaurant";
 import HttpMethods from "../requests";
 
 const request = new HttpMethods();
@@ -175,6 +175,8 @@ export class RestaurantRepository implements RestaurantRepo {
             return {
                 nodes: data.listings.nodes,
                 pageInfo: data.listings.pageInfo,
+                hasNextPage: data.listings.pageInfo.hasNextPage,
+                endCursor: data.listings.pageInfo.endCursor,
             };
         } catch (error) {
             console.error('Error fetching listings name:', error);
@@ -184,9 +186,12 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async checkInRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.post('/api/v1/restaurants/check-in', {
-                restaurantId,
-                accessToken
+            const response = await request.POST('/api/v1/restaurants/check-in', {
+                body: JSON.stringify({ restaurantId }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -197,9 +202,12 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async addFavoriteRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.post('/api/v1/restaurants/favorite', {
-                restaurantId,
-                accessToken
+            const response = await request.POST('/api/v1/restaurants/favorite', {
+                body: JSON.stringify({ restaurantId }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -210,9 +218,10 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async removeFavoriteRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.delete('/api/v1/restaurants/favorite', {
-                restaurantId,
-                accessToken
+            const response = await request.DELETE('/api/v1/restaurants/favorite', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -223,8 +232,10 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getFavoriteRestaurants(accessToken: string) {
         try {
-            const response = await request.get('/api/v1/restaurants/favorites', {
-                accessToken
+            const response = await request.GET('/api/v1/restaurants/favorites', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -235,10 +246,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantReviews(restaurantId: number, page = 1, limit = 10) {
         try {
-            const response = await request.get(`/api/v1/restaurants/${restaurantId}/reviews`, {
-                page,
-                limit
-            });
+            const response = await request.GET(`/api/v1/restaurants/${restaurantId}/reviews?page=${page}&limit=${limit}`);
             return response;
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
@@ -246,11 +254,14 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async addRestaurantReview(reviewData: any, accessToken: string) {
+    async addRestaurantReview(reviewData: Record<string, unknown>, accessToken: string) {
         try {
-            const response = await request.post('/api/v1/restaurants/reviews', {
-                ...reviewData,
-                accessToken
+            const response = await request.POST('/api/v1/restaurants/reviews', {
+                body: JSON.stringify(reviewData),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -259,11 +270,14 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async updateRestaurantReview(reviewId: number, reviewData: any, accessToken: string) {
+    async updateRestaurantReview(reviewId: number, reviewData: Record<string, unknown>, accessToken: string) {
         try {
-            const response = await request.put(`/api/v1/restaurants/reviews/${reviewId}`, {
-                ...reviewData,
-                accessToken
+            const response = await request.PUT(`/api/v1/restaurants/reviews/${reviewId}`, {
+                body: JSON.stringify(reviewData),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -274,8 +288,10 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async deleteRestaurantReview(reviewId: number, accessToken: string) {
         try {
-            const response = await request.delete(`/api/v1/restaurants/reviews/${reviewId}`, {
-                accessToken
+            const response = await request.DELETE(`/api/v1/restaurants/reviews/${reviewId}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -286,7 +302,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantStats(restaurantId: number) {
         try {
-            const response = await request.get(`/api/v1/restaurants/${restaurantId}/stats`);
+            const response = await request.GET(`/api/v1/restaurants/${restaurantId}/stats`);
             return response;
         } catch (error) {
             console.error('Error fetching restaurant stats:', error);
@@ -294,12 +310,10 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async searchRestaurants(query: string, filters: any = {}) {
+    async searchRestaurants(query: string, filters: Record<string, unknown> = {}) {
         try {
-            const response = await request.get('/api/v1/restaurants/search', {
-                query,
-                ...filters
-            });
+            const params = new URLSearchParams({ query, ...filters });
+            const response = await request.GET(`/api/v1/restaurants/search?${params}`);
             return response;
         } catch (error) {
             console.error('Error searching restaurants:', error);
@@ -309,7 +323,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantCategories() {
         try {
-            const response = await request.get('/api/v1/restaurants/categories');
+            const response = await request.GET('/api/v1/restaurants/categories');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant categories:', error);
@@ -319,7 +333,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantCuisines() {
         try {
-            const response = await request.get('/api/v1/restaurants/cuisines');
+            const response = await request.GET('/api/v1/restaurants/cuisines');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant cuisines:', error);
@@ -329,7 +343,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantPriceRanges() {
         try {
-            const response = await request.get('/api/v1/restaurants/price-ranges');
+            const response = await request.GET('/api/v1/restaurants/price-ranges');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant price ranges:', error);
@@ -339,7 +353,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantBadges() {
         try {
-            const response = await request.get('/api/v1/restaurants/badges');
+            const response = await request.GET('/api/v1/restaurants/badges');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant badges:', error);
@@ -349,7 +363,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantRecognition() {
         try {
-            const response = await request.get('/api/v1/restaurants/recognition');
+            const response = await request.GET('/api/v1/restaurants/recognition');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant recognition:', error);
@@ -359,7 +373,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantSortOptions() {
         try {
-            const response = await request.get('/api/v1/restaurants/sort-options');
+            const response = await request.GET('/api/v1/restaurants/sort-options');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant sort options:', error);
@@ -369,7 +383,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantFilters() {
         try {
-            const response = await request.get('/api/v1/restaurants/filters');
+            const response = await request.GET('/api/v1/restaurants/filters');
             return response;
         } catch (error) {
             console.error('Error fetching restaurant filters:', error);
@@ -379,9 +393,10 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantSuggestions(userId: number, accessToken: string) {
         try {
-            const response = await request.get('/api/v1/restaurants/suggestions', {
-                userId,
-                accessToken
+            const response = await request.GET(`/api/v1/restaurants/suggestions?userId=${userId}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -392,9 +407,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantTrending(limit = 10) {
         try {
-            const response = await request.get('/api/v1/restaurants/trending', {
-                limit
-            });
+            const response = await request.GET(`/api/v1/restaurants/trending?limit=${limit}`);
             return response;
         } catch (error) {
             console.error('Error fetching trending restaurants:', error);
@@ -404,11 +417,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantNearby(latitude: number, longitude: number, radius = 10) {
         try {
-            const response = await request.get('/api/v1/restaurants/nearby', {
-                latitude,
-                longitude,
-                radius
-            });
+            const response = await request.GET(`/api/v1/restaurants/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}`);
             return response;
         } catch (error) {
             console.error('Error fetching nearby restaurants:', error);
@@ -418,10 +427,10 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantRecommendations(userId: number, accessToken: string, limit = 10) {
         try {
-            const response = await request.get('/api/v1/restaurants/recommendations', {
-                userId,
-                accessToken,
-                limit
+            const response = await request.GET(`/api/v1/restaurants/recommendations?userId=${userId}&limit=${limit}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
             });
             return response;
         } catch (error) {
@@ -441,6 +450,152 @@ export class RestaurantRepository implements RestaurantRepo {
         } catch (error) {
             console.error('Error fetching favorite listings:', error);
             throw error;
+        }
+    }
+
+    async getCheckInRestaurant(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.GET(`/wp-json/wp/v2/api/check-in-restaurants/${userId}`, {
+                headers: {
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching check-in restaurants:', error);
+            throw error;
+        }
+    }
+
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/wp/v2/api/favorite-listings', {
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error creating favorite listing:', error);
+            throw error;
+        }
+    }
+
+    async createCheckIn(data: CheckInData, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/wp/v2/api/check-ins', {
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error creating check-in:', error);
+            throw error;
+        }
+    }
+
+    async createRestaurantListingAndReview(data: Record<string, unknown>, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/wp/v2/api/restaurant-listing-and-review', {
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error creating restaurant listing and review:', error);
+            throw error;
+        }
+    }
+
+    async deleteRestaurantListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.DELETE(`/wp-json/wp/v2/api/restaurant-listing/${id}`, {
+                headers: {
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error deleting restaurant listing:', error);
+            throw error;
+        }
+    }
+
+    async createListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/wp/v2/api/listing-and-review', {
+                body: JSON.stringify(payload),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error creating listing and review:', error);
+            throw error;
+        }
+    }
+
+    async updateListing(id: number, listingUpdateData: Record<string, unknown>, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.PUT(`/wp-json/wp/v2/api/listing/${id}`, {
+                body: JSON.stringify(listingUpdateData),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error updating listing:', error);
+            throw error;
+        }
+    }
+
+    async deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.DELETE(`/wp-json/wp/v2/api/listing/${id}`, {
+                headers: {
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error deleting listing:', error);
+            throw error;
+        }
+    }
+
+    async getlistingDrafts(token: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.GET('/wp-json/wp/v2/api/listing-drafts', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching listing drafts:', error);
+            throw error;
+        }
+    }
+
+    async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
+        try {
+            const response = await request.GET(`/wp-json/wp/v2/api/restaurant/${restaurantId}/ratings-count`) as { count: number };
+            return response.count || 0;
+        } catch (error) {
+            console.error('Error fetching restaurant ratings count:', error);
+            return 0;
         }
     }
 }

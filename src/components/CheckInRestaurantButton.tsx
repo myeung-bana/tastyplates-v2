@@ -55,8 +55,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     try {
       const res: Record<string, unknown> = await restaurantService.createCheckIn(
         { restaurant_slug: restaurantSlug, action },
-        session?.accessToken,
-        false
+        session?.accessToken
       );
 
       if (res.status == code.success) {

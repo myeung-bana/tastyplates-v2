@@ -16,7 +16,7 @@ import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
-import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed } from "@/constants/messages";
+import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed } from "@/constants/messages";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import ReplyItem from "./ReplyItem";
@@ -106,7 +106,7 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
       const relativeTime = formatDistanceToNow(date, { addSuffix: true });
       // Convert to more readable format (e.g., "2 days ago" instead of "2 days")
       return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
-    } catch (error) {
+    } catch {
       return formatDate(dateString);
     }
   };
@@ -293,7 +293,7 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
       const res = await reviewService.postReview(payload, session?.accessToken ?? "");
       
       // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
-      const isSuccess = (status: any) => {
+      const isSuccess = (status: number | string) => {
         // Handle numeric status codes (200-299)
         if (typeof status === 'number') {
           return status >= 200 && status < 300;

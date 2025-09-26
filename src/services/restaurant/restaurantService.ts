@@ -1,7 +1,7 @@
 // services/restaurant/restaurantService.ts
-import { CheckInData, FavoriteListingData } from "@/interfaces/restaurant/restaurant";
 import { RestaurantRepository } from "@/repositories/http/restaurant/restaurantRepository";
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
+import { FavoriteListingData, CheckInData } from "@/interfaces/restaurant/restaurant";
 import { RESTAURANT_CONSTANTS } from '@/constants/utils';
 
 export interface Restaurant {
@@ -186,6 +186,63 @@ export class RestaurantService {
         }
     }
 
+    async fetchRestaurantById(restaurantId: string, idType: string = 'DATABASE_ID', accessToken?: string) {
+        try {
+            return await restaurantRepo.getRestaurantById(restaurantId, idType, accessToken);
+        } catch (error) {
+            console.error('Error fetching restaurant by ID:', error);
+            throw new Error('Failed to fetch restaurant by ID');
+        }
+    }
+
+    async fetchCheckInRestaurant(userId: number, accessToken?: string) {
+        try {
+            return await restaurantRepo.getCheckInRestaurant(userId, accessToken);
+        } catch (error) {
+            console.error('Error fetching check-in restaurants:', error);
+            throw new Error('Failed to fetch check-in restaurants');
+        }
+    }
+
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string) {
+        try {
+            return await restaurantRepo.createFavoriteListing(data, accessToken);
+        } catch (error) {
+            console.error('Error creating favorite listing:', error);
+            throw new Error('Failed to create favorite listing');
+        }
+    }
+
+    async createCheckIn(data: CheckInData, accessToken?: string) {
+        try {
+            return await restaurantRepo.createCheckIn(data, accessToken);
+        } catch (error) {
+            console.error('Error creating check-in:', error);
+            throw new Error('Failed to create check-in');
+        }
+    }
+
+    async createRestaurantListingAndReview(data: Record<string, unknown>, accessToken?: string) {
+        try {
+            if (!accessToken) {
+                throw new Error('Access token is required for creating restaurant listing and review');
+            }
+            return await restaurantRepo.createListingAndReview(data, accessToken);
+        } catch (error) {
+            console.error('Error creating restaurant listing and review:', error);
+            throw new Error('Failed to create restaurant listing and review');
+        }
+    }
+
+    async deleteRestaurantListing(id: number, accessToken?: string) {
+        try {
+            return await restaurantRepo.deleteListing(id, accessToken);
+        } catch (error) {
+            console.error('Error deleting restaurant listing:', error);
+            throw new Error('Failed to delete restaurant listing');
+        }
+    }
+
     /**
      * Sort restaurants by location relevance with improved algorithm
      * Prioritizes restaurants whose addresses contain the location keyword
@@ -277,7 +334,7 @@ export class RestaurantService {
             ];
 
             // Check each field for matches
-            for (const { field, weight, name } of fieldsToSearch) {
+            for (const { field, weight } of fieldsToSearch) {
                 if (field) {
                     const fieldValue = field.toLowerCase();
                     

@@ -117,4 +117,13 @@ export class ReviewService {
             throw new Error('Failed to fetch restaurant reviews');
         }
     }
+
+    async likeReview(reviewId: number, accessToken?: string) {
+        try {
+            return await reviewRepo.likeReview(reviewId, accessToken);
+        } catch (error) {
+            console.error('Error liking review:', error);
+            throw new Error('Failed to like review');
+        }
+    }
 }

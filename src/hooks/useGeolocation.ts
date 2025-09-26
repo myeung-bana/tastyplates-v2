@@ -29,7 +29,7 @@ export const useGeolocation = () => {
               const address = results[0];
               
               // Extract city, state, and country for better matching
-              let locationParts = [];
+              const locationParts = [];
               
               // Try to get city
               const cityComponent = address.address_components?.find(component => 
@@ -106,13 +106,13 @@ export const useGeolocation = () => {
             let errorMessage = "Unable to retrieve your location";
             
             switch (err.code) {
-              case err.PERMISSION_DENIED:
+              case 1: // PERMISSION_DENIED
                 errorMessage = "Location access denied by user";
                 break;
-              case err.POSITION_UNAVAILABLE:
+              case 2: // POSITION_UNAVAILABLE
                 errorMessage = "Location information unavailable";
                 break;
-              case err.TIMEOUT:
+              case 3: // TIMEOUT
                 errorMessage = "Location request timed out";
                 break;
             }

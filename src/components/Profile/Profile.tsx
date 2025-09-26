@@ -67,6 +67,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [userReviewCount, setUserReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   // Removed unused state variables
   const [width, setWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -114,9 +115,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const statuses = useMemo(() => isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"], [isViewingOwnProfile]);
   
   const loadMore = useCallback(async () => {
-    if (loading || !hasNextPage || !targetUserId || status === "loading")
+    if (reviewsLoading || !hasNextPage || !targetUserId || status === "loading")
       return;
-    setLoading(true);
+    setReviewsLoading(true);
 
     try {
       const first = isFirstLoad.current ? 16 : 8;
@@ -145,12 +146,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } catch (error) {
       console.error("Error loading reviews:", error);
     } finally {
-      setLoading(false);
+      setReviewsLoading(false);
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
       }
     }
-  }, [loading, hasNextPage, targetUserId, status, endCursor]);
+  }, [reviewsLoading, hasNextPage, targetUserId, status, endCursor]);
 
   const fetchRestaurants = useCallback(async (
     first = 8,
@@ -247,7 +248,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !loading) {
+        if (entries[0].isIntersecting && hasNextPage && !reviewsLoading) {
           loadMore();
         }
       },
@@ -260,7 +261,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, loadMore]);
+  }, [hasNextPage, reviewsLoading, loadMore]);
 
   useEffect(() => {
     const fetchPublicUserData = async () => {
@@ -336,7 +337,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   useEffect(() => {
     if (!session?.accessToken || !targetUserId) return;
     const loadFollowData = async () => {
-      setLoading(true);
       setFollowingLoading(true);
       setFollowersLoading(true);
       try {
@@ -345,7 +345,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       } finally {
         setFollowingLoading(false);
         setFollowersLoading(false);
-        setLoading(false);
       }
     };
     loadFollowData();
@@ -651,7 +650,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
             )
           );
-          const validResults = results.filter(r => r && typeof r === "object" && r.id);
+          const validResults = results.filter((r: unknown) => r && typeof r === "object" && r && 'id' in r);
           const transformed = transformNodes(validResults as unknown as Listing[]);
           setWishlist(transformed);
         }
@@ -691,7 +690,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                 restaurantService.fetchRestaurantById(String(id), "DATABASE_ID").catch(() => null)
               )
             );
-            const validResults = results.filter(r => r && typeof r === "object" && r.id);
+            const validResults = results.filter((r: unknown) => r && typeof r === "object" && r && 'id' in r);
             const transformed = transformNodes(validResults as unknown as Listing[]);
             setCheckins(transformed);
           }
@@ -730,7 +729,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setHasNextPage(true);
       setHasFetchedCheckins(false);
       setHasFetchedWishlist(false);
-      setLoading(true);
       setNameLoading(true);
       setAboutMeLoading(true);
       setPalatesLoading(true);

@@ -97,8 +97,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     try {
       const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action },
-        session?.accessToken, // can be undefined
-        false // do not return JSON response
+        session?.accessToken // can be undefined
       );
       
       if (res.status === code.success) {
@@ -148,8 +147,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     try {
       const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action: "unsave" },
-        session?.accessToken, // can be undefined
-        false // do not return JSON response
+        session?.accessToken // can be undefined
       );
 
       if (res.status == code.success) {

@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import CustomModal from "./ui/Modal/Modal";
-import { MdOutlineComment, MdOutlineThumbUp } from "react-icons/md";
+import { MdOutlineThumbUp } from "react-icons/md";
 import { authorIdMissing, commentDuplicateError, commentedSuccess, commentFloodError, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
@@ -28,7 +28,6 @@ import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { UserService } from "@/services/user/userService";
-import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from "@/constants/session";
 
 const userService = new UserService()
 const reviewService = new ReviewService();
@@ -46,7 +45,6 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
   const { setFollowState } = useFollowContext();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
-  const [pendingShowSignin, setPendingShowSignin] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(initialPhotoIndex);
@@ -70,7 +68,6 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
   // Handle profile click for non-authenticated users
   const handleProfileClick = () => {
     if (!session?.user) {
-      setPendingShowSignin(true);
       setIsShowSignin(true);
     }
   };
@@ -89,14 +86,14 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
 
     setFollowLoading(true);
     try {
-      const response = await userService.followUser(authorUserId, session.accessToken);
+      const response = await userService.followUser(Number(authorUserId), session.accessToken);
       
-      if (response.status === code.SUCCESS) {
+      if (response.status === code.success) {
         const newFollowState = !isFollowing;
         setIsFollowing(newFollowState);
         
         // Update follow state in context
-        setFollowState(authorUserId, newFollowState);
+        setFollowState(Number(authorUserId), newFollowState);
         
         toast.success(newFollowState ? userFollowedFailed : userUnfollowedFailed);
       } else {
@@ -120,7 +117,7 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
     try {
       const response = await reviewService.likeReview(data.databaseId, session.accessToken);
       
-      if (response.status === code.SUCCESS) {
+      if (response.status === code.success) {
         const newLikedState = !userLiked;
         setUserLiked(newLikedState);
         setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
@@ -150,7 +147,7 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
     try {
       const response = await reviewService.likeReview(replyId, session.accessToken);
       
-      if (response.status === code.SUCCESS) {
+      if (response.status === code.success) {
         setReplies(prev => prev.map(reply => {
           if (reply.databaseId === replyId) {
             const newLikedState = !reply.userLiked;
@@ -196,9 +193,9 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
         authorId: session.user.id,
         content: commentReply,
         parent: data.databaseId,
-      }, session.accessToken);
+      }, session.accessToken!);
 
-      if (response.status === code.SUCCESS) {
+      if (response.status === code.success) {
         setCommentReply("");
         setCooldown(30); // 30 second cooldown
         
@@ -207,12 +204,12 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
         setReplies(repliesData);
         
         toast.success(commentedSuccess);
-      } else if (response.status === code.FLOOD_ERROR) {
+      } else if (response.status === code.badRequest) {
         toast.error(commentFloodError);
-      } else if (response.status === code.DUPLICATE_ERROR) {
+      } else if (response.status === code.conflict) {
         toast.error(commentDuplicateError);
-      } else if (response.status === code.MAXIMUM_REPLIES_ERROR) {
-        toast.error(maximumCommentReplies);
+      } else if (response.status === code.forbidden) {
+        toast.error(maximumCommentReplies(5));
       } else {
         toast.error(errorOccurred);
       }
@@ -278,6 +275,7 @@ const ReviewDetailModal2: React.FC<ReviewModalProps> = ({
             <div className="review-modal2__images">
               {data.reviewImages && data.reviewImages.length > 0 ? (
                 <div className="relative">
+                  {/* @ts-expect-error Slider component type compatibility issue */}
                   <Slider {...sliderSettings} ref={sliderRef}>
                     {data.reviewImages.map((image, index) => (
                       <div key={index} className="review-modal2__image-container">

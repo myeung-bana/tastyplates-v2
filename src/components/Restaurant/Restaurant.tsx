@@ -5,16 +5,12 @@ import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
 import SkeletonCard from "@/components/SkeletonCard";
-import { RestaurantService, Restaurant as RestaurantType } from "@/services/restaurant/restaurantService"
+import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
-import CustomModal from "../ui/Modal/Modal";
-import { FiSearch } from "react-icons/fi";
-import SelectOptions from "../ui/Options/SelectOptions";
 import { debounce } from "@/utils/debounce";
-import { MdArrowBackIos } from "react-icons/md";
 import { DEFAULT_IMAGE } from "@/constants/images";
 import { getBestAddress } from "@/utils/addressUtils";
 import SuggestedRestaurants from './SuggestedRestaurants';
@@ -71,7 +67,7 @@ const RestaurantPage = () => {
   const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
   
   // Initialize state with URL parameters
-  const [searchAddress, setSearchAddress] = useState(initialAddressFromUrl);
+  const [searchAddress] = useState(initialAddressFromUrl);
   const [searchEthnic, setSearchEthnic] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +76,7 @@ const RestaurantPage = () => {
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
-  const [searchTerm, setSearchTerm] = useState(initialListingFromUrl);
+  const [searchTerm] = useState(initialListingFromUrl);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   // Convert ethnic URL parameter to palates array
@@ -106,13 +102,13 @@ const RestaurantPage = () => {
     sortOption: null as string | null,
   });
 
-  const [isShowPopup, setIsShowPopup] = useState(false);
-  const [showListingModal, setShowListingModal] = useState(false);
-  const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
-  const [listingLoading, setListingLoading] = useState(false);
   const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
-  const [listingHasNextPage, setListingHasNextPage] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [listingOptions, setListingOptions] = useState<Array<{ key: string; label: string }>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [listingCurrentPage, setListingCurrentPage] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const fetchListingsDebouncedRef = useRef<(input: string) => void>();
 
   const mapListingToRestaurant = useCallback((item: Listing): Restaurant => ({
@@ -137,26 +133,7 @@ const RestaurantPage = () => {
     searchPalateStats: item.searchPalateStats,
   }), []);
 
-  const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    setSearchTerm(inputValue);
-    setShowListingModal(true);
-    const normalizedSearch = inputValue.trim().toLowerCase();
-    const alreadyExists = listingOptions.some(
-      (option) => option.label.toLowerCase().includes(normalizedSearch)
-    );
 
-    if (alreadyExists) return;
-    setListingLoading(true);
-
-    fetchListingsDebouncedRef.current?.(inputValue.trim());
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsShowPopup(false)
-    setSearchTerm(searchTerm)
-  };
 
   useEffect(() => {
     if (initialListingFromUrl) {
@@ -335,7 +312,6 @@ const RestaurantPage = () => {
 
   const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
     try {
-      setListingLoading(true);
       const result = await restaurantService.fetchListingsName(
         search,
         32,
@@ -352,8 +328,6 @@ const RestaurantPage = () => {
     } catch (err) {
       console.error("Error loading listing options", err);
       setListingOptions([]);
-    } finally {
-      setListingLoading(false);
     }
   }, [listingEndCursor]);
 

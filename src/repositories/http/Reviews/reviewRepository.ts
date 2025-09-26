@@ -234,4 +234,20 @@ export class ReviewRepository implements ReviewRepo {
     }
     return data;
   }
+
+  async likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
+    try {
+      const response = await request.POST('/wp-json/wp/v2/api/like-review', {
+        body: JSON.stringify({ review_id: reviewId }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+      });
+      return response as Record<string, unknown>;
+    } catch (error) {
+      console.error('Error liking review:', error);
+      throw error;
+    }
+  }
 }
