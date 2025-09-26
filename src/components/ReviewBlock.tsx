@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react";
 import { capitalizeWords, formatDate, PAGE, stripTags, truncateText } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
-import ReviewDetailModal from "./ReviewDetailModal";
+import ReviewPopUpModal from "./ReviewPopUpModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
@@ -371,7 +371,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           />
         ))} */}
         {isModalOpen && (
-          <ReviewDetailModal
+          <ReviewPopUpModal
             key={`modal-${selectedPhotoIndex}`}
             isOpen={isModalOpen}
             onClose={() => {

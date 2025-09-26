@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ReviewDetailModal from "@/components/ReviewDetailModal";
+import ReviewPopUpModal from "@/components/ReviewPopUpModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
@@ -21,7 +21,7 @@ const Photos = ({ index, data, image }: PhotosProps) => {
 
   return (
     <div className="review-card relative overflow-hidden" style={{ height: "180px" }}>
-      <ReviewDetailModal
+      <ReviewPopUpModal
         data={data as unknown as GraphQLReview}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

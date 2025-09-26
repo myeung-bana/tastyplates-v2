@@ -9,6 +9,7 @@ import { UserService } from "@/services/user/userService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
@@ -18,14 +19,14 @@ import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/consta
 import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed } from "@/constants/messages";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
+import ReplyItem from "./ReplyItem";
+import ReplySkeleton from "./ReplySkeleton";
 import toast from 'react-hot-toast';
 
 // Icons
 import { 
   AiOutlineHeart,
   AiFillHeart,
-  AiOutlineComment,
-  AiOutlineSend,
   AiOutlineMore,
   AiOutlineLeft,
   AiOutlineRight,
@@ -36,7 +37,7 @@ import {
 const userService = new UserService();
 const reviewService = new ReviewService();
 
-const InstagramReviewModal: React.FC<ReviewModalProps> = ({
+const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   data,
   isOpen,
   onClose,
@@ -64,6 +65,51 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [pendingShowSignin, setPendingShowSignin] = useState(false);
+  const [isLoadingReplies, setIsLoadingReplies] = useState(false);
+
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    try {
+      // Handle different date formats
+      let date: Date;
+      
+      // Check if it's already a valid ISO string
+      if (dateString.includes('T') && dateString.includes('Z')) {
+        // ISO string with timezone (e.g., '2024-01-15T10:30:00Z')
+        date = new Date(dateString);
+      } else if (dateString.includes('T')) {
+        // ISO string without timezone (e.g., '2024-01-15T10:30:00')
+        // Treat as UTC to avoid timezone conversion issues
+        date = new Date(dateString + 'Z');
+      } else {
+        // Try parsing as regular date
+        date = new Date(dateString);
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        // Try to parse as YYYY-MM-DD format
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts;
+          const validDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(validDate.getTime())) {
+            const relativeTime = formatDistanceToNow(validDate, { addSuffix: true });
+            return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+          }
+        }
+        return formatDate(dateString);
+      }
+      
+      const relativeTime = formatDistanceToNow(date, { addSuffix: true });
+      // Convert to more readable format (e.g., "2 days ago" instead of "2 days")
+      return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+    } catch {
+      return formatDate(dateString);
+    }
+  };
 
   const authorUserId = data.userId;
   const images = data.reviewImages || [];
@@ -75,9 +121,11 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
   // Load replies on modal open
   useEffect(() => {
     if (isOpen && data?.id) {
+      setIsLoadingReplies(true);
       reviewService.fetchCommentReplies(data.id)
         .then(setReplies)
-        .catch(error => console.error('Error fetching replies:', error));
+        .catch(error => console.error('Error fetching replies:', error))
+        .finally(() => setIsLoadingReplies(false));
     }
   }, [isOpen, data?.id]);
 
@@ -242,15 +290,24 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
         parent: data.databaseId,
         authorId: session?.user?.userId,
       };
-      console.log('📝 Comment payload:', payload);
-      console.log('🔑 Access token:', session?.accessToken ? 'Present' : 'Missing');
       const res = await reviewService.postReview(payload, session?.accessToken ?? "");
-      console.log('📤 Comment response:', res);
-      console.log('📊 Response status:', res.status);
-      console.log('📊 Expected status (created):', code.created);
       
-      // Check for success status codes (200, 201, etc.) - FIXED LOGIC
-      if (res.status >= 200 && res.status < 300) {
+      // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
+      const isSuccess = (status: number | string) => {
+        // Handle numeric status codes (200-299)
+        if (typeof status === 'number') {
+          return status >= 200 && status < 300;
+        }
+        // Handle string statuses (approved, success, etc.)
+        if (typeof status === 'string') {
+          const successStatuses = ['approved', 'success', 'created', 'ok'];
+          return successStatuses.includes(status.toLowerCase());
+        }
+        return false;
+      };
+
+      if (isSuccess(res.status)) {
+        console.log('✅ Comment approved successfully with status:', res.status);
         toast.success(commentedSuccess);
         // Remove only the optimistic reply, then merge server replies (avoid duplicates)
         const updatedReplies = await reviewService.fetchCommentReplies(data.id);
@@ -268,7 +325,6 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
         setCooldown(5);
       } else {
         // Remove optimistic reply on error
-        console.log('❌ Comment submission failed with status:', res.status);
         setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
         toast.error(errorOccurred);
       }
@@ -437,10 +493,10 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
               <button
                 onClick={handleFollowClick}
                 disabled={followLoading || !authorUserId}
-                className={`px-4 py-2 bg-[#E36B00] text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
+                className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                   isFollowing 
-                    ? 'bg-[#494D5D] text-white' 
-                    : 'text-[#FCFCFC]'
+                    ? 'bg-white text-black border border-black' 
+                    : 'bg-[#E36B00] text-[#FCFCFC]'
                 } disabled:opacity-50 disabled:pointer-events-none`}
               >
                 {followLoading ? (
@@ -471,12 +527,12 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
                 />
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-xs">
                       {data.author?.name || data.author?.node?.name || "Unknown User"}
                     </span>
                     <span className="text-gray-500 text-xs">
-                      {formatDate(data.date)}
+                      {formatRelativeTime(data.date)}
                     </span>
                   </div>
                   
@@ -546,9 +602,9 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
                         const full = i + 1 <= rating;
                         const half = !full && i + 0.5 <= rating;
                         return full ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-yellow-400" />
+                          <AiFillStar key={i} className="w-4 h-4 text-black" />
                         ) : half ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-yellow-400 opacity-50" />
+                          <AiFillStar key={i} className="w-4 h-4 text-black opacity-50" />
                         ) : (
                           <AiOutlineStar key={i} className="w-4 h-4 text-gray-300" />
                         );
@@ -563,82 +619,19 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
             </div>
 
             {/* Replies */}
-            {replies.map((reply, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex items-start space-x-3">
-                  {reply.author?.node?.id ? (
-                    session?.user ? (
-                      <Link
-                        href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
-                        passHref
-                      >
-                        <FallbackImage
-                          src={reply.userAvatar || DEFAULT_USER_ICON}
-                          alt={reply.author?.node?.name || "User"}
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-full cursor-pointer flex-shrink-0"
-                          type={FallbackImageType.Icon}
-                        />
-                      </Link>
-                    ) : (
-                      <FallbackImage
-                        src={reply.userAvatar || DEFAULT_USER_ICON}
-                        alt={reply.author?.node?.name || "User"}
-                        width={32}
-                        height={32}
-                        className="w-8 h-8 rounded-full cursor-pointer flex-shrink-0"
-                        onClick={handleProfileClick}
-                        type={FallbackImageType.Icon}
-                      />
-                    )
-                  ) : (
-                    <FallbackImage
-                      src={reply.userAvatar || DEFAULT_USER_ICON}
-                      alt={reply.author?.node?.name || "User"}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-full flex-shrink-0"
-                      type={FallbackImageType.Icon}
-                    />
-                  )}
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-xs">
-                        {reply.author?.name || reply.author?.node?.name || "Unknown User"}
-                      </span>
-                      <span className="text-gray-500 text-xs">
-                        {formatDate(reply.date)}
-                      </span>
-                    </div>
-                    
-                    <p className="text-xs mb-2">
-                      {capitalizeWords(stripTags(reply.content || ""))}
-                    </p>
-                    
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={() => handleReplyLike(reply.databaseId)}
-                        disabled={!!replyLoading[reply.databaseId]}
-                        className="flex items-center space-x-1 text-gray-500 hover:text-red-500 transition-colors"
-                      >
-                        {replyLoading[reply.databaseId] ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
-                        ) : reply.userLiked ? (
-                          <AiFillHeart className="w-4 h-4 text-red-500" />
-                        ) : (
-                          <AiOutlineHeart className="w-4 h-4" />
-                        )}
-                        <span className="text-xs">
-                          {reply.commentLikes || 0}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {isLoadingReplies ? (
+              <ReplySkeleton count={3} />
+            ) : (
+              replies.map((reply, index) => (
+                <ReplyItem
+                  key={index}
+                  reply={reply}
+                  onLike={handleReplyLike}
+                  onProfileClick={handleProfileClick}
+                  isLoading={!!replyLoading[reply.databaseId]}
+                />
+              ))
+            )}
           </div>
 
           {/* Actions */}
@@ -656,12 +649,13 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
                     <AiOutlineHeart className="w-6 h-6" />
                   )}
                 </button>
-                <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
+                {/* Chat and Share icons hidden as they are not currently used */}
+                {/* <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
                   <AiOutlineComment className="w-6 h-6" />
                 </button>
                 <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
                   <AiOutlineSend className="w-6 h-6" />
-                </button>
+                </button> */}
               </div>
               
               <button className="text-gray-500 hover:text-gray-700 transition-colors">
@@ -737,4 +731,4 @@ const InstagramReviewModal: React.FC<ReviewModalProps> = ({
   );
 };
 
-export default InstagramReviewModal;
+export default ReviewPopUpModal;
