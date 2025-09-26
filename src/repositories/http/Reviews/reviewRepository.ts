@@ -9,7 +9,12 @@ const request = new HttpMethods();
 
 export class ReviewRepository implements ReviewRepo {
   async getAllReviews(first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
-    const { data } = await client.query({
+    const { data } = await client.query<{
+      comments: {
+        nodes: GraphQLReview[];
+        pageInfo: PageInfo;
+      };
+    }>({
       query: GET_ALL_RECENT_REVIEWS,
       variables: { first, after },
       context: {
@@ -41,7 +46,13 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getCommentReplies(id: string): Promise<GraphQLReview[]> {
-    const { data } = await client.query({
+    const { data } = await client.query<{
+      comment: {
+        replies: {
+          nodes: GraphQLReview[];
+        };
+      };
+    }>({
       query: GET_COMMENT_REPLIES,
       variables: { id },
       fetchPolicy: "no-cache",
@@ -122,7 +133,13 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getUserReviews(userId: number, first = 16, after: string | null = null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }> {
-    const { data } = await client.query({
+    const { data } = await client.query<{
+      userCommentCount: number;
+      comments: {
+        nodes: GraphQLReview[];
+        pageInfo: PageInfo;
+      };
+    }>({
       query: GET_USER_REVIEWS,
       variables: { userId, first, after },
     });
@@ -181,7 +198,12 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
-    const { data } = await client.query({
+    const { data } = await client.query<{
+      comments: {
+        nodes: GraphQLReview[];
+        pageInfo: PageInfo;
+      };
+    }>({
       query: GET_RESTAURANT_REVIEWS,
       variables: { restaurantId, first, after },
       context: {
@@ -206,7 +228,11 @@ export class ReviewRepository implements ReviewRepo {
   async getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview> {
     if (!restaurantId) throw new Error('Missing restaurantId');
     try {
-      const { data } = await client.query({
+      const { data } = await client.query<{
+        reviews: {
+          nodes: GraphQLReview[];
+        };
+      }>({
         query: GET_REVIEWS_BY_RESTAURANT_ID,
         variables: { restaurantId },
         fetchPolicy: "no-cache",
