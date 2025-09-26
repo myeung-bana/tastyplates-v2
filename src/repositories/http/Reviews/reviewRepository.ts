@@ -25,8 +25,8 @@ export class ReviewRepository implements ReviewRepo {
       fetchPolicy: "no-cache",
     });
 
-    const reviews = data.comments?.nodes ?? [];
-    const pageInfo = data.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
+    const reviews = data?.comments?.nodes ?? [];
+    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
 
     // Runtime validation - more lenient approach
     if (!Array.isArray(reviews)) {
@@ -144,8 +144,8 @@ export class ReviewRepository implements ReviewRepo {
       variables: { userId, first, after },
     });
 
-    const reviews = data.comments?.nodes ?? [];
-    const pageInfo = data.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
+    const reviews = data?.comments?.nodes ?? [];
+    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
 
     // Runtime validation - more lenient approach
     if (!Array.isArray(reviews)) {
@@ -214,8 +214,8 @@ export class ReviewRepository implements ReviewRepo {
       fetchPolicy: "no-cache",
     });
 
-    const reviews = data.comments?.nodes ?? [];
-    const pageInfo = data.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
+    const reviews = data?.comments?.nodes ?? [];
+    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
 
     // Runtime validation - more lenient approach
     if (!Array.isArray(reviews)) {
