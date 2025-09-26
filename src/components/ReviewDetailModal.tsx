@@ -601,7 +601,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
               <div className="review-card__image-container relative bg-black overflow-hidden hidden md:block">
                 <span className="absolute top-4 right-4 md:top-5 md:right-5 z-10 bg-[#F1F1F1] px-3 py-2 rounded-[50px] text-sm leading-[17px] font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
-                {/* @ts-expect-error Slider component type compatibility issue */}
                 <Slider
                   ref={sliderRef}
                   {...settings}
@@ -643,7 +642,6 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
             <div>
               <div className="review-card__image-container bg-black overflow-hidden md:!hidden">
                 <span className="absolute top-4 right-4 z-10 bg-[#F1F1F1] px-2 py-1 rounded-[50px] text-[10px] leading-3 font-medium">{activeSlide + 1}/{data.reviewImages.length}</span>
-                {/* @ts-expect-error Slider component type compatibility issue */}
                 <Slider
                   ref={sliderRef}
                   {...settings}
