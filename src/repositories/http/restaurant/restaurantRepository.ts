@@ -102,13 +102,51 @@ export class RestaurantRepository implements RestaurantRepo {
         console.log('📍 Search term:', enhancedSearchTerm);
         console.log('📍 Location filter (client-side):', address || 'None');
 
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            listings: {
+                nodes: Array<{
+                    id: string;
+                    title: string;
+                    slug: string;
+                    content: string;
+                    databaseId: number;
+                    featuredImage?: {
+                        node: {
+                            sourceUrl: string;
+                        };
+                    };
+                    listingDetails: {
+                        latitude: string;
+                        longitude: string;
+                        phone: string;
+                        openingHours: string;
+                        menuUrl: string;
+                    };
+                    palates: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                    listingCategories: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                }>;
+                pageInfo: {
+                    endCursor: string;
+                    hasNextPage: boolean;
+                };
+            };
+        }>({
             query: GET_LISTINGS,
             variables,
         });
         return {
-            nodes: data.listings.nodes,
-            pageInfo: data.listings.pageInfo,
+            nodes: data?.listings?.nodes ?? [],
+            pageInfo: data?.listings?.pageInfo ?? { endCursor: null, hasNextPage: false },
         };
     }
 
