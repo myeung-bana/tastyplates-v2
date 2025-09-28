@@ -107,14 +107,14 @@ export class RestaurantRepository implements RestaurantRepo {
                     accessToken
                 },
             });
-            return data;
+            return !!data; // Return boolean as expected by interface
         } catch (error) {
             console.error('Error adding recently visited restaurant:', error);
             throw error;
         }
     }
 
-    async getRecentlyVisitedRestaurants(accessToken?: string,) {
+    async getRecentlyVisitedRestaurants(accessToken?: string) {
         try {
             const { data } = await client.query({
                 query: GET_RECENTLY_VISITED_RESTAURANTS,
@@ -122,7 +122,7 @@ export class RestaurantRepository implements RestaurantRepo {
                     accessToken
                 },
             });
-            return data.recentlyVisitedRestaurants;
+            return data.recentlyVisitedRestaurants || [];
         } catch (error) {
             console.error('Error fetching recently visited restaurants:', error);
             throw error;
@@ -218,7 +218,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async removeFavoriteRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.DELETE('/api/v1/restaurants/favorite', {
+            const response = await request.DELETE(`/api/v1/restaurants/favorite/${restaurantId}`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                 },
@@ -453,7 +453,8 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async getCheckInRestaurant(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
             const response = await request.GET(`/wp-json/wp/v2/api/check-in-restaurants/${userId}`, {
                 headers: {
@@ -467,7 +468,8 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string): Promise<Record<string, unknown>> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
             const response = await request.POST('/wp-json/wp/v2/api/favorite-listings', {
                 body: JSON.stringify(data),
@@ -483,7 +485,8 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async createCheckIn(data: CheckInData, accessToken?: string): Promise<Record<string, unknown>> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
             const response = await request.POST('/wp-json/wp/v2/api/check-ins', {
                 body: JSON.stringify(data),
