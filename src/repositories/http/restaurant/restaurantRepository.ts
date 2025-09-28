@@ -197,7 +197,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 userId
             },
         });
-        return data?.listing ?? null;
+        return (data?.listing ?? null) as unknown as Record<string, unknown>;
     }
 
     async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
