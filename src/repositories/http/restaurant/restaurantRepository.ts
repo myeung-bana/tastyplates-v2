@@ -276,7 +276,45 @@ export class RestaurantRepository implements RestaurantRepo {
             variables.taxQuery = taxQuery;
         }
 
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            listings: {
+                nodes: Array<{
+                    id: string;
+                    title: string;
+                    slug: string;
+                    content: string;
+                    databaseId: number;
+                    featuredImage?: {
+                        node: {
+                            sourceUrl: string;
+                        };
+                    };
+                    listingDetails: {
+                        latitude: string;
+                        longitude: string;
+                        phone: string;
+                        openingHours: string;
+                        menuUrl: string;
+                    };
+                    palates: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                    listingCategories: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                }>;
+                pageInfo: {
+                    hasNextPage: boolean;
+                    endCursor: string | null;
+                };
+            };
+        }>({
             query: hasTaxQuery
                 ? GET_ADDRESS_BY_PALATE_WITH_TAX
                 : GET_ADDRESS_BY_PALATE_NO_TAX,
@@ -285,10 +323,10 @@ export class RestaurantRepository implements RestaurantRepo {
         });
 
         return {
-            nodes: data.listings.nodes,
-            pageInfo: data.listings.pageInfo,
-            hasNextPage: data.listings.pageInfo.hasNextPage,
-            endCursor: data.listings.pageInfo.endCursor,
+            nodes: (data?.listings?.nodes ?? []) as unknown as Record<string, unknown>[],
+            pageInfo: (data?.listings?.pageInfo ?? { hasNextPage: false, endCursor: null }) as unknown as Record<string, unknown>,
+            hasNextPage: data?.listings?.pageInfo?.hasNextPage ?? false,
+            endCursor: (data?.listings?.pageInfo?.endCursor ?? null) as unknown as string,
         };
     }
 
