@@ -57,7 +57,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 palates
             },
         });
-        return data?.listing ?? null;
+        return (data?.listing ?? null) as unknown as Record<string, unknown>;
     }
 
     async getAllRestaurants(
