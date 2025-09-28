@@ -156,7 +156,39 @@ export class RestaurantRepository implements RestaurantRepo {
         accessToken?: string,
         userId?: number | null
     ) {
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            listing: {
+                id: string;
+                title: string;
+                slug: string;
+                content: string;
+                databaseId: number;
+                featuredImage?: {
+                    node: {
+                        sourceUrl: string;
+                    };
+                };
+                listingDetails: {
+                    latitude: string;
+                    longitude: string;
+                    phone: string;
+                    openingHours: string;
+                    menuUrl: string;
+                };
+                palates: {
+                    nodes: Array<{
+                        name: string;
+                        slug: string;
+                    }>;
+                };
+                listingCategories: {
+                    nodes: Array<{
+                        name: string;
+                        slug: string;
+                    }>;
+                };
+            };
+        }>({
             query: GET_RESTAURANT_BY_ID,
             variables: {
                 id,
@@ -165,7 +197,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 userId
             },
         });
-        return data.listing;
+        return data?.listing ?? null;
     }
 
     async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
