@@ -153,7 +153,7 @@ export class ReviewRepository implements ReviewRepo {
     }
 
     return {
-      userCommentCount: data.userCommentCount ?? 0,
+      userCommentCount: data?.userCommentCount ?? 0,
       reviews,
       pageInfo
     };
