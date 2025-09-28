@@ -218,13 +218,45 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRecentlyVisitedRestaurants(accessToken?: string) {
         try {
-            const { data } = await client.query({
+            const { data } = await client.query<{
+                recentlyVisitedRestaurants: Array<{
+                    id: string;
+                    title: string;
+                    slug: string;
+                    content: string;
+                    databaseId: number;
+                    featuredImage?: {
+                        node: {
+                            sourceUrl: string;
+                        };
+                    };
+                    listingDetails: {
+                        latitude: string;
+                        longitude: string;
+                        phone: string;
+                        openingHours: string;
+                        menuUrl: string;
+                    };
+                    palates: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                    listingCategories: {
+                        nodes: Array<{
+                            name: string;
+                            slug: string;
+                        }>;
+                    };
+                }>;
+            }>({
                 query: GET_RECENTLY_VISITED_RESTAURANTS,
                 variables: {
                     accessToken
                 },
             });
-            return data.recentlyVisitedRestaurants || [];
+            return data?.recentlyVisitedRestaurants || [];
         } catch (error) {
             console.error('Error fetching recently visited restaurants:', error);
             throw error;
