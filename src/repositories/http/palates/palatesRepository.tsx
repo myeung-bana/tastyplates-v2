@@ -5,10 +5,18 @@ import { PalateRepo } from "@/repositories/interface/user/palate";
 
 export class PalatesRepository implements PalateRepo {
     async getPalates() {
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            palates: {
+                nodes: Array<{
+                    id: string;
+                    name: string;
+                    slug: string;
+                }>;
+            };
+        }>({
             query: GET_ALL_PALATES
         });
 
-        return data.palates.nodes;
+        return (data?.palates?.nodes ?? []) as unknown as Record<string, unknown>;
     }
 };

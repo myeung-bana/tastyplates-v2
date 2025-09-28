@@ -1,3 +1,3 @@
 export interface TermsOfServiceRepo {
-    fetchTermsOfService(): Promise<Response>;
+    fetchTermsOfService(): Promise<Record<string, unknown>>;
 }

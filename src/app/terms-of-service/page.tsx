@@ -17,7 +17,7 @@ export default async function TermsOfService() {
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="text-[32px] font-bold text-center text-[#31343F] mb-8 max-w-xl w-full">
-            {data.title || "Terms of Service"}
+            {(data.title as string) || "Terms of Service"}
           </h1>
         </div>
 
@@ -26,7 +26,7 @@ export default async function TermsOfService() {
             <section>
               <div
                 className="prose prose-xs max-w-none text-[#31343F] text-justify"
-                dangerouslySetInnerHTML={{ __html: data.content }}
+                dangerouslySetInnerHTML={{ __html: data.content as string }}
               />
             </section>
           </div>

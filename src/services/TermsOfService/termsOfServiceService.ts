@@ -5,12 +5,9 @@ const termsOfServiceRepo: TermsOfServiceRepo = new TermsOfServiceRepository();
 
 export class TermsOfServiceService {
   async getTermsOfService() {
-    const res = await termsOfServiceRepo.fetchTermsOfService();
+    const data = await termsOfServiceRepo.fetchTermsOfService();
 
-    if (!res.ok) throw new Error("Failed to fetch Terms of Service");
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    if (data.error) throw new Error(String(data.error));
 
     return { title: data.title, content: data.content };
   }

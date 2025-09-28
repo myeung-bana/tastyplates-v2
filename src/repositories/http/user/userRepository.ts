@@ -73,13 +73,25 @@ export class UserRepository implements UserRepo {
     async getUserById(
         id: number | null,
     ) {
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            user: {
+                id: string;
+                databaseId: number;
+                firstName: string;
+                lastName: string;
+                email: string;
+                username: string;
+                avatar?: {
+                    url: string;
+                };
+            };
+        }>({
             query: GET_USER_BY_ID,
             variables: { id },
             fetchPolicy: "no-cache",
         });
 
-        return data.user;
+        return data?.user ?? null;
     }
 
     async updateUserFields(
