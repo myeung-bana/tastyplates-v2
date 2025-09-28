@@ -17,7 +17,39 @@ const request = new HttpMethods();
 
 export class RestaurantRepository implements RestaurantRepo {
     async getRestaurantBySlug(slug: string, palates: string) {
-        const { data } = await client.query({
+        const { data } = await client.query<{
+            listing: {
+                id: string;
+                title: string;
+                slug: string;
+                content: string;
+                databaseId: number;
+                featuredImage?: {
+                    node: {
+                        sourceUrl: string;
+                    };
+                };
+                listingDetails: {
+                    latitude: string;
+                    longitude: string;
+                    phone: string;
+                    openingHours: string;
+                    menuUrl: string;
+                };
+                palates: {
+                    nodes: Array<{
+                        name: string;
+                        slug: string;
+                    }>;
+                };
+                listingCategories: {
+                    nodes: Array<{
+                        name: string;
+                        slug: string;
+                    }>;
+                };
+            };
+        }>({
             query: GET_RESTAURANT_BY_SLUG,
             fetchPolicy: "no-cache",
             variables: {
@@ -25,7 +57,7 @@ export class RestaurantRepository implements RestaurantRepo {
                 palates
             },
         });
-        return data.listing;
+        return data?.listing ?? null;
     }
 
     async getAllRestaurants(
