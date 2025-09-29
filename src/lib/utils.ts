@@ -21,14 +21,18 @@ export function truncateText(text: string, limit: number): string {
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '';
   const [datePart] = dateString.split(' ');
+  if (!datePart) return '';
   const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return '';
   return `${day}/${month}/${year}`;
 }
 
 export function formatDateT(dateString: string | null | undefined): string {
   if (!dateString) return '';
   const [datePart] = dateString.split('T');
+  if (!datePart) return '';
   const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return '';
   return `${day}/${month}/${year}`;
 }
 
@@ -42,12 +46,20 @@ export function formatDateForInput(dateString: string): string {
     // MM/DD/YYYY
     const parts = dateString.split('/');
     if (parts.length !== 3) return '';
-    [month, day, year] = parts.map(Number);
+    const [monthStr, dayStr, yearStr] = parts;
+    if (!monthStr || !dayStr || !yearStr) return '';
+    month = Number(monthStr);
+    day = Number(dayStr);
+    year = Number(yearStr);
   } else if (dateString.includes('-')) {
     // YYYY-MM-DD
     const parts = dateString.split('-');
     if (parts.length !== 3) return '';
-    [year, month, day] = parts.map(Number);
+    const [yearStr, monthStr, dayStr] = parts;
+    if (!yearStr || !monthStr || !dayStr) return '';
+    year = Number(yearStr);
+    month = Number(monthStr);
+    day = Number(dayStr);
   } else {
     return '';
   }

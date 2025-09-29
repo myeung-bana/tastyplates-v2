@@ -248,7 +248,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !reviewsLoading) {
+        if (entries[0]?.isIntersecting && hasNextPage && !reviewsLoading) {
           loadMore();
         }
       },

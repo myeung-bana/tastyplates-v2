@@ -205,9 +205,11 @@ const OnboardingOnePage = () => {
       localStorage.setItem(REGISTRATION_KEY, JSON.stringify(updatedData));
       setIsLoading(false);
       router.push(ONBOARDING_TWO);
+      return; // Explicit return
     } catch (error) {
       console.error('Error in form submission:', error);
       setIsLoading(false);
+      return; // Explicit return
     }
   };
 

@@ -481,6 +481,7 @@ const AddListingPage = () => {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (!file) continue; // Guard against undefined file
         const reader = new FileReader();
 
         reader.onloadend = () => {

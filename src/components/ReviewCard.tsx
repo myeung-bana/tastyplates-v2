@@ -57,7 +57,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-              ? data.reviewImages[0].sourceUrl
+              ? data.reviewImages[0]?.sourceUrl || DEFAULT_IMAGE
               : DEFAULT_IMAGE
           }
           alt="Review"
@@ -163,7 +163,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   >
                     {palateFlagMap[tag.toLowerCase()] && (
                       <Image
-                        src={palateFlagMap[tag.toLowerCase()]}
+                        src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
                         alt={`${tag} flag`}
                         width={18}
                         height={10}

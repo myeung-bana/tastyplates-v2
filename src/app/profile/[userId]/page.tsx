@@ -13,6 +13,7 @@ const UserProfilePage = () => {
     // Only support base64-encoded userId (e.g., dXNlcjoyNw==)
     if (userIdParam) {
         const userIdStr = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+        if (!userIdStr) return; // Guard against undefined userIdStr
         try {
             const decodedBase64 = atob(decodeURIComponent(userIdStr));
             // decodedBase64 should be like 'user:27'

@@ -116,7 +116,7 @@ const Reviews = () => {
     if (!initialLoaded || hasReachedLimit) return;
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasNextPage && !loading && !hasReachedLimit) {
+        if (entries[0]?.isIntersecting && hasNextPage && !loading && !hasReachedLimit) {
           loadMore();
         }
       },

@@ -225,7 +225,7 @@ export class ReviewRepository implements ReviewRepo {
     return { reviews, pageInfo };
   }
 
-  async getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview> {
+  async getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview | null> {
     if (!restaurantId) throw new Error('Missing restaurantId');
     try {
       const { data } = await client.query<{
@@ -242,6 +242,7 @@ export class ReviewRepository implements ReviewRepo {
         // Basic validation - more lenient approach
         if (!review || typeof review !== 'object' || !review.id) {
           console.warn('Review data structure may not match expected format:', review);
+          return null;
         }
         return review;
       }

@@ -94,6 +94,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
         const parts = dateString.split('-');
         if (parts.length === 3) {
           const [year, month, day] = parts;
+          if (!year || !month || !day) return formatDate(dateString);
           const validDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
           if (!isNaN(validDate.getTime())) {
             const relativeTime = formatDistanceToNow(validDate, { addSuffix: true });
@@ -135,6 +136,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
       const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
       return () => clearTimeout(timer);
     }
+    return undefined; // Explicit return for all code paths
   }, [cooldown]);
 
   // Handle profile click for non-authenticated users
@@ -543,7 +545,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                         <span key={index} className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs">
                           {palateFlagMap[tag.toLowerCase()] && (
                             <Image
-                              src={palateFlagMap[tag.toLowerCase()]}
+                              src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
                               alt={`${tag} flag`}
                               width={12}
                               height={8}

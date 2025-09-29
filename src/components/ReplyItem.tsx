@@ -68,6 +68,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         const parts = dateString.split('-');
         if (parts.length === 3) {
           const [year, month, day] = parts;
+          if (!year || !month || !day) return formatDate(dateString);
           const validDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
           if (!isNaN(validDate.getTime())) {
             console.log('✅ Successfully parsed YYYY-MM-DD format');

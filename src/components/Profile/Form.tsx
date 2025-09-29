@@ -378,11 +378,14 @@ const Form = () => {
     }
 
     if (profile) {
-      const sizeInBytes = (profile.split(",")[1].length * 3) / 4;
-      if (sizeInBytes > imageSizeLimit) {
-        setProfileError(profileImageSizeLimit(imageMBLimit));
-        setIsLoading(false);
-        return;
+      const profileParts = profile.split(",");
+      if (profileParts[1]) {
+        const sizeInBytes = (profileParts[1].length * 3) / 4;
+        if (sizeInBytes > imageSizeLimit) {
+          setProfileError(profileImageSizeLimit(imageMBLimit));
+          setIsLoading(false);
+          return;
+        }
       }
     }
 
@@ -474,6 +477,8 @@ const Form = () => {
         window.removeEventListener("resize", handleResize);
       };
     }
+    
+    return undefined; // Explicit return for all code paths
   }, [session?.user?.palates]);
 
   return (

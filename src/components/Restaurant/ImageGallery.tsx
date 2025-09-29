@@ -37,7 +37,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
         {/* Main Image */}
         <div className="relative w-full h-full overflow-hidden">
           <Image
-            src={images[selectedImage]}
+            src={images[selectedImage] || '/default-image.png'}
             alt={`${restaurantTitle} - Image ${selectedImage + 1}`}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -111,7 +111,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
             {/* Main Image */}
             <div className="relative w-full h-full max-w-7xl max-h-full">
               <Image
-                src={images[selectedImage]}
+                src={images[selectedImage] || '/default-image.png'}
                 alt={`${restaurantTitle} - Image ${selectedImage + 1}`}
                 fill
                 className="object-contain"

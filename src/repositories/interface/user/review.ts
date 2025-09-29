@@ -10,6 +10,6 @@ export interface ReviewRepo {
     likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
     unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
     getRestaurantReviews(restaurantId: number, accessToken?: string, first?: number, after?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }>;
-    getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview>;
+    getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview | null>;
     likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>>;
 }

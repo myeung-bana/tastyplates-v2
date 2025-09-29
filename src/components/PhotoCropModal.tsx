@@ -248,6 +248,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     if (!rect) return;
     
     const touch = e.touches[0];
+    if (!touch) return; // Guard against undefined touch
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     
@@ -275,6 +276,7 @@ const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     if (!rect) return;
     
     const touch = e.touches[0];
+    if (!touch) return; // Guard against undefined touch
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     

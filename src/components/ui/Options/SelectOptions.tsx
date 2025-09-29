@@ -30,7 +30,7 @@ const SelectOptions = ({
     const handleObserver = useCallback(
         (entries: IntersectionObserverEntry[]) => {
             const target = entries[0];
-            if (target.isIntersecting && !isLoading && hasNextPage) {
+            if (target?.isIntersecting && !isLoading && hasNextPage) {
                 onLoadMore?.();
             }
         },

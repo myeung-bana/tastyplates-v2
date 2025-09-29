@@ -146,7 +146,7 @@ export const reviewlist: ReviewList[] = [
 
 // Helper function to get reviews for a specific restaurant
 export const getRestaurantReviews = (restaurantId: string): Review[] => {
-  return reviewlist[0].reviews.filter(
+  return reviewlist[0]?.reviews?.filter(
     (review) => review.restaurantId === restaurantId
-  );
+  ) || [];
 };

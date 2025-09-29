@@ -36,6 +36,7 @@ const ProfilePage = () => {
   const fetchUserProfile = async () => {
     // Simulate API call using dummy data
     const user = users[0]; // Using first user as example
+    if (!user) return; // Guard against undefined user
     setProfile({
       name: user.name,
       email: user.email,

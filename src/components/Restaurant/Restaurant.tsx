@@ -280,7 +280,7 @@ const RestaurantPage = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !loading) {
+        if (entries[0]?.isIntersecting && hasNextPage && !loading) {
           fetchRestaurants(false, endCursor);
         }
       },
