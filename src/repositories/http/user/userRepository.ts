@@ -90,6 +90,11 @@ export class UserRepository implements UserRepo {
             query: GET_USER_BY_ID,
             variables: { id },
             fetchPolicy: "no-cache",
+            context: {
+                headers: {
+                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+                },
+            },
         });
 
         // Return empty object instead of null for production safety
