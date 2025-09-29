@@ -92,6 +92,7 @@ export class UserRepository implements UserRepo {
             fetchPolicy: "no-cache",
         });
 
+        // Return empty object instead of null for production safety
         return (data?.user ?? {}) as Record<string, unknown>;
     }
 
