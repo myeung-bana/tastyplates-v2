@@ -345,10 +345,10 @@ export class RestaurantRepository implements RestaurantRepo {
                 },
             });
             return {
-                nodes: data.listings.nodes,
-                pageInfo: data.listings.pageInfo,
-                hasNextPage: data.listings.pageInfo.hasNextPage,
-                endCursor: data.listings.pageInfo.endCursor,
+                nodes: (data?.listings?.nodes ?? []) as unknown as Record<string, unknown>[],
+                pageInfo: (data?.listings?.pageInfo ?? { hasNextPage: false, endCursor: null }) as unknown as Record<string, unknown>,
+                hasNextPage: data?.listings?.pageInfo?.hasNextPage ?? false,
+                endCursor: (data?.listings?.pageInfo?.endCursor ?? null) as unknown as string,
             };
         } catch (error) {
             console.error('Error fetching listings name:', error);
