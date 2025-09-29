@@ -72,7 +72,8 @@ export class UserRepository implements UserRepo {
 
     async getUserById(
         id: number | null,
-    ) {
+        accessToken?: string
+    ): Promise<Record<string, unknown>> {
         const { data } = await client.query<{
             user: {
                 id: string;
@@ -91,7 +92,7 @@ export class UserRepository implements UserRepo {
             fetchPolicy: "no-cache",
         });
 
-        return data?.user ?? null;
+        return (data?.user ?? {}) as Record<string, unknown>;
     }
 
     async updateUserFields(
