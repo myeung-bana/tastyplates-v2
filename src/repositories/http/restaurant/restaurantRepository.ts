@@ -336,7 +336,45 @@ export class RestaurantRepository implements RestaurantRepo {
         after: string | null = null,
     ) {
         try {
-            const { data } = await client.query({
+            const { data } = await client.query<{
+                listings: {
+                    nodes: Array<{
+                        id: string;
+                        title: string;
+                        slug: string;
+                        content: string;
+                        databaseId: number;
+                        featuredImage?: {
+                            node: {
+                                sourceUrl: string;
+                            };
+                        };
+                        listingDetails: {
+                            latitude: string;
+                            longitude: string;
+                            phone: string;
+                            openingHours: string;
+                            menuUrl: string;
+                        };
+                        palates: {
+                            nodes: Array<{
+                                name: string;
+                                slug: string;
+                            }>;
+                        };
+                        listingCategories: {
+                            nodes: Array<{
+                                name: string;
+                                slug: string;
+                            }>;
+                        };
+                    }>;
+                    pageInfo: {
+                        endCursor: string;
+                        hasNextPage: boolean;
+                    };
+                };
+            }>({
                 query: GET_LISTINGS_NAME,
                 variables: {
                     searchTerm,
