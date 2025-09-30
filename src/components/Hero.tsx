@@ -12,9 +12,7 @@ import { useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
 import { RESTAURANTS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
-import Image from "next/image";
-// Removed unused imports
-import { HERO_BG, HERO_BG_SP } from "@/constants/images";
+// Removed Image import and image constants since we're using CSS backgrounds
 import Toast from "@/components/ui/Toast/Toast";
 
 const restaurantService = new RestaurantService();
@@ -236,23 +234,9 @@ const Hero = () => {
           onClose={() => setToast(null)}
         />
       )}
-      <section className="hero mx-auto">
+      <section className="hero">
         <div className="hero__container mx-auto">
           <div className="hero__content mx-auto">
-          <Image
-            src={HERO_BG}
-            width={1980}
-            height={538}
-            className="absolute inset-0 w-full -z-10 h-[538px] object-cover object-[70%] hidden sm:block"
-            alt="Hero background"
-          />
-          <Image
-            src={HERO_BG_SP}
-            width={640}
-            height={466}
-            className="absolute inset-0 w-full h-[466px] -z-10 object-left-top object-cover sm:hidden"
-            alt="Hero background"
-          />
           <h1 className="hero__title">Discover the Meal that fits Your Taste</h1>
           <p className="hero__description">
           Dine like a Brazilian in Tokyo - or Korean in New York?

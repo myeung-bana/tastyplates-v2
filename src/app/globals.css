@@ -120,6 +120,29 @@
   }
 }
 
+/* Mobile bottom navigation safe area */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure content doesn't get hidden behind bottom nav on mobile */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 80px; /* Height of bottom nav */
+  }
+  
+  /* Adjust for pages that shouldn't have bottom nav */
+  .no-bottom-nav {
+    padding-bottom: 0;
+  }
+  
+  /* Ensure hero section background is visible */
+  .hero {
+    position: relative;
+    overflow: hidden;
+  }
+}
+
 /* .restaurants__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

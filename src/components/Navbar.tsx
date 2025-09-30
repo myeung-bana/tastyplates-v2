@@ -163,7 +163,7 @@ export default function Navbar(props: Record<string, unknown>) {
       />
       <PasswordUpdatedModal isOpen={isOpenPasswordUpdate} onClose={() => setIsOpenPasswordUpdate(false)} />
       <nav
-        className={`navbar !z-[1000] ${isLandingPage
+        className={`navbar !z-[1000] hidden md:block ${isLandingPage
           ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
           : "bg-white border-b border-[#CACACA]"
           }`}

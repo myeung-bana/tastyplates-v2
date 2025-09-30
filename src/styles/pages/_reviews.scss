@@ -8,6 +8,22 @@
     padding: 1.5rem 0;
   }
 
+  @media (max-width: 767px) {
+    &__container {
+      padding: 0 1rem;
+    }
+    
+    &__title {
+      font-size: 1.375rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    &__subtitle {
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+  }
+
   &__container {
     max-width: 82rem; // Increased from 80rem to accommodate 4 cards
     margin: 0 auto;
@@ -66,6 +82,11 @@
   // box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
   overflow: hidden;
 
+  @media (max-width: 767px) {
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
   &__header {
     padding: 1rem;
     display: flex;
@@ -87,8 +108,8 @@
     object-fit: cover;
 
     @media (max-width: 767px) {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
     }
   }
 
@@ -103,7 +124,7 @@
     font-size: 0.75rem;
 
     @media (max-width: 767px) {
-      font-size: 0.625rem;
+      font-size: 0.7rem;
     }
   }
 
@@ -145,7 +166,7 @@
     padding: 0.5rem 1rem 0 1rem;
 
     @media (max-width: 767px) {
-      padding: 0;
+      padding: 0.75rem 0.5rem 0 0.5rem;
     }
   }
 
@@ -177,7 +198,8 @@
     line-height: 1.5;
 
     @media (max-width: 767px) {
-      line-height: 1;
+      line-height: 1.4;
+      font-size: 0.75rem;
     }
   }
 
@@ -278,8 +300,9 @@
   font-style: normal;
   color: #31343F;
   text-align: center;
+  font-weight: 500;
 
   @media (max-width: 767px) {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 }

@@ -1,9 +1,19 @@
 .hero {
   padding: 10.5rem 0 8.75rem 0;
-  // background-color: #fafafa;
+  position: relative;
+  background-image: url('/images/hero-bg.png');
+  background-size: cover;
+  background-position: 70% center;
+  background-repeat: no-repeat;
+  min-height: 538px;
+  width: 100%;
+  margin: 0;
 
   @media (max-width: 767px) {
     padding: 7.25rem 0 5rem 0;
+    background-image: url('/images/hero-bg-sp.png');
+    background-position: left top;
+    min-height: 466px;
   }
 
   &__container {
@@ -24,6 +34,8 @@
   &__content {
     flex: 1;
     text-align: center;
+    position: relative;
+    z-index: 1;
 
     @media (min-width: 1024px) {
       text-align: left;

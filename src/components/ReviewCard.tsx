@@ -6,8 +6,7 @@ import {
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
-import { Fragment, useState } from "react";
-import { palateFlagMap } from "@/utils/palateFlags";
+import { useState } from "react";
 import Link from "next/link"; // Import Link
 import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
@@ -24,10 +23,6 @@ import {
 const ReviewCard = ({ data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
-  const UserPalateNames = data?.palates
-    ?.split("|")
-    .map((s) => capitalizeWords(s.trim()))
-    .filter((s) => s.length > 0);
 
   const { data: session } = useSession();
 
@@ -154,30 +149,6 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                 {data.author?.name || data.author?.node?.name || "Unknown User"}
               </h3>
             )}
-            <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-              {UserPalateNames?.map((tag, index) => (
-                <Fragment key={tag}>
-                  <span
-                    key={index}
-                    className="review-block__palate-tag"
-                  >
-                    {palateFlagMap[tag.toLowerCase()] && (
-                      <Image
-                        src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
-                        alt={`${tag} flag`}
-                        width={18}
-                        height={10}
-                        className="w-[18px] h-[10px] rounded object-cover"
-                      />
-                    )}
-                    {tag}
-                  </span>
-                  {index == 0 && index != UserPalateNames.length -1 && 
-                    <span className="text-[8px]">·</span>
-                  }
-                </Fragment>
-              ))}
-            </div>
           </div>
           <div className="rate-container ml-auto inline-flex shrink-0">
             <div className="review-detail-meta">
@@ -189,13 +160,13 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   className="star-icon size-3 md:size-4"
                   alt="star icon"
                 />
-                <i className="rating-counter">{data.reviewStars}</i>
+                <span className="rating-counter">{data.reviewStars}</span>
               </span>
             </div>
           </div>
         </div>
-        <p className="text-[10px] md:text-sm font-semibold w-[304px] line-clamp-1 break-words">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
-        <p className="review-card__text max-w-[304px] text-[10px] md:text-sm font-normal line-clamp-2 !mb-0 break-words">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
+        <p className="text-[12px] md:text-sm font-semibold w-[304px] line-clamp-1 break-words">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
+        <p className="review-card__text max-w-[304px] text-[12px] md:text-sm font-normal line-clamp-2 !mb-0 break-words">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
         {/* <span className="review-card__timestamp">{data.date}</span> */}
       </div>
     </div>
