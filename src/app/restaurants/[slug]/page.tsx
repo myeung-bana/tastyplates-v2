@@ -307,7 +307,7 @@ export default function RestaurantDetail() {
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
             <div className="flex flex-col-reverse md:flex-col">
-              <div className="flex flex-col md:flex-row justify-between px-4 md:px-0">
+              <div className="flex flex-col md:flex-row justify-between px-2">
                 <div className="mt-6 md:mt-0">
                   <h1 className="restaurant-detail__name leading-7">{restaurant.title}</h1>
                   <div className="restaurant-detail__meta">
@@ -339,7 +339,7 @@ export default function RestaurantDetail() {
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 px-2">
           {/* Left Column - Main Content (3/5 width) */}
           <div className="lg:col-span-3 space-y-8">
             {/* Featured Image */}
@@ -389,9 +389,14 @@ export default function RestaurantDetail() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h3 className="text-lg font-semibold mb-4">Location</h3>
               <div className="space-y-4">
-                {lat && lng ? (
+                {(lat && lng) || address || restaurant?.listingDetails?.googleMapUrl ? (
                   <div className="h-64 rounded-xl overflow-hidden">
-                    <RestaurantMap lat={lat} lng={lng} />
+                    <RestaurantMap 
+                      lat={lat} 
+                      lng={lng} 
+                      googleMapUrl={restaurant?.listingDetails?.googleMapUrl}
+                      address={address}
+                    />
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl">

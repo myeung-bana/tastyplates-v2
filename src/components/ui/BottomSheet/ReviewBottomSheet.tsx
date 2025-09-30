@@ -1,27 +1,27 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useFollowContext } from "./FollowContext";
+import { useFollowContext } from "../../FollowContext";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
-import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../../../lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import FallbackImage, { FallbackImageType } from "../Image/FallbackImage";
 import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed } from "@/constants/messages";
-import SignupModal from "./SignupModal";
-import SigninModal from "./SigninModal";
-import ReplyItem from "./ReplyItem";
-import ReplySkeleton from "./ReplySkeleton";
-import ReviewBottomSheet from "./ui/BottomSheet/ReviewBottomSheet";
+import SignupModal from "../../SignupModal";
+import SigninModal from "../../SigninModal";
+import ReplyItem from "../../ReplyItem";
+import ReplySkeleton from "../../ReplySkeleton";
+import BottomSheet from "./BottomSheet";
 import toast from 'react-hot-toast';
 
 // Icons
@@ -38,7 +38,7 @@ import {
 const userService = new UserService();
 const reviewService = new ReviewService();
 
-const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
+const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
   data,
   isOpen,
   onClose,
@@ -68,22 +68,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   const [pendingShowSignin, setPendingShowSignin] = useState(false);
   const [isLoadingReplies, setIsLoadingReplies] = useState(false);
 
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check if mobile on mount and resize
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   // Helper function to format relative time
-  const formatRelativeTime = (dateString: string): string => {
+  const formatRelativeTime = useCallback((dateString: string): string => {
     if (!dateString) return '';
     
     try {
@@ -125,7 +111,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     } catch {
       return formatDate(dateString);
     }
-  };
+  }, []);
 
   const authorUserId = data.userId;
   const images = data.reviewImages || [];
@@ -135,7 +121,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     .filter((s) => s.length > 0);
 
   // Load replies on modal open
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen && data?.id) {
       setIsLoadingReplies(true);
       reviewService.fetchCommentReplies(data.id)
@@ -146,7 +132,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   }, [isOpen, data?.id]);
 
   // Cooldown timer
-  useEffect(() => {
+  React.useEffect(() => {
     if (cooldown > 0) {
       const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
       return () => clearTimeout(timer);
@@ -155,14 +141,14 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   }, [cooldown]);
 
   // Handle profile click for non-authenticated users
-  const handleProfileClick = () => {
+  const handleProfileClick = useCallback(() => {
     if (!session?.user) {
       setPendingShowSignin(true);
     }
-  };
+  }, [session?.user]);
 
   // Handle follow/unfollow
-  const handleFollowClick = async () => {
+  const handleFollowClick = useCallback(async () => {
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -191,10 +177,10 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     } finally {
       setFollowLoading(false);
     }
-  };
+  }, [session?.user, authorUserId, isFollowing, setFollowState]);
 
   // Handle like/unlike main review
-  const handleLikeClick = async () => {
+  const handleLikeClick = useCallback(async () => {
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -207,10 +193,10 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     onLikeChange?.(newLikedState, newLikedState ? likesCount + 1 : likesCount - 1);
     toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
-  };
+  }, [session?.user, userLiked, likesCount, onLikeChange]);
 
   // Handle reply like/unlike
-  const handleReplyLike = async (replyId: number) => {
+  const handleReplyLike = useCallback(async (replyId: number) => {
     if (!session?.user) {
       setIsShowSignin(true);
       return;
@@ -239,10 +225,10 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     } finally {
       setReplyLoading(prev => ({ ...prev, [replyId]: false }));
     }
-  };
+  }, [session?.user, replies]);
 
-  // Handle comment submission - FIXED VERSION
-  const handleCommentSubmit = async () => {
+  // Handle comment submission
+  const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
     if (!session?.user) {
       setIsShowSignin(true);
@@ -353,10 +339,10 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [commentText, isLoading, cooldown, session?.user, data.commentedOn?.node?.databaseId, data.databaseId, data.id]);
 
   // Handle signin modal
-  useEffect(() => {
+  React.useEffect(() => {
     if (pendingShowSignin) {
       setIsShowSignin(true);
       setPendingShowSignin(false);
@@ -364,55 +350,30 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   }, [pendingShowSignin]);
 
   // Navigation functions
-  const nextImage = () => {
+  const nextImage = useCallback(() => {
     if (currentImageIndex < images.length - 1) {
       setCurrentImageIndex(currentImageIndex + 1);
     }
-  };
+  }, [currentImageIndex, images.length]);
 
-  const prevImage = () => {
+  const prevImage = useCallback(() => {
     if (currentImageIndex > 0) {
       setCurrentImageIndex(currentImageIndex - 1);
     }
-  };
+  }, [currentImageIndex]);
 
-  if (!isOpen) return null;
-
-  // Use mobile bottom sheet for mobile devices
-  if (isMobile) {
-    return (
-      <ReviewBottomSheet
-        data={data}
-        isOpen={isOpen}
-        onClose={onClose}
-        initialPhotoIndex={initialPhotoIndex}
-        userLiked={userLikedProp}
-        likesCount={likesCountProp}
-        onLikeChange={onLikeChange}
-      />
-    );
-  }
-
-  // Desktop Modal
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black bg-opacity-75" 
-        onClick={onClose}
-      />
-      
-      {/* Modal Container */}
-      <div className="relative bg-white rounded-2xl overflow-hidden max-w-5xl w-full max-h-[35rem] min-h-[35rem] flex mx-4 shadow-2xl">
-        {/* Left Side - Images */}
-        <div className="flex-1 bg-black relative min-h-0">
+    <>
+      <BottomSheet isOpen={isOpen} onClose={onClose} maxHeight="90vh">
+        {/* Images Section */}
+        <div className="relative h-64 bg-black">
           {images.length > 0 ? (
             <div className="relative h-full">
               <Image
                 src={images[currentImageIndex]?.sourceUrl || DEFAULT_IMAGE}
                 alt={`Review image ${currentImageIndex + 1}`}
                 fill
-                className="object-contain max-h-full"
+                className="object-contain"
                 priority
               />
               
@@ -422,16 +383,18 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                   <button
                     onClick={prevImage}
                     disabled={currentImageIndex === 0}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full disabled:opacity-30"
+                    type="button"
                   >
-                    <AiOutlineLeft className="w-6 h-6" />
+                    <AiOutlineLeft className="w-5 h-5" />
                   </button>
                   <button
                     onClick={nextImage}
                     disabled={currentImageIndex === images.length - 1}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full disabled:opacity-30"
+                    type="button"
                   >
-                    <AiOutlineRight className="w-6 h-6" />
+                    <AiOutlineRight className="w-5 h-5" />
                   </button>
                 </>
               )}
@@ -448,300 +411,303 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
               <Image
                 src={DEFAULT_IMAGE}
                 alt="No image available"
-                width={400}
-                height={400}
+                width={200}
+                height={200}
                 className="opacity-50"
               />
             </div>
           )}
         </div>
 
-        {/* Right Side - Content */}
-        <div className="w-[25rem] flex flex-col min-h-0">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              {data.author?.node?.id ? (
-                session?.user ? (
-                  <Link
-                    href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
-                    passHref
-                  >
-                    <FallbackImage
-                      src={data.userAvatar || DEFAULT_USER_ICON}
-                      alt={data.author?.node?.name || "User"}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-full cursor-pointer"
-                      type={FallbackImageType.Icon}
-                    />
-                  </Link>
-                ) : (
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            {data.author?.node?.id ? (
+              session?.user ? (
+                <Link
+                  href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                  passHref
+                >
                   <FallbackImage
                     src={data.userAvatar || DEFAULT_USER_ICON}
                     alt={data.author?.node?.name || "User"}
                     width={32}
                     height={32}
                     className="w-8 h-8 rounded-full cursor-pointer"
-                    onClick={handleProfileClick}
                     type={FallbackImageType.Icon}
                   />
-                )
+                </Link>
               ) : (
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
-                  className="w-8 h-8 rounded-full"
+                  className="w-8 h-8 rounded-full cursor-pointer"
+                  onClick={handleProfileClick}
                   type={FallbackImageType.Icon}
                 />
-              )}
-              
-              <div>
-                <div className="flex items-center space-x-2">
-                  {session?.user ? (
-                    <Link
-                      href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
-                      passHref
-                    >
-                      <span className="font-semibold text-xs cursor-pointer hover:underline">
-                        {data.author?.name || data.author?.node?.name || "Unknown User"}
-                      </span>
-                    </Link>
-                  ) : (
-                    <span
-                      className="font-semibold text-xs cursor-pointer hover:underline"
-                      onClick={handleProfileClick}
-                    >
-                      {data.author?.name || data.author?.node?.name || "Unknown User"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Follow Button */}
-            {(!session?.user || (session?.user?.id !== authorUserId)) && (
-              <button
-                onClick={handleFollowClick}
-                disabled={followLoading || !authorUserId}
-                className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
-                  isFollowing 
-                    ? 'bg-white text-black border border-black' 
-                    : 'bg-[#E36B00] text-[#FCFCFC]'
-                } disabled:opacity-50 disabled:pointer-events-none`}
-              >
-                {followLoading ? (
-                  <span className="animate-pulse">
-                    {isFollowing ? "Unfollowing..." : "Following..."}
-                  </span>
-                ) : isFollowing ? (
-                  "Following"
-                ) : (
-                  "Follow"
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Comments Section */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-            {/* Main Review as First Comment */}
-            <div className="space-y-2">
-              <div className="flex items-start space-x-3">
-                <FallbackImage
-                  src={data.userAvatar || DEFAULT_USER_ICON}
-                  alt={data.author?.node?.name || "User"}
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-full flex-shrink-0"
-                  type={FallbackImageType.Icon}
-                />
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-xs">
-                      {data.author?.name || data.author?.node?.name || "Unknown User"}
-                    </span>
-                    <span className="text-gray-500 text-xs">
-                      {formatRelativeTime(data.date)}
-                    </span>
-                  </div>
-                  
-                  {/* Palate Tags */}
-                  {UserPalateNames && UserPalateNames.length > 0 && (
-                    <div className="flex space-x-1 mb-2">
-                      {UserPalateNames.slice(0, 2).map((tag: string, index: number) => (
-                        <span key={index} className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs">
-                          {palateFlagMap[tag.toLowerCase()] && (
-                            <Image
-                              src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
-                              alt={`${tag} flag`}
-                              width={12}
-                              height={8}
-                              className="w-3 h-2 rounded object-cover"
-                            />
-                          )}
-                          <span>{tag}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Review Title */}
-                  <p className="text-xs font-medium mb-2">
-                    {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
-                      <>
-                        {showFullTitle
-                          ? capitalizeWords(stripTags(data.reviewMainTitle || ""))
-                          : capitalizeWords(truncateText(stripTags(data.reviewMainTitle || ""), reviewTitleDisplayLimit)) + "…"}
-                        <button
-                          className="text-blue-500 text-xs ml-1 hover:underline"
-                          onClick={() => setShowFullTitle(!showFullTitle)}
-                        >
-                          {showFullTitle ? "Show less" : "more"}
-                        </button>
-                      </>
-                    ) : (
-                      capitalizeWords(stripTags(data.reviewMainTitle || ""))
-                    )}
-                  </p>
-                  
-                  {/* Review Content */}
-                  <p className="text-xs mb-2">
-                    {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
-                      <>
-                        {showFullContent
-                          ? capitalizeWords(stripTags(data.content || ""))
-                          : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
-                        <button
-                          className="text-blue-500 text-xs ml-1 hover:underline"
-                          onClick={() => setShowFullContent(!showFullContent)}
-                        >
-                          {showFullContent ? "Show less" : "more"}
-                        </button>
-                      </>
-                    ) : (
-                      capitalizeWords(stripTags(data.content || ""))
-                    )}
-                  </p>
-                  
-                  {/* Rating */}
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="flex space-x-1">
-                      {Array.from({ length: 5 }, (_, i) => {
-                        const rating = typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars;
-                        const full = i + 1 <= rating;
-                        const half = !full && i + 0.5 <= rating;
-                        return full ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-black" />
-                        ) : half ? (
-                          <AiFillStar key={i} className="w-4 h-4 text-black opacity-50" />
-                        ) : (
-                          <AiOutlineStar key={i} className="w-4 h-4 text-gray-300" />
-                        );
-                      })}
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars}/5
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Replies */}
-            {isLoadingReplies ? (
-              <ReplySkeleton count={3} />
+              )
             ) : (
-              replies.map((reply, index) => (
-                <ReplyItem
-                  key={index}
-                  reply={reply}
-                  onLike={handleReplyLike}
-                  onProfileClick={handleProfileClick}
-                  isLoading={!!replyLoading[reply.databaseId]}
-                />
-              ))
+              <FallbackImage
+                src={data.userAvatar || DEFAULT_USER_ICON}
+                alt={data.author?.node?.name || "User"}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full"
+                type={FallbackImageType.Icon}
+              />
             )}
-          </div>
-
-          {/* Actions */}
-          <div className="border-t border-gray-200 p-4 space-y-3">
-            {/* Like and Comment Count */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleLikeClick}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-red-500 transition-colors"
-                >
-                  {userLiked ? (
-                    <AiFillHeart className="w-6 h-6 text-red-500" />
-                  ) : (
-                    <AiOutlineHeart className="w-6 h-6" />
-                  )}
-                </button>
-                {/* Chat and Share icons hidden as they are not currently used */}
-                {/* <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
-                  <AiOutlineComment className="w-6 h-6" />
-                </button>
-                <button className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors">
-                  <AiOutlineSend className="w-6 h-6" />
-                </button> */}
-              </div>
-              
-              <button className="text-gray-500 hover:text-gray-700 transition-colors">
-                <AiOutlineMore className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Likes Count */}
-            <div className="text-xs font-semibold">
-              {likesCount} {likesCount === 1 ? 'like' : 'likes'}
-            </div>
-
-            {/* Comment Input */}
-            <div className="flex items-center space-x-2">
-              {isLoading ? (
-                <div className="flex-1 text-xs text-gray-500 italic">
-                  Sending...
-                </div>
-              ) : (
-                <>
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
+            
+            <div>
+              <div className="flex items-center space-x-2">
+                {session?.user ? (
+                  <Link
+                    href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                    passHref
+                  >
+                    <span className="font-semibold text-sm cursor-pointer hover:underline">
+                      {data.author?.name || data.author?.node?.name || "Unknown User"}
+                    </span>
+                  </Link>
+                ) : (
+                  <span
+                    className="font-semibold text-sm cursor-pointer hover:underline"
+                    onClick={handleProfileClick}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        handleCommentSubmit();
+                        handleProfileClick();
                       }
                     }}
-                    placeholder={
-                      cooldown > 0
-                        ? `Please wait ${cooldown}s before commenting again...`
-                        : "Add a comment..."
-                    }
-                    className="flex-1 resize-none border-none outline-none text-xs placeholder-gray-500"
-                    rows={1}
-                    disabled={cooldown > 0}
-                  />
-                  {commentText.trim() && (
-                    <button
-                      onClick={handleCommentSubmit}
-                      disabled={isLoading || cooldown > 0}
-                      className="text-blue-500 font-semibold text-xs hover:text-blue-600 disabled:opacity-50"
-                    >
-                      Post
-                    </button>
-                  )}
-                </>
-              )}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Follow Button */}
+          {(!session?.user || (session?.user?.id !== authorUserId)) && (
+            <button
+              onClick={handleFollowClick}
+              disabled={followLoading || !authorUserId}
+              className={`px-4 py-2 text-sm font-semibold rounded-full h-fit min-w-[80px] flex items-center justify-center transition-colors ${
+                isFollowing 
+                  ? 'bg-white text-black border border-black' 
+                  : 'bg-[#E36B00] text-[#FCFCFC]'
+              } disabled:opacity-50`}
+              type="button"
+            >
+              {followLoading ? (
+                <span className="animate-pulse">
+                  {isFollowing ? "Unfollowing..." : "Following..."}
+                </span>
+              ) : isFollowing ? (
+                "Following"
+              ) : (
+                "Follow"
+              )}
+            </button>
+          )}
         </div>
-      </div>
+
+        {/* Reviews Content */}
+        <div className="p-4 space-y-4">
+          {/* Main Review */}
+          <div className="space-y-3">
+            <div className="flex items-start space-x-3">
+              <FallbackImage
+                src={data.userAvatar || DEFAULT_USER_ICON}
+                alt={data.author?.node?.name || "User"}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full flex-shrink-0"
+                type={FallbackImageType.Icon}
+              />
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm">
+                    {data.author?.name || data.author?.node?.name || "Unknown User"}
+                  </span>
+                  <span className="text-gray-500 text-sm">
+                    {formatRelativeTime(data.date)}
+                  </span>
+                </div>
+                
+                {/* Palate Tags */}
+                {UserPalateNames && UserPalateNames.length > 0 && (
+                  <div className="flex space-x-1 mb-2">
+                    {UserPalateNames.slice(0, 2).map((tag: string, index: number) => (
+                      <span key={index} className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs">
+                        {palateFlagMap[tag.toLowerCase()] && (
+                          <Image
+                            src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
+                            alt={`${tag} flag`}
+                            width={12}
+                            height={8}
+                            className="w-3 h-2 rounded object-cover"
+                          />
+                        )}
+                        <span>{tag}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Review Title */}
+                <p className="text-sm font-medium mb-2">
+                  {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
+                    <>
+                      {showFullTitle
+                        ? capitalizeWords(stripTags(data.reviewMainTitle || ""))
+                        : capitalizeWords(truncateText(stripTags(data.reviewMainTitle || ""), reviewTitleDisplayLimit)) + "…"}
+                      <button
+                        className="text-blue-500 text-sm ml-1 hover:underline"
+                        onClick={() => setShowFullTitle(!showFullTitle)}
+                        type="button"
+                      >
+                        {showFullTitle ? "Show less" : "more"}
+                      </button>
+                    </>
+                  ) : (
+                    capitalizeWords(stripTags(data.reviewMainTitle || ""))
+                  )}
+                </p>
+                
+                {/* Review Content */}
+                <p className="text-sm mb-2">
+                  {stripTags(data.content || "").length > reviewDescriptionDisplayLimit ? (
+                    <>
+                      {showFullContent
+                        ? capitalizeWords(stripTags(data.content || ""))
+                        : capitalizeWords(truncateText(stripTags(data.content || ""), reviewDescriptionDisplayLimit)) + "…"}
+                      <button
+                        className="text-blue-500 text-sm ml-1 hover:underline"
+                        onClick={() => setShowFullContent(!showFullContent)}
+                        type="button"
+                      >
+                        {showFullContent ? "Show less" : "more"}
+                      </button>
+                    </>
+                  ) : (
+                    capitalizeWords(stripTags(data.content || ""))
+                  )}
+                </p>
+                
+                {/* Rating */}
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="flex space-x-1">
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const rating = typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars;
+                      const full = i + 1 <= rating;
+                      const half = !full && i + 0.5 <= rating;
+                      return full ? (
+                        <AiFillStar key={i} className="w-4 h-4 text-black" />
+                      ) : half ? (
+                        <AiFillStar key={i} className="w-4 h-4 text-black opacity-50" />
+                      ) : (
+                        <AiOutlineStar key={i} className="w-4 h-4 text-gray-300" />
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    {typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars}/5
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Replies */}
+          {isLoadingReplies ? (
+            <ReplySkeleton count={3} />
+          ) : (
+            replies.map((reply, index) => (
+              <ReplyItem
+                key={index}
+                reply={reply}
+                onLike={handleReplyLike}
+                onProfileClick={handleProfileClick}
+                isLoading={!!replyLoading[reply.databaseId]}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="border-t border-gray-200 p-4 space-y-3">
+          {/* Like and Comment Count */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleLikeClick}
+                className="flex items-center space-x-1 text-gray-500 hover:text-red-500 transition-colors"
+                type="button"
+              >
+                {userLiked ? (
+                  <AiFillHeart className="w-6 h-6 text-red-500" />
+                ) : (
+                  <AiOutlineHeart className="w-6 h-6" />
+                )}
+              </button>
+            </div>
+            
+            <button className="text-gray-500 hover:text-gray-700 transition-colors" type="button">
+              <AiOutlineMore className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Likes Count */}
+          <div className="text-sm font-semibold">
+            {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+          </div>
+
+          {/* Comment Input */}
+          <div className="flex items-center space-x-2">
+            {isLoading ? (
+              <div className="flex-1 text-sm text-gray-500 italic">
+                Sending...
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCommentSubmit();
+                    }
+                  }}
+                  placeholder={
+                    cooldown > 0
+                      ? `Please wait ${cooldown}s before commenting again...`
+                      : "Add a comment..."
+                  }
+                  className="flex-1 resize-none border-none outline-none text-sm placeholder-gray-500"
+                  rows={1}
+                  disabled={cooldown > 0}
+                />
+                {commentText.trim() && (
+                  <button
+                    onClick={handleCommentSubmit}
+                    disabled={isLoading || cooldown > 0}
+                    className="text-blue-500 font-semibold text-sm hover:text-blue-600 disabled:opacity-50"
+                    type="button"
+                  >
+                    Post
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* Auth Modals */}
       <SignupModal
@@ -760,8 +726,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
           setIsShowSignup(true);
         }}
       />
-    </div>
+    </>
   );
 };
 
-export default ReviewPopUpModal;
+export default ReviewBottomSheet;
