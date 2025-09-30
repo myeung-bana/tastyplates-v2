@@ -34,7 +34,7 @@
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.75rem;
 
     @media (min-width: 768px) {
@@ -48,7 +48,7 @@
 
     // Skeleton loading specific styling
     &--skeleton {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 0.75rem;
 
       @media (min-width: 768px) {
@@ -88,7 +88,7 @@
     height: 222px;
 
     @media (max-width: 767px) {
-      height: 132px;
+      height: 180px;
     }
   }
 
@@ -113,7 +113,7 @@
     padding: 1rem 0 0 0;
 
     @media (max-width: 767px) {
-      padding: 0.2rem 0 0 0;
+      padding: 0.75rem 0 0 0;
     }
   }
 
@@ -124,7 +124,7 @@
     margin-bottom: 0.5rem;
 
     @media (max-width: 767px) {
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.5rem;
     }
   }
 
@@ -134,7 +134,7 @@
     color: #31343F;
 
     @media (max-width: 767px) {
-      font-size: 10px;
+      font-size: 16px;
     }
   }
 
@@ -146,7 +146,7 @@
     font-weight: 400;
 
     @media (max-width: 767px) {
-      font-size: 12px;
+      font-size: 14px;
     }
   }
 
@@ -160,6 +160,11 @@
     gap: 1rem;
     color: #4b5563;
     font-size: 0.875rem;
+
+    @media (max-width: 767px) {
+      font-size: 13px;
+      gap: 0.75rem;
+    }
   }
 
   &__delivery,
@@ -167,6 +172,10 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
+
+    @media (max-width: 767px) {
+      gap: 0.25rem;
+    }
   }
 
   &__icon {
@@ -174,8 +183,8 @@
     height: 1rem;
 
     @media (max-width: 767px) {
-      width: 0.75rem;
-      height: 0.75rem;
+      width: 0.875rem;
+      height: 0.875rem;
     }
   }
 }

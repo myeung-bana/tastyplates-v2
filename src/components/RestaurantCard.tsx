@@ -306,11 +306,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
             <div className="restaurant-card__info w-full">
               <div className="restaurant-card__location">
-                <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
+                <span className="block w-full text-[12px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
               </div>
             </div>
 
-            <div className="restaurant-card__tags mt-1 text-[0.9rem]">
+            <div className="restaurant-card__tags mt-1 text-[12px] md:text-[0.9rem]">
               {(() => {
                 const tags = [...cuisineNames];
                 if (restaurant.priceRange) tags.push(restaurant.priceRange);
