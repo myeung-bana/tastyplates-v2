@@ -200,13 +200,17 @@ export class RestaurantRepository implements RestaurantRepo {
         return (data?.listing ?? null) as unknown as Record<string, unknown>;
     }
 
-    async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
+    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
         try {
             const { data } = await client.mutate({
                 mutation: ADD_RECENTLY_VISITED_RESTAURANT,
                 variables: {
-                    restaurantId,
-                    accessToken
+                    postId,
+                },
+                context: {
+                    headers: {
+                        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+                    },
                 },
             });
             return !!data; // Return boolean as expected by interface

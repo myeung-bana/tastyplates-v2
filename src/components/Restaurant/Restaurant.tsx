@@ -86,9 +86,6 @@ const RestaurantPage = () => {
     // Split by comma and clean up the values
     const ethnicValues = initialEthnicFromUrl.split(',').map(val => val.trim()).filter(val => val);
     
-    console.log('🌐 URL ethnic parameter:', initialEthnicFromUrl);
-    console.log('🍽️ Converted to palates:', ethnicValues);
-    
     // Map ethnic values to palate names (this might need adjustment based on your data structure)
     return ethnicValues;
   };
@@ -185,8 +182,7 @@ const RestaurantPage = () => {
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
-      console.log('🔍 Fetching restaurants with searchAddress:', searchAddress);
-      
+
       const data = await restaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
         firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE),

@@ -6,9 +6,11 @@ import { useSession } from "next-auth/react";
 import { 
   FiHome, 
   FiSearch, 
-  FiUser
+  FiUser,
+  FiSettings,
+  FiPlusSquare
 } from "react-icons/fi";
-import { HOME, RESTAURANTS, PROFILE } from "@/constants/pages";
+import { HOME, RESTAURANTS, PROFILE, SETTINGS, LISTING_STEP_ONE } from "@/constants/pages";
 import { useAuthModal } from "./AuthModalWrapper";
 
 const BottomNav: React.FC = () => {
@@ -82,16 +84,33 @@ const BottomNav: React.FC = () => {
       activePaths: [RESTAURANTS, "/restaurants/"],
     },
     {
+      name: "Add Listing",
+      href: LISTING_STEP_ONE,
+      icon: FiPlusSquare,
+      activePaths: [LISTING_STEP_ONE, "/listing/"],
+      requiresAuth: true,
+      isCenter: true,
+    },
+    {
       name: "Profile",
       href: PROFILE,
       icon: FiUser,
       activePaths: [PROFILE, "/profile/"],
+      requiresAuth: true,
+      isAvatar: true,
+    },
+    {
+      name: "Settings",
+      href: SETTINGS,
+      icon: FiSettings,
+      activePaths: [SETTINGS, "/settings/"],
       requiresAuth: true,
     },
   ];
 
   // Check if current path is active
   const isActive = (activePaths: string[]) => {
+    if (!pathname) return false;
     return activePaths.some(path => {
       if (path.endsWith('/')) {
         return pathname.startsWith(path);
@@ -108,7 +127,9 @@ const BottomNav: React.FC = () => {
       isVisible ? 'translate-y-0' : 'translate-y-full'
     }`}>
       <div className="flex items-center justify-around px-2 py-1">
-        {navItems.map((item) => {
+        {navItems
+          .filter(item => !item.requiresAuth || session?.user)
+          .map((item) => {
           const Icon = item.icon;
           const active = isActive(item.activePaths);
           
@@ -120,22 +141,30 @@ const BottomNav: React.FC = () => {
               className={`flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors duration-200 ${
                 active 
                   ? 'text-[#E36B00]' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+                  : 'text-gray-600 hover:text-gray-700'
+              } ${item.isCenter ? 'bg-[#E36B00] text-white rounded-lg mx-2' : ''}`}
             >
-              <Icon 
-                className={`w-6 h-6 mb-1 transition-colors duration-200 ${
-                  active ? 'text-[#E36B00]' : 'text-gray-500'
-                }`} 
-              />
-              <span className={`text-xs font-medium transition-colors duration-200 ${
-                active ? 'text-[#E36B00]' : 'text-gray-500'
-              }`}>
-                {item.name}
-              </span>
-              
+              {item.isAvatar ? (
+                session?.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt="Profile"
+                    className="w-6 h-6 mb-1 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-6 h-6 mb-1 rounded-full bg-gray-300 flex items-center justify-center">
+                    <Icon className="w-4 h-4 text-gray-600" />
+                  </div>
+                )
+              ) : (
+                <Icon 
+                  className={`w-6 h-6 mb-1 transition-colors duration-200 ${
+                    active ? 'text-[#E36B00]' : 'text-gray-600'
+                  } ${item.isCenter ? 'text-white' : ''}`} 
+                />
+              )}
               {/* Active indicator */}
-              {active && (
+              {active && !item.isCenter && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-[#E36B00] rounded-full" />
               )}
             </Link>

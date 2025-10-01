@@ -95,7 +95,7 @@ export class ReviewRepository implements ReviewRepo {
     }
   }
 
-  async getReviewDrafts(accessToken?: string): Promise<GraphQLReview[]> {
+  async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
     try {
       const response = await request.GET('/wp-json/wp/v2/api/comments?type=listing_draft&status=hold', {
         headers: {
@@ -105,12 +105,13 @@ export class ReviewRepository implements ReviewRepo {
 
       const drafts = response || [];
       
-      // Runtime validation
-      if (!isGraphQLReviewArray(drafts)) {
-        throw new Error('Invalid draft data received from API');
+      // Return raw draft data as the component expects WordPress comment structure
+      if (!Array.isArray(drafts)) {
+        console.error('Drafts response is not an array:', drafts);
+        return [];
       }
 
-      return drafts;
+      return drafts as Record<string, unknown>[];
     } catch (error) {
       console.error("Failed to fetch review drafts", error);
       throw new Error('Failed to fetch review drafts');

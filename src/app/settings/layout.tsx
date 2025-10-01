@@ -12,7 +12,6 @@ export default function RootLayout({
       <Suspense fallback={<div></div>}>
         <Navbar />
         {children}
-        <Footer />
       </Suspense>
     </section>
   );

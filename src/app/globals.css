@@ -162,10 +162,6 @@ main {
     overflow: hidden;
   }
   
-  /* Ensure footer doesn't overlap with bottom nav */
-  .footer {
-    margin-bottom: 80px; /* Height of bottom nav */
-  }
 }
 
 /* .restaurants__grid {

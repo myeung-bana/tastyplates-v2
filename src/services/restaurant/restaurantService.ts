@@ -120,9 +120,9 @@ export class RestaurantService {
         }
     }
 
-    async addRecentlyVisitedRestaurant(restaurantId: number, accessToken: string) {
+    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
         try {
-            return await restaurantRepo.addRecentlyVisitedRestaurant(restaurantId, accessToken);
+            return await restaurantRepo.addRecentlyVisitedRestaurant(postId, accessToken);
         } catch (error) {
             console.error('Error adding recently visited restaurant:', error);
             throw new Error('Failed to add recently visited restaurant');

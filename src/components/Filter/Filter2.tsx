@@ -147,7 +147,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
   return (
     <>
       {/* Filter Buttons */}
-      <div className="filter2__buttons">
+      <div className="filter2__buttons text-sm">
         <CuisineFilter 
           onFilterChange={handleCuisineChange}
           selectedCuisines={selectedCuisines}
@@ -159,7 +159,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
             onClick={() => setIsModalOpen(true)}
             className="filter2__button"
           >
-            <span className="filter2__button-text">
+            <span className="filter2__button-text text-sm">
               Filter
               {activeFiltersCount > 0 && (
                 <span className="filter2__badge">{activeFiltersCount}</span>

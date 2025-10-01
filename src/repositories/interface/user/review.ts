@@ -4,7 +4,7 @@ export interface ReviewRepo {
     getAllReviews(first?: number, after?: string | null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }>;
     getCommentReplies(id: string): Promise<GraphQLReview[]>;
     createReview<T>(data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: T }>;
-    getReviewDrafts(accessToken?: string): Promise<GraphQLReview[]>;
+    getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]>;
     deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void>;
     getUserReviews(userId: number, first?: number, after?: string | null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }>;
     likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
