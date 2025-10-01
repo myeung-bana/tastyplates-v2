@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import RestaurantCard from "@/components/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
-import SkeletonCard from "@/components/SkeletonCard";
+import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
@@ -344,13 +344,13 @@ const RestaurantPage = () => {
   return (
     <div className="restaurants">
       <div className="restaurants__container">
-        <div className="restaurants__title">
           {searchAddress && (
-            <p className="text-sm text-gray-600 mt-1">
-              Showing results for: <span className="font-medium">{searchAddress}</span>
-            </p>
+            <div className="restaurants__title">
+              <p className="text-sm text-gray-600 mt-1">
+                Showing results for: <span className="font-medium">{searchAddress}</span>
+              </p>
+            </div>
           )}
-        </div>
         
         <div className="restaurants__content">
           <Filter2 

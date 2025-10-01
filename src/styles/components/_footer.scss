@@ -1,6 +1,12 @@
 .footer {
   background-color: #F1F1F1;
   color: #31343F;
+  margin-top: 5em;
+  
+  /* Mobile spacing for bottom nav */
+  @media (max-width: 767px) {
+    margin-bottom: 80px; /* Height of bottom nav */
+  }
 
   &__container {
     max-width: 80rem; // max-w-7xl

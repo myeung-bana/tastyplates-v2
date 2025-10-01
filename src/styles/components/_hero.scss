@@ -35,7 +35,7 @@
     flex: 1;
     text-align: center;
     position: relative;
-    z-index: 1;
+    z-index: 100;
 
     @media (min-width: 1024px) {
       text-align: left;
@@ -127,9 +127,6 @@
     margin-left: auto;
     margin-right: auto;
 
-    @media (min-width: 1024px) {
-      margin-left: 0;
-    }
 
     @media (max-width: 767px) {
       max-width: 300px;

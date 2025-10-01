@@ -125,10 +125,30 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Sticky Footer Layout */
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure main content takes available space */
+main {
+  flex: 1;
+}
+
+/* Footer positioning */
+.footer {
+  margin-top: auto;
+}
+
 /* Ensure content doesn't get hidden behind bottom nav on mobile */
 @media (max-width: 767px) {
   body {
-    padding-bottom: 80px; /* Height of bottom nav */
+    padding-bottom: 0; /* Remove the 80px padding since footer handles spacing */
   }
   
   /* Adjust for pages that shouldn't have bottom nav */
@@ -140,6 +160,11 @@
   .hero {
     position: relative;
     overflow: hidden;
+  }
+  
+  /* Ensure footer doesn't overlap with bottom nav */
+  .footer {
+    margin-bottom: 80px; /* Height of bottom nav */
   }
 }
 

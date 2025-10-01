@@ -83,11 +83,11 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     return (
       <>
         <button
-          className="restaurant-detail__review-button flex items-center gap-2"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors"
           onClick={() => setShowSignin(true)}
         >
           <FaMapMarkerAlt />
-          <span className="underline">Check-In</span>
+          <span>Check-In</span>
         </button>
         <SignupModal
           isOpen={showSignup}
@@ -111,22 +111,22 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
   if (!initialized) {
     return (
-      <button className="restaurant-detail__review-button flex items-center gap-2" disabled>
+      <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors" disabled>
         <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
-        <span className="underline text-gray-400">Loading…</span>
+        <span className="text-gray-400">Loading…</span>
       </button>
     );
   }
 
   return (
     <button
-      className="restaurant-detail__review-button flex items-center gap-2"
+      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors"
       onClick={handleToggle}
       disabled={loading}
       aria-pressed={checkedIn}
     >
       <FaMapMarkerAlt className={checkedIn ? "text-primary" : undefined} />
-      <span className={checkedIn ? "underline font-bold" : "underline"}>
+      <span className={checkedIn ? "font-bold" : ""}>
         {checkedIn ? "Checked-in" : "Check-In"}
       </span>
       {error && <span className="text-xs text-red-500 ml-2">{error}</span>}

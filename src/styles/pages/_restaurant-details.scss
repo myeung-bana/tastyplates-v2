@@ -40,7 +40,6 @@
     background: white;
     border-radius: 1rem 0;
     padding: 2rem 0;
-    margin-bottom: 2rem;
     // box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 
     @media (max-width: 767px) {
@@ -255,10 +254,15 @@
 }
 
 .reviews-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  // margin: 2rem 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 2rem 0;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .review-card {
@@ -329,133 +333,173 @@
 // _restaurant-details.scss
 
 .review-block {
-  // background-color: #fff; // White background for the review block
-  // border: 1px solid #e0e0e0; // Light gray border
-  border-radius: 8px; // Rounded corners
-  // padding: 16px; // Padding inside the block
-  // margin-bottom: 16px; // Space between review blocks
-  // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Subtle shadow for depth
-  // transition: box-shadow 0.3s ease; // Smooth transition for hover effect
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+  height: fit-content;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  @media (max-width: 767px) {
+    padding: 12px;
+    min-height: 280px;
+  }
 
   &__header {
-    display: flex; // Flexbox for header layout
-    flex-direction: column;
-    justify-content: center;
-    align-items: start; // Center items vertically
-    margin-bottom: 12px; // Space below the header
-    gap: 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 8px;
 
     @media (max-width: 767px) {
-      gap: 0.5rem;
+      flex-direction: column;
+      gap: 6px;
     }
   }
 
   &__user {
-    display: flex; // Flexbox for user info layout
-    align-items: center; // Center items vertically
-    margin-right: 16px; // Space between user info and rating
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
   }
 
   &__user-image {
-    border-radius: 50%; // Circular user image
-    border: 2px solid #f0f0f0; // Light border around the image
-  }
-
-  &__user-info {
-    margin-left: 8px; // Space between image and user info
-  }
-
-  &__username {
-    font-size: 1rem;
-    font-weight: 500; // Medium username
-    color: #31343F; // Dark text color
-
-    @media (max-width: 767px) {
-      font-size: 10px;
-      line-height: 12px;
-    }
-  }
-
-  &__restaurant {
-    font-size: 0.9rem; // Smaller font size for restaurant name
-    color: #777; // Gray color for restaurant name
-  }
-
-  &__rating {
-    display: flex; // Flexbox for rating layout
-    align-items: center; // Center items vertically
-    // margin-left: auto; // Push rating to the right
-  }
-
-  &__star {
-    color: #ffcc00; // Gold color for star icon
-    margin-right: 4px; // Space between star and rating number
-  }
-
-  &__image-container {
-    margin: 12px 0; // Space above and below the image
-    text-align: center; // Center the image
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: start;
-    align-items: center;
-    gap: 24px;
-  }
-
-  &__image {
-    border-radius: 16px; // Slightly rounded corners for images
-    width: 304px;
-    height: 228px; // Responsive image
+    border-radius: 50%;
+    border: 2px solid #f0f0f0;
+    width: 40px;
+    height: 40px;
     object-fit: cover;
 
     @media (max-width: 767px) {
-      width: 240px;
-      height: 180px;
+      width: 32px;
+      height: 32px;
     }
+  }
+
+  &__user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__username {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 2px;
+    line-height: 1.3;
+
+    @media (max-width: 767px) {
+      font-size: 0.8rem;
+    }
+  }
+
+  &__rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   &__content {
-    margin-top: 8px; // Space above content
-  }
-
-  &__actions {
-    display: flex; // Flexbox for action buttons
-    margin-bottom: 8px; // Space below actions
-  }
-
-  &__action-btn {
-    background: none; // No background for buttons
-    border: none; // No border
-    color: #007bff; // Blue color for icons
-    cursor: pointer; // Pointer cursor on hover
-    display: flex; // Flexbox for icon and text
-    align-items: end; // Center items vertically
-    margin-right: 16px; // Space between buttons
-
-    &:hover {
-      color: #0056b3; // Darker blue on hover
-    }
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
   }
 
   &__text {
-    font-size: 1rem; // Standard font size for review text
-    color: #31343F; // Dark text color
-    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #4b5563;
+    margin-bottom: 8px;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 
     @media (max-width: 767px) {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
     }
   }
 
-  &__recognitions {
-    font-size: 0.75rem; // Standard font size for review text
+  &__image-container {
+    margin: 12px 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    max-height: 160px;
+    overflow: hidden;
+  }
+
+  &__image {
+    border-radius: 6px;
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 767px) {
+      width: 80px;
+      height: 80px;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  &__action-btn {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+
+    &:hover {
+      background-color: #f9fafb;
+      color: #374151;
+    }
   }
 
   &__timestamp {
-    font-size: 0.8rem; // Smaller font size for timestamp
-    color: #aaa; // Light gray color for timestamp
-    margin-top: 4px; // Space above timestamp
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #9ca3af;
   }
 }
 
@@ -493,7 +537,7 @@
   display: inline-block;
   background-color: transparent; // Light background color
   color: #333; // Text color
-  padding: 5px 10px; // Padding for spacing
+  padding: 0.5rem 0rem; // Padding for spacing
   border-radius: 12px; // Rounded corners
   // margin: 5px; // Margin for spacing between tags
   font-size: 14px; // Font size

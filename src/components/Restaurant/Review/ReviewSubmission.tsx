@@ -9,7 +9,7 @@ import Image from "next/image";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { useParams } from "next/navigation";
-import ReviewSubmissionSkeleton from "@/components/ui/ReviewSubmissionSkeleton";
+import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";

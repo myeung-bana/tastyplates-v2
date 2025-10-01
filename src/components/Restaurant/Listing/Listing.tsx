@@ -7,12 +7,12 @@ import "@/styles/pages/_restaurants.scss";
 import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";
-import SkeletonCard from "@/components/SkeletonCard";
+import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from "next-auth/react";
 import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
-import SkeletonListingCard from "@/components/SkeletonListingCard";
+import SkeletonListingCard from "@/components/ui/Skeleton/SkeletonListingCard";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
 import { useDebounce } from "use-debounce"; // Import useDebounce

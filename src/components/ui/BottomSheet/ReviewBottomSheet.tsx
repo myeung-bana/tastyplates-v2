@@ -20,7 +20,7 @@ import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedS
 import SignupModal from "../../SignupModal";
 import SigninModal from "../../SigninModal";
 import ReplyItem from "../../ReplyItem";
-import ReplySkeleton from "../../ReplySkeleton";
+import ReplySkeleton from "../Skeleton/ReplySkeleton";
 import BottomSheet from "./BottomSheet";
 import toast from 'react-hot-toast';
 

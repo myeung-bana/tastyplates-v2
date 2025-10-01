@@ -294,13 +294,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating text-[1rem]">
-                {displayRating > 0 && (
-                  <>
-                    <FaStar className="restaurant-card__icon -mt-1" />
-                    {displayRating}
-                    <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
-                  </>
-                )}
+                <FaStar className="restaurant-card__icon -mt-1" />
+                {displayRating > 0 ? displayRating : 0}
+                <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
               </div>
             </div>
 

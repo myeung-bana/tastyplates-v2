@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Photos from "./Restaurant/Details/Photos";
 import Pagination from "./Pagination";
 import ReviewBlock from "./ReviewBlock";
+import ReviewBlockSkeleton from "./ui/Skeleton/ReviewBlockSkeleton";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/user/userService';
@@ -306,48 +307,36 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
       content: (
         <div className="reviews-container">
           {loading ? (
-            <div className="restaurant-detail__content mt-10">
-              <div className="h-6 w-24 bg-gray-300 rounded mx-auto mb-6"></div>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="border border-[#CACACA] rounded-lg p-4 space-y-2">
-                    <div className="h-5 w-32 bg-gray-300 rounded"></div>
-                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                    <div className="h-4 w-3/4 bg-gray-300 rounded"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <>
+              {[...Array(4)].map((_, i) => (
+                <ReviewBlockSkeleton key={i} />
+              ))}
+            </>
           ) : paginatedReviews.length ? (
             <>
-              {paginatedReviews.map((review, index) => (
-                <div key={review.databaseId.toString()}>
-                  <ReviewBlock
-                    review={{
-                      databaseId: review.databaseId,
-                      id: review.id,
-                      authorId: review.author?.node?.databaseId ?? 0,
-                      restaurantId: restaurantId.toString(),
-                      user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
-                      rating: Number(review.reviewStars) || 0,
-                      date: review.date,
-                      title: review.reviewMainTitle,
-                      comment: review.content,
-                      images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
-                      userImage: review.userAvatar ?? DEFAULT_USER_ICON,
-                      recognitions: review.recognitions ?? [],
-                      palateNames: typeof review.palates === "string"
-                        ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
-                        : [],
-                      commentLikes: review.commentLikes ?? 0,
-                      userLiked: review.userLiked ?? false,
-                    }}
-                  />
-                  {index < paginatedReviews.length - 1 && (
-                    <div className="border-t border-gray-200 my-6"></div>
-                  )}
-                </div>
+              {paginatedReviews.map((review) => (
+                <ReviewBlock
+                  key={review.databaseId.toString()}
+                  review={{
+                    databaseId: review.databaseId,
+                    id: review.id,
+                    authorId: review.author?.node?.databaseId ?? 0,
+                    restaurantId: restaurantId.toString(),
+                    user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
+                    rating: Number(review.reviewStars) || 0,
+                    date: review.date,
+                    title: review.reviewMainTitle,
+                    comment: review.content,
+                    images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
+                    userImage: review.userAvatar ?? DEFAULT_USER_ICON,
+                    recognitions: review.recognitions ?? [],
+                    palateNames: typeof review.palates === "string"
+                      ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
+                      : [],
+                    commentLikes: review.commentLikes ?? 0,
+                    userLiked: review.userLiked ?? false,
+                  }}
+                />
               ))}
               <Pagination
                 currentPage={currentPage}
@@ -366,41 +355,27 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
       label: "Photos",
       content: (
         <>
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-gray-300 animate-pulse rounded-2xl w-full"
-                  style={{ height: "180px" }}
-                />
-              ))}
-            </div>
-          ) : (
-            <>
-              <Masonry
-                key={`photo-page-${currentPage}`} // <-- Forces reset on page change
-                items={paginatedPhotoItems}
-                render={({ data }) => (
-                  <Photos
-                    key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
-                    data={mapToReviewedDataProps(toReviewBlockReview(data.review))}
-                    image={data.image}
-                    index={data.imageIndex}
-                  />
-                )}
-                columnGutter={32}
-                columnWidth={304}
-                maxColumnCount={4}
+          <Masonry
+            key={`photo-page-${currentPage}`} // <-- Forces reset on page change
+            items={paginatedPhotoItems}
+            render={({ data }) => (
+              <Photos
+                key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
+                data={mapToReviewedDataProps(toReviewBlockReview(data.review))}
+                image={data.image}
+                index={data.imageIndex}
               />
-              {totalPhotoPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  hasNextPage={currentPage < totalPhotoPages}
-                  onPageChange={(page) => setCurrentPage(page)}
-                />
-              )}
-            </>
+            )}
+            columnGutter={32}
+            columnWidth={304}
+            maxColumnCount={4}
+          />
+          {totalPhotoPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              hasNextPage={currentPage < totalPhotoPages}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
           )}
         </>
       ),
@@ -410,21 +385,21 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
   // Render
   return (
     <section className="restaurant-reviews">
-      <div className="flex justify-between items-center">
-        <h2>Reviews</h2>
-        <div className="flex gap-4">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex gap-3"><h2 className="text-lg font-bold text-[#31343F]">Reviews</h2></div>
+        <div className="flex gap-3">
           <div className="search-bar">
             <CustomPopover
               align="center"
               trigger={
-                <button className="review-filter">
+                <button className="review-filter text-sm">
                   {!selectedReviewFilter.text ? 'All Reviews' : selectedReviewFilter.text}
                 </button>
               }
               content={
                 <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
                   {reviewFilterOptions.map((option, index) =>
-                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold" onClick={() => { setSelectedReviewFilter({text: option.label, value: option.value}); setCurrentPage(1); }}>
+                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold text-sm" onClick={() => { setSelectedReviewFilter({text: option.label, value: option.value}); setCurrentPage(1); }}>
                       {option.label}
                     </li>
                   )}
@@ -436,32 +411,20 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
             <CustomPopover
               align="center"
               trigger={
-                <button className="review-filter">
+                <button className="review-filter text-sm">
                   {!sortOrder.text ? 'All Reviews' : sortOrder.text}
                 </button>
               }
               content={
                 <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
                   {sortOptions.map((option, index) =>
-                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold" onClick={() => { setSortOrder({text: option.label, value: option.value}); setCurrentPage(1); }}>
+                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold text-sm" onClick={() => { setSortOrder({text: option.label, value: option.value}); setCurrentPage(1); }}>
                       {option.label}
                     </li>
                   )}
                 </ul>
               }
             />
-            {/* <select
-              className="review-filter"
-              style={{ color: '#494D5D' }}
-              value={sortOrder}
-              onChange={e => { setSortOrder(e.target.value); setCurrentPage(1); }}
-            >
-              {sortOptions.map((option, index) =>
-                <option value={option.value} key={index}>
-                  {option.label}
-                </option>
-              )}
-            </select> */}
           </div>
         </div>
       </div>

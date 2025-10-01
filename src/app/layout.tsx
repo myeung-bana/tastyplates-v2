@@ -6,6 +6,7 @@ import { FollowProvider } from "@/components/FollowContext";
 import InactivityLogout from "@/components/InactivityLogout";
 import BottomNav from "@/components/BottomNav";
 import AuthModalWrapper from "@/components/AuthModalWrapper";
+import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
@@ -25,8 +26,11 @@ export default function RootLayout({
           <SessionWrapper>
             <InactivityLogout />
             <AuthModalWrapper>
-              <div className="min-h-screen bg-white">
-                {children}
+              <div className="min-h-screen bg-white flex flex-col">
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
                 <BottomNav />
               </div>
             </AuthModalWrapper>

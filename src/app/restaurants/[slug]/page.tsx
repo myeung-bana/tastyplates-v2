@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/RestaurantReviews";
-import RestaurantDetailSkeleton from "@/components/RestaurantDetailSkeleton";
+import RestaurantDetailSkeleton from "@/components/ui/Skeleton/RestaurantDetailSkeleton";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -109,7 +109,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-semibold text-sm"
     >
       {loading ? (
         <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -118,7 +118,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       ) : (
         <FaRegHeart className="text-gray-500" />
       )}
-      <span className="text-sm font-medium">
+      <span className="text-sm font-semibold">
         {saved ? "Saved" : "Save"}
       </span>
     </button>
@@ -302,11 +302,28 @@ export default function RestaurantDetail() {
   if (!restaurant) return notFound();
 
   return (
-    <div className="restaurant-detail mt-32 md:mt-20">
+    <div className="restaurant-detail mt-4 md:mt-20">
       <div className="restaurant-detail__container !pt-0">
+        {/* Mobile: Gallery First */}
+        <div className="md:hidden">
+          <div className="relative h-64 rounded-2xl overflow-hidden mx-2 mb-6">
+            <Image
+              src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
+              alt={restaurant.title}
+              fill
+              className="object-cover"
+              priority
+            />
+            <ImageGallery 
+              images={getRestaurantImages(restaurant)} 
+              restaurantTitle={restaurant.title} 
+            />
+          </div>
+        </div>
+
         <div className="restaurant-detail__header">
           <div className="restaurant-detail__info">
-            <div className="flex flex-col-reverse md:flex-col">
+            <div className="flex flex-col md:flex-col">
               <div className="flex flex-col md:flex-row justify-between px-2">
                 <div className="mt-6 md:mt-0">
                   <h1 className="restaurant-detail__name leading-7">{restaurant.title}</h1>
@@ -325,11 +342,11 @@ export default function RestaurantDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-row flex-nowrap gap-4">
+                <div className="flex flex-row flex-wrap gap-3 items-center">
                   <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
-                  <button onClick={addReview} className="flex items-center gap-2 hover:underline">
-                    <FaPen className="size-4 md:size-5" />
-                    <span className="underline">Write a Review</span>
+                  <button onClick={addReview} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors">
+                    <FaPen className="w-4 h-4" />
+                    <span>Write a Review</span>
                   </button>
                   <SaveRestaurantButton restaurantSlug={restaurant.slug} />
                 </div>
@@ -339,51 +356,50 @@ export default function RestaurantDetail() {
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 px-2">
-          {/* Left Column - Main Content (3/5 width) */}
-          <div className="lg:col-span-3 space-y-8">
-            {/* Featured Image */}
-            <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden">
-              <Image
-                src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
-                alt={restaurant.title}
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-
-            {/* Image Gallery */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-              <ImageGallery 
-                images={getRestaurantImages(restaurant)} 
-                restaurantTitle={restaurant.title} 
-              />
-            </div>
-
-            {/* Description Section */}
-            {restaurant.content && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                <h3 className="text-lg font-semibold mb-4">About</h3>
-                <div className="text-gray-700 leading-relaxed">
-                  {restaurant.content}
-                </div>
+        <div className="flex flex-col lg:flex-row gap-8 px-2">
+          {/* Left Column - Main Content */}
+          <div className="flex-1 min-w-0">
+            <div className="space-y-8">
+              {/* Desktop: Featured Image */}
+              <div className="hidden md:block relative h-64 md:h-80 rounded-2xl overflow-hidden">
+                <Image
+                  src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
+                  alt={restaurant.title}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <ImageGallery 
+                  images={getRestaurantImages(restaurant)} 
+                  restaurantTitle={restaurant.title} 
+                />
               </div>
-            )}
 
-            {/* Rating Section */}
-            <div>
-              <RatingSection ratingMetrics={ratingMetrics} palatesParam={palatesParam} />
-            </div>
+              {/* Restaurant Description Section */}
+              {restaurant.content && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-semibold mb-4">Restaurant Description</h3>
+                  <div 
+                    className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: restaurant.content }}
+                  />
+                </div>
+              )}
 
-            {/* Community Recognition Section */}
-            <div>
-              <CommunityRecognitionSection metrics={communityRecognitionMetrics} />
+              {/* Rating Section */}
+              <div>
+                <RatingSection ratingMetrics={ratingMetrics} palatesParam={palatesParam} />
+              </div>
+
+              {/* Community Recognition Section */}
+              <div>
+                <CommunityRecognitionSection metrics={communityRecognitionMetrics} />
+              </div>
             </div>
           </div>
 
-          {/* Right Column - Sticky Sidebar (2/5 width) */}
-          <div className="lg:col-span-2">
+          {/* Right Column - Sticky Sidebar (max 375px) */}
+          <div className="lg:w-[375px] lg:flex-shrink-0">
             <div className="lg:sticky lg:top-24 space-y-6">
             {/* Map and Address */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
@@ -460,7 +476,6 @@ export default function RestaurantDetail() {
         {/* Full-Width Reviews Section */}
         <div className="mt-12">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-            <h3 className="text-2xl font-bold mb-6">Reviews</h3>
             <RestaurantReviews 
               restaurantId={restaurant.databaseId || 0} 
               onReviewsUpdate={(reviews) => {

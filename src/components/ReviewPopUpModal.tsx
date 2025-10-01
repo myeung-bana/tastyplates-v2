@@ -20,8 +20,9 @@ import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedS
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import ReplyItem from "./ReplyItem";
-import ReplySkeleton from "./ReplySkeleton";
+import ReplySkeleton from "./ui/Skeleton/ReplySkeleton";
 import ReviewBottomSheet from "./ui/BottomSheet/ReviewBottomSheet";
+import PalateTags from "./ui/PalateTags/PalateTags";
 import toast from 'react-hot-toast';
 
 // Icons
@@ -570,24 +571,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                   </div>
                   
                   {/* Palate Tags */}
-                  {UserPalateNames && UserPalateNames.length > 0 && (
-                    <div className="flex space-x-1 mb-2">
-                      {UserPalateNames.slice(0, 2).map((tag: string, index: number) => (
-                        <span key={index} className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs">
-                          {palateFlagMap[tag.toLowerCase()] && (
-                            <Image
-                              src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
-                              alt={`${tag} flag`}
-                              width={12}
-                              height={8}
-                              className="w-3 h-2 rounded object-cover"
-                            />
-                          )}
-                          <span>{tag}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <PalateTags palateNames={UserPalateNames || []} maxTags={2} />
                   
                   {/* Review Title */}
                   <p className="text-xs font-medium mb-2">

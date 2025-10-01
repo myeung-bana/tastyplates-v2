@@ -307,7 +307,7 @@ const Hero = () => {
                     onClose={handleSearchModalClose}
                     placeholder="Search Cuisine"
                     dropDownClassName="!max-h-[350px]"
-                    baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-50"
+                    baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-[100]"
                     className="!bg-transparent !border-0 !shadow-none !w-full !cursor-default"
                   />
                   <SelectOptions
@@ -323,7 +323,7 @@ const Hero = () => {
                       setListing('')
                     }}
                     onClose={() => setShowLocationModal(false)}
-                    className="!p-2 !top-20 !absolute !right-0 !w-[55%] z-50 !max-h-[350px]"
+                    className="!p-2 !top-20 !absolute !right-0 !w-[55%] z-[100] !max-h-[350px]"
                   />
                 </>
               ) : (
@@ -357,7 +357,7 @@ const Hero = () => {
                       setCuisine('');
                     }}
                     onClose={() => setShowListingModal(false)}
-                    className="!p-2 !top-20 !absolute !left-0 !w-full z-50 !max-h-[350px]"
+                    className="!p-2 !top-20 !absolute !left-0 !w-full z-[100] !max-h-[350px]"
                   />
                 </>
               )}

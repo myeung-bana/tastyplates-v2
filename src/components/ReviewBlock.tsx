@@ -22,6 +22,7 @@ import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
+import PalateTags from "./ui/PalateTags/PalateTags";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -191,8 +192,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     }
   };
 
+  const handleSeeMore = () => {
+    setIsModalOpen(true);
+    setSelectedPhotoIndex(0);
+  };
+
   return (
-    <div className="review-block px-4 py-4 md:p-0">
+    <div className="review-block">
       <div className="review-block__header">
         <div className="review-block__user">
           {(review.authorId) ? (
@@ -201,9 +207,9 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 <Image
                   src={review?.userImage || DEFAULT_USER_ICON}
                   alt={review?.user || "User"}
-                  width={40}
-                  height={40}
-                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                  width={48}
+                  height={48}
+                  className="review-block__user-image cursor-pointer"
                 />
               </a>
             ) : session ? (
@@ -211,18 +217,18 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 <Image
                   src={review?.userImage || DEFAULT_USER_ICON}
                   alt={review?.user || "User"}
-                  width={40}
-                  height={40}
-                  className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                  width={48}
+                  height={48}
+                  className="review-block__user-image cursor-pointer"
                 />
               </a>
             ) : (
               <Image
                 src={review?.userImage || DEFAULT_USER_ICON}
                 alt={review?.user || "User"}
-                width={40}
-                height={40}
-                className="review-block__user-image size-6 md:size-10 cursor-pointer"
+                width={48}
+                height={48}
+                className="review-block__user-image cursor-pointer"
                 onClick={() => setIsShowSignin(true)}
               />
             )
@@ -230,10 +236,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             <FallbackImage
               src={review?.userImage || DEFAULT_USER_ICON}
               alt={review?.user || "User"}
-              width={40}
-              height={40}
-              className="review-block__user-image size-6 md:size-10"
-            type={FallbackImageType.Icon}
+              width={48}
+              height={48}
+              className="review-block__user-image"
+              type={FallbackImageType.Icon}
             />
           )}
           <div className="review-block__user-info">
@@ -264,28 +270,6 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 {review?.user || "Unknown User"}
               </h3>
             )}
-            <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
-              {review.palateNames?.map((tag, index) => {
-                const flagSrc = palateFlagMap[tag.toLowerCase()];
-                return (
-                  <span
-                    key={index}
-                    className="review-block__palate-tag text-[#31343f] bg-[#f1f1f1] flex items-center gap-1"
-                  >
-                    {flagSrc && (
-                      <Image
-                        src={flagSrc}
-                        alt={`${tag} flag`}
-                        width={18}
-                        height={10}
-                        className="rounded object-cover"
-                      />
-                    )}
-                    {capitalizeWords(tag)}
-                  </span>
-                );
-              })}
-            </div>
           </div>
         </div>
         <div className="review-block__rating">
@@ -300,122 +284,104 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
               <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
             );
           })}
-          {/* {[...Array(review.rating)].map((i, index) =>
-            <FiStar key={index} className="review-block__star fill-[#31343F] stroke-none size-3 md:size-3.5" />
-          )} */}
-          <span className="text-[#9ca3af] text-[10px] md:text-sm p-2">&#8226;</span>
-          <span className="review-card__timestamp">
+          <span className="review-block__timestamp">
             {formatDate(review.date)}
           </span>
         </div>
-        <div className="review-block__recognitions flex gap-2">
-          {Array.isArray(review.recognitions) && review.recognitions.filter(tag => tag && tag.trim() !== '').length > 0 && (
-            <div className="review-block__recognitions flex gap-2">
-              {tags
-                .filter(tagObj => (review.recognitions ?? []).includes(tagObj.name))
-                .map((tagObj, index) => (
-                  <span key={index} className="review-block__recognitions flex items-center !w-fit !rounded-[50px] !px-3 !py-1 border-[1.5px] border-[#494D5D] gap-1">
-                    <Image src={tagObj.icon} alt={tagObj.name} width={16} height={16} />
-                    {tagObj.name}
-                  </span>
-                ))}
-            </div>
-          )}
-        </div>
       </div>
       <div className="review-block__content">
-        <h3 className="text-xs font-semibold md:text-base mb-2 break-words">
-          {stripTags(review?.title || "").length > reviewTitleDisplayLimit ? (
-            <>
-              {expandedTitle
-                ? capitalizeWords(stripTags(review?.title || ""))
-                : capitalizeWords(truncateText(stripTags(review?.title || ""), reviewTitleDisplayLimit)) + "…"} {" "}
-              <button
-                className="text-xs hover:underline inline font-bold"
-                onClick={() => setExpandedTitle(!expandedTitle)}
-              >
-                {expandedTitle ? "[Show Less]" : "[See More]"}
-              </button>
-            </>
-          ) : (
-            stripTags(review?.title || "")
-          )}
+        <h3 className="text-sm font-semibold mb-2 break-words">
+          {stripTags(review?.title || "")}
         </h3>
         <p className="review-block__text break-words">
-          {stripTags(review?.comment || "").length > reviewDescriptionDisplayLimit ? (
+          {stripTags(review?.comment || "").length > 200 ? (
             <>
-              {expandedComment
-                ? capitalizeWords(stripTags(review?.comment || ""))
-                : capitalizeWords(truncateText(stripTags(review?.comment || ""), reviewDescriptionDisplayLimit)) + "…"} {" "}
+              {capitalizeWords(truncateText(stripTags(review?.comment || ""), 200))}...
               <button
-                className="text-xs hover:underline inline font-bold"
-                onClick={() => setExpandedComment(!expandedComment)}
+                className="text-blue-600 hover:underline ml-1 font-medium text-sm"
+                onClick={handleSeeMore}
               >
-                {expandedComment ? "[Show Less]" : "[See More]"}
+                See more
               </button>
             </>
           ) : (
             capitalizeWords(stripTags(review?.comment || ""))
           )}
         </p>
+        {/* Reviewer's palate tags */}
+        <PalateTags palateNames={review.palateNames || []} maxTags={2} />
       </div>
-      <div className="">
-        {" "}
-        {/* {review.images.length > 0 && review.images?.map((image) => (
+      {/* Show only first 2 images */}
+      <div className="review-block__image-container">
+        {review.images.slice(0, 2).map((image, index) => (
           <Image
-            src={image} // Display the first image from the review
+            key={index}
+            src={image}
             alt="Review"
-            width={400}
-            height={400}
+            width={100}
+            height={100}
             className="review-block__image"
-          />
-        ))} */}
-        {isModalOpen && (
-          <ReviewPopUpModal
-            key={`modal-${selectedPhotoIndex}`}
-            isOpen={isModalOpen}
-            onClose={() => {
-              setIsModalOpen(false);
-              setSelectedPhotoIndex(0);
-            }}
-            data={mapToReviewedDataProps(review) as unknown as GraphQLReview}
-            initialPhotoIndex={selectedPhotoIndex}
-            userLiked={userLiked}
-            likesCount={likesCount}
-            onLikeChange={(liked, count) => {
-              setUserLiked(liked);
-              setLikesCount(count);
+            onClick={() => {
+              setSelectedPhotoIndex(index);
+              setIsModalOpen(true);
             }}
           />
+        ))}
+        {review.images.length > 2 && (
+          <div 
+            className="review-block__image bg-gray-200 flex items-center justify-center cursor-pointer"
+            onClick={handleSeeMore}
+          >
+            <span className="text-gray-600 font-medium text-sm">
+              +{review.images.length - 2} more
+            </span>
+          </div>
         )}
-        <PhotoSlider
-          reviewPhotos={review.images}
-          onImageClick={(idx) => {
-            setSelectedPhotoIndex(idx);
-            setIsModalOpen(true);
-          }}
-        />
       </div>
-      <div className="review-block__actions flex items-center relative text-center">
+
+      <div className="review-block__actions">
         <button
           onClick={toggleLike}
           disabled={loading}
           aria-pressed={userLiked}
           aria-label={userLiked ? "Unlike comment" : "Like comment"}
-          className="review-block__action-btn cursor-pointer"
+          className="review-block__action-btn"
         >
           {loading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
           ) : (
-            <BiLike className={`shrink-0 size-6 transition-colors duration-200 ${userLiked ? 'text-blue-600 fill-blue-600' : 'fill-[#494D5D]'
-              }`} />
+            <BiLike className={`w-5 h-5 transition-colors duration-200 ${userLiked ? 'text-blue-600 fill-blue-600' : 'fill-gray-500'}`} />
           )}
-          <span className="ml-2 text-center leading-6">{likesCount}</span>
+          <span>{likesCount}</span>
         </button>
-        {/* <button className="review-block__action-btn">
-            <FiMessageCircle />
-          </button> */}
+        <button
+          onClick={handleSeeMore}
+          className="review-block__action-btn"
+        >
+          <span>View full review</span>
+        </button>
       </div>
+
+      {/* Modal for full review */}
+      {isModalOpen && (
+        <ReviewPopUpModal
+          key={`modal-${selectedPhotoIndex}`}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedPhotoIndex(0);
+          }}
+          data={mapToReviewedDataProps(review) as unknown as GraphQLReview}
+          initialPhotoIndex={selectedPhotoIndex}
+          userLiked={userLiked}
+          likesCount={likesCount}
+          onLikeChange={(liked, count) => {
+            setUserLiked(liked);
+            setLikesCount(count);
+          }}
+        />
+      )}
+
       <SignupModal
         isOpen={isShowSignup}
         onClose={() => setIsShowSignup(false)}
