@@ -3,7 +3,7 @@ import Image from "next/image";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { MdOutlineThumbUp } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import { palateFlagMap } from "@/utils/palateFlags";
+import PalateTags from "@/components/ui/PalateTags/PalateTags";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import toast from 'react-hot-toast';
@@ -69,6 +69,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [expandedTitles, setExpandedTitles] = useState<{ [id: string]: boolean }>({});
   const [expandedContents, setExpandedContents] = useState<{ [id: string]: boolean }>({});
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -123,6 +124,15 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     setExpandedContents(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleCloseWithAnimation = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+    }, 300); // Match CSS animation duration
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -130,52 +140,66 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-200"
-        onClick={() => setIsOpen(false)}
+        onClick={handleCloseWithAnimation}
       />
-      {/* Right-side modal */}
-      <div className="relative w-full max-w-xl h-full bg-white shadow-xl flex flex-col overflow-y-auto animate-slide-in-right">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      {/* Right-side modal (compact) */}
+      <div className={`relative w-full max-w-md h-full bg-white shadow-xl flex flex-col overflow-y-auto ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}` }>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-10">
           <div className="flex items-center gap-1">
-            <h2 className="text-lg font-bold text-[#31343F]">Reviews</h2>
-            <span className="text-lg font-normal text-[#494D5D]">·</span>
-            <span className="text-lg font-normal text-[#494D5D]">{reviews.length}</span>
+            <h2 className="text-base font-semibold text-[#31343F]">Reviews</h2>
+            <span className="text-sm text-[#494D5D]">·</span>
+            <span className="text-sm text-[#494D5D]">{reviews.length}</span>
           </div>
           <button
-            className="text-2xl text-gray-400 hover:text-gray-700"
-            onClick={() => setIsOpen(false)}
+            className="text-xl text-gray-400 hover:text-gray-700 p-1"
+            onClick={handleCloseWithAnimation}
             aria-label="Close"
           >
             &times;
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {loading && <div className="text-center text-gray-400">Loading...</div>}
-          {error && <div className="text-center text-red-500">Failed to load reviews.</div>}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loading && (
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex animate-pulse gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-32" />
+                    <div className="h-3 bg-gray-100 rounded w-24" />
+                    <div className="h-3 bg-gray-100 rounded w-5/6" />
+                    <div className="h-3 bg-gray-100 rounded w-4/6" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {error && <div className="text-center text-red-500 text-sm py-4">Failed to load reviews.</div>}
           {!loading && !error && reviews.length === 0 && (
-            <div className="text-center text-gray-400">No reviews</div>
+            <div className="text-center text-gray-400 text-sm py-4">No reviews</div>
           )}
           {!loading && !error && reviews.map((review) => {
             const reviewTitle = review.reviewMainTitle || '';
             const reviewStars = Number(review.reviewStars) || 0;
             const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
-            const palatesArr = review.palates
+            const palateNames = review.palates
               ? review.palates
                 .split("|")
-                .map((s: string) => ({ name: capitalizeWords(s.trim()) }))
-                .filter((s) => s.name)
+                .map((s: string) => capitalizeWords(s.trim()))
+                .filter((s) => s)
               : [];
             return (
-              <div key={review.id || review.databaseId} className="mb-8 pb-0 last:border-b-0 last:pb-0">
-                <div className="flex items-center gap-3 mb-2">
+              <div key={review.id || review.databaseId} className="mb-4 pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
+                <div className="flex items-start gap-2 mb-2">
                   {(review.author?.node?.id || review.userId) ? (
                     session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
                       <a href={PROFILE}>
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
-                          width={40}
-                          height={40}
-                          className="rounded-full object-cover cursor-pointer"
+                          width={32}
+                          height={32}
+                          className="rounded-full object-cover cursor-pointer flex-shrink-0"
                         />
                       </a>
                     ) : session ? (
@@ -183,18 +207,18 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
-                          width={40}
-                          height={40}
-                          className="rounded-full object-cover cursor-pointer"
+                          width={32}
+                          height={32}
+                          className="rounded-full object-cover cursor-pointer flex-shrink-0"
                         />
                       </a>
                     ) : (
                       <Image
                         src={userAvatar}
                         alt={review.author?.name || "User"}
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover cursor-pointer"
+                        width={32}
+                        height={32}
+                        className="rounded-full object-cover cursor-pointer flex-shrink-0"
                         onClick={() => setIsShowSignin(true)}
                       />
                     )
@@ -202,90 +226,66 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     <FallbackImage
                       src={userAvatar}
                       alt={review.author?.name || "User"}
-                      width={40}
-                      height={40}
-                      className="rounded-full object-cover"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover flex-shrink-0"
                     type={FallbackImageType.Icon}
                     />
                   )}
-                  <div>
+                  <div className="flex-1 min-w-0">
                     {(review.author?.node?.id || review.userId) ? (
                       session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
                         <a href={PROFILE}>
-                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                          <div className="font-medium text-sm text-[#31343F] cursor-pointer truncate">
                             {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>
                         </a>
                       ) : session ? (
                         <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId || '')])}>
-                          <div className="font-semibold text-[#31343F] cursor-pointer">
+                          <div className="font-medium text-sm text-[#31343F] cursor-pointer truncate">
                             {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>
                         </a>
                       ) : (
                         <div
-                          className="font-semibold text-[#31343F] cursor-pointer"
+                          className="font-medium text-sm text-[#31343F] cursor-pointer truncate"
                           onClick={() => setIsShowSignin(true)}
                         >
                           {review.author?.name || review.author?.node?.name || "Unknown User"}
                         </div>
                       )
                     ) : (
-                      <div className="font-semibold text-[#31343F]">
+                      <div className="font-medium text-sm text-[#31343F] truncate">
                         {review.author?.name || review.author?.node?.name || "Unknown User"}
                       </div>
                     )}
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      {palatesArr.map((p, idx: number) => {
-                        const lowerName = p.name.toLowerCase();
-                        return (
-                          <span
-                            key={p.name + idx}
-                            className="flex items-center gap-1 bg-[#f1f1f1] text-xs text-[#31343f] rounded-full px-2 py-1 font-medium"
-                          >
-                            {palateFlagMap[lowerName] && (
-                              <Image
-                                src={palateFlagMap[lowerName]}
-                                alt={`${p.name} flag`}
-                                width={18}
-                                height={10}
-                                className="rounded object-cover"
-                              />
-                            )}
-                            {p.name}
-                          </span>
-                        );
-                      })}
-                    </div>
+                    <PalateTags palateNames={palateNames} maxTags={2} className="!mb-0" />
                   </div>
                 </div>
-                <div className="flex items-center text-sm text-[#31343F] mt-2">
+                <div className="flex items-center gap-1 text-xs text-[#494D5D] mb-1">
                   {Array.from({ length: 5 }, (_, i) => {
                     const full = i + 1 <= reviewStars;
                     const half = !full && i + 0.5 <= reviewStars;
                     return full ? (
-                      <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR_FILLED} key={i} width={12} height={12} className="w-3 h-3" alt="star rating" />
                     ) : half ? (
-                      <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="half star rating" />
+                      <Image src={STAR_HALF} key={i} width={12} height={12} className="w-3 h-3" alt="half star rating" />
                     ) : (
-                      <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
+                      <Image src={STAR} key={i} width={12} height={12} className="w-3 h-3" alt="star rating" />
                     );
                   })}
-                  <span className="mx-2">·</span>
+                  <span>·</span>
                   <span>{new Date(review.date).toLocaleDateString()}</span>
                 </div>
-                {/* {reviewTitle && (
-                  <div className="font-semibold mt-2 text-[#31343F]">{reviewTitle}</div>
-                )} */}
                 {reviewTitle && (
-                  <div className="text-sm font-semibold mt-2 text-[#31343F] break-words">
+                  <div className="text-sm font-medium mb-1 text-[#31343F] break-words">
                     {expandedTitles[review.id]
                       ? capitalizeWords(reviewTitle)
                       : capitalizeWords(truncateText(reviewTitle, reviewTitleDisplayLimit)) + "… "}
                     {" "}
                     {reviewTitle.length > reviewTitleDisplayLimit && (
                       <button
-                        className="hover:underline font-bold"
+                        className="hover:underline font-medium text-xs"
                         onClick={() => toggleTitle(review.id)}
                       >
                         {expandedTitles[review.id] ? " [Show Less]" : "[See More]"}
@@ -293,7 +293,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     )}
                   </div>
                 )}
-                <div className="text-[#31343F] mt-1 leading-[1.5] break-words">
+                <div className="text-sm text-[#31343F] leading-relaxed break-words">
                   {review.content.length > reviewDescriptionDisplayLimit ? (
                     <>
                       <div
@@ -304,7 +304,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         }}
                       />
                       <button
-                        className="text-xs hover:underline inline font-bold"
+                        className="text-xs hover:underline font-medium"
                         onClick={() => toggleContent(review.id)}
                       >
                         {expandedContents[review.id] ? "[Show Less]" : "[See More]"}
@@ -314,8 +314,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     <div dangerouslySetInnerHTML={{ __html: capitalizeWords(review.content) }} />
                   )}
                 </div>
-                {/* <div className="text-[#31343F] mt-1" dangerouslySetInnerHTML={{ __html: review.content }} /> */}
-                <div className="flex items-center gap-2 text-sm text-[#494D5D] mt-2">
+                <div className="flex items-center gap-1 text-xs text-[#494D5D] mt-2">
                   <button
                     onClick={() => handleLike(review)}
                     disabled={likeLoading[review.id]}
@@ -324,10 +323,10 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                     className="focus:outline-none cursor-pointer"
                   >
                     {likeLoading[review.id] ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+                      <div className="animate-spin rounded-full h-3 w-3 border-[1px] border-blue-400 border-t-transparent"></div>
                     ) : (
                       <MdOutlineThumbUp
-                        className={`shrink-0 size-6 stroke-[#494D5D] transition-colors duration-200 ${review.userLiked ? 'text-blue-600' : ''}`}
+                        className={`shrink-0 w-4 h-4 stroke-[#494D5D] transition-colors duration-200 ${review.userLiked ? 'text-blue-600' : ''}`}
                       />
                     )}
                   </button>
@@ -358,6 +357,9 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
         .animate-slide-in-right {
           animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .animate-slide-out-right {
+          animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         @keyframes slideInRight {
           from {
             transform: translateX(100%);
@@ -366,6 +368,16 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
           to {
             transform: translateX(0);
             opacity: 1;
+          }
+        }
+        @keyframes slideOutRight {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
           }
         }
       `}</style>
