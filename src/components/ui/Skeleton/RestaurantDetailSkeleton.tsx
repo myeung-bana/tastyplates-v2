@@ -2,8 +2,8 @@ import React  from "react";
 
 const RestaurantDetailSkeleton = () => {
     return (
-        <div className="restaurant-detail mt-32 md:mt-20 animate-pulse">
-            <div className="restaurant-detail__container !max-w-7xl !pt-0">
+        <div className="restaurant-detail mt-4 md:mt-20 animate-pulse">
+            <div className="restaurant-detail__container !pt-0">
                 {/* Mobile: Gallery First */}
                 <div className="md:hidden">
                     <div className="h-64 bg-gray-300 rounded-2xl mx-2 mb-6"></div>

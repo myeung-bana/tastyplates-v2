@@ -351,7 +351,8 @@
 
   @media (max-width: 767px) {
     padding: 12px;
-    min-height: 280px;
+    min-height: 240px; // Reduced for better mobile fit
+    width: 85%;
   }
 
   &__header {
@@ -463,8 +464,8 @@
     }
 
     @media (max-width: 767px) {
-      width: 80px;
-      height: 80px;
+      width: 70px; // Slightly smaller for mobile
+      height: 70px;
     }
   }
 
@@ -648,5 +649,23 @@
     -moz-padding-end: 32px;
     -webkit-padding-start: 12px;
     -moz-padding-start: 12px;
+  }
+}
+
+// Mobile-specific review grid improvements
+@media (max-width: 1023px) {
+  .restaurant-reviews {
+    .grid {
+      grid-template-columns: 1fr !important; // Force single column on tablets and below
+      gap: 12px; // Reduced gap
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .restaurant-reviews {
+    .grid {
+      gap: 8px; // Even tighter gap on mobile
+    }
   }
 }
