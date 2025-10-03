@@ -19,7 +19,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
       <h3 className="text-lg font-semibold mb-4">Community Recognition</h3>
-      <div className="w-full flex flex-col lg:flex-row items-center justify-center gap-6 my-5 lg:gap-0 lg:my-0">
+      <div className="community-recognition w-full flex flex-col lg:flex-row items-center justify-center gap-6 my-5 lg:gap-0 lg:my-0">
         <div className="flex items-center w-full">
           <div className="rating-column w-full border-r border-[#CACACA]">
             <Image

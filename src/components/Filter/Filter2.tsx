@@ -2,7 +2,6 @@ import "@/styles/components/filter2.scss";
 import { useEffect, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
-import BottomSheet from "../ui/BottomSheet/BottomSheet";
 import { CategoryService } from "@/services/category/categoryService";
 import CuisineFilter from "./CuisineFilter";
 
@@ -170,15 +169,16 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
         </div>
       </div>
 
-      {/* Bottom Sheet Modal */}
-      <BottomSheet
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Filter"
-        maxHeight="85vh"
-        className="filter2__bottom-sheet"
-      >
-        <div className="filter2__content-wrapper">
+      {/* Slide-in Modal (left) - match CuisineFilter behavior */}
+      <div className={`filter2__modal ${isModalOpen ? 'filter2__modal--open' : ''}`}>
+        <div className="filter2__overlay" onClick={() => setIsModalOpen(false)} />
+        <div className="filter2__content">
+          {/* Header */}
+          <div className="filter2__header">
+            <h2 className="filter2__title">Filter</h2>
+            <button onClick={() => setIsModalOpen(false)} className="filter2__close" />
+          </div>
+
           {/* Content */}
           <div className="filter2__body">
             {/* Category Section */}
@@ -376,21 +376,11 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
 
           {/* Footer */}
           <div className="filter2__footer">
-            <button
-              onClick={resetFilter}
-              className="filter2__button filter2__button--secondary"
-            >
-              Reset
-            </button>
-            <button
-              onClick={applyFilters}
-              className="filter2__button filter2__button--primary"
-            >
-              Apply
-            </button>
+            <button onClick={resetFilter} className="filter2__button filter2__button--secondary">Reset</button>
+            <button onClick={applyFilters} className="filter2__button filter2__button--primary">Apply</button>
           </div>
         </div>
-      </BottomSheet>
+      </div>
     </>
   );
 };

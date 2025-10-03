@@ -12,7 +12,6 @@ export default function RootLayout({
       <Suspense fallback={<div></div>}>
         <Navbar hasSearchBar />
         {children}
-        <Footer />
       </Suspense>
     </section>
   );

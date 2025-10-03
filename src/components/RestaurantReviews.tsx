@@ -155,9 +155,10 @@ const reviewService = new ReviewService();
 interface RestaurantReviewsProps {
   restaurantId: number;
   onReviewsUpdate?: (reviews: GraphQLReview[]) => void;
+  reviewCount?: number;
 }
 
-export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: RestaurantReviewsProps) {
+export default function RestaurantReviews({ restaurantId, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
   // Session and user state
   const { data: session } = useSession();
   const currentUserId = session?.user?.id || null;
@@ -386,7 +387,11 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate }: Res
   return (
     <section className="restaurant-reviews">
       <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-3"><h2 className="text-lg font-bold text-[#31343F]">Reviews</h2></div>
+        <div className="flex gap-3">
+          <h2 className="text-lg font-bold text-[#31343F]">
+            Recommended Reviews ({reviewCount || allReviews.length})
+          </h2>
+        </div>
         <div className="flex gap-3">
           <div className="search-bar">
             <CustomPopover

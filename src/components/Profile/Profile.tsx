@@ -84,7 +84,14 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [checkins, setCheckins] = useState<Restaurant[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
-  const isViewingOwnProfile = session?.user?.id === targetUserId;
+  
+  // Add ref to track if follow data has been loaded
+  const hasLoadedFollowData = useRef(false);
+  
+  // Memoize the viewing own profile check
+  const isViewingOwnProfile = useMemo(() => {
+    return session?.user?.id === targetUserId;
+  }, [session?.user?.id, targetUserId]);
 
   const transformNodes = useCallback((nodes: Listing[]): Restaurant[] => {
     return nodes.map((item) => ({
@@ -115,7 +122,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const statuses = useMemo(() => isViewingOwnProfile ? ["PUBLISH", "DRAFT"] : ["PUBLISH"], [isViewingOwnProfile]);
   
   const loadMore = useCallback(async () => {
-    if (reviewsLoading || !hasNextPage || !targetUserId || status === "loading")
+    if (reviewsLoading || !hasNextPage || !targetUserId)
       return;
     setReviewsLoading(true);
 
@@ -151,7 +158,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         isFirstLoad.current = false;
       }
     }
-  }, [reviewsLoading, hasNextPage, targetUserId, status, endCursor]);
+  }, [reviewsLoading, hasNextPage, targetUserId, endCursor]);
 
   const fetchRestaurants = useCallback(async (
     first = 8,
@@ -278,6 +285,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         setNameLoading(false);
         setAboutMeLoading(false);
         setPalatesLoading(false);
+        // Set main loading to false after initial data is loaded
+        setLoading(false);
       }
     };
     if (targetUserId && !isViewingOwnProfile) {
@@ -287,43 +296,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setNameLoading(false);
       setAboutMeLoading(false);
       setPalatesLoading(false);
+      // Set main loading to false for own profile
+      setLoading(false);
     }
   }, [targetUserId, isViewingOwnProfile]);
 
-  const fetchFollowing = useCallback(async () => {
-    setFollowingLoading(true);
-    if (!session?.accessToken || !targetUserId) {
-      setFollowingLoading(false);
-      return [];
-    }
-    try {
-      const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
-      setFollowing(followingList);
-      return followingList;
-    } finally {
-      setFollowingLoading(false);
-    }
-  }, [session?.accessToken, targetUserId]);
-
-  const fetchFollowers = useCallback(async () => {
-    setFollowersLoading(true);
-    if (!session?.accessToken || !targetUserId) {
-      setFollowersLoading(false);
-      return [];
-    }
-    try {
-      // Use current following state instead of dependency
-      const followersList = await userService.getFollowersList(
-        targetUserId,
-        following,
-        session.accessToken
-      );
-      setFollowers(followersList);
-      return followersList;
-    } finally {
-      setFollowersLoading(false);
-    }
-  }, [session?.accessToken, targetUserId, following]);
+  // Remove the separate fetchFollowing and fetchFollowers callbacks
+  // They will be replaced with inline async functions in useEffect
 
   useEffect(() => {
     // Only set userData from session.user if viewing own profile
@@ -334,21 +313,45 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setPalatesLoading(false);
     }
   }, [isViewingOwnProfile, session?.user]);
+  // Fixed: Load follow data only once when dependencies change
   useEffect(() => {
-    if (!session?.accessToken || !targetUserId) return;
+    if (!session?.accessToken || !targetUserId || hasLoadedFollowData.current) return;
+    
     const loadFollowData = async () => {
       setFollowingLoading(true);
       setFollowersLoading(true);
       try {
-        await fetchFollowing();
-        await fetchFollowers();
+        // Fetch following first
+        const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
+        setFollowing(followingList);
+        
+        // Then fetch followers using the fresh following data
+        const followersList = await userService.getFollowersList(
+          targetUserId,
+          followingList,
+          session.accessToken
+        );
+        setFollowers(followersList);
+        
+        // Mark as loaded to prevent re-fetching
+        hasLoadedFollowData.current = true;
+      } catch (error) {
+        console.error("Error loading follow data:", error);
       } finally {
         setFollowingLoading(false);
         setFollowersLoading(false);
       }
     };
+    
     loadFollowData();
-  }, [session?.accessToken, targetUserId, fetchFollowers, fetchFollowing]);
+  }, [session?.accessToken, targetUserId]);
+  
+  // Reset follow data loading flag when targetUserId changes
+  useEffect(() => {
+    hasLoadedFollowData.current = false;
+    setFollowers([]);
+    setFollowing([]);
+  }, [targetUserId]);
   useEffect(() => {
     // No cache sync needed, always fetch fresh
   }, [targetUserId]);
@@ -361,14 +364,24 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (response.status == code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      const [newFollowing] = await Promise.all([
-        fetchFollowing(),
-        fetchFollowers()
-      ]);
-      setFollowers(prev => prev.map(user => ({
-        ...user,
-        isFollowing: (newFollowing || []).some((f: Record<string, unknown>) => f.id === user.id)
-      })));
+      // Refresh follow data after successful follow
+      hasLoadedFollowData.current = false;
+      const loadFollowData = async () => {
+        try {
+          const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
+          setFollowing(followingList);
+          const followersList = await userService.getFollowersList(
+            targetUserId,
+            followingList,
+            session.accessToken
+          );
+          setFollowers(followersList);
+          hasLoadedFollowData.current = true;
+        } catch (error) {
+          console.error("Error refreshing follow data:", error);
+        }
+      };
+      loadFollowData();
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };
@@ -381,14 +394,24 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     if (response.status == code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      const [newFollowing] = await Promise.all([
-        fetchFollowing(),
-        fetchFollowers()
-      ]);
-      setFollowers(prev => prev.map(user => ({
-        ...user,
-        isFollowing: (newFollowing || []).some((f: Record<string, unknown>) => f.id === user.id)
-      })));
+      // Refresh follow data after successful unfollow
+      hasLoadedFollowData.current = false;
+      const loadFollowData = async () => {
+        try {
+          const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
+          setFollowing(followingList);
+          const followersList = await userService.getFollowersList(
+            targetUserId,
+            followingList,
+            session.accessToken
+          );
+          setFollowers(followersList);
+          hasLoadedFollowData.current = true;
+        } catch (error) {
+          console.error("Error refreshing follow data:", error);
+        }
+      };
+      loadFollowData();
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
     }
   };

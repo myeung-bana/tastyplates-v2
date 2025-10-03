@@ -15,10 +15,13 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
-import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit } from "@/constants/validation";
+import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { responseStatusCode as code } from "@/constants/response";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
+import { getCityCountry } from "@/utils/addressUtils";
+import { GoogleMapUrl } from "@/utils/addressUtils";
+import RestaurantReviewHeader from "./RestaurantReviewHeader";
 interface Restaurant {
   id: string;
   slug: string;
@@ -43,6 +46,9 @@ const ReviewSubmissionPage = () => {
   const restaurantId = params.id;
   const { data: session } = useSession();
   const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantImage, setRestaurantImage] = useState('');
+  const [restaurantLocation, setRestaurantLocation] = useState('');
+  const [googleMapUrl, setGoogleMapUrl] = useState<GoogleMapUrl | null>(null);
   const [review_main_title, setReviewMainTitle] = useState('');
   const [content, setContent] = useState('');
   const [review_stars, setReviewStars] = useState(0);
@@ -71,12 +77,15 @@ const ReviewSubmissionPage = () => {
   });
 
   useEffect(() => {
-    const fetchName = async () => {
+    const fetchRestaurantData = async () => {
       if (!restaurantId || !session?.accessToken) return;
 
       try {
         const data = await restaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
         setRestaurantName(data.title as string);
+        setRestaurantImage((data.featuredImage as any)?.node?.sourceUrl || '');
+        setRestaurantLocation((data.address as string) || '');
+        setGoogleMapUrl((data.googleMapUrl as GoogleMapUrl) || null);
       } catch (error) {
         console.error(error);
       } finally {
@@ -84,7 +93,7 @@ const ReviewSubmissionPage = () => {
       }
     };
 
-    fetchName();
+    fetchRestaurantData();
   }, [restaurantId, session]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
@@ -177,15 +186,15 @@ const ReviewSubmissionPage = () => {
     if (content.trim() === '') {
       setDescriptionError(requiredDescription);
       hasError = true;
-    } else if (content.length > reviewDescriptionLimit) {
-      setDescriptionError(maximumReviewDescription(reviewDescriptionLimit));
+    } else     if (content.length > reviewDescriptionMaxLimit) {
+      setDescriptionError(maximumReviewDescription(reviewDescriptionMaxLimit));
       hasError = true;
     } else {
       setDescriptionError('');
     }
 
-    if (review_main_title.length > reviewTitleLimit) {
-      setReviewTitleError(maximumReviewTitle(reviewTitleLimit));
+    if (review_main_title.length > reviewTitleMaxLimit) {
+      setReviewTitleError(maximumReviewTitle(reviewTitleMaxLimit));
       hasError = true;
     } else {
       setReviewTitleError('');
@@ -293,12 +302,15 @@ const ReviewSubmissionPage = () => {
       <div className="submitRestaurants mt-16 md:mt-20">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
-            <h1 className="submitRestaurants__title">
-              {restaurantName}
-            </h1>
-            <form className="submitRestaurants__form">
+          <RestaurantReviewHeader 
+            restaurantName={restaurantName}
+            restaurantImage={restaurantImage}
+            restaurantLocation={restaurantLocation}
+            googleMapUrl={googleMapUrl}
+          />
+          <form className="submitRestaurants__form">
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Rating</label>
+                <label className="submitRestaurants__label">How would you rate your experience?</label>
                 <div className="submitRestaurants__input-group">
                   <Rating
                     totalStars={5}
@@ -321,6 +333,7 @@ const ReviewSubmissionPage = () => {
                     className="submitRestaurants__input resize-vertical"
                     placeholder="Title of your review"
                     value={review_main_title}
+                    maxLength={reviewTitleMaxLimit}
                     onChange={(e) => {
                       setReviewMainTitle(e.target.value);
                       if (e.target.value.trim() !== '') {
@@ -329,19 +342,25 @@ const ReviewSubmissionPage = () => {
                     }}
                     rows={2}
                   ></textarea>
+                  <div className="character-counter">
+                    <span className={review_main_title.length > 40 ? 'text-red-500' : 'text-gray-500'}>
+                      {review_main_title.length}/{reviewTitleMaxLimit}
+                    </span>
+                  </div>
                   {reviewTitleError && (
                     <p className="text-red-600 text-sm mt-1">{reviewTitleError}</p>
                   )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
-                <label className="submitRestaurants__label">Description</label>
+                <label className="submitRestaurants__label">Tell us about your experience</label>
                 <div className="submitRestaurants__input-group">
                   <textarea
                     name="content"
                     className="submitRestaurants__input resize-vertical md:!h-full"
                     placeholder="Write a review about the food, service or ambiance of the restaurant"
                     value={content}
+                    maxLength={reviewDescriptionMaxLimit}
                     onChange={(e) => {
                       setContent(e.target.value);
                       if (e.target.value.trim() !== '') {
@@ -350,6 +369,11 @@ const ReviewSubmissionPage = () => {
                     }}
                     rows={6}
                   ></textarea>
+                  <div className="character-counter">
+                    <span className={content.length > 1000 ? 'text-red-500' : 'text-gray-500'}>
+                      {content.length}/{reviewDescriptionMaxLimit}
+                    </span>
+                  </div>
                   {descriptionError && (
                     <p className="text-red-600 text-sm mt-1">{descriptionError}</p>
                   )}
@@ -405,7 +429,7 @@ const ReviewSubmissionPage = () => {
               </div>
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">
-                  Give Recognition
+                  How would you recognise your experience?
                 </label>
                 <div className="submitRestaurants__cuisine-checkbox-grid">
                   {tags.map((tag) => {
@@ -418,14 +442,14 @@ const ReviewSubmissionPage = () => {
                           }`}
                       >
                         <Image src={tag.icon} width={24} height={24} alt="icon" />
-                        <span>{tag.name}</span>
+                        <span className="text-sm md:text-base">{tag.name}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
-              <p className="text-xs md:text-sm text-[#31343F]">
-                By posting review, you agree to TastyPlates'&nbsp;
+              <p className="text-sm md:text-sm text-[#31343F]">
+                By posting a review, you agree that you are above 13 years old and agree to TastyPlates'&nbsp;
                 <Link
                   href={WRITING_GUIDELINES}
                   className="underline"
@@ -496,7 +520,6 @@ const ReviewSubmissionPage = () => {
           setIsOpen={() => setIsSubmitted(!isSubmitted)}
         />
       </div>
-      <Footer />
     </>
   );
 };

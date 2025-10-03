@@ -23,7 +23,7 @@ const ProfilePage = () => {
 
   return (
     <>
-      <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-20 text-[#31343F]">
+      <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter text-[#31343F]">
         {/* Pass the logged-in user's ID as targetUserId */}
         <Profile targetUserId={session.user.id} />
       </div>

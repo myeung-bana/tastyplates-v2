@@ -11,5 +11,7 @@ export const minimumImage = 1
 export const listingTitleLimit = 30
 export const reviewTitleLimit = 150
 export const reviewTitleDisplayLimit = 50
+export const reviewTitleMaxLimit = 50
 export const reviewDescriptionLimit = 1000
 export const reviewDescriptionDisplayLimit = 300
+export const reviewDescriptionMaxLimit = 1200

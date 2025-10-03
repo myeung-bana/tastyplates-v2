@@ -23,13 +23,16 @@ import {
   calculateRatingMetrics, 
   type RatingMetrics,
   calculateCommunityRecognitionMetrics,
-  type CommunityRecognitionMetrics
+  type CommunityRecognitionMetrics,
+  calculateOverallRating
 } from "@/utils/reviewUtils";
 import { getBestAddress } from "@/utils/addressUtils";
 import { GraphQLReview } from "@/types/graphql";
 import ImageGallery from "@/components/Restaurant/ImageGallery";
 import RatingSection from "@/components/Restaurant/RatingSection";
 import CommunityRecognitionSection from "@/components/Restaurant/CommunityRecognitionSection";
+import BottomSheet from "@/components/ui/BottomSheet/BottomSheet";
+import { FiClock, FiPhone, FiDollarSign } from "react-icons/fi";
 
 // Save Restaurant Button Component
 function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
@@ -134,7 +137,12 @@ function getRestaurantImages(restaurant: Listing): string[] {
     images.push(restaurant.featuredImage.node.sourceUrl);
   }
   
-  // Add placeholder images for demonstration
+  // If no featured image, return empty array to show "No Photos Available"
+  if (images.length === 0) {
+    return [];
+  }
+  
+  // Add placeholder images for demonstration (only if we have a featured image)
   for (let i = 1; i <= 6; i++) {
     images.push(`/placeholder-restaurant-${i}.jpg`);
   }
@@ -168,6 +176,8 @@ export default function RestaurantDetail() {
     valueForMoney: 0,
     bestService: 0
   });
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const palatesParam = searchParams?.get("ethnic") || null;
@@ -306,19 +316,25 @@ export default function RestaurantDetail() {
       <div className="restaurant-detail__container !pt-0">
         {/* Mobile: Gallery First */}
         <div className="md:hidden">
-          <div className="relative h-64 rounded-2xl overflow-hidden mx-2 mb-6">
-            <Image
-              src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
-              alt={restaurant.title}
-              fill
-              className="object-cover"
-              priority
-            />
-            <ImageGallery 
-              images={getRestaurantImages(restaurant)} 
-              restaurantTitle={restaurant.title} 
-            />
-          </div>
+          {getRestaurantImages(restaurant).length > 0 ? (
+            <div className="relative h-64 rounded-2xl overflow-hidden mx-2 mb-6">
+              <Image
+                src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
+                alt={restaurant.title}
+                fill
+                className="object-cover"
+                priority
+              />
+              <ImageGallery 
+                images={getRestaurantImages(restaurant)} 
+                restaurantTitle={restaurant.title} 
+              />
+            </div>
+          ) : (
+            <div className="h-64 rounded-2xl mx-2 mb-6 bg-gray-100 flex items-center justify-center">
+              <span className="text-gray-500 text-lg font-medium">No Photos Available</span>
+            </div>
+          )}
         </div>
 
         <div className="restaurant-detail__header">
@@ -341,6 +357,26 @@ export default function RestaurantDetail() {
                       <span>{restaurant.priceRange}</span>
                     </div>
                   </div>
+                  
+                  {/* Add Categories Section */}
+                  <div className="mt-3">
+                    <div className="flex flex-wrap gap-2">
+                      {restaurant.listingCategories?.nodes?.length > 0 ? (
+                        restaurant.listingCategories.nodes.map((category: { name: string, slug: string }, index: number) => (
+                          <span
+                            key={`category-${index}`}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                          >
+                            {category.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+                          Uncategorized
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex flex-row flex-wrap gap-3 items-center">
                   <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
@@ -361,28 +397,58 @@ export default function RestaurantDetail() {
           <div className="flex-1 min-w-0">
             <div className="space-y-8">
               {/* Desktop: Featured Image */}
-              <div className="hidden md:block relative h-64 md:h-80 rounded-2xl overflow-hidden">
-                <Image
-                  src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
-                  alt={restaurant.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-                <ImageGallery 
-                  images={getRestaurantImages(restaurant)} 
-                  restaurantTitle={restaurant.title} 
-                />
-              </div>
+              {getRestaurantImages(restaurant).length > 0 ? (
+                <div className="hidden md:block relative h-64 md:h-80 rounded-2xl overflow-hidden">
+                  <Image
+                    src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
+                    alt={restaurant.title}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  <ImageGallery 
+                    images={getRestaurantImages(restaurant)} 
+                    restaurantTitle={restaurant.title} 
+                  />
+                </div>
+              ) : (
+                <div className="hidden md:block h-64 md:h-80 rounded-2xl bg-gray-100 flex items-center justify-center">
+                  <span className="text-gray-500 text-xl font-medium">No Photos Available</span>
+                </div>
+              )}
 
               {/* Restaurant Description Section */}
               {restaurant.content && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
                   <h3 className="text-lg font-semibold mb-4">Restaurant Description</h3>
-                  <div 
-                    className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: restaurant.content }}
-                  />
+                  <div className="relative">
+                    <div 
+                      className={`text-gray-700 leading-relaxed prose prose-sm max-w-none ${
+                        restaurant.content.length > 300 && !isDescriptionExpanded ? 'line-clamp-4' : ''
+                      }`}
+                      dangerouslySetInnerHTML={{ __html: restaurant.content }}
+                    />
+                    
+                    {restaurant.content.length > 300 && (
+                      <>
+                        {/* Mobile: Full-width button */}
+                        <button
+                          onClick={() => setShowDescriptionModal(true)}
+                          className="text-sm w-full mt-4 px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium text-gray-700 transition-colors md:hidden"
+                        >
+                          See More
+                        </button>
+                        
+                        {/* Desktop: Inline expansion */}
+                        <button
+                          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                          className="text-sm hidden md:inline text-[#E36B00] hover:text-[#D15A00] font-medium ml-1 transition-colors"
+                        >
+                          {isDescriptionExpanded ? 'See Less' : '...See More'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -449,23 +515,34 @@ export default function RestaurantDetail() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
               <h3 className="text-lg font-semibold mb-4">Restaurant Details</h3>
               <div className="space-y-3">
-                {restaurant.listingDetails?.openingHours && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">🕒</span>
-                    <span className="text-gray-700">{restaurant.listingDetails.openingHours}</span>
+                <div className="flex items-center gap-3">
+                  <FiClock className="w-5 h-5 text-gray-500" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-500">Opening Hours</span>
+                    <span className="text-gray-700">
+                      {restaurant.listingDetails?.openingHours || 'Not available'}
+                    </span>
                   </div>
-                )}
-                
-                {restaurant.listingDetails?.phone && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">📞</span>
-                    <span className="text-gray-700">{restaurant.listingDetails.phone}</span>
-                  </div>
-                )}
+                </div>
                 
                 <div className="flex items-center gap-3">
-                  <span className="text-gray-500">💰</span>
-                  <span className="text-gray-700">{restaurant.priceRange}</span>
+                  <FiPhone className="w-5 h-5 text-gray-500" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-500">Phone</span>
+                    <span className="text-gray-700">
+                      {restaurant.listingDetails?.phone || 'Not available'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <FiDollarSign className="w-5 h-5 text-gray-500" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-500">Price Range</span>
+                    <span className="text-gray-700">
+                      {restaurant.priceRange || 'Not available'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -478,6 +555,7 @@ export default function RestaurantDetail() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
             <RestaurantReviews 
               restaurantId={restaurant.databaseId || 0} 
+              reviewCount={calculateOverallRating(restaurantReviews).count}
               onReviewsUpdate={(reviews) => {
                 setRestaurantReviews(reviews);
                 setAllReviews(reviews);
@@ -504,6 +582,22 @@ export default function RestaurantDetail() {
           setIsShowSignin(false);
         }}
       />
+      
+      {/* Description Modal */}
+      <BottomSheet
+        isOpen={showDescriptionModal}
+        onClose={() => setShowDescriptionModal(false)}
+        title={`${restaurant.title} - Description`}
+        maxHeight="85vh"
+        className="restaurant-description-modal"
+      >
+        <div className="p-6 pb-24">
+          <div 
+            className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: restaurant.content }}
+          />
+        </div>
+      </BottomSheet>
     </div>
   );
 }

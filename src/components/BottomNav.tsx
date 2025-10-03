@@ -70,6 +70,14 @@ const BottomNav: React.FC = () => {
     }
   };
 
+  // Handle click for items that require auth
+  const handleAuthRequiredClick = (e: React.MouseEvent, item: any) => {
+    if (!session?.user) {
+      e.preventDefault();
+      showSignin();
+    }
+  };
+
   const navItems = [
     {
       name: "Home",
@@ -98,6 +106,7 @@ const BottomNav: React.FC = () => {
       activePaths: [PROFILE, "/profile/"],
       requiresAuth: true,
       isAvatar: true,
+      showWhenUnauthenticated: true, // Always show profile button
     },
     {
       name: "Settings",
@@ -128,7 +137,7 @@ const BottomNav: React.FC = () => {
     }`}>
       <div className="flex items-center justify-around px-2 py-1">
         {navItems
-          .filter(item => !item.requiresAuth || session?.user)
+          .filter(item => !item.requiresAuth || session?.user || item.showWhenUnauthenticated)
           .map((item) => {
           const Icon = item.icon;
           const active = isActive(item.activePaths);
@@ -137,34 +146,28 @@ const BottomNav: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
-              onClick={item.requiresAuth ? handleProfileClick : undefined}
+              onClick={item.requiresAuth ? (e) => handleAuthRequiredClick(e, item) : undefined}
               className={`flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors duration-200 ${
                 active 
                   ? 'text-[#E36B00]' 
                   : 'text-gray-600 hover:text-gray-700'
-              } ${item.isCenter ? 'bg-[#E36B00] text-white rounded-lg mx-2' : ''}`}
+              }`}
             >
-              {item.isAvatar ? (
-                session?.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt="Profile"
-                    className="w-6 h-6 mb-1 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-6 h-6 mb-1 rounded-full bg-gray-300 flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-gray-600" />
-                  </div>
-                )
+              {item.isAvatar && session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt="Profile"
+                  className="w-6 h-6 mb-1 rounded-full object-cover"
+                />
               ) : (
                 <Icon 
                   className={`w-6 h-6 mb-1 transition-colors duration-200 ${
                     active ? 'text-[#E36B00]' : 'text-gray-600'
-                  } ${item.isCenter ? 'text-white' : ''}`} 
+                  }`} 
                 />
               )}
               {/* Active indicator */}
-              {active && !item.isCenter && (
+              {active && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-[#E36B00] rounded-full" />
               )}
             </Link>
