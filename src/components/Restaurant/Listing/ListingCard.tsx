@@ -1,10 +1,14 @@
 "use client";
 import Image from "next/image";
 import { IoMdClose } from "react-icons/io";
+import { FaEdit } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 import "@/styles/components/_listing-card.scss";
 import { formatDateT, stripTags } from "@/lib/utils";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { DEFAULT_IMAGE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { PAGE } from "@/lib/utils";
+import { EDIT_REVIEW } from "@/constants/pages";
 
 export interface ReviewDraft {
   author: number;
@@ -35,15 +39,13 @@ interface ListingCardProps {
 }
 
 const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
-  // const reviewsCount = getRestaurantReviewsCount(restaurant.id);
-  // const getCuisineNames = (cuisineIds: string[]) => {
-  //   return cuisineIds
-  //     .map((id) => {
-  //       const cuisine = cuisines.find((c) => c.id === id);
-  //       return cuisine ? cuisine.name : null; // Return the cuisine name or null if not found
-  //     })
-  //     .filter((name) => name); // Filter out any null values
-  // };
+  const router = useRouter();
+
+  const handleEdit = () => {
+    // Navigate to edit-review page with the review ID
+    // We'll use a placeholder slug since we don't have restaurant slug in the draft
+    router.push(PAGE(EDIT_REVIEW, ["draft", reviewDraft.id.toString()]));
+  };
 
   return (
     <div className="relative overflow-hidden rounded-md">
@@ -58,8 +60,16 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
         {/* <span className="restaurant-card__price">{restaurant.priceRange}</span> */}
         <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
           <button
-            className="rounded-full p-2 bg-white"
+            className="rounded-full p-2 bg-white hover:bg-gray-50 transition-colors"
+            onClick={handleEdit}
+            title="Edit Review"
+          >
+            <FaEdit className="w-4 h-4" />
+          </button>
+          <button
+            className="rounded-full p-2 bg-white hover:bg-gray-50 transition-colors"
             onClick={() => onDelete()}
+            title="Delete Review"
           >
             <IoMdClose />
           </button>

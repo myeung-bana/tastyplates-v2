@@ -121,7 +121,8 @@ export const GET_USER_REVIEWS = gql`
         commentType: "listing",
         userId: $userId,
         orderby: COMMENT_DATE,
-        order: DESC 
+        order: DESC,
+        commentApproved: 1
       }
       first: $first
       after: $after

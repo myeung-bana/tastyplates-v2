@@ -6,7 +6,6 @@ export const GET_USER_BY_ID = gql`
       id
       databaseId
       name
-      display_name
       nicename
       userProfile {
         palates

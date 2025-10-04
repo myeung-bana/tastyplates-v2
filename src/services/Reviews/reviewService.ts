@@ -70,6 +70,36 @@ export class ReviewService {
         }
     }
 
+    async updateReviewDraft(draftId: number, reviewData: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
+        try {
+            const formattedData = {
+                post: reviewData.restaurantId,
+                parent: reviewData.parent || 0,
+                author: reviewData.authorId,
+                content: reviewData.content || '',
+                review_main_title: reviewData.review_main_title || '',
+                review_stars: reviewData.review_stars || 0,
+                review_images_idz: reviewData.review_images_idz || [],
+                recognitions: reviewData.recognitions || [],
+                mode: reviewData.mode,
+            };
+
+            return await reviewRepo.updateReviewDraft(draftId, formattedData, accessToken);
+        } catch (error) {
+            console.error("Failed to update review draft", error);
+            throw new Error('Failed to update review draft');
+        }
+    }
+
+    async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
+        try {
+            return await reviewRepo.getReviewById(reviewId, accessToken);
+        } catch (error) {
+            console.error("Failed to fetch review by ID", error);
+            throw new Error('Failed to fetch review by ID');
+        }
+    }
+
     async fetchUserReviews(userId: number, first = 16, after: string | null = null) {
         try {
             const response = await reviewRepo.getUserReviews(userId, first, after);

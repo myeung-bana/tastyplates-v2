@@ -133,6 +133,47 @@ export class ReviewRepository implements ReviewRepo {
     }
   }
 
+  async updateReviewDraft(draftId: number, form: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
+    try {
+      const response = await request.PUT(`/wp-json/wp/v2/api/comments/${draftId}`, {
+        body: JSON.stringify(form),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const status = (response as any).status || 200;
+      return {
+        status,
+        data: response
+      };
+    } catch (error) {
+      console.error("Failed to update review draft", error);
+      throw new Error('Failed to update review draft');
+    }
+  }
+
+  async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
+    try {
+      const response = await request.GET(`/wp-json/wp/v2/api/comments/${reviewId}`, {
+        headers: {
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      if (!response || typeof response !== 'object') {
+        throw new Error('Invalid review data received');
+      }
+
+      return response as Record<string, unknown>;
+    } catch (error) {
+      console.error("Failed to fetch review by ID", error);
+      throw new Error('Failed to fetch review by ID');
+    }
+  }
+
   async getUserReviews(userId: number, first = 16, after: string | null = null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }> {
     const { data } = await client.query<{
       userCommentCount: number;

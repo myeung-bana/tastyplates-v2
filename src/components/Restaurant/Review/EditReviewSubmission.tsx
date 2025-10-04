@@ -1,6 +1,5 @@
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
-import Footer from "@/components/Footer";
 import "@/styles/pages/_submit-restaurants.scss";
 import Rating from "./Rating";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
@@ -22,6 +21,7 @@ import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { getCityCountry } from "@/utils/addressUtils";
 import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
+
 interface Restaurant {
   id: string;
   slug: string;
@@ -33,7 +33,6 @@ interface Restaurant {
   priceRange: string;
   address: string;
   phone: string;
-  reviews: number;
   description: string;
   recognition?: string[];
 }
@@ -41,9 +40,10 @@ interface Restaurant {
 const restaurantService = new RestaurantService();
 const reviewService = new ReviewService();
 
-const ReviewSubmissionPage = () => {
+const EditReviewSubmissionPage = () => {
   const params = useParams() as { slug: string; id: string };
   const restaurantId = params.id;
+  const reviewId = parseInt(params.id); // For edit mode, the id is the review ID
   const { data: session } = useSession();
   const [restaurantName, setRestaurantName] = useState('');
   const [restaurantImage, setRestaurantImage] = useState('');
@@ -75,26 +75,139 @@ const ReviewSubmissionPage = () => {
     description: "",
     recognition: []
   });
+  const [restaurantDatabaseId, setRestaurantDatabaseId] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchRestaurantData = async () => {
-      if (!restaurantId || !session?.accessToken) return;
+    const fetchData = async () => {
+      if (!reviewId || !session?.accessToken) return;
 
       try {
-        const data = await restaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
-        setRestaurantName(data.title as string);
-        setRestaurantImage((data.featuredImage as any)?.node?.sourceUrl || '');
-        setRestaurantLocation((data.address as string) || '');
-        setGoogleMapUrl((data.googleMapUrl as GoogleMapUrl) || null);
+        // Fetch the review data first
+        const reviewData = await reviewService.getReviewById(reviewId, session?.accessToken);
+        
+        // Debug: Log the review data structure to understand what we're working with
+        console.log('Review data received:', reviewData);
+        console.log('Review data keys:', Object.keys(reviewData));
+        console.log('Review data.post:', reviewData.post);
+        console.log('Review data.post type:', typeof reviewData.post);
+        console.log('Review data.restaurantId:', reviewData.restaurantId);
+        console.log('Review data.restaurantId type:', typeof reviewData.restaurantId);
+        
+        // Extract restaurant ID from review data
+        const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
+        
+        console.log('Review data post field:', reviewData.post);
+        console.log('Review data restaurantId field:', reviewData.restaurantId);
+        console.log('Extracted restaurant ID:', restaurantIdFromReview);
+        console.log('Restaurant ID is valid number:', !isNaN(Number(restaurantIdFromReview)));
+        console.log('Restaurant ID as number:', Number(restaurantIdFromReview));
+        
+        if (restaurantIdFromReview && !isNaN(Number(restaurantIdFromReview))) {
+          // Set the restaurant database ID for the submit function
+          setRestaurantDatabaseId(Number(restaurantIdFromReview));
+          
+          try {
+            // Fetch restaurant data
+            console.log('Attempting to fetch restaurant with ID:', restaurantIdFromReview);
+            console.log('ID Type:', 'DATABASE_ID');
+            console.log('Access Token exists:', !!session?.accessToken);
+            
+            let restaurantData = await restaurantService.fetchRestaurantById(
+              restaurantIdFromReview.toString(), 
+              "DATABASE_ID", 
+              session?.accessToken
+            );
+            
+            console.log('Restaurant data received (DATABASE_ID):', restaurantData);
+            console.log('Restaurant data type:', typeof restaurantData);
+            console.log('Restaurant data is null:', restaurantData === null);
+            console.log('Restaurant data is undefined:', restaurantData === undefined);
+            
+            // If DATABASE_ID fails, try with SLUG as fallback
+            if (!restaurantData || restaurantData === null) {
+              console.log('Trying with SLUG as fallback...');
+              try {
+                restaurantData = await restaurantService.fetchRestaurantById(
+                  restaurantIdFromReview.toString(), 
+                  "SLUG", 
+                  session?.accessToken
+                );
+                console.log('Restaurant data received (SLUG):', restaurantData);
+              } catch (slugError) {
+                console.error('SLUG fallback also failed:', slugError);
+              }
+            }
+            
+            if (restaurantData && typeof restaurantData === 'object') {
+              setRestaurantName((restaurantData.title as string) || 'Restaurant Name Not Available');
+              setRestaurantImage((restaurantData.featuredImage as any)?.node?.sourceUrl || '');
+              setRestaurantLocation((restaurantData.address as string) || 'Location Not Available');
+              setGoogleMapUrl((restaurantData.googleMapUrl as GoogleMapUrl) || null);
+            } else {
+              console.error('Restaurant data is null or invalid after all attempts:', restaurantData);
+              setRestaurantName('Restaurant Name Not Available');
+              setRestaurantLocation('Location Not Available');
+              toast.error('Unable to load restaurant information. The restaurant may have been deleted or moved.');
+            }
+          } catch (restaurantError) {
+            console.error('Failed to fetch restaurant data:', restaurantError);
+            setRestaurantName('Restaurant Name Not Available');
+            setRestaurantLocation('Location Not Available');
+            toast.error('Unable to load restaurant information. Please try refreshing the page.');
+          }
+        } else {
+          console.error('No restaurant ID found in review data');
+          setRestaurantName('Restaurant Name Not Available');
+          setRestaurantLocation('Location Not Available');
+        }
+
+        // Pre-populate form with existing review data
+        setReviewMainTitle((reviewData.review_main_title as string) || (reviewData.reviewMainTitle as string) || '');
+        
+        // Handle content - check for both raw and rendered content
+        const contentValue = (reviewData.content as any)?.raw || 
+                           (reviewData.content as any)?.rendered || 
+                           (reviewData.content as string) || '';
+        setContent(contentValue);
+        
+        setReviewStars((reviewData.review_stars as number) || (reviewData.reviewStars as number) || 0);
+        
+        // Handle existing photos - check multiple possible field names
+        let existingImages: string[] = [];
+        
+        if (reviewData.review_images_idz && Array.isArray(reviewData.review_images_idz)) {
+          existingImages = reviewData.review_images_idz.map((img: any) => 
+            img.sourceUrl || img.url || img
+          ).filter(Boolean);
+        } else if (reviewData.reviewImages && Array.isArray(reviewData.reviewImages)) {
+          existingImages = reviewData.reviewImages.map((img: any) => 
+            img.sourceUrl || img.url || img
+          ).filter(Boolean);
+        }
+        
+        if (existingImages.length > 0) {
+          setSelectedFiles(existingImages);
+          setIsDoneSelecting(true);
+        }
+        
+        // Set recognition tags if available
+        if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
+          setRestaurant(prev => ({
+            ...prev,
+            recognition: reviewData.recognitions as string[]
+          }));
+        }
+
       } catch (error) {
         console.error(error);
+        toast.error('Failed to load review data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRestaurantData();
-  }, [restaurantId, session]);
+    fetchData();
+  }, [reviewId, session]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -107,8 +220,8 @@ const ReviewSubmissionPage = () => {
     },
     {
       id: 2,
-      name: "Insta-Worthy",
-      icon: PHONE,
+      name: "Insta Worthy",
+      icon: HELMET,
     },
     {
       id: 3,
@@ -118,48 +231,15 @@ const ReviewSubmissionPage = () => {
     {
       id: 4,
       name: "Best Service",
-      icon: HELMET,
+      icon: PHONE,
     },
   ];
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const files = Array.from(event.target.files);
-      const totalImages = selectedFiles.length + files.length;
-
-      if (totalImages > 6) {
-        setUploadedImageError(maximumImageLimit(maximumImage));
-        return;
-      } else {
-        setUploadedImageError('');
-      }
-
-      const imageList: string[] = [...selectedFiles];
-      let loadedImages = 0;
-
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (reader.result) {
-            imageList.push(reader.result as string);
-          }
-
-          loadedImages++;
-          if (loadedImages === files.length) {
-            setSelectedFiles(imageList);
-            setIsDoneSelecting(true);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+  const handleRating = (rating: number) => {
+    setReviewStars(rating);
+    if (rating > 0) {
+      setRatingError('');
     }
-  };
-
-
-
-  const handleRating = (rate: number) => {
-    setReviewStars(rate);
-    setRatingError('');
   };
 
   const submitReview = async (e: FormEvent, mode: 'publish' | 'draft') => {
@@ -173,20 +253,10 @@ const ReviewSubmissionPage = () => {
       setRatingError('');
     }
 
-    if (selectedFiles.length < minimumImage) {
-      setUploadedImageError(minimumImageLimit(minimumImage));
-      hasError = true;
-    } else if (selectedFiles.length > maximumImage) {
-      setUploadedImageError(maximumImageLimit(maximumImage));
-      hasError = true;
-    } else {
-      setUploadedImageError('');
-    }
-
     if (content.trim() === '') {
       setDescriptionError(requiredDescription);
       hasError = true;
-    } else     if (content.length > reviewDescriptionMaxLimit) {
+    } else if (content.length > reviewDescriptionMaxLimit) {
       setDescriptionError(maximumReviewDescription(reviewDescriptionMaxLimit));
       hasError = true;
     } else {
@@ -202,16 +272,20 @@ const ReviewSubmissionPage = () => {
 
     if (hasError) return;
 
-    if (mode === 'publish') {
-      setIsLoading(true);
-    } else if (mode === 'draft') {
+    // Check if we have the restaurant database ID
+    if (!restaurantDatabaseId) {
+      toast.error('Restaurant information not loaded. Please refresh the page.');
+      return;
+    }
+
+    setIsLoading(true);
+    if (mode === 'draft') {
       setIsSavingAsDraft(true);
     }
 
-
     try {
       const reviewData = {
-        restaurantId,
+        restaurantId: restaurantDatabaseId, // Use the actual restaurant database ID
         authorId: session?.user?.userId,
         review_stars,
         review_main_title,
@@ -221,9 +295,16 @@ const ReviewSubmissionPage = () => {
         mode,
       };
 
-      const res = await reviewService.postReview(reviewData, session?.accessToken ?? "");
+      console.log('Submitting review data:', reviewData);
+      console.log('Review ID:', reviewId);
+      console.log('Access token exists:', !!session?.accessToken);
+
+      const res = await reviewService.updateReviewDraft(reviewId, reviewData, session?.accessToken ?? "");
+      
+      console.log('Update response:', res);
+      
       if (mode === 'publish') {
-        if (res.status === code.created || res.status === code.success) {
+        if (res.status === code.created || res.status === 200) {
           setIsSubmitted(true);
         } else if (res.status === code.conflict) {
           toast.error(commentDuplicateError);
@@ -233,7 +314,7 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateWeekError);
           setIsLoading(false);
           return;
-        } else if (res.data?.code === 'comment_flood') {
+        } else if ((res.data as any)?.code === 'comment_flood') {
           toast.error(commentFloodError);
           setIsLoading(false);
           return;
@@ -243,7 +324,7 @@ const ReviewSubmissionPage = () => {
           return;
         }
       } else if (mode === 'draft') {
-        if (res.status === code.created || res.status === code.success) {
+        if (res.status === code.created || res.status === 200) {
           toast.success(savedAsDraft);
           router.push(LISTING);
         } else if (res.status === code.duplicate_week) {
@@ -254,7 +335,7 @@ const ReviewSubmissionPage = () => {
           toast.error(commentDuplicateError);
           setIsSavingAsDraft(false);
           return;
-        } else if (res.data?.code === 'comment_flood') {
+        } else if ((res.data as any)?.code === 'comment_flood') {
           toast.error(commentFloodError);
           setIsLoading(false);
           return;
@@ -271,16 +352,16 @@ const ReviewSubmissionPage = () => {
       setContent('');
       setSelectedFiles([]);
       setIsDoneSelecting(false);
-      setRestaurant({
-        ...restaurant,
-        recognition: [],
-      });
-      setDescriptionError('');
+      setRestaurant(prev => ({ ...prev, recognition: [] }));
       setUploadedImageError('');
     } catch (error) {
       console.error('Failed to submit review:', error);
+      console.error('Error details:', error);
+      toast.error('Failed to update review. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsSavingAsDraft(false);
     }
-    setIsLoading(false);
   };
 
   const handleChangeRecognition = (tagName: string) => {
@@ -297,18 +378,19 @@ const ReviewSubmissionPage = () => {
   }
 
   if (loading) return <ReviewSubmissionSkeleton />;
+  
   return (
     <>
       <div className="submitRestaurants mt-16 md:mt-20">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
-          <RestaurantReviewHeader 
-            restaurantName={restaurantName}
-            restaurantImage={restaurantImage}
-            restaurantLocation={restaurantLocation}
-            googleMapUrl={googleMapUrl}
-          />
-          <form className="submitRestaurants__form">
+            <RestaurantReviewHeader 
+              restaurantName={restaurantName}
+              restaurantImage={restaurantImage}
+              restaurantLocation={restaurantLocation}
+              googleMapUrl={googleMapUrl}
+            />
+            <form className="submitRestaurants__form">
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">How would you rate your experience?</label>
                 <div className="submitRestaurants__input-group">
@@ -384,47 +466,61 @@ const ReviewSubmissionPage = () => {
                   Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
-                  <label className="flex gap-2 items-center rounded-xl py-2 px-4 md;py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
-                    <MdOutlineFileUpload className="size-5" />
+                  <div className="submitRestaurants__upload-area">
+                    <div className="submitRestaurants__upload-content">
+                      <MdOutlineFileUpload className="submitRestaurants__upload-icon" />
+                      <p className="submitRestaurants__upload-text">
+                        Drag and drop your photos here, or click to browse
+                      </p>
+                      <p className="submitRestaurants__upload-subtext">
+                        Supported formats: JPG, PNG, GIF (Max 5MB each)
+                      </p>
+                    </div>
                     <input
                       type="file"
-                      name="image"
-                      className="submitRestaurants__input hidden"
-                      placeholder="Image URL"
-                      value={restaurant.image}
-                      onChange={handleFileChange}
                       multiple
-                      max={6}
+                      accept="image/*"
+                      className="submitRestaurants__file-input"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length + selectedFiles.length > maximumImage) {
+                          setUploadedImageError(maximumImageLimit);
+                          return;
+                        }
+                        if (files.length < minimumImage) {
+                          setUploadedImageError(minimumImageLimit);
+                          return;
+                        }
+                        setUploadedImageError('');
+                        setIsDoneSelecting(true);
+                      }}
                     />
-                    <span className="text-sm md:text-base text-[#494D5D] font-semibold">
-                      Upload
-                    </span>
-                  </label>
+                  </div>
                   {uploadedImageError && (
                     <p className="text-red-600 text-sm mt-1">{uploadedImageError}</p>
                   )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {/* {selectedFiles} */}
-                  {isDoneSelecting &&
-                    selectedFiles.map((item: string, index: number) => (
-                      <div className="rounded-2xl relative" key={index}>
-                        <button
-                          type="button"
-                          onClick={() => deleteSelectedFile(item)}
-                          className="absolute top-3 right-3 rounded-full bg-[#FCFCFC] p-2"
-                        >
-                          <MdClose className="size-3 md:size-4" />
-                        </button>
-                        <Image
-                          src={item}
-                          alt="Review image"
-                          width={187}
-                          height={140}
-                          className="rounded-2xl object-cover"
-                        />
-                      </div>
-                    ))}
+                  {(isDoneSelecting || selectedFiles.length > 0) && (
+                    <div className="submitRestaurants__selected-files">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="submitRestaurants__file-item">
+                          <Image
+                            src={file}
+                            alt={`Selected file ${index + 1}`}
+                            width={80}
+                            height={80}
+                            className="rounded-2xl object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => deleteSelectedFile(file)}
+                            className="submitRestaurants__delete-btn"
+                          >
+                            <MdClose className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -482,7 +578,7 @@ const ReviewSubmissionPage = () => {
                       />
                     </svg>
                   )}
-                  Post Review
+                  Update Review
                 </button>
                 <button
                   className="flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
@@ -514,8 +610,8 @@ const ReviewSubmissionPage = () => {
           </div>
         </div>
         <CustomModal
-          header="Review Posted"
-          content={`Your review for ${restaurantName} is successfully posted.`}
+          header="Review Updated"
+          content={`Your review for ${restaurantName} has been successfully updated.`}
           isOpen={isSubmitted}
           setIsOpen={() => setIsSubmitted(!isSubmitted)}
         />
@@ -524,4 +620,4 @@ const ReviewSubmissionPage = () => {
   );
 };
 
-export default ReviewSubmissionPage;
+export default EditReviewSubmissionPage;

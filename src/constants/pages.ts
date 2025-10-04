@@ -13,6 +13,7 @@ export const DASHBOARD_PROFILE = "/dashboard/profile";
 export const DASHBOARD_SETTINGS = "/dashboard/settings";
 export const RESTAURANTS = "/restaurants";
 export const ADD_REVIEW = "/add-review";
+export const EDIT_REVIEW = "/edit-review";
 export const LISTING = "/listing";
 export const LISTING_DRAFT = "/listing/draft";
 export const LISTING_STEP_ONE = "/listing/step-1";

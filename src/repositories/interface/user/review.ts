@@ -6,6 +6,8 @@ export interface ReviewRepo {
     createReview<T>(data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: T }>;
     getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]>;
     deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void>;
+    updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }>;
+    getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>>;
     getUserReviews(userId: number, first?: number, after?: string | null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }>;
     likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
     unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;

@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { capitalizeWords, formatDate, PAGE, stripTags, truncateText } from "@/lib/utils";
+import { capitalizeWords, formatDate, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewPopUpModal from "./ReviewPopUpModal";
@@ -213,7 +213,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 />
               </a>
             ) : session ? (
-              <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
+              <a href={generateProfileUrl(review.authorId)}>
                 <Image
                   src={review?.userImage || DEFAULT_USER_ICON}
                   alt={review?.user || "User"}
@@ -252,7 +252,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                   </h3>
                 </a>
               ) : session ? (
-                <a href={PAGE(PROFILE, [encodeRelayId('user', review.authorId)])}>
+                <a href={generateProfileUrl(review.authorId)}>
                   <h3 className="review-block__username cursor-pointer">
                     {review?.user || "Unknown User"}
                   </h3>

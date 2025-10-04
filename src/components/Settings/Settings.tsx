@@ -363,7 +363,7 @@ const Settings = () => {
                 {isPersonalInfoLoading ? (
                   <div className="animate-pulse h-6 bg-gray-200 rounded w-32"></div>
                 ) : (
-                  <span>{String(userData?.display_name || "")}</span>
+                  <span>{String(userData?.name || "")}</span>
                 )}
               </div>
             </div>

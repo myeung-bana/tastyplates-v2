@@ -3,30 +3,20 @@
 import React from "react";
 import Profile from "@/components/Profile/Profile";
 import { useParams } from "next/navigation";
-// Removed unused import
+import { parseProfileUrl } from "@/lib/utils";
 
 const UserProfilePage = () => {
     const params = useParams();
     const userIdParam = params ? params["userId"] : undefined;
+    
     let parsedUserId: number | undefined = undefined;
 
-    // Only support base64-encoded userId (e.g., dXNlcjoyNw==)
     if (userIdParam) {
         const userIdStr = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
-        if (!userIdStr) return; // Guard against undefined userIdStr
-        try {
-            const decodedBase64 = atob(decodeURIComponent(userIdStr));
-            // decodedBase64 should be like 'user:27'
-            const match = decodedBase64.match(/user:(\d+)/);
-            if (match) {
-                parsedUserId = Number(match[1]);
-            }
-        } catch {
-            // If not base64 or doesn't match, parsedUserId remains undefined
+        if (userIdStr) {
+            parsedUserId = parseProfileUrl(userIdStr) || undefined;
         }
     }
-
-    // Removed unused variable
 
     if (!parsedUserId || isNaN(parsedUserId)) {
         return (
@@ -37,7 +27,7 @@ const UserProfilePage = () => {
     }
 
     return (
-        <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-4 text-[#31343F]">
+        <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-4 md:mt-20 text-[#31343F]">
             <Profile targetUserId={parsedUserId} />
         </div>
     );

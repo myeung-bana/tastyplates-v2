@@ -8,7 +8,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
-import { stripTags, formatDate, PAGE, capitalizeWords, truncateText } from "../lib/utils";
+import { stripTags, formatDate, PAGE, capitalizeWords, truncateText, generateProfileUrl } from "../lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
@@ -465,7 +465,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
               {data.author?.node?.id ? (
                 session?.user ? (
                   <Link
-                    href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                    href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                     passHref
                   >
                     <FallbackImage
@@ -503,7 +503,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                 <div className="flex items-center space-x-2">
                   {session?.user ? (
                     <Link
-                      href={String(session.user.id) === String(data.author.node.id) ? PROFILE : PAGE(PROFILE, [data.author.node.id])}
+                      href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                       passHref
                     >
                       <span className="font-semibold text-xs cursor-pointer hover:underline">

@@ -90,7 +90,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   
   // Memoize the viewing own profile check
   const isViewingOwnProfile = useMemo(() => {
-    return session?.user?.id === targetUserId;
+    return Number(session?.user?.id) === targetUserId;
   }, [session?.user?.id, targetUserId]);
 
   const transformNodes = useCallback((nodes: Listing[]): Restaurant[] => {
@@ -788,7 +788,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
                 {nameLoading ? (
                   <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  (userData?.display_name as string) || (userData?.name as string) || ""
+                  (userData?.name as string) || ""
                 )}
               </h2>
               <div className="flex gap-1 mt-2 flex-wrap justify-start">

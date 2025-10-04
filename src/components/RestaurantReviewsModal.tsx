@@ -11,7 +11,7 @@ import { commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed } from "@/
 import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
-import { capitalizeWords, PAGE, truncateText } from "@/lib/utils";
+import { capitalizeWords, PAGE, truncateText, generateProfileUrl } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 
 interface Restaurant {
@@ -203,7 +203,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                         />
                       </a>
                     ) : session ? (
-                      <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId || '')])}>
+                      <a href={generateProfileUrl(review.author?.node?.id || review.userId || "")}>
                         <Image
                           src={userAvatar}
                           alt={review.author?.name || "User"}
@@ -241,7 +241,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
                           </div>
                         </a>
                       ) : session ? (
-                        <a href={PAGE(PROFILE, [(review.author?.node?.id || review.userId || '')])}>
+                        <a href={generateProfileUrl(review.author?.node?.id || review.userId || "")}>
                           <div className="font-medium text-sm text-[#31343F] cursor-pointer truncate">
                             {review.author?.name || review.author?.node?.name || "Unknown User"}
                           </div>

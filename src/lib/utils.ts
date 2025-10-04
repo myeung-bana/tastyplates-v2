@@ -116,3 +116,106 @@ export const validEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 };
+
+// Profile ID encoding/decoding utilities
+export const encodeUserId = (userId: string): string => {
+  if (typeof window !== 'undefined' && window.btoa) {
+    // Browser environment
+    return window.btoa(`user:${userId}`).replace(/[+/=]/g, (match) => {
+      switch (match) {
+        case '+': return '-';
+        case '/': return '_';
+        case '=': return '';
+        default: return match;
+      }
+    });
+  } else if (typeof Buffer !== 'undefined') {
+    // Node.js environment
+    return Buffer.from(`user:${userId}`)
+      .toString('base64')
+      .replace(/[+/=]/g, (match) => {
+        switch (match) {
+          case '+': return '-';
+          case '/': return '_';
+          case '=': return '';
+          default: return match;
+        }
+      });
+  }
+  // Fallback to simple encoding
+  return btoa(`user:${userId}`).replace(/[+/=]/g, (match) => {
+    switch (match) {
+      case '+': return '-';
+      case '/': return '_';
+      case '=': return '';
+      default: return match;
+    }
+  });
+};
+
+export const decodeUserId = (encodedId: string): string => {
+  try {
+    // Restore base64 characters
+    const base64 = encodedId.replace(/[-_]/g, (match) => {
+      switch (match) {
+        case '-': return '+';
+        case '_': return '/';
+        default: return match;
+      }
+    });
+
+    // Add padding if needed
+    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+
+    let decoded: string;
+    if (typeof window !== 'undefined' && window.atob) {
+      // Browser environment
+      decoded = window.atob(padded);
+    } else if (typeof Buffer !== 'undefined') {
+      // Node.js environment
+      decoded = Buffer.from(padded, 'base64').toString();
+    } else {
+      // Fallback
+      decoded = atob(padded);
+    }
+
+    // Extract user ID from "user:123" format
+    const match = decoded.match(/^user:(\d+)$/);
+    if (match) {
+      return match[1];
+    }
+    
+    throw new Error('Invalid encoded user ID format');
+  } catch (error) {
+    throw new Error(`Failed to decode user ID: ${error}`);
+  }
+};
+
+// Enhanced profile URL generation with encoding
+export const generateProfileUrl = (userId: string | number): string => {
+  const userIdStr = String(userId);
+  if (!userIdStr || userIdStr === "undefined" || userIdStr === "null") {
+    return "";
+  }
+
+  // Encode the user ID to obfuscate it
+  const encodedId = encodeUserId(userIdStr);
+  return `/profile/${encodedId}`;
+};
+
+// Enhanced profile URL parsing with decoding
+export const parseProfileUrl = (userIdParam: string): number | null => {
+  if (!userIdParam) return null;
+  
+  try {
+    // First try to decode as an encoded ID
+    const decodedId = decodeUserId(userIdParam.trim());
+    const userId = parseInt(decodedId);
+    return !isNaN(userId) && userId > 0 ? userId : null;
+  } catch (error) {
+    // If decoding fails, try parsing as a direct number (backward compatibility)
+    console.warn('Failed to decode profile URL, trying direct parse:', error);
+    const userId = parseInt(userIdParam.trim());
+    return !isNaN(userId) && userId > 0 ? userId : null;
+  }
+};

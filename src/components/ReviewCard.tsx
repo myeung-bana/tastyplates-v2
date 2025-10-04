@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
+import { generateProfileUrl } from "@/lib/utils";
 import "@/styles/pages/_restaurant-details.scss";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import {
@@ -66,10 +67,10 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
       <div className="review-card__content !px-0 mt-2 md:mt-0">
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
-          {data.author?.node?.id || data.id ? (
+          {data.author?.node?.databaseId || data.id ? (
             session?.user?.id &&
             String(session.user.id) ===
-              String(data.author?.node?.id || data.id) ? (
+              String(data.author?.node?.databaseId || data.id) ? (
               <Link href={PROFILE}>
                 <FallbackImage
                   src={data.userAvatar || DEFAULT_USER_ICON}
@@ -82,7 +83,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
               </Link>
             ) : session ? (
               <Link
-                href={PAGE(PROFILE, [data.author?.node?.id || data.id])}
+                href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                 prefetch={false}
               >
                 <FallbackImage
@@ -118,10 +119,10 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
 
           <div className="review-card__user-info">
             {/* Make username clickable and handle auth logic */}
-            {data.author?.node?.id || data.id ? (
+            {data.author?.node?.databaseId || data.id ? (
               session?.user?.id &&
               String(session.user.id) ===
-                String(data.author?.node?.id || data.id) ? (
+                String(data.author?.node?.databaseId || data.id) ? (
                 <Link href={PROFILE}>
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
@@ -129,7 +130,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                 </Link>
               ) : session ? (
                 <Link
-                  href={PAGE(PROFILE, [data.author?.node?.id || data.id])}
+                  href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                   prefetch={false}
                 >
                   <h3 className="review-card__username line-clamp-1 cursor-pointer">

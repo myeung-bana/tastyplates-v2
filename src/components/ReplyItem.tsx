@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { GraphQLReview } from "@/types/graphql";
-import { capitalizeWords, stripTags, PAGE, formatDate } from "../lib/utils";
+import { capitalizeWords, stripTags, PAGE, formatDate, generateProfileUrl } from "../lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
@@ -97,7 +97,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         {reply.author?.node?.id ? (
           session?.user ? (
             <Link
-              href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : PAGE(PROFILE, [reply.author.node.id])}
+              href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id)}
               passHref
             >
               <FallbackImage

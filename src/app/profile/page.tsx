@@ -1,34 +1,32 @@
 "use client";
 import { useSession } from "next-auth/react";
-// Removed unused import
-import Profile from "@/components/Profile/Profile";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { generateProfileUrl } from "@/lib/utils";
 
 const ProfilePage = () => {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
-  if (status === "loading") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-[#31343F]">
-        Loading user session...
-      </div>
-    );
-  }
-  if (!session || !session.user || !session.user.id) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-[#31343F]">
-        Please log in to view your profile.
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
+    
+    if (!session || !session.user || !session.user.id) {
+      // Redirect to login if not authenticated
+      router.push("/login");
+      return;
+    }
 
+    // Redirect to the user's profile with direct user ID
+    const profileUrl = generateProfileUrl(session.user.id);
+    router.replace(profileUrl);
+  }, [session, status, router]);
+
+  // Show loading while redirecting
   return (
-    <>
-      <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter text-[#31343F]">
-        {/* Pass the logged-in user's ID as targetUserId */}
-        <Profile targetUserId={session.user.id} />
-      </div>
-      {/* <Footer /> */}
-    </>
+    <div className="flex flex-col items-center justify-center min-h-screen text-[#31343F]">
+      Loading user session...
+    </div>
   );
 };
 
