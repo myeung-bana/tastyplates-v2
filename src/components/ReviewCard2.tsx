@@ -1,4 +1,4 @@
-// ReviewCard.tsx
+// ReviewCard2.tsx - Optimized for Grid Layout
 import Image from "next/image";
 import ReviewPopUpModal from "./ReviewPopUpModal";
 import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
@@ -7,13 +7,12 @@ import {
 } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
-import Link from "next/link"; // Import Link
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
-import "@/styles/pages/_reviews.scss";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
 import {
   DEFAULT_IMAGE,
@@ -21,19 +20,20 @@ import {
   STAR_FILLED,
 } from "@/constants/images";
 
-const ReviewCard = ({ data, width }: ReviewCardProps) => {
+const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
+  const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
 
   const { data: session } = useSession();
 
   return (
-    <div className="review-card !border-none" style={{ width: `${width || 300}px` }}>
+    <div className="overflow-hidden">
       <ReviewPopUpModal
         data={data as unknown as GraphQLReview}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+      
       {/* Auth modals */}
       {showAuthModal === "signup" && (
         <SignupModal
@@ -49,7 +49,9 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
           onOpenSignup={() => setShowAuthModal("signup")}
         />
       )}
-      <div className="review-card__image-container">
+
+      {/* Image Section - Standalone with rounded borders */}
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl mb-2">
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
@@ -58,15 +60,17 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
           }
           alt="Review"
           width={400}
-          height={600}
-          className="review-card__image rounded-2xl min-h-[233px] max-h-[236px] md:min-h-[228px] md:max-h-[405px] hover:cursor-pointer"
+          height={300}
+          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200 cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />
       </div>
 
-      <div className="review-card__content !px-0 mt-2 md:mt-0">
-        <div className="review-card__user mb-2">
-          {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
+      {/* Content Section - No background, minimal padding */}
+      <div className="px-0">
+        {/* User Info */}
+        <div className="flex items-center gap-3 mb-2">
+          {/* User Avatar */}
           {data.author?.node?.databaseId || data.id ? (
             session?.user?.id &&
             String(session.user.id) ===
@@ -77,7 +81,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
-                  className="review-card__user-image cursor-pointer"
+                  className="w-8 h-8 rounded-full object-cover cursor-pointer"
                   type={FallbackImageType.Icon}
                 />
               </Link>
@@ -91,7 +95,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   alt={data.author?.node?.name || "User"}
                   width={32}
                   height={32}
-                  className="review-card__user-image cursor-pointer"
+                  className="w-8 h-8 rounded-full object-cover cursor-pointer"
                   type={FallbackImageType.Icon}
                 />
               </Link>
@@ -101,7 +105,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                 alt={data.author?.node?.name || "User"}
                 width={32}
                 height={32}
-                className="review-card__user-image cursor-pointer"
+                className="w-8 h-8 rounded-full object-cover cursor-pointer"
                 onClick={() => setShowAuthModal('signin')}
                 type={FallbackImageType.Icon}
               />
@@ -112,19 +116,19 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
               alt={data.author?.node?.name || "User"}
               width={32}
               height={32}
-              className="review-card__user-image"
+              className="w-8 h-8 rounded-full object-cover"
               type={FallbackImageType.Icon}
             />
           )}
 
-          <div className="review-card__user-info">
-            {/* Make username clickable and handle auth logic */}
+          {/* User Name - Matching ReviewCard font sizes */}
+          <div className="flex-1 min-w-0">
             {data.author?.node?.databaseId || data.id ? (
               session?.user?.id &&
               String(session.user.id) ===
                 String(data.author?.node?.databaseId || data.id) ? (
                 <Link href={PROFILE}>
-                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                  <h3 className="text-[12px] md:text-xs font-medium text-[#31343F] truncate cursor-pointer">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
@@ -133,45 +137,52 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                   prefetch={false}
                 >
-                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                  <h3 className="text-[12px] md:text-xs font-medium text-[#31343F] truncate cursor-pointer">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
               ) : (
                 <h3
-                  className="review-card__username line-clamp-1 cursor-pointer"
+                  className="text-[12px] md:text-xs font-medium text-[#31343F] truncate cursor-pointer"
                   onClick={() => setShowAuthModal('signin')}
                 >
                   {data.author?.name || data.author?.node?.name || "Unknown User"}
                 </h3>
               )
             ) : (
-              <h3 className="review-card__username line-clamp-1">
+              <h3 className="text-[12px] md:text-xs font-medium text-[#31343F] truncate">
                 {data.author?.name || data.author?.node?.name || "Unknown User"}
               </h3>
             )}
           </div>
-          <div className="rate-container ml-auto inline-flex shrink-0">
-            <div className="review-detail-meta">
-              <span className="ratings">
-                <Image
-                  src={STAR_FILLED}
-                  width={16}
-                  height={16}
-                  className="star-icon size-3 md:size-4"
-                  alt="star icon"
-                />
-                <span className="rating-counter">{data.reviewStars}</span>
-              </span>
-            </div>
+
+          {/* Rating - Matching ReviewCard styling */}
+          <div className="flex items-center gap-1 ml-auto">
+            <Image
+              src={STAR_FILLED}
+              width={16}
+              height={16}
+              className="w-3 h-3 md:w-4 md:h-4"
+              alt="star icon"
+            />
+            <span className="text-[12px] md:text-sm font-medium text-[#31343F]">{data.reviewStars}</span>
           </div>
         </div>
-        <p className="text-[12px] md:text-sm font-semibold w-[304px] line-clamp-1 break-words">{capitalizeWords(stripTags(data.reviewMainTitle || "")) || ""}</p>
-        <p className="review-card__text max-w-[304px] text-[12px] md:text-sm font-normal line-clamp-2 !mb-0 break-words">{capitalizeWords(stripTags(data.content || "")) || ""}</p>
-        {/* <span className="review-card__timestamp">{data.date}</span> */}
+
+        {/* Review Title - Matching ReviewCard font sizes */}
+        {data.reviewMainTitle && (
+          <p className="text-[12px] md:text-sm font-semibold text-[#31343F] mb-1 line-clamp-1 break-words">
+            {capitalizeWords(stripTags(data.reviewMainTitle))}
+          </p>
+        )}
+
+        {/* Review Content - Matching ReviewCard font sizes and styling */}
+        <p className="text-[12px] md:text-sm font-normal text-[#494D5D] line-clamp-2 break-words leading-[1.4] md:leading-[1.5]">
+          {capitalizeWords(stripTags(data.content || ""))}
+        </p>
       </div>
     </div>
   );
 };
 
-export default ReviewCard;
+export default ReviewCard2;

@@ -24,7 +24,6 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const { data: session, status } = useSession();
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
-  const [userReviewCount, setUserReviewCount] = useState(0);
 
   // Use our custom hooks
   const {
@@ -56,12 +55,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   }, []);
 
-  // Tab configuration with review count callback
+  // Tab configuration
   const tabs = [
     {
       id: "reviews",
       label: "Reviews",
-      content: <ReviewsTab targetUserId={targetUserId} status={status} onReviewCountChange={setUserReviewCount} />
+      content: <ReviewsTab targetUserId={targetUserId} status={status} />
     },
     {
       id: "listings",
@@ -87,7 +86,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         nameLoading={nameLoading}
         aboutMeLoading={aboutMeLoading}
         palatesLoading={palatesLoading}
-        userReviewCount={userReviewCount}
+        userReviewCount={0} // This will be handled by ReviewsTab
         followers={followers}
         following={following}
         followersLoading={followersLoading}

@@ -5,10 +5,11 @@ interface ReviewCardSkeletonProps {
 }
 
 const ReviewCardSkeleton: React.FC<ReviewCardSkeletonProps> = ({ width = 304 }) => {
+  const safeWidth = isNaN(width) ? 304 : width;
   return (
     <div 
       className="review-card animate-pulse"
-      style={{ width: `${width}px` }}
+      style={{ width: `${safeWidth}px` }}
     >
       {/* Main review image */}
       <div className="review-card__image-container">

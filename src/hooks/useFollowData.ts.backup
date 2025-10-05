@@ -1,0 +1,112 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { UserService } from '@/services/user/userService';
+import { responseStatusCode as code } from '@/constants/response';
+import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from '@/constants/session';
+
+interface UseFollowDataReturn {
+  followers: Record<string, unknown>[];
+  following: Record<string, unknown>[];
+  followersLoading: boolean;
+  followingLoading: boolean;
+  handleFollow: (id: string) => Promise<void>;
+  handleUnfollow: (id: string) => Promise<void>;
+  refreshFollowData: () => Promise<void>;
+}
+
+export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
+  const { data: session } = useSession();
+  const [followers, setFollowers] = useState<Record<string, unknown>[]>([]);
+  const [following, setFollowing] = useState<Record<string, unknown>[]>([]);
+  const [followersLoading, setFollowersLoading] = useState(true);
+  const [followingLoading, setFollowingLoading] = useState(true);
+  const hasLoadedFollowData = useRef(false);
+
+  const userService = useRef(new UserService()).current;
+
+  const loadFollowData = useCallback(async () => {
+    if (!session?.accessToken || !targetUserId) return;
+    
+    setFollowingLoading(true);
+    setFollowersLoading(true);
+    
+    try {
+      // Fetch following first
+      const followingList = await userService.getFollowingList(targetUserId, session.accessToken);
+      setFollowing(followingList);
+      
+      // Then fetch followers using the fresh following data
+      const followersList = await userService.getFollowersList(
+        targetUserId,
+        followingList,
+        session.accessToken
+      );
+      setFollowers(followersList);
+      
+      hasLoadedFollowData.current = true;
+    } catch (error) {
+      console.error("Error loading follow data:", error);
+    } finally {
+      setFollowingLoading(false);
+      setFollowersLoading(false);
+    }
+  }, [session?.accessToken, targetUserId]);
+
+  const refreshFollowData = useCallback(async () => {
+    hasLoadedFollowData.current = false;
+    await loadFollowData();
+  }, [loadFollowData]);
+
+  const handleFollow = useCallback(async (id: string) => {
+    if (!session?.accessToken) return;
+    
+    const userIdNum = Number(id);
+    if (isNaN(userIdNum)) return;
+    
+    const response = await userService.followUser(userIdNum, session.accessToken);
+    if (response.status === code.success) {
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+      await refreshFollowData();
+    }
+  }, [session?.accessToken, targetUserId, refreshFollowData]);
+
+  const handleUnfollow = useCallback(async (id: string) => {
+    if (!session?.accessToken) return;
+    
+    const userIdNum = Number(id);
+    if (isNaN(userIdNum)) return;
+    
+    const response = await userService.unfollowUser(userIdNum, session.accessToken);
+    if (response.status === code.success) {
+      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+      await refreshFollowData();
+    }
+  }, [session?.accessToken, targetUserId, userService, refreshFollowData]);
+
+  // Load follow data when dependencies change
+  useEffect(() => {
+    if (!session?.accessToken || !targetUserId || hasLoadedFollowData.current) return;
+    loadFollowData();
+  }, [session?.accessToken, targetUserId, loadFollowData]);
+
+  // Reset follow data when targetUserId changes
+  useEffect(() => {
+    hasLoadedFollowData.current = false;
+    setFollowers([]);
+    setFollowing([]);
+  }, [targetUserId]);
+
+  return {
+    followers,
+    following,
+    followersLoading,
+    followingLoading,
+    handleFollow,
+    handleUnfollow,
+    refreshFollowData
+  };
+};

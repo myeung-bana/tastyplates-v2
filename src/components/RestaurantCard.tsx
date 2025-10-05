@@ -60,6 +60,12 @@ export interface RestaurantCardProps {
 const restaurantService = new RestaurantService();
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick }: RestaurantCardProps) => {
+  // Safety check for restaurant object
+  if (!restaurant) {
+    console.warn('RestaurantCard: restaurant object is undefined or null');
+    return null;
+  }
+
   const pathname = usePathname();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -79,8 +85,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setSaved(initialSavedStatus ?? false);
   }, [initialSavedStatus]);
 
-  const displayRating = typeof restaurant.averageRating === 'number' ? restaurant.averageRating : restaurant.rating;
-  const displayRatingsCount = typeof restaurant.ratingsCount === 'number' ? restaurant.ratingsCount : 0;
+  const displayRating = typeof restaurant?.averageRating === 'number' ? restaurant.averageRating : (restaurant?.rating || 0);
+  const displayRatingsCount = typeof restaurant?.ratingsCount === 'number' ? restaurant.ratingsCount : 0;
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
