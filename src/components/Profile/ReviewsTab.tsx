@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Masonry } from 'masonic';
 import ReviewCard2 from '../ReviewCard2';
-import ReviewCardSkeleton from '../ui/Skeleton/ReviewCardSkeleton';
+import ReviewCardSkeleton2 from '../ui/Skeleton/ReviewCardSkeleton2';
 import { ReviewedDataProps } from '@/interfaces/Reviews/review';
 import { ReviewService } from '@/services/Reviews/reviewService';
+import { RestaurantService } from '@/services/restaurant/restaurantService';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface ReviewsTabProps {
   targetUserId: number;
   status: string;
   onReviewCountChange?: (count: number) => void;
+  userDataReady?: boolean;
 }
 
-const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange }) => {
+const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange, userDataReady = true }) => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [userReviewCount, setUserReviewCount] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -21,6 +23,21 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   const isFirstLoad = useRef(true);
 
   const reviewService = useRef(new ReviewService()).current;
+  const restaurantService = useRef(new RestaurantService()).current;
+
+  // Helper function to fetch restaurant details if needed
+  const fetchRestaurantDetails = useCallback(async (restaurantId: string | number) => {
+    try {
+      const restaurantDetails = await restaurantService.fetchRestaurantById(
+        restaurantId.toString(),
+        'DATABASE_ID'
+      );
+      return restaurantDetails;
+    } catch (error) {
+      console.error('Error fetching restaurant details:', error);
+      return null;
+    }
+  }, [restaurantService]);
 
   const loadMore = useCallback(async () => {
     if (reviewsLoading || !hasNextPage || !targetUserId) return;
@@ -86,10 +103,10 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
 
   useEffect(() => {
     setReviews([]);
-    if (status !== "loading" && targetUserId) {
+    if (status !== "loading" && targetUserId && userDataReady) {
       loadMore();
     }
-  }, [status, targetUserId, loadMore]);
+  }, [status, targetUserId, userDataReady, loadMore]);
 
   const getItemSize = (index: number) => {
     try {
@@ -118,9 +135,9 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   return (
     <>
       {reviewsLoading && reviews.length === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10 mt-10">
           {Array.from({ length: 6 }, (_, i) => (
-            <ReviewCardSkeleton key={`skeleton-${i}`} />
+            <ReviewCardSkeleton2 key={`skeleton-${i}`} />
           ))}
         </div>
       ) : reviews.length > 0 ? (

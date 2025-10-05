@@ -1,10 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
 import RestaurantCard from '../RestaurantCard';
 import RestaurantCardSkeleton from '../ui/Skeleton/RestaurantCardSkeleton';
 import TabContentGrid from '../ui/TabContentGrid/TabContentGrid';
-import { RestaurantService } from '@/services/restaurant/restaurantService';
-import { Listing } from '@/interfaces/restaurant/restaurant';
-import { DEFAULT_IMAGE } from '@/constants/images';
 
 interface Restaurant {
   id: string;
@@ -21,74 +18,14 @@ interface Restaurant {
 }
 
 interface CheckinsTabProps {
-  targetUserId: number;
-  isViewingOwnProfile: boolean;
+  checkins: Restaurant[];
+  checkinsLoading: boolean;
 }
 
-const CheckinsTab: React.FC<CheckinsTabProps> = ({ targetUserId, isViewingOwnProfile }) => {
-  const [checkins, setCheckins] = useState<Restaurant[]>([]);
-  const [checkinsLoading, setCheckinsLoading] = useState(false);
-  const [hasFetchedCheckins, setHasFetchedCheckins] = useState(false);
-
-  const restaurantService = useRef(new RestaurantService()).current;
-
-  const transformNodes = useCallback((nodes: Listing[]): Restaurant[] => {
-    return nodes.map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      name: item.title,
-      image: item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
-      rating: item.averageRating || 0,
-      databaseId: item.databaseId || 0,
-      palatesNames: Array.isArray(item?.palates?.nodes)
-        ? item.palates.nodes.map((p: Record<string, unknown>) => (p?.name as string) ?? "Unknown")
-        : [],
-      streetAddress: item?.listingDetails?.googleMapUrl?.streetAddress || "",
-      countries: Array.isArray(item?.countries?.nodes)
-        ? item.countries.nodes.map((c: Record<string, unknown>) => (c?.name as string) ?? "Unknown").join(", ")
-        : "Default Location",
-      priceRange: item.priceRange ?? "N/A",
-      averageRating: item.averageRating ?? 0,
-      ratingsCount: item.ratingsCount ?? 0,
-      status: item.status || "",
-    }));
-  }, []);
-
-  const fetchCheckins = useCallback(async () => {
-    if (!isViewingOwnProfile || hasFetchedCheckins) {
-      return;
-    }
-
-    setCheckinsLoading(true);
-    try {
-      const data = await restaurantService.fetchAllRestaurants(
-        "",
-        8,
-        null,
-        [],
-        [],
-        null,
-        null,
-        targetUserId,
-        null,
-        null,
-        null,
-        ["PUBLISH", "DRAFT"]
-      );
-      const transformed = transformNodes(data.nodes as unknown as Listing[]);
-      setCheckins(transformed);
-      setHasFetchedCheckins(true);
-    } catch (error) {
-      console.error("Error fetching check-ins:", error);
-      setCheckins([]);
-    } finally {
-      setCheckinsLoading(false);
-    }
-  }, [targetUserId, isViewingOwnProfile, hasFetchedCheckins, transformNodes, restaurantService]);
-
-  useEffect(() => {
-    fetchCheckins();
-  }, [fetchCheckins]);
+const CheckinsTab: React.FC<CheckinsTabProps> = ({
+  checkins,
+  checkinsLoading,
+}) => {
 
   return (
     <TabContentGrid

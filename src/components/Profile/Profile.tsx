@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -7,6 +7,7 @@ import { WELCOME_KEY } from "@/constants/session";
 
 // Import our new components and hooks
 import ProfileHeader from "./ProfileHeader";
+import ProfileHeaderSkeleton from "./ProfileHeaderSkeleton";
 import ReviewsTab from "./ReviewsTab";
 import ListingsTab from "./ListingsTab";
 import WishlistsTab from "./WishlistsTab";
@@ -25,6 +26,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [userReviewCount, setUserReviewCount] = useState(0);
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [checkins, setCheckins] = useState<any[]>([]);
+  const [checkinsLoading, setCheckinsLoading] = useState(false);
 
   // Use our custom hooks
   const {
@@ -45,6 +50,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     handleUnfollow
   } = useFollowData(targetUserId);
 
+  // Wishlist handler
+  const handleWishlistChange = useCallback((restaurantId: string, isSaved: boolean) => {
+    setWishlist(prev => 
+      isSaved 
+        ? prev.filter(rest => rest.id !== restaurantId)
+        : prev
+    );
+  }, []);
+
   // Welcome message effect
   useEffect(() => {
     const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
@@ -61,7 +75,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     {
       id: "reviews",
       label: "Reviews",
-      content: <ReviewsTab targetUserId={targetUserId} status={status} onReviewCountChange={setUserReviewCount} />
+      content: <ReviewsTab 
+        targetUserId={targetUserId} 
+        status={status} 
+        onReviewCountChange={setUserReviewCount}
+        userDataReady={!loading && userData !== null}
+      />
     },
     {
       id: "listings",
@@ -71,34 +90,45 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     {
       id: "wishlists",
       label: "Wishlists",
-      content: <WishlistsTab targetUserId={targetUserId} isViewingOwnProfile={isViewingOwnProfile} />
+      content: <WishlistsTab 
+        wishlist={wishlist} 
+        wishlistLoading={wishlistLoading} 
+        handleWishlistChange={handleWishlistChange} 
+      />
     },
     {
       id: "checkins",
       label: "Check-ins",
-      content: <CheckinsTab targetUserId={targetUserId} isViewingOwnProfile={isViewingOwnProfile} />
+      content: <CheckinsTab 
+        checkins={checkins} 
+        checkinsLoading={checkinsLoading} 
+      />
     }
   ];
 
   return (
     <div className="w-full min-h-screen bg-white">
-      <ProfileHeader
-        userData={userData}
-        nameLoading={nameLoading}
-        aboutMeLoading={aboutMeLoading}
-        palatesLoading={palatesLoading}
-        userReviewCount={userReviewCount}
-        followers={followers}
-        following={following}
-        followersLoading={followersLoading}
-        followingLoading={followingLoading}
-        isViewingOwnProfile={isViewingOwnProfile}
-        onShowFollowers={() => setShowFollowers(true)}
-        onShowFollowing={() => setShowFollowing(true)}
-        onFollow={handleFollow}
-        onUnfollow={handleUnfollow}
-        session={session}
-      />
+      {loading ? (
+        <ProfileHeaderSkeleton />
+      ) : (
+        <ProfileHeader
+          userData={userData}
+          nameLoading={nameLoading}
+          aboutMeLoading={aboutMeLoading}
+          palatesLoading={palatesLoading}
+          userReviewCount={userReviewCount}
+          followers={followers}
+          following={following}
+          followersLoading={followersLoading}
+          followingLoading={followingLoading}
+          isViewingOwnProfile={isViewingOwnProfile}
+          onShowFollowers={() => setShowFollowers(true)}
+          onShowFollowing={() => setShowFollowing(true)}
+          onFollow={handleFollow}
+          onUnfollow={handleUnfollow}
+          session={session}
+        />
+      )}
 
       <FollowersModal
         open={showFollowers}
