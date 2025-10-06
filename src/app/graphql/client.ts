@@ -2,8 +2,19 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
+// Use proxy URL for local development to avoid CORS issues
+const graphqlUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_API_URL || 
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port.startsWith('300'))
+    ? '/api/graphql-proxy' 
+    : 'https://backend.tastyplates.co/graphql');
+
+// Debug: Log the GraphQL URL being used
+if (typeof window !== 'undefined') {
+  console.log('GraphQL URL:', graphqlUrl);
+}
+
 const httpLink = createHttpLink({
-  uri: process.env.NEXT_PUBLIC_WP_GRAPHQL_API_URL,
+  uri: graphqlUrl,
 });
 
 const authLink = setContext(async (_, { headers }) => { // Make this an async function
