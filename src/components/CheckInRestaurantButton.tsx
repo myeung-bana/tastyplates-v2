@@ -58,7 +58,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         session?.accessToken
       );
 
-      if (res.status == code.success) {
+      if (res.status === "checkedin" || res.status === "uncheckedin") {
         toast.success(checkedIn ? uncheckInRestaurantSuccess : checkInRestaurantSuccess);
         const data = res as { status: string };
         setCheckedIn(data.status === "checkedin");
@@ -68,7 +68,6 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         setCheckedIn(prevCheckedIn);
         window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: prevCheckedIn } }));
       }
-      if (!res.ok) throw new Error(checkInStatusError);
     } catch {
       toast.error(checkInStatusError);
       setCheckedIn(prevCheckedIn);

@@ -400,8 +400,11 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async checkInRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.POST('/api/v1/restaurants/check-in', {
-                body: JSON.stringify({ restaurantId }),
+            const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
+                body: JSON.stringify({ 
+                    restaurantId: restaurantId,
+                    action: 'checkin'
+                }),
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`,
@@ -416,8 +419,11 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async addFavoriteRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.POST('/api/v1/restaurants/favorite', {
-                body: JSON.stringify({ restaurantId }),
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({ 
+                    restaurantId: restaurantId,
+                    action: 'save'
+                }),
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`,
@@ -432,8 +438,13 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async removeFavoriteRestaurant(restaurantId: number, accessToken: string) {
         try {
-            const response = await request.DELETE(`/api/v1/restaurants/favorite/${restaurantId}`, {
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({ 
+                    restaurantId: restaurantId,
+                    action: 'unsave'
+                }),
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`,
                 },
             });
@@ -446,7 +457,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getFavoriteRestaurants(accessToken: string) {
         try {
-            const response = await request.GET('/api/v1/restaurants/favorites', {
+            const response = await request.GET('/wp-json/restaurant/v1/favorites/', {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                 },
@@ -460,7 +471,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getRestaurantReviews(restaurantId: number, page = 1, limit = 10) {
         try {
-            const response = await request.GET(`/api/v1/restaurants/${restaurantId}/reviews?page=${page}&limit=${limit}`);
+            const response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}&page=${page}&limit=${limit}`);
             return response;
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
@@ -469,188 +480,99 @@ export class RestaurantRepository implements RestaurantRepo {
     }
 
     async addRestaurantReview(reviewData: Record<string, unknown>, accessToken: string) {
-        try {
-            const response = await request.POST('/api/v1/restaurants/reviews', {
-                body: JSON.stringify(reviewData),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error adding restaurant review:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant review creation in WordPress plugin
+        throw new Error('Restaurant review creation not implemented in WordPress plugin yet');
     }
 
     async updateRestaurantReview(reviewId: number, reviewData: Record<string, unknown>, accessToken: string) {
-        try {
-            const response = await request.PUT(`/api/v1/restaurants/reviews/${reviewId}`, {
-                body: JSON.stringify(reviewData),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error updating restaurant review:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant review update in WordPress plugin
+        throw new Error('Restaurant review update not implemented in WordPress plugin yet');
     }
 
     async deleteRestaurantReview(reviewId: number, accessToken: string) {
-        try {
-            const response = await request.DELETE(`/api/v1/restaurants/reviews/${reviewId}`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error deleting restaurant review:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant review deletion in WordPress plugin
+        throw new Error('Restaurant review deletion not implemented in WordPress plugin yet');
     }
 
     async getRestaurantStats(restaurantId: number) {
-        try {
-            const response = await request.GET(`/api/v1/restaurants/${restaurantId}/stats`);
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant stats:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant stats in WordPress plugin
+        throw new Error('Restaurant stats not implemented in WordPress plugin yet');
     }
 
     async searchRestaurants(query: string, filters: Record<string, unknown> = {}) {
-        try {
-            const params = new URLSearchParams({ query, ...filters });
-            const response = await request.GET(`/api/v1/restaurants/search?${params}`);
-            return response;
-        } catch (error) {
-            console.error('Error searching restaurants:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant search in WordPress plugin
+        throw new Error('Restaurant search not implemented in WordPress plugin yet');
     }
 
     async getRestaurantCategories() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/categories');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant categories:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant categories in WordPress plugin
+        throw new Error('Restaurant categories not implemented in WordPress plugin yet');
     }
 
     async getRestaurantCuisines() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/cuisines');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant cuisines:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant cuisines in WordPress plugin
+        throw new Error('Restaurant cuisines not implemented in WordPress plugin yet');
     }
 
     async getRestaurantPriceRanges() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/price-ranges');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant price ranges:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant price ranges in WordPress plugin
+        throw new Error('Restaurant price ranges not implemented in WordPress plugin yet');
     }
 
     async getRestaurantBadges() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/badges');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant badges:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant badges in WordPress plugin
+        throw new Error('Restaurant badges not implemented in WordPress plugin yet');
     }
 
     async getRestaurantRecognition() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/recognition');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant recognition:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant recognition in WordPress plugin
+        throw new Error('Restaurant recognition not implemented in WordPress plugin yet');
     }
 
     async getRestaurantSortOptions() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/sort-options');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant sort options:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant sort options in WordPress plugin
+        throw new Error('Restaurant sort options not implemented in WordPress plugin yet');
     }
 
     async getRestaurantFilters() {
-        try {
-            const response = await request.GET('/api/v1/restaurants/filters');
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant filters:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant filters in WordPress plugin
+        throw new Error('Restaurant filters not implemented in WordPress plugin yet');
     }
 
     async getRestaurantSuggestions(userId: number, accessToken: string) {
-        try {
-            const response = await request.GET(`/api/v1/restaurants/suggestions?userId=${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant suggestions:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant suggestions in WordPress plugin
+        throw new Error('Restaurant suggestions not implemented in WordPress plugin yet');
     }
 
     async getRestaurantTrending(limit = 10) {
-        try {
-            const response = await request.GET(`/api/v1/restaurants/trending?limit=${limit}`);
-            return response;
-        } catch (error) {
-            console.error('Error fetching trending restaurants:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement trending restaurants in WordPress plugin
+        throw new Error('Trending restaurants not implemented in WordPress plugin yet');
     }
 
     async getRestaurantNearby(latitude: number, longitude: number, radius = 10) {
-        try {
-            const response = await request.GET(`/api/v1/restaurants/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}`);
-            return response;
-        } catch (error) {
-            console.error('Error fetching nearby restaurants:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement nearby restaurants in WordPress plugin
+        throw new Error('Nearby restaurants not implemented in WordPress plugin yet');
     }
 
     async getRestaurantRecommendations(userId: number, accessToken: string, limit = 10) {
-        try {
-            const response = await request.GET(`/api/v1/restaurants/recommendations?userId=${userId}&limit=${limit}`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant recommendations:', error);
-            throw error;
-        }
+        // Note: This endpoint doesn't exist in the WordPress plugin yet
+        // TODO: Implement restaurant recommendations in WordPress plugin
+        throw new Error('Restaurant recommendations not implemented in WordPress plugin yet');
     }
 
     async getFavoriteListing(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
@@ -702,8 +624,11 @@ export class RestaurantRepository implements RestaurantRepo {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
-            const response = await request.POST('/wp-json/wp/v2/api/check-ins', {
-                body: JSON.stringify(data),
+            const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
+                body: JSON.stringify({
+                    restaurant_slug: data.restaurant_slug,
+                    action: data.action || 'checkin'
+                }),
                 headers: {
                     'Content-Type': 'application/json',
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
