@@ -45,14 +45,17 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const restaurantService = useMemo(() => new RestaurantService(), []);
 
   const checkFavoriteStatus = useCallback(async () => {
-    if (!session?.accessToken || !session?.user?.id) return;
+    if (!session?.accessToken || !restaurantSlug) return;
     try {
-      const response = await restaurantService.fetchFavoritingListing(session.user.id, session.accessToken);
-      setSaved(Boolean((response as { isFavorite?: boolean }).isFavorite));
+      const response = await restaurantService.createFavoriteListing(
+        { restaurant_slug: restaurantSlug, action: "check" },
+        session.accessToken
+      );
+      setSaved((response as { status: string }).status === "saved");
     } catch (error) {
       console.error("Error checking favorite status:", error);
     }
-  }, [session?.accessToken, session?.user?.id, restaurantService]);
+  }, [session?.accessToken, restaurantSlug, restaurantService]);
 
   const toggleFavorite = useCallback(async () => {
     if (!session?.user) {
@@ -87,6 +90,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
+      toast.error(favoriteStatusError);
       setError(favoriteStatusError);
     } finally {
       setLoading(false);
@@ -94,17 +98,37 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   }, [saved, session?.user, session?.accessToken, restaurantSlug, restaurantService]);
 
   useEffect(() => {
-    if (session?.user && !initialized) {
-      checkFavoriteStatus();
-      setInitialized(true);
-    }
-  }, [session?.user, initialized, checkFavoriteStatus]);
+    let isMounted = true;
+    if (!session || !restaurantSlug || initialized) return;
+    
+    const fetchFavoriteStatus = async () => {
+      try {
+        await checkFavoriteStatus();
+      } catch (error) {
+        console.error("Failed to fetch favorite status:", error);
+      } finally {
+        if (isMounted) setInitialized(true);
+      }
+    };
+
+    fetchFavoriteStatus();
+    return () => { isMounted = false; };
+  }, [restaurantSlug, session, initialized, checkFavoriteStatus]);
 
   if (error) {
     return (
       <div className="flex items-center gap-2 text-red-600">
         <span className="text-sm">{error}</span>
       </div>
+    );
+  }
+
+  if (!initialized) {
+    return (
+      <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-semibold text-sm" disabled>
+        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        <span className="text-sm font-semibold">Loading...</span>
+      </button>
     );
   }
 

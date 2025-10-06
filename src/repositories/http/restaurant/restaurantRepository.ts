@@ -577,7 +577,7 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async getFavoriteListing(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
         try {
-            const response = await request.GET(`/wp-json/wp/v2/api/favorite-listings/${userId}`, {
+            const response = await request.GET(`/wp-json/restaurant/v1/favorites/?user_id=${userId}`, {
                 headers: {
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
                 },
@@ -592,7 +592,7 @@ export class RestaurantRepository implements RestaurantRepo {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
-            const response = await request.GET(`/wp-json/wp/v2/api/check-in-restaurants/${userId}`, {
+            const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
                 headers: {
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
                 },
@@ -607,8 +607,22 @@ export class RestaurantRepository implements RestaurantRepo {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
-            const response = await request.POST('/wp-json/wp/v2/api/favorite-listings', {
-                body: JSON.stringify(data),
+            // Map frontend actions to WordPress plugin actions
+            const actionMap: Record<string, string> = {
+                'add': 'save',
+                'remove': 'unsave',
+                'save': 'save',
+                'unsave': 'unsave',
+                'check': 'check'
+            };
+            
+            const wpAction = actionMap[data.action] || 'save';
+            
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({
+                    restaurant_slug: data.restaurant_slug,
+                    action: wpAction
+                }),
                 headers: {
                     'Content-Type': 'application/json',
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),

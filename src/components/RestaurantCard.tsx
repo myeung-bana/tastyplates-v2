@@ -106,7 +106,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
         session?.accessToken // can be undefined
       );
       
-      if (res.status === code.success) {
+      if (res.status === "saved" || res.status === "unsaved") {
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
         setSaved((res.status as unknown as string) === "saved");
         onWishlistChange?.(restaurant, (res.status as unknown as string) === "saved");
