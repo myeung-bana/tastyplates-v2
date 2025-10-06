@@ -36,6 +36,7 @@ const CheckinsTab: React.FC<CheckinsTabProps> = ({
       emptyMessage="No Check-ins Yet."
       itemProps={{ profileTablist: "checkins" }}
       skeletonKeyPrefix="checkin-skeleton"
+      gridClassName="restaurants__grid restaurants__grid--profile"
     />
   );
 };

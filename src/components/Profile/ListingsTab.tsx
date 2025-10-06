@@ -121,6 +121,7 @@ const ListingsTab: React.FC<ListingsTabProps> = ({ targetUserId, isViewingOwnPro
       emptyMessage="No Listings Yet."
       itemProps={{ profileTablist: "listings" }}
       skeletonKeyPrefix="listing-skeleton"
+      gridClassName="restaurants__grid restaurants__grid--profile"
     />
   );
 };

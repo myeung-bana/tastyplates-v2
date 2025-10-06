@@ -11,10 +11,9 @@ interface ReviewsTabProps {
   targetUserId: number;
   status: string;
   onReviewCountChange?: (count: number) => void;
-  userDataReady?: boolean;
 }
 
-const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange, userDataReady = true }) => {
+const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange }) => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [userReviewCount, setUserReviewCount] = useState(0);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -90,23 +89,17 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   });
 
   useEffect(() => {
-    setReviews([]);
-    setEndCursor(null);
-    setHasNextPage(true);
-    isFirstLoad.current = true;
-    return () => {
+    if (status !== "loading" && targetUserId) {
+      // Reset state for new user
       setReviews([]);
       setEndCursor(null);
+      setHasNextPage(true);
       isFirstLoad.current = true;
-    };
-  }, [targetUserId]);
-
-  useEffect(() => {
-    setReviews([]);
-    if (status !== "loading" && targetUserId && userDataReady) {
+      
+      // Trigger initial load
       loadMore();
     }
-  }, [status, targetUserId, userDataReady, loadMore]);
+  }, [status, targetUserId]); // Remove loadMore from dependencies
 
   const getItemSize = (index: number) => {
     try {
@@ -135,13 +128,13 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   return (
     <>
       {reviewsLoading && reviews.length === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10 mt-10">
-          {Array.from({ length: 6 }, (_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+          {Array.from({ length: 3 }, (_, i) => (
             <ReviewCardSkeleton2 key={`skeleton-${i}`} />
           ))}
         </div>
       ) : reviews.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10 mt-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
           {reviews.map((review, index) => (
             <ReviewCard2 
               key={review.id}

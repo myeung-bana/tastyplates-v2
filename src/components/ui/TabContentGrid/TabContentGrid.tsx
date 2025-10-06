@@ -8,6 +8,7 @@ interface TabContentGridProps<T> {
   emptyMessage: string;
   itemProps?: Record<string, any>;
   skeletonKeyPrefix?: string;
+  gridClassName?: string;
 }
 
 const TabContentGrid = <T extends { id: string | number }>({
@@ -17,11 +18,12 @@ const TabContentGrid = <T extends { id: string | number }>({
   SkeletonComponent,
   emptyMessage,
   itemProps = {},
-  skeletonKeyPrefix = "skeleton"
+  skeletonKeyPrefix = "skeleton",
+  gridClassName = "restaurants__grid"
 }: TabContentGridProps<T>) => {
   return (
     <>
-      <div className="restaurants__grid">
+      <div className={`${gridClassName} mt-10`}>
         {loading && items.length === 0 ? (
           Array.from({ length: 8 }, (_, i) => (
             <SkeletonComponent key={`${skeletonKeyPrefix}-${i}`} skeletonKeyPrefix={skeletonKeyPrefix} />

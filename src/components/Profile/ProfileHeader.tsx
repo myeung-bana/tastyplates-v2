@@ -117,9 +117,18 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           
           {/* Stats Row */}
           <div className="flex gap-6 mb-4 text-sm">
+            {/* Reviews Count */}
             <span className="cursor-default">
-              <span className="font-semibold">{userReviewCount}</span> Reviews
+              <span className="font-semibold">
+                {followersLoading || followingLoading ? (
+                  <span className="inline-block w-8 h-4 bg-gray-200 rounded animate-pulse" />
+                ) : (
+                  userReviewCount
+                )}
+              </span> Reviews
             </span>
+            
+            {/* Followers Count */}
             <button
               type="button"
               className="text-primary focus:outline-none hover:underline"
@@ -138,6 +147,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 )}
               </span> Followers
             </button>
+            
+            {/* Following Count */}
             <button
               type="button"
               className="text-primary focus:outline-none hover:underline"
