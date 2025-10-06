@@ -204,6 +204,34 @@ export class RestaurantService {
         }
     }
 
+    async saveFavoriteListing(restaurantSlug: string, accessToken?: string) {
+        try {
+            return await restaurantRepo.saveFavoriteListing(restaurantSlug, accessToken);
+        } catch (error) {
+            console.error('Error saving favorite listing:', error);
+            throw new Error('Failed to save favorite listing');
+        }
+    }
+
+    async unsaveFavoriteListing(restaurantSlug: string, accessToken?: string) {
+        try {
+            return await restaurantRepo.unsaveFavoriteListing(restaurantSlug, accessToken);
+        } catch (error) {
+            console.error('Error unsaving favorite listing:', error);
+            throw new Error('Failed to unsave favorite listing');
+        }
+    }
+
+    async checkFavoriteListing(restaurantSlug: string, accessToken?: string) {
+        try {
+            return await restaurantRepo.checkFavoriteListing(restaurantSlug, accessToken);
+        } catch (error) {
+            console.error('Error checking favorite listing:', error);
+            throw new Error('Failed to check favorite listing');
+        }
+    }
+
+    // Keep the old function for backward compatibility
     async createFavoriteListing(data: FavoriteListingData, accessToken?: string) {
         try {
             return await restaurantRepo.createFavoriteListing(data, accessToken);

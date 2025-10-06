@@ -47,8 +47,8 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
   const checkFavoriteStatus = useCallback(async () => {
     if (!session?.accessToken || !restaurantSlug) return;
     try {
-      const response = await restaurantService.createFavoriteListing(
-        { restaurant_slug: restaurantSlug, action: "check" },
+      const response = await restaurantService.checkFavoriteListing(
+        restaurantSlug,
         session.accessToken
       );
       setSaved((response as { status: string }).status === "saved");
@@ -74,15 +74,15 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 
     try {
       if (saved) {
-        await restaurantService.createFavoriteListing(
-          { restaurant_slug: restaurantSlug, action: "remove" },
+        await restaurantService.unsaveFavoriteListing(
+          restaurantSlug,
           session.accessToken
         );
         setSaved(false);
         toast.success(removedFromWishlistSuccess);
       } else {
-        await restaurantService.createFavoriteListing(
-          { restaurant_slug: restaurantSlug, action: "add" },
+        await restaurantService.saveFavoriteListing(
+          restaurantSlug,
           session.accessToken
         );
         setSaved(true);

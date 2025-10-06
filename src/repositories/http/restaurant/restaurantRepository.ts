@@ -605,6 +605,67 @@ export class RestaurantRepository implements RestaurantRepo {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async saveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({
+                    restaurant_slug: restaurantSlug,
+                    action: 'save'
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error saving favorite listing:', error);
+            throw error;
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async unsaveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({
+                    restaurant_slug: restaurantSlug,
+                    action: 'unsave'
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error unsaving favorite listing:', error);
+            throw error;
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async checkFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
+                body: JSON.stringify({
+                    restaurant_slug: restaurantSlug,
+                    action: 'check'
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+                },
+            });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error checking favorite listing:', error);
+            throw error;
+        }
+    }
+
+    // Keep the old function for backward compatibility, but mark as deprecated
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
         try {
             // Map frontend actions to WordPress plugin actions

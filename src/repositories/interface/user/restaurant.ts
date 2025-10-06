@@ -30,6 +30,9 @@ export interface RestaurantRepo {
     updateListing(id: number, listingUpdateData: Record<string, unknown>, accessToken?: string): Promise<Record<string, unknown>>;
     deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>>;
     getlistingDrafts(token: string): Promise<Record<string, unknown>>;
+    saveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;
+    unsaveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;
+    checkFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;
     createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;
     getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;
     createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>>;

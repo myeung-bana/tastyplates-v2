@@ -101,10 +101,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
-      const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
-        { restaurant_slug: restaurant.slug, action },
-        session?.accessToken // can be undefined
-      );
+      let res: Record<string, unknown>;
+      if (action === "save") {
+        res = await restaurantService.saveFavoriteListing(restaurant.slug, session?.accessToken);
+      } else {
+        res = await restaurantService.unsaveFavoriteListing(restaurant.slug, session?.accessToken);
+      }
       
       if (res.status === "saved" || res.status === "unsaved") {
         toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
