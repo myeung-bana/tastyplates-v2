@@ -128,13 +128,13 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   return (
     <>
       {reviewsLoading && reviews.length === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
           {Array.from({ length: 3 }, (_, i) => (
             <ReviewCardSkeleton2 key={`skeleton-${i}`} />
           ))}
         </div>
       ) : reviews.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
           {reviews.map((review, index) => (
             <ReviewCard2 
               key={review.id}

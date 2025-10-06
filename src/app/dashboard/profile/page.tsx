@@ -212,7 +212,7 @@ const ProfilePage = () => {
             </>
           ) : (
             <>
-              <FiEdit2 /> Edit Profile
+              Edit Profile
             </>
           )}
         </button>

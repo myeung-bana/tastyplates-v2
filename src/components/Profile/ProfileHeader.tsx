@@ -43,10 +43,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   session
 }) => {
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-6 font-inter text-[#31343F]">
-      {/* Profile Info Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full">
-        {/* Profile Image */}
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6 font-inter text-[#31343F]">
+      {/* Compact Mobile Instagram-style Layout */}
+      <div className="flex items-start gap-4 w-full">
+        {/* Profile Image - Left column, left-aligned */}
         <div className="flex-shrink-0">
           <FallbackImage
             src={
@@ -59,69 +59,31 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             alt={(userData?.name as string) || "User"}
             width={80}
             height={80}
-            className="rounded-full object-cover"
+            className="rounded-full object-cover w-16 h-16 md:w-20 md:h-20"
             type={FallbackImageType.Icon}
           />
         </div>
         
-        {/* Profile Details */}
-        <div className="flex-1 min-w-0 w-full">
-          {/* Name and Action Button Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-medium truncate">
-                {nameLoading ? (
-                  <span className="inline-block w-32 h-7 bg-gray-200 rounded animate-pulse" />
-                ) : (
-                  (userData?.name as string) || ""
-                )}
-              </h1>
-            </div>
-            {/* Action Button - Edit Profile or Follow/Unfollow */}
-            {isViewingOwnProfile ? (
-              <Link
-                href={PROFILE_EDIT}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm whitespace-nowrap"
-              >
-                <FaPen className="text-gray-500" />
-                <span>Edit Profile</span>
-              </Link>
-            ) : (
-              userData && (userData.databaseId as number) && session?.accessToken && (
-                <button
-                  onClick={() => {
-                    const isFollowing = following.some((f: Record<string, unknown>) => f.id === (userData.databaseId as number));
-                    if (isFollowing) {
-                      onUnfollow(String(userData.databaseId as number));
-                    } else {
-                      onFollow(String(userData.databaseId as number));
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm whitespace-nowrap"
-                >
-                  {following.some((f: Record<string, unknown>) => f.id === (userData.databaseId as number)) ? (
-                    <>
-                      <FaHeart className="text-red-500" />
-                      <span>Following</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaRegHeart className="text-gray-500" />
-                      <span>Follow</span>
-                    </>
-                  )}
-                </button>
-              )
-            )}
+        {/* Profile Details - Right column, compact layout */}
+        <div className="flex-1 min-w-0">
+          {/* Username */}
+          <div className="mb-2">
+            <h1 className="text-base md:text-2xl font-medium truncate">
+              {nameLoading ? (
+                <span className="inline-block w-32 h-6 bg-gray-200 rounded animate-pulse" />
+              ) : (
+                (userData?.name as string) || ""
+              )}
+            </h1>
           </div>
           
-          {/* Stats Row */}
-          <div className="flex gap-6 mb-4 text-sm">
+          {/* Stats Row - Compact Instagram style */}
+          <div className="flex gap-4 text-sm mb-3">
             {/* Reviews Count */}
             <span className="cursor-default">
               <span className="font-semibold">
                 {followersLoading || followingLoading ? (
-                  <span className="inline-block w-8 h-4 bg-gray-200 rounded animate-pulse" />
+                  <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
                   userReviewCount
                 )}
@@ -131,7 +93,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {/* Followers Count */}
             <button
               type="button"
-              className="text-primary focus:outline-none hover:underline"
+              className="focus:outline-none hover:underline"
               onClick={() => {
                 if (followers.length > 0) {
                   onShowFollowers();
@@ -141,7 +103,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             >
               <span className="font-semibold">
                 {followersLoading ? (
-                  <span className="inline-block w-8 h-4 bg-gray-200 rounded animate-pulse" />
+                  <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
                   followers.length
                 )}
@@ -151,7 +113,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {/* Following Count */}
             <button
               type="button"
-              className="text-primary focus:outline-none hover:underline"
+              className="focus:outline-none hover:underline"
               onClick={() => {
                 if (following.length > 0) {
                   onShowFollowing();
@@ -161,7 +123,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             >
               <span className="font-semibold">
                 {followingLoading ? (
-                  <span className="inline-block w-8 h-4 bg-gray-200 rounded animate-pulse" />
+                  <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
                   following.length
                 )}
@@ -170,11 +132,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           </div>
           
           {/* Bio Section */}
-          <div className="mb-4">
+          <div className="mb-2">
             {aboutMeLoading ? (
-              <div className="w-full h-16 bg-gray-200 rounded animate-pulse" />
+              <div className="w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
-              <p className="text-sm">
+              <p className="text-sm leading-relaxed">
                 {((userData?.userProfile as Record<string, unknown>)?.aboutMe as string) || 
                  (userData?.about_me as string) || 
                  <span className="text-gray-400">No bio set</span>}
@@ -183,11 +145,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           </div>
           
           {/* Palates Section */}
-          <div className="mb-4">
+          <div className="mb-2">
             {palatesLoading ? (
-              <span className="inline-block w-24 h-6 bg-gray-200 rounded animate-pulse" />
+              <span className="inline-block w-24 h-5 bg-gray-200 rounded animate-pulse" />
             ) : (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1 flex-wrap">
                 {((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string) ? (
                   (((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string))
                     .split(/[|,]\s*/)
@@ -206,14 +168,14 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       return (
                         <span
                           key={index}
-                          className="bg-gray-100 py-1 px-2 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
+                          className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
                         >
                           {flagSrc && (
                             <Image
                               src={flagSrc}
                               alt={`${capitalizedPalate} flag`}
-                              width={16}
-                              height={9}
+                              width={12}
+                              height={7}
                               className="rounded object-cover"
                             />
                           )}
@@ -222,11 +184,23 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       );
                     })
                 ) : (
-                  <span className="text-gray-400 text-sm">No palates set</span>
+                  <span className="text-gray-400 text-xs">No palates set</span>
                 )}
               </div>
             )}
           </div>
+          
+          {/* Edit Profile Button - Show for own profile on all screen sizes */}
+          {isViewingOwnProfile && (
+            <div className="mt-4">
+              <Link
+                href="/profile/edit"
+                className="items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+              >
+                <span>Edit Profile</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

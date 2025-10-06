@@ -129,152 +129,187 @@ const FormContent = memo(({
         </div>
       </>
     )}
-    <div className="flex flex-col justify-center items-center pt-10 px-3 md:px-0">
-      <h1 className="text-[#31343F] text-lg md:text-2xl font-medium">
-        Edit Profile
-      </h1>
-      <form
-        onSubmit={submitReview}
-        className="listing__form max-w-[672px] w-full my-4 md:my-10 mx-3 py-6 px-4 md:py-8 md:px-6 lg:mx-0 rounded-3xl border border-[#CACACA] bg-[#FCFCFC]"
-      >
-        {/* Profile image upload */}
-        <div className="listing__form-group">
-          <div className="relative flex justify-center">
-            <label
-              htmlFor="image"
-              className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""
-                }`}
-            >
-              <input
-                id="image"
-                type="file"
-                name="image"
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*"
-                disabled={isLoading}
-              />
-              <div className="relative">
-                <FallbackImage
-                  src={profilePreview}
-                  width={120}
-                  height={120}
-                  className="rounded-full size-20 md:size-[120px] object-cover"
-                  alt="profile"
-                  unoptimized
-                  type={FallbackImageType.Icon}
-                />
-                <div className="border-[1.5px] border-[#494D5D] absolute right-0 bottom-0 size-8 md:size-11 p-2 md:p-3 rounded-[50px] bg-white text-center">
-                  <MdOutlineEdit className="size-4 md:size-5" />
-                </div>
-              </div>
-            </label>
-          </div>
-          {profileError && (
-            <p className="mt-2 text-sm text-red-600 text-center">
-              {profileError}
-            </p>
-          )}
+    
+    {/* Modern Instagram-inspired Profile Edit Layout */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-light text-gray-900 mb-2">
+            Edit Profile
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Update your information to help others discover your taste preferences
+          </p>
         </div>
 
-        {/* About Me */}
-        <div className="listing__form-group">
-          <label className="listing__label">Bio</label>
-          <div className="listing__input-group">
-            <textarea
-              ref={textareaRef}
-              name="aboutMe"
-              className={`listing__input resize-none min-h-[120px] ${isLoading ? "opacity-50" : ""
-                } ${bioError ? "border-red-500 focus:border-red-500" : ""}`}
-              placeholder="Tell us about yourself... Share your food journey, favorite cuisines, or what makes you passionate about dining!"
-              value={aboutMe}
-              onChange={handleTextAreaChange}
-              rows={4}
-              disabled={isLoading}
-              maxLength={aboutMeMaxLimit}
-            />
-            <div className="flex justify-between items-center mt-2">
-              <div className="text-xs text-gray-500">
-                {bioCharacterCount}/{aboutMeMaxLimit} characters
+        {/* Main Content Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <form onSubmit={submitReview} className="p-8 space-y-8">
+            
+            {/* Profile Photo Section */}
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative group">
+                <label
+                  htmlFor="image"
+                  className={`cursor-pointer flex justify-center ${isLoading ? "opacity-50" : ""}`}
+                >
+                  <input
+                    id="image"
+                    type="file"
+                    name="image"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                    disabled={isLoading}
+                  />
+                  <div className="relative">
+                    <FallbackImage
+                      src={profilePreview}
+                      width={120}
+                      height={120}
+                      className="rounded-full size-24 md:size-32 object-cover ring-4 ring-gray-100 transition-all duration-200 group-hover:ring-gray-200"
+                      alt="profile"
+                      unoptimized
+                      type={FallbackImageType.Icon}
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-3 shadow-lg border-2 border-gray-100 group-hover:border-gray-200 transition-all duration-200">
+                      <MdOutlineEdit className="size-5 text-gray-600" />
+                    </div>
+                  </div>
+                </label>
               </div>
-              {bioError && (
-                <div className="text-xs text-red-600">
-                  {bioError}
+              
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-1">Profile Photo</h3>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Click the edit icon to change your profile picture.
+                </p>
+                {profileError && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {profileError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Bio Section */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Bio
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Tell others about your food journey, favorite cuisines, or what makes you passionate about dining. This helps people connect with your taste preferences.
+                </p>
+              </div>
+              
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  name="aboutMe"
+                  className={`w-full px-4 py-3 border rounded-xl resize-none transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
+                    isLoading ? "opacity-50" : ""
+                  } ${
+                    bioError ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-orange-300"
+                  }`}
+                  placeholder="Share your food story... What cuisines do you love? Any memorable dining experiences? What makes you excited about food?"
+                  value={aboutMe}
+                  onChange={handleTextAreaChange}
+                  rows={4}
+                  disabled={isLoading}
+                  maxLength={aboutMeMaxLimit}
+                />
+                
+                <div className="flex justify-between items-center mt-2">
+                  <div className="text-xs text-gray-400">
+                    {bioCharacterCount}/{aboutMeMaxLimit} characters
+                  </div>
+                  {bioError && (
+                    <div className="text-xs text-red-600">
+                      {bioError}
+                    </div>
+                  )}
                 </div>
+              </div>
+            </div>
+
+            {/* Palate Section */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Ethnic Palate Preferences
+                </label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Select up to 2 ethnic cuisines that best represent your taste preferences. This helps others understand your culinary background and recommendations.
+                </p>
+              </div>
+              
+              <div className={`${isLoading ? "opacity-50 pointer-events-none" : ""}`}>
+                <CustomMultipleSelect
+                  label="Palate (Select up to 2)"
+                  placeholder="Choose your preferred ethnic cuisines..."
+                  items={palateOptions}
+                  className="!rounded-xl w-full"
+                  value={selectedPalates}
+                  onChange={handlePalateChange}
+                  limitValueLength={palateLimit}
+                />
+              </div>
+              
+              {palateError && (
+                <p className="mt-2 text-sm text-red-600">{palateError}</p>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Palate */}
-        <div className="listing__form-group">
-          <label className="listing__label">
-            Ethnic Palate <span className="!font-medium">(Select up to 2)</span>
-          </label>
-          <div
-            className={`flex flex-wrap gap-2 ${isLoading ? "opacity-50 pointer-events-none" : ""
-              }`}
-          >
-            <CustomMultipleSelect
-              label="Palate (Select up to 2)"
-              placeholder="Select your palate"
-              items={palateOptions}
-              className="!rounded-[10px] w-full"
-              value={selectedPalates}
-              onChange={handlePalateChange}
-              limitValueLength={palateLimit}
-            />
-          </div>
-          {palateError && (
-            <p className="mt-2 text-sm text-red-600">{palateError}</p>
-          )}
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-100">
+              <button
+                type="submit"
+                className="flex-1 bg-[#E36B00] hover:bg-[#c55a00] text-white font-semibold py-3 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    Saving Changes...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+              
+              <button
+                type="button"
+                className="flex-1 sm:flex-none underline text-[#494D5D] font-semibold text-center py-3 px-6 bg-transparent hover:text-[#31343F] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => router.push(PROFILE)}
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-
-        {/* Buttons */}
-        <div className="flex gap-4 items-center m-auto">
-          <button
-            type="submit"
-            className="listing__button flex items-center justify-center gap-2 text-sm md:text-base"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              "Save and Continue"
-            )}
-          </button>
-          <button
-            type="button"
-            className="underline h-10 !text-[#494D5D] !bg-transparent font-semibold text-center"
-            onClick={() => router.push(PROFILE)}
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+      </div>
 
       {/* Photo Crop Modal */}
       <PhotoCropModal
@@ -507,7 +542,7 @@ const Form = () => {
           </button>
         }
       />
-      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}    </div>
+      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}</div>
   </>
   );
 };

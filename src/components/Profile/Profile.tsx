@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
+import Link from "next/link";
+import { FaPen } from "react-icons/fa";
 import { WELCOME_KEY } from "@/constants/session";
 import "@/styles/pages/_restaurants.scss";
 
