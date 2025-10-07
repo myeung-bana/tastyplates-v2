@@ -669,6 +669,25 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                       {typeof data.reviewStars === 'string' ? parseFloat(data.reviewStars) : data.reviewStars}/5
                     </span>
                   </div>
+                  
+                  {/* Restaurant Name */}
+                  {data.commentedOn?.node?.title && data.commentedOn?.node?.slug && (
+                    <div className="mb-2 flex items-center space-x-1">
+                      <svg 
+                        className="w-3 h-3 text-gray-500" 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                      >
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      <Link 
+                        href={`/restaurants/${data.commentedOn.node.slug}`}
+                        className="text-xs font-medium text-[#E36B00] hover:text-[#c55a00] hover:underline transition-colors"
+                      >
+                        {data.commentedOn.node.title}
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

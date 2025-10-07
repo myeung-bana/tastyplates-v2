@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 export const GET_ALL_RECENT_REVIEWS = gql`
   query GetReviews($first: Int = 16, $after: String) {
     comments(
-      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1 }
+      where: { commentType: "listing", orderby: COMMENT_DATE, order: DESC, commentApproved: 1, parent: 0 }
       first: $first
       after: $after
     ) {
@@ -121,7 +121,8 @@ export const SEARCH_REVIEWS_BY_HASHTAG = gql`
       where: { 
         commentType: "listing", 
         commentApproved: 1,
-        hashtag: $hashtag
+        hashtag: $hashtag,
+        parent: 0
       }
       first: $first
       after: $after
@@ -194,7 +195,8 @@ export const GET_USER_REVIEWS = gql`
         userId: $userId,
         orderby: COMMENT_DATE,
         order: DESC,
-        commentApproved: 1
+        commentApproved: 1,
+        parent: 0
       }
       first: $first
       after: $after
@@ -292,7 +294,8 @@ comments(
     orderby: COMMENT_DATE, 
     order: DESC, 
     contentId: $restaurantId,
-    commentApproved: 1
+    commentApproved: 1,
+    parent: 0
     }
     first: $first
     after: $after

@@ -2861,12 +2861,16 @@ add_filter('graphql_comment_query_args', function ($query_args, $source, $args, 
     return $query_args;
 }, 10, 5);
 
-// Allow filtering comments by hashtag via GraphQL where args
+// Allow filtering comments by hashtag and parent via GraphQL where args
 add_filter('graphql_input_fields', function ($fields, $type_name) {
     if ($type_name === 'RootQueryToCommentConnectionWhereArgs') {
         $fields['hashtag'] = [
             'type' => 'String',
             'description' => __('Filter comments by hashtag (without #)', 'listing-post-type'),
+        ];
+        $fields['parent'] = [
+            'type' => 'Int',
+            'description' => __('Filter comments by parent comment ID (0 for top-level comments)', 'listing-post-type'),
         ];
     }
     return $fields;
@@ -2883,6 +2887,12 @@ add_filter('graphql_comment_query_args', function ($query_args, $source, $args, 
             'compare' => 'LIKE',
         ];
     }
+    
+    if (isset($args['where']['parent'])) {
+        $parent_id = intval($args['where']['parent']);
+        $query_args['parent'] = $parent_id;
+    }
+    
     return $query_args;
 }, 10, 5);
 
