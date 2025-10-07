@@ -17,6 +17,7 @@ export const GET_ALL_RECENT_REVIEWS = gql`
         reviewStars
         date
         content(format: RENDERED)
+        hashtags
         reviewImages {
           databaseId
           id
@@ -90,6 +91,7 @@ query GetCommentWithReplies($id: ID!) {
         databaseId
         date
         content(format: RENDERED)
+        hashtags
         commentLikes
         userLiked
         palates
@@ -111,6 +113,76 @@ query GetCommentWithReplies($id: ID!) {
     }
   }
 }
+`;
+
+export const SEARCH_REVIEWS_BY_HASHTAG = gql`
+  query SearchReviewsByHashtag($hashtag: String!, $first: Int = 20, $after: String) {
+    comments(
+      where: { 
+        commentType: "listing", 
+        commentApproved: 1,
+        hashtag: $hashtag
+      }
+      first: $first
+      after: $after
+    ) {
+      nodes {
+        databaseId
+        id
+        uri
+        reviewMainTitle
+        commentLikes
+        userLiked
+        reviewStars
+        date
+        content(format: RENDERED)
+        hashtags
+        reviewImages {
+          databaseId
+          id
+          sourceUrl
+        }
+        palates
+        userAvatar
+        author {
+          name
+            node {
+              ... on User {
+              id
+              databaseId
+              name
+              nicename
+              avatar {
+                url
+              }  
+            }
+          }
+        }
+        commentedOn {
+          node {
+            ... on Listing {
+              databaseId
+              title
+              slug
+              featuredImage {
+                node {
+                  databaseId
+                  altText
+                  mediaItemUrl
+                  mimeType
+                  mediaType
+                }
+              }
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
 `;
 
 export const GET_USER_REVIEWS = gql`
@@ -135,6 +207,7 @@ export const GET_USER_REVIEWS = gql`
         reviewStars
         date
         content(format: RENDERED)
+        hashtags
         reviewImages {
           databaseId
           id
@@ -234,6 +307,7 @@ comments(
         reviewStars
         date
         content(format: RENDERED)
+        hashtags
         palates
         userAvatar
         recognitions

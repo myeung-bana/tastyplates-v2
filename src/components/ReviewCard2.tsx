@@ -2,9 +2,7 @@
 import Image from "next/image";
 import ReviewPopUpModal from "./ReviewPopUpModal";
 import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
-import {
-  ReviewCardProps,
-} from "@/interfaces/Reviews/review";
+import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link";
@@ -14,6 +12,7 @@ import SigninModal from "./SigninModal";
 import { PROFILE } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import HashtagDisplay from "./ui/HashtagDisplay/HashtagDisplay";
 import {
   DEFAULT_IMAGE,
   DEFAULT_USER_ICON,
@@ -176,10 +175,12 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
           </p>
         )}
 
-        {/* Review Content - Matching ReviewCard font sizes and styling */}
-        <p className="text-[12px] md:text-sm font-normal text-[#494D5D] line-clamp-2 break-words leading-[1.4] md:leading-[1.5]">
-          {capitalizeWords(stripTags(data.content || ""))}
-        </p>
+        {/* Review Content with Hashtags */}
+        <HashtagDisplay 
+          content={stripTags(data.content || "")}
+          hashtags={data.hashtags as unknown as string[]}
+          className="text-[12px] md:text-sm font-normal text-[#494D5D] line-clamp-2 break-words leading-[1.4] md:leading-[1.5]"
+        />
       </div>
     </div>
   );

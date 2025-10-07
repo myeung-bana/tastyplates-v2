@@ -1,58 +1,15 @@
 'use client';
 import React from 'react';
-import { FollowingReview } from '@/repositories/http/following/followingReviewRepository';
-import { ReviewedDataProps } from '@/interfaces/Reviews/review';
+import { GraphQLReview } from '@/types/graphql';
 import ReviewCard2 from './ReviewCard2';
 import ReviewCardSkeleton from './ui/Skeleton/ReviewCardSkeleton';
 
 interface FollowingReviewsProps {
-  reviews: FollowingReview[];
+  reviews: GraphQLReview[];
   loading: boolean;
   hasMore: boolean;
   observerRef?: React.MutableRefObject<HTMLDivElement | null>;
 }
-
-// Helper function to convert FollowingReview to ReviewedDataProps
-const mapFollowingReviewToReviewedDataProps = (review: FollowingReview): ReviewedDataProps => {
-  return {
-    databaseId: review.id,
-    id: review.id.toString(),
-    reviewMainTitle: review.title,
-    commentLikes: "0", // Not available in following review data
-    userLiked: false, // Not available in following review data
-    content: review.content,
-    uri: "", // Not available in following review data
-    reviewStars: review.stars.toString(),
-    date: review.date,
-    reviewImages: review.images.map((imageUrl, index) => ({
-      databaseId: review.id + index, // Generate unique ID
-      id: `${review.id}-img-${index}`,
-      sourceUrl: imageUrl
-    })),
-    palates: [], // Not available in following review data
-    userAvatar: review.author.avatar,
-    author: {
-      node: {
-        databaseId: review.author.id,
-        name: review.author.display_name,
-        username: review.author.username,
-        avatar: {
-          url: review.author.avatar
-        }
-      }
-    },
-    userId: review.author.id,
-    commentedOn: {
-      node: {
-        databaseId: review.restaurant.id,
-        title: review.restaurant.name,
-        slug: "", // Not available
-        uri: "", // Not available
-        featuredImage: null // Not available
-      }
-    }
-  };
-};
 
 const FollowingReviews: React.FC<FollowingReviewsProps> = ({ 
   reviews, 
@@ -67,7 +24,7 @@ const FollowingReviews: React.FC<FollowingReviewsProps> = ({
         {reviews.map((review) => (
           <ReviewCard2 
             key={review.id}
-            data={mapFollowingReviewToReviewedDataProps(review)}
+            data={review as any} // GraphQLReview is compatible with ReviewedDataProps
           />
         ))}
       </div>

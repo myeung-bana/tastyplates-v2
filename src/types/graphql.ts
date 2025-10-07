@@ -37,12 +37,34 @@ export interface GraphQLReview {
   commentedOn: GraphQLCommentedOn;
   recognitions?: string[];
   userId?: string;
+  hashtags?: string[];
 }
 
 export interface GraphQLReviewImage {
   databaseId: number;
   id: string;
   sourceUrl: string;
+}
+
+// Hashtag Types
+export interface GraphQLHashtag {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HashtagSearchResult {
+  hashtag: string;
+  posts: number;
+  recentPosts: Array<{
+    id: string;
+    title: string;
+    image?: string;
+    date: string;
+  }>;
 }
 
 export interface GraphQLAuthor {

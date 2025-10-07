@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -20,6 +20,7 @@ import FollowingModal from "./FollowingModal";
 import { useFollowData } from "@/hooks/useFollowData";
 import { useProfileData } from "@/hooks/useProfileData";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { FollowService } from "@/services/follow/followService";
 
 interface ProfileProps {
   targetUserId: number;
@@ -34,6 +35,10 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [checkins, setCheckins] = useState<any[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  const followService = useRef(new FollowService()).current;
 
   // Use our custom hooks
   const {
@@ -63,6 +68,51 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     );
   }, []);
 
+  // Custom follow/unfollow handlers for profile header
+  const handleProfileFollow = useCallback(async (id: string) => {
+    if (!session?.accessToken) return;
+    
+    setFollowLoading(true);
+    try {
+      const userIdNum = Number(id);
+      if (isNaN(userIdNum)) return;
+      
+      const response = await followService.followUser(userIdNum, session.accessToken);
+      if (response.status === 200) {
+        setIsFollowing(true);
+        // Also update the followers count by refreshing follow data
+        await handleFollow(id);
+      }
+    } catch (error) {
+      console.error("Error following user:", error);
+      toast.error("Failed to follow user");
+    } finally {
+      setFollowLoading(false);
+    }
+  }, [session?.accessToken, followService, handleFollow]);
+
+  const handleProfileUnfollow = useCallback(async (id: string) => {
+    if (!session?.accessToken) return;
+    
+    setFollowLoading(true);
+    try {
+      const userIdNum = Number(id);
+      if (isNaN(userIdNum)) return;
+      
+      const response = await followService.unfollowUser(userIdNum, session.accessToken);
+      if (response.status === 200) {
+        setIsFollowing(false);
+        // Also update the followers count by refreshing follow data
+        await handleUnfollow(id);
+      }
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      toast.error("Failed to unfollow user");
+    } finally {
+      setFollowLoading(false);
+    }
+  }, [session?.accessToken, followService, handleUnfollow]);
+
   // Welcome message effect
   useEffect(() => {
     const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
@@ -73,6 +123,26 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       localStorage.removeItem(WELCOME_KEY);
     }
   }, []);
+
+  // Check if current user is following the target user
+  useEffect(() => {
+    const checkFollowingStatus = async () => {
+      if (!session?.accessToken || !targetUserId || isViewingOwnProfile) {
+        setIsFollowing(false);
+        return;
+      }
+
+      try {
+        const response = await followService.isFollowingUser(targetUserId, session.accessToken);
+        setIsFollowing(response.is_following || false);
+      } catch (error) {
+        console.error("Error checking following status:", error);
+        setIsFollowing(false);
+      }
+    };
+
+    checkFollowingStatus();
+  }, [session?.accessToken, targetUserId, isViewingOwnProfile, followService]);
 
   // Fetch wishlist data - DELAYED LOADING (Priority 4)
   useEffect(() => {
@@ -259,9 +329,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           isViewingOwnProfile={isViewingOwnProfile}
           onShowFollowers={() => setShowFollowers(true)}
           onShowFollowing={() => setShowFollowing(true)}
-          onFollow={handleFollow}
-          onUnfollow={handleUnfollow}
+          onFollow={handleProfileFollow}
+          onUnfollow={handleProfileUnfollow}
           session={session}
+          targetUserId={targetUserId}
+          isFollowing={isFollowing}
+          followLoading={followLoading}
         />
       )}
 

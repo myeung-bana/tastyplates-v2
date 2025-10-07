@@ -8,10 +8,11 @@ export interface ReviewRepo {
     deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void>;
     updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }>;
     getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>>;
-    getUserReviews(userId: number, first?: number, after?: string | null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }>;
+    getUserReviews(userId: number, first?: number, after?: string | null, accessToken?: string): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }>;
     likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
     unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }>;
     getRestaurantReviews(restaurantId: number, accessToken?: string, first?: number, after?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }>;
     getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview | null>;
+    postReview(payload: any, accessToken: string): Promise<any>;
     likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>>;
 }

@@ -48,18 +48,14 @@ export class ReviewService {
                 throw new Error('Invalid comment id');
             }
 
-            // If already a Relay global ID that decodes to "comment:{n}", use as-is
-            const decoded = atobSafe(graphqlId);
-            if (decoded && decoded.startsWith('comment:') && isNumeric(decoded.split(':')[1] || '')) {
-                // already global id
-            } else if (graphqlId.startsWith('comment:')) {
-                // raw typename:id -> encode
-                graphqlId = btoaSafe(graphqlId);
-            } else if (isNumeric(graphqlId)) {
-                // numeric -> encode as comment:{id}
-                graphqlId = btoaSafe(`comment:${graphqlId}`);
+            // Check if it's a numeric ID (e.g., "123") or a raw "comment:123" string
+            if (!isNaN(Number(id)) && !id.includes(':')) {
+                graphqlId = btoaSafe(`comment:${id}`);
+            } else if (id.startsWith('comment:') && !id.includes('=')) { // Raw "comment:123"
+                graphqlId = btoaSafe(id);
             } else {
-                // Fallback: leave as-is (some callers may already pass a valid global id)
+                // Assume it's already a valid global ID (base64 encoded)
+                // Optionally, decode and re-encode to ensure consistency, but for now, pass as is.
             }
 
             const replies = await reviewRepo.getCommentReplies(graphqlId);
@@ -70,74 +66,9 @@ export class ReviewService {
         }
     }
 
-    async postReview(reviewData: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: Record<string, unknown> }> {
-        const formattedData = {
-            post: reviewData.restaurantId,
-            parent: reviewData.parent || 0,
-            author: reviewData.authorId,
-            content: reviewData.content || '',
-            review_main_title: reviewData.review_main_title || '',
-            review_stars: reviewData.review_stars || 0,
-            review_images_idz: reviewData.review_images_idz || [],
-            recognitions: reviewData.recognitions || [],
-            mode: reviewData.mode,
-        };
-
-        return await reviewRepo.createReview(formattedData, accessToken);
-    }
-
-    async fetchReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
+    async fetchUserReviews(userId: number, first = 16, after: string | null = null, accessToken?: string) {
         try {
-            const drafts = await reviewRepo.getReviewDrafts(accessToken);
-            return drafts as unknown as Record<string, unknown>[];
-        } catch (error) {
-            console.error("Failed to fetch review drafts", error);
-            throw new Error('Failed to fetch review drafts');
-        }
-    }
-
-    async deleteReviewDraft(draftId: number, accessToken?: string, force = false): Promise<void> {
-        try {
-            await reviewRepo.deleteReviewDraft(draftId, accessToken, force);
-        } catch (error) {
-            console.error("Failed to delete review draft", error);
-            throw new Error('Failed to delete review draft');
-        }
-    }
-
-    async updateReviewDraft(draftId: number, reviewData: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
-        try {
-            const formattedData = {
-                post: reviewData.restaurantId,
-                parent: reviewData.parent || 0,
-                author: reviewData.authorId,
-                content: reviewData.content || '',
-                review_main_title: reviewData.review_main_title || '',
-                review_stars: reviewData.review_stars || 0,
-                review_images_idz: reviewData.review_images_idz || [],
-                recognitions: reviewData.recognitions || [],
-                mode: reviewData.mode,
-            };
-
-            return await reviewRepo.updateReviewDraft(draftId, formattedData, accessToken);
-        } catch (error) {
-            console.error("Failed to update review draft", error);
-            throw new Error('Failed to update review draft');
-        }
-    }
-
-    async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            return await reviewRepo.getReviewById(reviewId, accessToken);
-        } catch (error) {
-            console.error("Failed to fetch review by ID", error);
-            throw new Error('Failed to fetch review by ID');
-        }
-    }
-
-    async fetchUserReviews(userId: number, first = 16, after: string | null = null) {
-        try {
-            const response = await reviewRepo.getUserReviews(userId, first, after);
+            const response = await reviewRepo.getUserReviews(userId, first, after, accessToken);
             return response;
         } catch (error) {
             console.error('Error fetching user reviews:', error);
@@ -145,29 +76,30 @@ export class ReviewService {
         }
     }
 
-    async likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
+    async likeComment(commentId: number, accessToken: string) {
         try {
-            // Return the backend response so the component receives it!
-            return await reviewRepo.likeComment(commentId, accessToken);
+            const response = await reviewRepo.likeComment(commentId, accessToken);
+            return response;
         } catch (error) {
-            console.error("Failed to like comment", error);
-            throw new Error("Failed to like comment");
+            console.error('Error liking comment:', error);
+            throw new Error('Failed to like comment');
         }
     }
 
-    async unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
+    async unlikeComment(commentId: number, accessToken: string) {
         try {
-            // Return the backend response so the component receives it!
-            return await reviewRepo.unlikeComment(commentId, accessToken);
+            const response = await reviewRepo.unlikeComment(commentId, accessToken);
+            return response;
         } catch (error) {
-            console.error("Failed to unlike comment", error);
-            throw new Error("Failed to unlike comment");
+            console.error('Error unliking comment:', error);
+            throw new Error('Failed to unlike comment');
         }
     }
 
-    async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
+    async fetchRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string) {
         try {
-            return await reviewRepo.getRestaurantReviews(restaurantId, accessToken, first, after);
+            const response = await reviewRepo.getRestaurantReviews(restaurantId, accessToken, first, after);
+            return response;
         } catch (error) {
             console.error('Error fetching restaurant reviews:', error);
             throw new Error('Failed to fetch restaurant reviews');
@@ -176,19 +108,21 @@ export class ReviewService {
 
     async fetchRestaurantReviewsById(restaurantId: string | number) {
         try {
-            return await reviewRepo.getRestaurantReviewsById(restaurantId);
+            const response = await reviewRepo.getRestaurantReviewsById(restaurantId);
+            return response;
         } catch (error) {
-            console.error('Error fetching restaurant reviews:', error);
-            throw new Error('Failed to fetch restaurant reviews');
+            console.error('Error fetching restaurant reviews by ID:', error);
+            throw new Error('Failed to fetch restaurant reviews by ID');
         }
     }
 
-    async likeReview(reviewId: number, accessToken?: string) {
+    async postReview(payload: any, accessToken: string) {
         try {
-            return await reviewRepo.likeReview(reviewId, accessToken);
+            const response = await reviewRepo.postReview(payload, accessToken);
+            return response;
         } catch (error) {
-            console.error('Error liking review:', error);
-            throw new Error('Failed to like review');
+            console.error('Error posting review:', error);
+            throw new Error('Failed to post review');
         }
     }
 }

@@ -23,6 +23,9 @@ interface ProfileHeaderProps {
   onFollow: (id: string) => Promise<void>;
   onUnfollow: (id: string) => Promise<void>;
   session: any;
+  targetUserId: number;
+  isFollowing: boolean;
+  followLoading: boolean;
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -40,7 +43,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onShowFollowing,
   onFollow,
   onUnfollow,
-  session
+  session,
+  targetUserId,
+  isFollowing,
+  followLoading
 }) => {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6 font-inter text-[#31343F]">
@@ -51,7 +57,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <FallbackImage
             src={
               // Priority order: userProfile.profileImage > user.image > session.user.image > default
-              ((userData?.userProfile as Record<string, unknown>)?.profileImage as Record<string, unknown>)?.node?.mediaItemUrl as string ||
+              (((userData?.userProfile as Record<string, unknown>)?.profileImage as Record<string, unknown>)?.node as Record<string, unknown>)?.mediaItemUrl as string ||
               (userData?.image as string) ||
               (session?.user?.image as string) ||
               DEFAULT_USER_ICON
@@ -66,8 +72,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         
         {/* Profile Details - Right column, compact layout */}
         <div className="flex-1 min-w-0">
-          {/* Username */}
-          <div className="mb-2">
+          {/* Username and Follow Button */}
+          <div className="mb-2 flex items-center gap-3">
             <h1 className="text-base md:text-2xl font-medium truncate">
               {nameLoading ? (
                 <span className="inline-block w-32 h-6 bg-gray-200 rounded animate-pulse" />
@@ -75,6 +81,35 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 (userData?.name as string) || ""
               )}
             </h1>
+            
+            {/* Follow/Unfollow Button - Only show for other users */}
+            {!isViewingOwnProfile && session?.user && (
+              <button
+                onClick={() => {
+                  if (isFollowing) {
+                    onUnfollow(targetUserId.toString());
+                  } else {
+                    onFollow(targetUserId.toString());
+                  }
+                }}
+                disabled={followLoading}
+                className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
+                  isFollowing 
+                    ? 'bg-white text-black border border-black' 
+                    : 'bg-[#E36B00] text-[#FCFCFC]'
+                } disabled:opacity-50 disabled:pointer-events-none`}
+              >
+                {followLoading ? (
+                  <span className="animate-pulse">
+                    {isFollowing ? "Unfollowing..." : "Following..."}
+                  </span>
+                ) : isFollowing ? (
+                  "Following"
+                ) : (
+                  "Follow"
+                )}
+              </button>
+            )}
           </div>
           
           {/* Stats Row - Compact Instagram style */}

@@ -1407,6 +1407,46 @@ add_action(
             },
         ]);
 
+        // GraphQL field to expose hashtags as an array of strings
+        register_graphql_field('Comment', 'hashtags', [
+            'type'        => ['list_of' => 'String'],
+            'description' => __('Hashtags extracted from comment content or stored in meta', 'listing-post-type'),
+            'resolve'     => function ($comment) {
+                $cid = $comment->comment_ID ?? $comment->ID ?? $comment->databaseId ?? null;
+                if (! $cid) return [];
+
+                // Prefer stored meta (string of comma-separated hashtags)
+                $stored = get_comment_meta($cid, 'hashtags', true);
+                if (is_string($stored) && strlen($stored) > 0) {
+                    $parts = array_map('trim', explode(',', strtolower($stored)));
+                    $parts = array_filter($parts, fn($p) => $p !== '');
+                    return array_values(array_unique($parts));
+                }
+
+                // Fallback: extract from content
+                $content = '';
+                if (isset($comment->comment_content)) {
+                    $content = $comment->comment_content;
+                } elseif (isset($comment->content)) {
+                    $content = $comment->content;
+                }
+                if (!is_string($content) || $content === '') {
+                    return [];
+                }
+
+                // Match hashtags: letters, numbers, underscore and common CJK ranges
+                preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+                $tags = [];
+                foreach ($matches[0] as $tag) {
+                    $clean = strtolower(trim(ltrim($tag, '#')));
+                    if ($clean !== '' && strlen($clean) <= 100) {
+                        $tags[] = $clean;
+                    }
+                }
+                return array_values(array_unique($tags));
+            },
+        ]);
+
         register_graphql_field('Comment', 'userId', [
             'type'        => 'Int',
             'description' => __('User ID of the comment author (from wp_users)', 'listing-post-type'),
@@ -2164,6 +2204,80 @@ add_action(
             ],
         ]);
 
+        ### COMMENT SUBMISSION ENDPOINT ###
+        register_rest_route('v1', '/review', [
+            'methods' => 'POST',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                $params = $request->get_json_params();
+                $content = sanitize_textarea_field($params['content'] ?? '');
+                $restaurant_id = intval($params['restaurantId'] ?? 0);
+                $parent_id = intval($params['parent'] ?? 0);
+                $author_id = intval($params['authorId'] ?? $user_id);
+
+                if (empty($content)) {
+                    return new WP_Error('rest_invalid_param', 'Content is required', ['status' => 400]);
+                }
+
+                if (!$restaurant_id && !$parent_id) {
+                    return new WP_Error('rest_invalid_param', 'Either restaurantId or parent is required', ['status' => 400]);
+                }
+
+                // Determine the post ID - use restaurant_id for top-level comments, or get from parent
+                $post_id = $restaurant_id;
+                if ($parent_id && !$restaurant_id) {
+                    $parent_comment = get_comment($parent_id);
+                    if ($parent_comment) {
+                        $post_id = $parent_comment->comment_post_ID;
+                    } else {
+                        return new WP_Error('rest_invalid_param', 'Invalid parent comment', ['status' => 400]);
+                    }
+                }
+
+                // Create comment data
+                $comment_data = [
+                    'comment_post_ID' => $post_id,
+                    'comment_content' => $content,
+                    'comment_type' => 'listing',
+                    'comment_approved' => 1, // Auto-approve comments
+                    'user_id' => $author_id,
+                    'comment_parent' => $parent_id, // 0 for top-level comments
+                ];
+
+                $comment_id = wp_insert_comment($comment_data);
+
+                if (is_wp_error($comment_id)) {
+                    return new WP_Error('rest_comment_failed', $comment_id->get_error_message(), ['status' => 500]);
+                }
+
+                // Auto-extract hashtags from content
+                preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+                $tags = [];
+                foreach ($matches[0] as $tag) {
+                    $clean = strtolower(trim(ltrim($tag, '#')));
+                    if ($clean !== '' && strlen($clean) <= 100) {
+                        $tags[] = $clean;
+                    }
+                }
+                if (!empty($tags)) {
+                    update_comment_meta($comment_id, 'hashtags', implode(',', array_values(array_unique($tags))));
+                }
+
+                return [
+                    'status' => 'approved',
+                    'comment_id' => $comment_id,
+                    'message' => 'Comment submitted successfully'
+                ];
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ]);
+
         ### COMMENT LIKE/UNLIKE ENDPOINT ###
         register_rest_route('restaurant/v1', '/comment-like', [
             'methods' => 'POST',
@@ -2379,6 +2493,49 @@ add_action('pre_get_comments', function ($query) {
     unset($query->query_vars['include_unapproved']);
 });
 
+// Automatically extract and store hashtags when comments are created or updated
+add_action('comment_post', function ($comment_ID) {
+    $comment = get_comment($comment_ID);
+    if (!$comment) return;
+    if ($comment->comment_type !== 'listing' && $comment->comment_type !== 'listing_draft') return;
+
+    $content = is_string($comment->comment_content) ? $comment->comment_content : '';
+    if ($content === '') return;
+
+    preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+    $tags = [];
+    foreach ($matches[0] as $tag) {
+        $clean = strtolower(trim(ltrim($tag, '#')));
+        if ($clean !== '' && strlen($clean) <= 100) {
+            $tags[] = $clean;
+        }
+    }
+    if (!empty($tags)) {
+        update_comment_meta($comment_ID, 'hashtags', implode(',', array_values(array_unique($tags))));
+    }
+});
+
+add_action('edit_comment', function ($comment_ID) {
+    $comment = get_comment($comment_ID);
+    if (!$comment) return;
+    if ($comment->comment_type !== 'listing' && $comment->comment_type !== 'listing_draft') return;
+
+    $content = is_string($comment->comment_content) ? $comment->comment_content : '';
+    if ($content === '') return;
+
+    preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+    $tags = [];
+    foreach ($matches[0] as $tag) {
+        $clean = strtolower(trim(ltrim($tag, '#')));
+        if ($clean !== '' && strlen($clean) <= 100) {
+            $tags[] = $clean;
+        }
+    }
+    if (!empty($tags)) {
+        update_comment_meta($comment_ID, 'hashtags', implode(',', array_values(array_unique($tags))));
+    }
+});
+
 add_action('init', function () {
     $labels = [
         'name'          => __('Listings'),
@@ -2493,6 +2650,19 @@ add_action('init', function () {
             return current_user_can('edit_posts');
         },
     ]);
+
+        // Register comment meta for hashtags (stored as comma-separated string for efficient LIKE queries)
+        register_meta('comment', 'hashtags', [
+            'type' => 'string',
+            'single' => true,
+            'show_in_rest' => true,
+            'show_in_graphql' => true,
+            'graphql_single_name' => 'CommentHashtags',
+            'description' => __('Hashtags for the comment (comma-separated)', 'listing-post-type'),
+            'auth_callback' => function () {
+                return current_user_can('edit_posts');
+            },
+        ]);
 
     // Register comment meta for comment likes
     register_meta('comment', '_comment_likes', [
@@ -2688,6 +2858,31 @@ add_filter('graphql_comment_query_args', function ($query_args, $source, $args, 
     // Force only approved comments
     $query_args['status'] = 'approve';
 
+    return $query_args;
+}, 10, 5);
+
+// Allow filtering comments by hashtag via GraphQL where args
+add_filter('graphql_input_fields', function ($fields, $type_name) {
+    if ($type_name === 'RootQueryToCommentConnectionWhereArgs') {
+        $fields['hashtag'] = [
+            'type' => 'String',
+            'description' => __('Filter comments by hashtag (without #)', 'listing-post-type'),
+        ];
+    }
+    return $fields;
+}, 10, 2);
+
+add_filter('graphql_comment_query_args', function ($query_args, $source, $args, $context, $info) {
+    if (!empty($args['where']['hashtag'])) {
+        global $wpdb;
+        $tag = sanitize_text_field(strtolower($args['where']['hashtag']));
+        // Use a meta query to match the comma-separated string
+        $query_args['meta_query'][] = [
+            'key'     => 'hashtags',
+            'value'   => $tag,
+            'compare' => 'LIKE',
+        ];
+    }
     return $query_args;
 }, 10, 5);
 

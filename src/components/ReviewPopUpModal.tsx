@@ -302,6 +302,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
       reviewImages: [],
       palates: session.user.palates || "",
       userAvatar: session.user.image || DEFAULT_USER_ICON,
+      hashtags: [], // Add empty hashtags array for optimistic reply
       author: {
         name: session.user.name || "Unknown User",
         node: {
@@ -357,8 +358,12 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
         return false;
       };
 
-      if (isSuccess(res.status)) {
-        console.log('✅ Comment approved successfully with status:', res.status);
+      // Check if response has status field or if it's a direct success response
+      const responseStatus = res.status || res.data?.status;
+      const isResponseSuccess = isSuccess(responseStatus) || (res.data && res.data.status === 'approved');
+
+      if (isResponseSuccess) {
+        console.log('✅ Comment approved successfully with status:', responseStatus);
         toast.success(commentedSuccess);
         // Remove only the optimistic reply, then merge server replies (avoid duplicates)
         const updatedReplies = await reviewService.fetchCommentReplies(data.id);

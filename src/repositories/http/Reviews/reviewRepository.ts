@@ -58,183 +58,80 @@ export class ReviewRepository implements ReviewRepo {
       fetchPolicy: "no-cache",
     });
 
-    console.log('🔍 GraphQL reply data:', data);
-    const replies = data?.comment?.replies?.nodes || [];
-    console.log('📝 Extracted replies:', replies);
-    
-    // Runtime validation - more lenient for replies since they have different structure
-    if (!Array.isArray(replies)) {
-      throw new Error('Invalid reply data received from GraphQL - not an array');
-    }
+    const replies = data?.comment?.replies?.nodes ?? [];
 
-    // Validate that we have at least some basic structure for replies
-    if (replies.length > 0) {
-      const firstReply = replies[0];
-      if (!firstReply || typeof firstReply !== 'object' || !firstReply.id || !firstReply.databaseId) {
-        console.warn('Reply data structure may not match expected format:', firstReply);
-        // Don't throw error, just log warning and continue
-      }
+    // Runtime validation - more lenient approach
+    if (!Array.isArray(replies)) {
+      throw new Error('Invalid replies data received from GraphQL - not an array');
     }
 
     return replies;
   }
 
-  async createReview<T>(form: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: T }> {
-    const response = await request.POST('/wp-json/wp/v2/api/comments', {
-      body: JSON.stringify(form),
-      headers: {
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const status = (response as any).status || 200;
-    return {
-      status,
-      data: response as T
-    }
-  }
-
-  async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
-    try {
-      const response = await request.GET('/wp-json/wp/v2/api/comments?type=listing_draft&status=hold', {
-        headers: {
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-
-      const drafts = response || [];
-      
-      // Return raw draft data as the component expects WordPress comment structure
-      if (!Array.isArray(drafts)) {
-        console.error('Drafts response is not an array:', drafts);
-        return [];
-      }
-
-      return drafts as Record<string, unknown>[];
-    } catch (error) {
-      console.error("Failed to fetch review drafts", error);
-      throw new Error('Failed to fetch review drafts');
-    }
-  }
-
-  async deleteReviewDraft(draftId: number, accessToken?: string, force = false): Promise<void> {
-    try {
-      const query = force ? '?force=true' : '';
-      await request.DELETE(`/wp-json/wp/v2/api/comments/${draftId}${query}`, {
-        headers: {
-
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-    } catch (error) {
-      console.error("Failed to delete review draft", error);
-      throw new Error('Failed to delete review draft');
-    }
-  }
-
-  async updateReviewDraft(draftId: number, form: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
-    try {
-      const response = await request.PUT(`/wp-json/wp/v2/api/comments/${draftId}`, {
-        body: JSON.stringify(form),
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const status = (response as any).status || 200;
-      return {
-        status,
-        data: response
-      };
-    } catch (error) {
-      console.error("Failed to update review draft", error);
-      throw new Error('Failed to update review draft');
-    }
-  }
-
-  async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
-    try {
-      const response = await request.GET(`/wp-json/wp/v2/api/comments/${reviewId}`, {
-        headers: {
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-
-      if (!response || typeof response !== 'object') {
-        throw new Error('Invalid review data received');
-      }
-
-      return response as Record<string, unknown>;
-    } catch (error) {
-      console.error("Failed to fetch review by ID", error);
-      throw new Error('Failed to fetch review by ID');
-    }
-  }
-
-  async getUserReviews(userId: number, first = 16, after: string | null = null): Promise<{ userCommentCount: number; reviews: GraphQLReview[]; pageInfo: PageInfo }> {
+  async getUserReviews(userId: number, first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo; userCommentCount: number }> {
     const { data } = await client.query<{
-      userCommentCount: number;
       comments: {
         nodes: GraphQLReview[];
         pageInfo: PageInfo;
       };
+      userCommentCount: number;
     }>({
       query: GET_USER_REVIEWS,
-      variables: { userId, first, after },
+      variables: { userId: userId.toString(), first, after },
+      context: {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+        },
+      },
+      fetchPolicy: "no-cache",
     });
 
     const reviews = data?.comments?.nodes ?? [];
     const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
+    const userCommentCount = data?.userCommentCount ?? 0;
 
     // Runtime validation - more lenient approach
     if (!Array.isArray(reviews)) {
       throw new Error('Invalid review data received from GraphQL - not an array');
     }
 
-    return {
-      userCommentCount: data?.userCommentCount ?? 0,
-      reviews,
-      pageInfo
-    };
+    return { reviews, pageInfo, userCommentCount };
   }
 
   async likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
-    const body = JSON.stringify({
-      comment_id: commentId,
-    });
-    const response = await request.POST('/wp-json/wp/v2/api/comments/comment-like', {
-      body,
-      headers: {
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-    });
+    const response = await request.POST(
+      `/wp-json/v1/like-comment`,
+      {
+        body: JSON.stringify({
+          comment_id: commentId,
+        }),
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       userLiked: (response as any)?.userLiked ?? false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       likesCount: (response as any)?.likesCount ?? 0
     };
   }
 
   async unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
-    const body = JSON.stringify({
-      comment_id: commentId,
-    });
-    const response = await request.POST('/wp-json/wp/v2/api/comments/comment-unlike', {
-      body,
-      headers: {
-        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-      },
-    });
+    const response = await request.POST(
+      `/wp-json/v1/unlike-comment`,
+      {
+        body: JSON.stringify({
+          comment_id: commentId,
+        }),
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     return {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       userLiked: (response as any)?.userLiked ?? false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       likesCount: (response as any)?.likesCount ?? 0
     };
   }
@@ -247,7 +144,7 @@ export class ReviewRepository implements ReviewRepo {
       };
     }>({
       query: GET_RESTAURANT_REVIEWS,
-      variables: { restaurantId, first, after },
+      variables: { restaurantId: restaurantId.toString(), first, after },
       context: {
         headers: {
           ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
@@ -268,7 +165,6 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview | null> {
-    if (!restaurantId) throw new Error('Missing restaurantId');
     try {
       const { data } = await client.query<{
         reviews: {
@@ -276,47 +172,58 @@ export class ReviewRepository implements ReviewRepo {
         };
       }>({
         query: GET_REVIEWS_BY_RESTAURANT_ID,
-        variables: { restaurantId },
+        variables: { restaurantId: restaurantId.toString() },
         fetchPolicy: "no-cache",
       });
-      if (data?.reviews?.nodes?.length) {
-        const review = data.reviews.nodes[0];
-        // Basic validation - more lenient approach
-        if (!review || typeof review !== 'object' || !review.id) {
-          console.warn('Review data structure may not match expected format:', review);
-          return null;
-        }
-        return review;
+
+      const reviews = data?.reviews?.nodes ?? [];
+      
+      if (!Array.isArray(reviews) || reviews.length === 0) {
+        return null;
       }
-    } catch {
+
+      return reviews[0] || null;
+    } catch (error) {
+      console.error('Error fetching restaurant reviews by ID:', error);
+      return null;
     }
-    const response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}`);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((response as any)?.error || (response as any)?.status >= 400) {
-      throw new Error('Failed to fetch from WordPress');
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (response as any)?.reviews?.[0] || response;
-    // Basic validation - more lenient approach
-    if (!data || typeof data !== 'object') {
-      console.warn('Review data structure may not match expected format:', data);
-    }
-    return data;
+  }
+
+  async postReview(payload: any, accessToken: string): Promise<any> {
+    const response = await request.POST(
+      `/wp-json/v1/review`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    return response;
+  }
+
+  // Placeholder implementations for missing interface methods
+  async createReview<T>(data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: T }> {
+    throw new Error('Method not implemented');
+  }
+
+  async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
+    throw new Error('Method not implemented');
+  }
+
+  async deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void> {
+    throw new Error('Method not implemented');
+  }
+
+  async updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
+    throw new Error('Method not implemented');
+  }
+
+  async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
+    throw new Error('Method not implemented');
   }
 
   async likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
-    try {
-      const response = await request.POST('/wp-json/wp/v2/api/like-review', {
-        body: JSON.stringify({ review_id: reviewId }),
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-        },
-      });
-      return response as Record<string, unknown>;
-    } catch (error) {
-      console.error('Error liking review:', error);
-      throw error;
-    }
+    throw new Error('Method not implemented');
   }
 }
