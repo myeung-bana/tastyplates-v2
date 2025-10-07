@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useFollowContext } from "./FollowContext";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
+import { FollowService } from "@/services/follow/followService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { stripTags, formatDate, PAGE, capitalizeWords, truncateText, generateProfileUrl } from "../lib/utils";
@@ -38,6 +39,8 @@ import {
 
 const userService = new UserService();
 const reviewService = new ReviewService();
+
+const followService = new FollowService();
 
 const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   data,
@@ -146,6 +149,32 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     }
   }, [isOpen, data?.id]);
 
+  // Initialize follow state when modal opens
+  useEffect(() => {
+    // Only run this once the modal is open, we have a session token,
+    // and we can reliably read the author's databaseId.
+    if (!isOpen) return;
+    if (!session?.accessToken) return;
+    
+    // Get author user ID from data
+    const authorUserId = data.userId || data.author?.node?.databaseId;
+    if (!authorUserId) {
+      setIsFollowing(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        const result = await userService.isFollowingUser(Number(authorUserId), session.accessToken);        
+        setIsFollowing(!!result.is_following);
+        setFollowState(Number(authorUserId), !!result.is_following);
+      } catch (err) {
+        console.error('Error fetching follow state:', err);
+        setIsFollowing(false);
+      }
+    })();
+  }, [isOpen, session?.accessToken, data.userId, data.author, setFollowState]);
+
   // Cooldown timer
   useEffect(() => {
     if (cooldown > 0) {
@@ -176,7 +205,12 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
     setFollowLoading(true);
     try {
-      const response = await userService.followUser(Number(authorUserId), session.accessToken || "");
+      let response;
+      if (isFollowing) {
+        response = await followService.unfollowUser(Number(authorUserId), session.accessToken || "");
+      } else {
+        response = await followService.followUser(Number(authorUserId), session.accessToken || "");
+      }
       
       if (response.status === code.success) {
         const newFollowState = !isFollowing;
@@ -184,7 +218,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
         setFollowState(Number(authorUserId), newFollowState);
         toast.success(newFollowState ? "Following user!" : "Unfollowed user!");
       } else {
-        toast.error(errorOccurred);
+        toast.error(response.message || errorOccurred);
       }
     } catch (error) {
       console.error('Follow/unfollow error:', error);

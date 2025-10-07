@@ -5,25 +5,21 @@ interface ReviewCardSkeletonProps {
 }
 
 const ReviewCardSkeleton: React.FC<ReviewCardSkeletonProps> = ({ width = 304 }) => {
-  const safeWidth = isNaN(width) ? 304 : width;
   return (
-    <div 
-      className="review-card animate-pulse"
-      style={{ width: `${safeWidth}px` }}
-    >
+    <div className="overflow-hidden animate-pulse">
       {/* Main review image */}
-      <div className="review-card__image-container">
-        <div className="bg-gray-300 rounded-2xl min-h-[233px] max-h-[236px] md:min-h-[228px] md:max-h-[405px] w-full" />
+      <div className="relative aspect-[4.5/6] overflow-hidden rounded-2xl mb-2">
+        <div className="bg-gray-300 w-full h-full" />
       </div>
 
       {/* User info section with palate tags */}
-      <div className="review-card__content !px-0 mt-2 md:mt-0">
-        <div className="review-card__user mb-2">
+      <div className="px-0">
+        <div className="flex items-start gap-2 mb-2">
           <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0" />
-          <div className="review-card__user-info flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
             <div className="h-4 bg-gray-300 rounded w-24 mb-1" />
             {/* Palate tags */}
-            <div className="review-block__palate-tags flex flex-row flex-wrap gap-1">
+            <div className="flex flex-row flex-wrap gap-1">
               <div className="h-5 bg-gray-200 rounded-full w-16" />
               <div className="h-5 bg-gray-200 rounded-full w-20" />
             </div>

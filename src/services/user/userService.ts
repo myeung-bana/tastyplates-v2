@@ -162,11 +162,17 @@ export class UserService {
             const res = await userRepo.followUser(userId, token);
             return {
                 ...res,
-                status: code.success,
+                status: res.status || code.success,
             };
         } catch (error) {
             console.error('Follow user error:', error);
-            return {} as followUserResponse;
+            return {
+                result: 'error',
+                following: 0,
+                followers: 0,
+                status: 500,
+                message: 'Failed to follow user. Please try again.'
+            };
         }
     }
 
@@ -175,11 +181,17 @@ export class UserService {
             const res = await userRepo.unfollowUser(userId, token);
             return {
                 ...res,
-                status: code.success,
+                status: res.status || code.success,
             };
         } catch (error) {
             console.error('Unfollow user error:', error);
-            return {} as followUserResponse;
+            return {
+                result: 'error',
+                following: 0,
+                followers: 0,
+                status: 500,
+                message: 'Failed to unfollow user. Please try again.'
+            };
         }
     }
 

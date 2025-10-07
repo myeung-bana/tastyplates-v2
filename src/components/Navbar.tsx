@@ -30,7 +30,7 @@ import CustomModal from "./ui/Modal/Modal";
 import { MdArrowBackIos } from "react-icons/md";
 
 const navigationItems = [
-  { name: "Restaurants", href: RESTAURANTS },
+  { name: "Explore", href: RESTAURANTS },
   // { name: "Dashboard", href: "/dashboard" },
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];

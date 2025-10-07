@@ -51,7 +51,7 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
       )}
 
       {/* Image Section - Standalone with rounded borders */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl mb-2">
+      <div className="relative aspect-[4.5/6] overflow-hidden rounded-2xl mb-2">
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
@@ -59,8 +59,8 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
               : DEFAULT_IMAGE
           }
           alt="Review"
-          width={400}
-          height={300}
+          width={450}
+          height={600}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200 cursor-pointer"
           onClick={() => setIsModalOpen(true)}
         />

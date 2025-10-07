@@ -2,9 +2,9 @@
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { GraphQLReview } from "@/types/graphql";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
-import ReviewCard from "./ReviewCard";
+import ReviewCard2 from "./ReviewCard2";
+import ReviewCardSkeleton from "./ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
-import { Masonry } from "masonic";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
@@ -38,7 +38,6 @@ const Reviews = () => {
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 0);
   
   // Cap reviews at 25
   const MAX_REVIEWS = 25;
@@ -47,26 +46,6 @@ const Reviews = () => {
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
-  // const isLoadingOnce = useRef(false);
-
-  const handleResize = () => {
-    setWidth(window.innerWidth);
-  };
-
-  useEffect(() => {
-    window.addEventListener("load", handleResize);
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("load", handleResize);
-    };
-  }, []);
-
-  const getColumns = () => {
-    if (width >= 1024) return 4;
-    if (width >= 768) return 3;
-    return 2;
-  };
 
   const loadMore = useCallback(async () => {
     if (loading || !hasNextPage || hasReachedLimit) return;
@@ -133,11 +112,21 @@ const Reviews = () => {
 
   if (!initialLoaded) {
     return (
-      <div className="!w-full mt-10">
-        <div className="flex justify-center text-center min-h-[40px] ml-50">
-          <span className="text-gray-500 text-sm">Loading session...</span>
+      <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
+        <div className="reviews__container xl:!px-0">
+          <h2 className="reviews__title">Latest Reviews</h2>
+          <p className="reviews__subtitle">
+            See what others are saying about their dining experiences
+          </p>
+          
+          {/* Skeleton loading for initial load */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+            {Array.from({ length: 10 }, (_, i) => (
+              <ReviewCardSkeleton key={`skeleton-${i}`} />
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -149,30 +138,26 @@ const Reviews = () => {
           See what others are saying about their dining experiences
         </p>
 
-        <Masonry items={reviews.map(mapToReviewedDataProps)} render={ReviewCard} columnGutter={width > 1280 ? 32 : width > 767 ? 20 : 12} maxColumnWidth={304} columnCount={getColumns()} maxColumnCount={4} />
+        {/* Standard Grid Layout */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+          {reviews.map((review) => (
+            <ReviewCard2 
+              key={review.id}
+              data={mapToReviewedDataProps(review)}
+            />
+          ))}
+        </div>
+        
+        {/* Loading more content with skeletons */}
+        {loading && !hasReachedLimit && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
+            {Array.from({ length: 5 }, (_, i) => (
+              <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
+            ))}
+          </div>
+        )}
+        
         <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-          {loading && !hasReachedLimit && (
-            <>
-              <svg
-                className="w-5 h-5 text-gray-500 animate-spin"
-                viewBox="0 0 100 100"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="35"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="10"
-                  strokeDasharray="164"
-                  strokeDashoffset="40"
-                />
-              </svg>
-              <span className="text-gray-500 text-sm">Load more content</span>
-            </>
-          )}
           {hasReachedLimit && (
             <div className="text-center">
               <p className="text-gray-400 text-sm mb-2">

@@ -577,97 +577,6 @@ function delete_listing($request)
     return ['success' => true, 'deleted' => $id];
 }
 
-// function enhance_set_featured_images_from_reviews()
-// {
-//     // Start a timer for performance tracking
-//     $start_time = microtime(true);
-//     $total_listings_processed = 0;
-//     $featured_images_set = 0;
-
-//     // Retrieve all 'listing' posts that do NOT already have a featured image
-//     $args_listings = [
-//         'post_type'      => 'listing',
-//         'posts_per_page' => -1,          // Get all listings
-//         'post_status'    => 'any',       // Consider all statuses (publish, draft, etc.)
-//         'meta_query'     => [            // Only get listings that don't have a thumbnail
-//             'relation' => 'OR',
-//             [
-//                 'key'     => '_thumbnail_id',
-//                 'compare' => 'NOT EXISTS',
-//             ],
-//             [
-//                 'key'     => '_thumbnail_id',
-//                 'value'   => '',
-//                 'compare' => '=',
-//             ],
-//         ],
-//         'fields'         => 'ids',       // Only get post IDs for efficiency
-//     ];
-
-//     $listing_ids_without_thumbnail = get_posts($args_listings);
-
-//     if (empty($listing_ids_without_thumbnail)) {
-//         error_log('No listings found without a featured image to process.');
-//         return;
-//     }
-
-//     error_log('Starting featured image migration for ' . count($listing_ids_without_thumbnail) . ' listings.');
-
-//     foreach ($listing_ids_without_thumbnail as $listing_id) {
-//         $total_listings_processed++;
-
-//         // Get approved comments for the current listing, ensuring they have image IDs
-//         $args_comments = [
-//             'post_id'    => $listing_id,
-//             'status'     => 'approve',
-//             'orderby'    => 'comment_date_gmt', // Order by date to potentially pick the oldest/newest image first
-//             'order'      => 'ASC',              // ASC for oldest comment first, DESC for newest
-//             'meta_query' => [
-//                 [
-//                     'key'     => 'review_images_idz',
-//                     'compare' => 'EXISTS',
-//                 ],
-//                 [
-//                     'key'     => 'review_images_idz',
-//                     'value'   => '',
-//                     'compare' => '!=',
-//                 ],
-//             ],
-//             'number'     => 1, // Only need one comment that has an image
-//         ];
-
-//         $comments_with_images = get_comments($args_comments);
-
-//         if (!empty($comments_with_images)) {
-//             $comment = $comments_with_images[0]; // Get the first comment found with images
-//             $image_ids_raw = get_comment_meta($comment->comment_ID, 'review_images_idz', true);
-
-//             // Sanitize and validate the image ID
-//             $image_ids = explode(',', $image_ids_raw);
-//             $first_image_id = intval(trim($image_ids[0]));
-
-//             // Verify that the image ID actually corresponds to a valid attachment in the Media Library
-//             if ($first_image_id > 0 && get_post_type($first_image_id) === 'attachment') {
-//                 if (set_post_thumbnail($listing_id, $first_image_id)) {
-//                     $featured_images_set++;
-//                     error_log("SUCCESS: Set featured image for listing #{$listing_id} from comment #{$comment->comment_ID} (Image ID: {$first_image_id})");
-//                 } else {
-//                     error_log("WARNING: Failed to set featured image for listing #{$listing_id} with image ID #{$first_image_id} from comment #{$comment->comment_ID}.");
-//                 }
-//             } else {
-//                 error_log("NOTICE: First image ID #{$first_image_id} from comment #{$comment->comment_ID} for listing #{$listing_id} is not a valid attachment or is zero.");
-//             }
-//         } else {
-//             error_log("NOTICE: Listing #{$listing_id} has no approved comments with review images.");
-//         }
-//     }
-
-//     $end_time = microtime(true);
-//     $execution_time = round($end_time - $start_time, 2);
-
-//     error_log("Finished featured image migration. Processed {$total_listings_processed} listings. Set {$featured_images_set} featured images in {$execution_time} seconds.");
-// }
-
 function register_category_taxonomy()
 {
     register_taxonomy('listingCategories', ['listing'], [
@@ -1040,10 +949,146 @@ function get_followers_list(WP_REST_Request $request)
                 'name' => $user->display_name,
                 'palates' => array_values($palatesArr),
                 'image' => $avatar_url,
+                'username' => $user->user_login,
+                'email' => $user->user_email,
             ];
         }
     }
     return $users;
+}
+
+function get_following_reviews(WP_REST_Request $request)
+{
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return new WP_REST_Response(['error' => 'User not authenticated'], 401);
+    }
+    
+    $page = intval($request->get_param('page')) ?: 1;
+    $per_page = intval($request->get_param('per_page')) ?: 10;
+    $offset = ($page - 1) * $per_page;
+    
+    global $wpdb;
+    $table = $wpdb->prefix . 'user_followers';
+    
+    // Get followed user IDs
+    $following_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT user_id FROM $table WHERE follower_id = %d",
+        $user_id
+    ));
+    
+    if (empty($following_ids)) {
+        return new WP_REST_Response(['reviews' => [], 'has_more' => false], 200);
+    }
+    
+    // Get reviews from followed users
+    $placeholders = implode(',', array_fill(0, count($following_ids), '%d'));
+    $query_params = array_merge($following_ids, [$per_page + 1, $offset]);
+    
+    $reviews = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.*, p.post_title as restaurant_name, p.ID as restaurant_id,
+                u.display_name, u.user_login, u.user_email
+         FROM {$wpdb->comments} c 
+         JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID 
+         JOIN {$wpdb->users} u ON c.user_id = u.ID
+         WHERE c.user_id IN ($placeholders) 
+         AND c.comment_approved = 1 
+         AND c.comment_type = 'listing_draft'
+         ORDER BY c.comment_date DESC 
+         LIMIT %d OFFSET %d",
+        $query_params
+    ));
+    
+    $has_more = count($reviews) > $per_page;
+    if ($has_more) {
+        array_pop($reviews); // Remove the extra record
+    }
+    
+    // Format reviews with metadata
+    $formatted_reviews = [];
+    foreach ($reviews as $review) {
+        $review_stars = get_comment_meta($review->comment_ID, 'review_stars', true);
+        $review_title = get_comment_meta($review->comment_ID, 'review_main_title', true);
+        $review_images = get_comment_meta($review->comment_ID, 'review_images_idz', true);
+        
+        $formatted_reviews[] = [
+            'id' => $review->comment_ID,
+            'content' => $review->comment_content,
+            'date' => $review->comment_date,
+            'stars' => floatval($review_stars),
+            'title' => $review_title,
+            'images' => $review_images ? json_decode($review_images, true) : [],
+            'restaurant' => [
+                'id' => $review->restaurant_id,
+                'name' => $review->restaurant_name
+            ],
+            'author' => [
+                'id' => $review->user_id,
+                'username' => $review->user_login,
+                'display_name' => $review->display_name,
+                'avatar' => get_avatar_url($review->user_id)
+            ]
+        ];
+    }
+    
+    return new WP_REST_Response([
+        'reviews' => $formatted_reviews,
+        'has_more' => $has_more
+    ], 200);
+}
+
+function get_suggested_users(WP_REST_Request $request)
+{
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return new WP_REST_Response(['error' => 'User not authenticated'], 401);
+    }
+    
+    global $wpdb;
+    $table = $wpdb->prefix . 'user_followers';
+    
+    // Get users already being followed
+    $following_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT user_id FROM $table WHERE follower_id = %d",
+        $user_id
+    ));
+    
+    $exclude_ids = array_merge($following_ids, [$user_id]);
+    $exclude_placeholders = implode(',', array_fill(0, count($exclude_ids), '%d'));
+    $query_params = array_merge($exclude_ids, [5]); // Limit to 5 suggestions
+    
+    // Get users with most followers (excluding already followed and self)
+    $suggested = $wpdb->get_results($wpdb->prepare(
+        "SELECT u.ID, u.user_login, u.display_name, u.user_email,
+                COUNT(f.follower_id) as follower_count,
+                (SELECT COUNT(*) FROM {$wpdb->comments} c 
+                 WHERE c.user_id = u.ID AND c.comment_approved = 1 
+                 AND c.comment_type = 'listing_draft') as review_count
+         FROM {$wpdb->users} u
+         LEFT JOIN $table f ON u.ID = f.user_id
+         WHERE u.ID NOT IN ($exclude_placeholders)
+         AND u.ID != 1
+         GROUP BY u.ID
+         HAVING review_count > 0
+         ORDER BY follower_count DESC, review_count DESC
+         LIMIT %d",
+        $query_params
+    ));
+    
+    // Format suggested users
+    $formatted_suggestions = [];
+    foreach ($suggested as $user) {
+        $formatted_suggestions[] = [
+            'id' => $user->ID,
+            'username' => $user->user_login,
+            'display_name' => $user->display_name,
+            'avatar' => get_avatar_url($user->ID),
+            'follower_count' => intval($user->follower_count),
+            'review_count' => intval($user->review_count)
+        ];
+    }
+    
+    return new WP_REST_Response(['suggested_users' => $formatted_suggestions], 200);
 }
 
 $posts = get_posts(['post_type' => 'listing', 'numberposts' => -1]);
@@ -2045,6 +2090,24 @@ add_action(
         register_rest_route('v1', '/followers-list', array(
             'methods' => 'GET',
             'callback' => 'get_followers_list',
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ));
+
+        // Following reviews endpoint
+        register_rest_route('v1', '/following-reviews', array(
+            'methods' => 'GET',
+            'callback' => 'get_following_reviews',
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ));
+
+        // Suggested users endpoint
+        register_rest_route('v1', '/suggested-users', array(
+            'methods' => 'GET',
+            'callback' => 'get_suggested_users',
             'permission_callback' => function () {
                 return is_user_logged_in();
             }

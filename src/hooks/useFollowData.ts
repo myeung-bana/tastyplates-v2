@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { UserService } from '@/services/user/userService';
+import { FollowService } from '@/services/follow/followService';
 import { responseStatusCode as code } from '@/constants/response';
 import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from '@/constants/session';
 
@@ -22,7 +22,7 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
   const [followingLoading, setFollowingLoading] = useState(true);
   const hasLoadedFollowData = useRef(false);
 
-  const userService = useRef(new UserService()).current;
+  const followService = useRef(new FollowService()).current;
 
   const loadFollowData = useCallback(async () => {
     if (!session?.accessToken || !targetUserId) return;
@@ -33,8 +33,8 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
     try {
       // Load both followers and following in parallel for better performance
       const [followingList, followersList] = await Promise.all([
-        userService.getFollowingList(targetUserId, session.accessToken),
-        userService.getFollowersList(targetUserId, [], session.accessToken) // Pass empty array for initial load
+        followService.getFollowingList(targetUserId, session.accessToken),
+        followService.getFollowersList(targetUserId, [], session.accessToken) // Pass empty array for initial load
       ]);
       
       setFollowing(followingList);
@@ -60,7 +60,7 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
     
-    const response = await userService.followUser(userIdNum, session.accessToken);
+    const response = await followService.followUser(userIdNum, session.accessToken);
     if (response.status === code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
@@ -75,7 +75,7 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
     
-    const response = await userService.unfollowUser(userIdNum, session.accessToken);
+    const response = await followService.unfollowUser(userIdNum, session.accessToken);
     if (response.status === code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));

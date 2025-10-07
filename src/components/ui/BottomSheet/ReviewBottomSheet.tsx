@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useFollowContext } from "../../FollowContext";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
+import { FollowService } from "@/services/follow/followService";
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { stripTags, formatDate, PAGE, capitalizeWords, truncateText, generateProfileUrl } from "../../../lib/utils";
@@ -37,6 +38,8 @@ import {
 
 const userService = new UserService();
 const reviewService = new ReviewService();
+
+const followService = new FollowService();
 
 const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
   data,
@@ -161,7 +164,12 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
 
     setFollowLoading(true);
     try {
-      const response = await userService.followUser(Number(authorUserId), session.accessToken || "");
+      let response;
+      if (isFollowing) {
+        response = await followService.unfollowUser(Number(authorUserId), session.accessToken || "");
+      } else {
+        response = await followService.followUser(Number(authorUserId), session.accessToken || "");
+      }
       
       if (response.status === code.success) {
         const newFollowState = !isFollowing;
@@ -169,7 +177,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
         setFollowState(Number(authorUserId), newFollowState);
         toast.success(newFollowState ? "Following user!" : "Unfollowed user!");
       } else {
-        toast.error(errorOccurred);
+        toast.error(response.message || errorOccurred);
       }
     } catch (error) {
       console.error('Follow/unfollow error:', error);

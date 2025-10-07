@@ -157,9 +157,17 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        const response = await request.POST(`/wp-json/v1/follow`, { body: JSON.stringify({ user_id: userId }), headers: headers });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return response as any;
+        try {
+            const response = await request.POST(`/wp-json/v1/follow`, { 
+                body: JSON.stringify({ user_id: userId }), 
+                headers: headers 
+            });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return response as any;
+        } catch (error) {
+            console.error('Repository followUser error:', error);
+            throw new Error('Failed to follow user');
+        }
     }
 
     async unfollowUser(userId: number, token?: string): Promise<followUserResponse> {
@@ -167,9 +175,17 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        const response = await request.POST('/wp-json/v1/unfollow', { body: JSON.stringify({ user_id: userId }), headers: headers });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return response as any;
+        try {
+            const response = await request.POST('/wp-json/v1/unfollow', { 
+                body: JSON.stringify({ user_id: userId }), 
+                headers: headers 
+            });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return response as any;
+        } catch (error) {
+            console.error('Repository unfollowUser error:', error);
+            throw new Error('Failed to unfollow user');
+        }
     }
 
     async isFollowingUser(userId: number, token?: string): Promise<isFollowingUserResponse> {
@@ -177,9 +193,17 @@ export class UserRepository implements UserRepo {
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         };
 
-        const response = await request.POST('/wp-json/v1/is-following', { body: JSON.stringify({ user_id: userId }), headers: headers });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return response as any;
+        try {
+            const response = await request.POST('/wp-json/v1/is-following', { 
+                body: JSON.stringify({ user_id: userId }), 
+                headers: headers 
+            });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return response as any;
+        } catch (error) {
+            console.error('Repository isFollowingUser error:', error);
+            return { is_following: false };
+        }
     }
 
     async sendForgotPasswordEmail(formData: FormData): Promise<HttpResponse> {
