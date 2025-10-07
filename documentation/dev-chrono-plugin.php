@@ -993,7 +993,7 @@ function get_following_reviews(WP_REST_Request $request)
          JOIN {$wpdb->users} u ON c.user_id = u.ID
          WHERE c.user_id IN ($placeholders) 
          AND c.comment_approved = 1 
-         AND c.comment_type = 'listing_draft'
+         AND c.comment_type = 'listing'
          ORDER BY c.comment_date DESC 
          LIMIT %d OFFSET %d",
         $query_params
@@ -1010,6 +1010,33 @@ function get_following_reviews(WP_REST_Request $request)
         $review_stars = get_comment_meta($review->comment_ID, 'review_stars', true);
         $review_title = get_comment_meta($review->comment_ID, 'review_main_title', true);
         $review_images = get_comment_meta($review->comment_ID, 'review_images_idz', true);
+        $image_urls = [];
+        if ($review_images) {
+            $images_data = json_decode($review_images, true);
+            if (is_array($images_data)) {
+                foreach ($images_data as $img) {
+                    if (is_array($img) && isset($img['sourceUrl'])) {
+                        // Handle case where image is already an object with sourceUrl
+                        $image_urls[] = $img['sourceUrl'];
+                    } elseif (is_string($img)) {
+                        // Handle case where image is already a URL string
+                        $image_urls[] = $img;
+                    } elseif (is_numeric($img)) {
+                        // Handle case where image is an attachment ID - convert to URL
+                        $attachment_url = wp_get_attachment_url($img);
+                        if ($attachment_url) {
+                            $image_urls[] = $attachment_url;
+                        }
+                    }
+                }
+            } elseif (is_numeric($review_images)) {
+                // Handle case where review_images_idz is a single attachment ID
+                $attachment_url = wp_get_attachment_url($review_images);
+                if ($attachment_url) {
+                    $image_urls[] = $attachment_url;
+                }
+            }
+        }
         
         $formatted_reviews[] = [
             'id' => $review->comment_ID,
@@ -1017,7 +1044,7 @@ function get_following_reviews(WP_REST_Request $request)
             'date' => $review->comment_date,
             'stars' => floatval($review_stars),
             'title' => $review_title,
-            'images' => $review_images ? json_decode($review_images, true) : [],
+            'images' => $image_urls,
             'restaurant' => [
                 'id' => $review->restaurant_id,
                 'name' => $review->restaurant_name

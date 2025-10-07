@@ -31,6 +31,7 @@ import { MdArrowBackIos } from "react-icons/md";
 
 const navigationItems = [
   { name: "Explore", href: RESTAURANTS },
+  { name: "Following", href: "/following" },
   // { name: "Dashboard", href: "/dashboard" },
   // { name: "Submit Listing", href: "/submit-restaurant" },
 ];

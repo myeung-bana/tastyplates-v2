@@ -133,10 +133,9 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
   const authorUserId = data.userId;
   const images = data.reviewImages || [];
-  const UserPalateNames = data?.palates
-    ?.split("|")
-    .map((s) => capitalizeWords(s.trim()))
-    .filter((s) => s.length > 0);
+  const UserPalateNames = Array.isArray(data?.palates) 
+    ? data.palates.map((s) => capitalizeWords(s.trim())).filter((s) => s.length > 0)
+    : data?.palates?.split("|").map((s) => capitalizeWords(s.trim())).filter((s) => s.length > 0) || [];
 
   // Load replies on modal open
   useEffect(() => {

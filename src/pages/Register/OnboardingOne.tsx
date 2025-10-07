@@ -65,7 +65,10 @@ const OnboardingOnePage = () => {
     setPronoun(parsedData.pronoun || "");
 
     if (parsedData.palates) {
-      setSelectedPalates(new Set(parsedData.palates.split(",")));
+      const palatesArray = Array.isArray(parsedData.palates) 
+        ? parsedData.palates 
+        : parsedData.palates.split(",");
+      setSelectedPalates(new Set(palatesArray));
     }
 
     setHasMounted(true);

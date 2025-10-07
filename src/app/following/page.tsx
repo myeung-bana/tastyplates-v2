@@ -6,7 +6,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import SuggestedUsers from '@/components/SuggestedUsers';
 import FollowingReviews from '@/components/FollowingReviews';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
-import { FaUsers, FaHeart } from 'react-icons/fa';
+import { FaUsers } from 'react-icons/fa';
 
 export default function FollowingPage() {
   const { data: session, status } = useSession();
@@ -29,7 +29,7 @@ export default function FollowingPage() {
   // Show loading state while checking authentication
   if (status === 'loading') {
     return (
-      <div className="bg-gray-50 py-8">
+      <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E36B00] mx-auto"></div>
@@ -43,7 +43,7 @@ export default function FollowingPage() {
   // Redirect to sign-in if not authenticated
   if (!session) {
     return (
-      <div className="bg-gray-50 py-8">
+      <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-16">
             <FaUsers className="mx-auto h-16 w-16 text-gray-400 mb-6" />
@@ -66,12 +66,11 @@ export default function FollowingPage() {
   }
 
   return (
-    <div className="bg-gray-50 py-8">
+    <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <FaHeart className="text-[#E36B00]" />
             Following
           </h1>
           <p className="text-gray-600">
@@ -139,16 +138,7 @@ export default function FollowingPage() {
 
             {/* Reviews Feed */}
             {reviews.length > 0 && (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    Latest from your following
-                  </h2>
-                  <p className="text-gray-600">
-                    {reviews.length} review{reviews.length !== 1 ? 's' : ''} from people you follow
-                  </p>
-                </div>
-                
+              <div>                
                 <FollowingReviews 
                   reviews={reviews}
                   loading={loading}

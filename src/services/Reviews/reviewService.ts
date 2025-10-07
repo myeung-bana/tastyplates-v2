@@ -27,7 +27,42 @@ export class ReviewService {
 
     async fetchCommentReplies(id: string) {
         try {
-            const replies = await reviewRepo.getCommentReplies(id);
+            // Normalize to Relay global ID expected by WPGraphQL
+            const isNumeric = (val: string) => /^\d+$/.test(val.trim());
+            const btoaSafe = (input: string) =>
+                typeof window !== 'undefined' && typeof window.btoa === 'function'
+                    ? window.btoa(input)
+                    : Buffer.from(input, 'utf-8').toString('base64');
+            const atobSafe = (input: string) => {
+                try {
+                    return (typeof window !== 'undefined' && typeof window.atob === 'function')
+                        ? window.atob(input)
+                        : Buffer.from(input, 'base64').toString('utf-8');
+                } catch {
+                    return '';
+                }
+            };
+
+            let graphqlId = id;
+            if (!graphqlId) {
+                throw new Error('Invalid comment id');
+            }
+
+            // If already a Relay global ID that decodes to "comment:{n}", use as-is
+            const decoded = atobSafe(graphqlId);
+            if (decoded && decoded.startsWith('comment:') && isNumeric(decoded.split(':')[1] || '')) {
+                // already global id
+            } else if (graphqlId.startsWith('comment:')) {
+                // raw typename:id -> encode
+                graphqlId = btoaSafe(graphqlId);
+            } else if (isNumeric(graphqlId)) {
+                // numeric -> encode as comment:{id}
+                graphqlId = btoaSafe(`comment:${graphqlId}`);
+            } else {
+                // Fallback: leave as-is (some callers may already pass a valid global id)
+            }
+
+            const replies = await reviewRepo.getCommentReplies(graphqlId);
             return replies;
         } catch (error) {
             console.error('Error fetching comment replies:', error);

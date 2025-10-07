@@ -24,7 +24,11 @@ const mapFollowingReviewToReviewedDataProps = (review: FollowingReview): Reviewe
     uri: "", // Not available in following review data
     reviewStars: review.stars.toString(),
     date: review.date,
-    reviewImages: review.images,
+    reviewImages: review.images.map((imageUrl, index) => ({
+      databaseId: review.id + index, // Generate unique ID
+      id: `${review.id}-img-${index}`,
+      sourceUrl: imageUrl
+    })),
     palates: [], // Not available in following review data
     userAvatar: review.author.avatar,
     author: {
