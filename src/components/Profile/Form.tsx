@@ -95,8 +95,8 @@ const FormContent = memo(({
   <>
     {isSubmitted && (
       <>
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-[1000]" />
-        <div className="fixed inset-0 flex items-center justify-center z-[1010]">
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-[60]" />
+        <div className="fixed inset-0 flex items-center justify-center z-[70]">
           <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-orange-600 transition-colors text-2xl"
@@ -131,10 +131,10 @@ const FormContent = memo(({
     )}
     
     {/* Modern Instagram-inspired Profile Edit Layout */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header Section */}
-        <div className="text-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white md:min-h-screen">
+      <div className="max-w-4xl mx-auto px-0 md:px-4 py-0 md:py-8">
+        {/* Header Section - Desktop Only */}
+        <div className="hidden md:block text-center mb-8">
           <h1 className="text-3xl font-light text-gray-900 mb-2">
             Edit Profile
           </h1>
@@ -144,8 +144,8 @@ const FormContent = memo(({
         </div>
 
         {/* Main Content Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <form onSubmit={submitReview} className="p-8 space-y-8">
+        <div className="bg-white rounded-none md:rounded-2xl shadow-none md:shadow-sm border-0 md:border md:border-gray-100 overflow-hidden">
+          <form onSubmit={submitReview} className="p-4 md:p-8 space-y-6 md:space-y-8">
             
             {/* Profile Photo Section */}
             <div className="flex flex-col items-center space-y-4">
@@ -263,10 +263,10 @@ const FormContent = memo(({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-100">
+            <div className="flex flex-col gap-4 pt-6 border-t border-gray-100">
               <button
                 type="submit"
-                className="flex-1 bg-[#E36B00] hover:bg-[#c55a00] text-white font-semibold py-3 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-[#E36B00] hover:bg-[#c55a00] text-white font-semibold py-4 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -300,7 +300,7 @@ const FormContent = memo(({
               
               <button
                 type="button"
-                className="flex-1 sm:flex-none underline text-[#494D5D] font-semibold text-center py-3 px-6 bg-transparent hover:text-[#31343F] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full underline text-[#494D5D] font-semibold text-center py-3 px-6 bg-transparent hover:text-[#31343F] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => router.push(PROFILE)}
                 disabled={isLoading}
               >
@@ -342,7 +342,6 @@ const Form = () => {
   const [palateError, setPalateError] = useState("");
   const [profileError, setProfileError] = useState("");
   const [bioError, setBioError] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
   const [showCropModal, setShowCropModal] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState("");
 
@@ -499,51 +498,49 @@ const Form = () => {
         .map((p) => capitalizeFirstLetter(p));
       setSelectedPalates(new Set(palates));
     }
-
-    if (typeof window !== "undefined") {
-      const handleResize = () => {
-        setIsMobile(window.innerWidth < 768);
-      };
-
-      handleResize();
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
-    }
-    
-    return undefined; // Explicit return for all code paths
   }, [session?.user?.palates]);
 
   return (
     <>
-      <CustomModal
-        header={<></>}
-        content={formContent}
-        isOpen={isMobile}
-        setIsOpen={setIsMobile}
-        backdropClass="bg-white backdrop-opacity-100"
-        baseClass="h-full md:h-3/4 !max-w-[1280px] max-h-full md:max-h-[530px] lg:max-h-[640px] xl:max-h-[720px] m-0 rounded-none relative md:rounded-3xl"
-        closeButtonClass="!top-5 md:!top-6 !right-unset !left-3 z-10"
-        headerClass="border-b border-[#CACACA] h-16"
-        contentClass="!p-0"
-        hasFooter={true}
-        footer={<></>}
-        footerClass="!p-0 hidden"
-        wrapperClass="!z-[1010]"
-        hasCustomCloseButton
-        customButton={
-          <button
-            onClick={() => router.back()}
-            className="absolute top-4 left-3 p-2"
-          >
-            <PiCaretLeftBold className="size-4 stroke-[#1C1B1F]" />
-          </button>
-        }
+      {/* Mobile Layout - Full Screen */}
+      <div className="md:hidden">
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* Mobile Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
+            <button
+              onClick={() => router.back()}
+              className="p-2 -ml-2"
+            >
+              <PiCaretLeftBold className="size-5 text-gray-900" />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
+            <div className="w-9" /> {/* Spacer for centering */}
+          </div>
+          
+          {/* Mobile Content */}
+          <div className="px-4 py-6">
+            {formContent}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:block font-inter mt-16 md:mt-20">
+        {formContent}
+      </div>
+
+      {/* Photo Crop Modal */}
+      <PhotoCropModal
+        isOpen={showCropModal}
+        onClose={() => setShowCropModal(false)}
+        onCrop={(croppedImage) => {
+          setProfilePreview(croppedImage);
+          setProfile(croppedImage);
+          setShowCropModal(false);
+        }}
+        imageSrc={tempImageSrc}
       />
-      <div className="font-inter mt-16 md:mt-20 hidden md:block">{formContent}</div>
-  </>
+    </>
   );
 };
 

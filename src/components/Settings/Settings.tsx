@@ -297,9 +297,9 @@ const Settings = () => {
         {isSubmitted && (
           <>
             {/* Overlay */}
-            <div className="fixed inset-0 bg-black bg-opacity-60 z-[1000]"></div>
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-[60]"></div>
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-[1010]">
+            <div className="fixed inset-0 flex items-center justify-center z-[70]">
               <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
                 {/* Exit button */}
                 <button
@@ -350,7 +350,7 @@ const Settings = () => {
             `}</style>
           </>
         )}
-        <div className="flex flex-col justify-center items-center py-6 sm:py-10 relative z-50">
+        <div className="flex flex-col justify-center items-center py-6 sm:py-10 relative z-10">
           <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium">
             Personal Info
           </h1>

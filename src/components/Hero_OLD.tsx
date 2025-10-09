@@ -241,6 +241,144 @@ const Hero = () => {
           <p className="hero__description">
           Dine like a Brazilian in Tokyo - or Korean in New York?
           </p>
+          <form onSubmit={handleSearch} className="hero__search">
+            <div className="hero__search-wrapper relative">
+              {/* Mobile Search - Restaurant Name */}
+              <div className="hero__search-restaurant text-center md:!hidden">
+                <input
+                  type="text"
+                  placeholder="Start Your Search"
+                  className="hero__search-input text-center"
+                  value={cuisine}
+                  onChange={(e) => {
+                    setCuisine(e.target.value)
+                    setListing('')
+                  }}
+                />
+              </div>
+              {!isSearchListing ? (
+                <>
+                  <div className="hero__search-restaurant !hidden md:!flex flex-col !items-start w-[50%]">
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
+                      {/* {cuisine.length > 0 ? "" : "What ______ like to eat?"} */}
+                      Discover by Cultural Palate
+                    </label>
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        placeholder="Search Cuisine"
+                        className="hero__search-input"
+                        value={cuisine}
+                        onChange={handleCuisineChange}
+                        onClick={handlePalateInputClick}
+                      />
+                    </div>
+                  </div>
+                  <div className="hero__search-divider"></div>
+                  <div className="hero__search-location !hidden md:!flex flex-col !items-start w-[50%]">
+                    <label className="text-sm md:text-[0.9rem] font-medium text-[#31343F]">
+                      Location
+                    </label>
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        placeholder="Search location"
+                        className="hero__search-input"
+                        value={location}
+                        onChange={(e) => {
+                          setLocation(e.target.value)
+                          setListing('')
+                        }}
+                        onClick={handleLocationInputClick}
+                      />
+                    </div>
+                  </div>
+                  <CustomMultipleSelect
+                    enableCheckboxHeader={true}
+                    enableSelectionDropdown={true}
+                    hideTagRendering={true}
+                    showModal={showSearchModal}
+                    hideDropdownLabel={true}
+                    hideDropdownSearch={true}
+                    items={palateOptions}
+                    limitValueLength={1}
+                    value={selectedPalates}
+                    onSelectionChangeWithHeader={handlePalateChange}
+                    onClose={handleSearchModalClose}
+                    placeholder="Search Cuisine"
+                    dropDownClassName="!max-h-[350px]"
+                    baseClassName="!p-0 !h-0 !top-20 !absolute !left-0 !w-[45%] z-[100]"
+                    className="!bg-transparent !border-0 !shadow-none !w-full !cursor-default"
+                  />
+                  <SelectOptions
+                    isLoading={addressLoading}
+                    isOpen={showLocationModal}
+                    options={locationOptions}
+                    searchValue={location}
+                    hasNextPage={hasNextPage}
+                    onLoadMore={() => fetchAddressByPalate(selectedPalates, currentPage + 1)}
+                    onSelect={(label) => {
+                      setLocation(label);
+                      setShowLocationModal(false);
+                      setListing('')
+                    }}
+                    onClose={() => setShowLocationModal(false)}
+                    className="!p-2 !top-20 !absolute !right-0 !w-[55%] z-[100] !max-h-[350px]"
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="hero__search-restaurant !bg-transparent">
+                    <FiSearch className="hero__search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search by Listing Name"
+                      className="hero__search-input"
+                      value={listing}
+                      onChange={(e) => {
+                        handleListingChange(e)
+                      }}
+                      onClick={() => {
+                        setShowListingModal(true)
+                      }}
+                    />
+                  </div>
+                  <SelectOptions
+                    isOpen={showListingModal}
+                    isLoading={listingLoading}
+                    options={listingOptions}
+                    searchValue={listing}
+                    hasNextPage={listingHasNextPage}
+                    onLoadMore={() => fetchListingsName(listing.trim(), listingCurrentPage + 1)}
+                    onSelect={(label) => {
+                      setListing(label);
+                      setShowListingModal(false);
+                      setLocation('');
+                      setCuisine('');
+                    }}
+                    onClose={() => setShowListingModal(false)}
+                    className="!p-2 !top-20 !absolute !left-0 !w-full z-[100] !max-h-[350px]"
+                  />
+                </>
+              )}
+              <button
+                type="submit"
+                className="hero__search-button h-8 w-8 sm:h-11 sm:w-11 text-center"
+                disabled={!listing && !location && !cuisine && selectedPalates.size === 0}
+              >
+                <FiSearch className="hero__search-icon stroke-white" />
+              </button>
+            </div>
+          </form>
+          <div className="flex gap-2 justify-center mt-6 items-center">
+            <MdStore className="size-4 sm:size-5 fill-[#FCFCFC]" />
+            <button
+              onClick={searchByListingName}
+              className="border-b border-[#FCFCFC] font-semibold text-sm sm:text-base text-[#FCFCFC] leading-5"
+            >
+              {!isSearchListing ? ("Search by Listing Name") : ("Search by Palate")}
+            </button>
+          </div>
         </div>
       </div>
     </section>

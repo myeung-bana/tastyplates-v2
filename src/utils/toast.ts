@@ -1,25 +1,26 @@
 import toast from 'react-hot-toast';
 
-// Custom toast utility with standardized styling
+// Custom toast utility with standardized white pill-shape styling
 export const customToast = {
   success: (message: string, options?: { duration?: number }) => {
     return toast.success(message, {
       duration: options?.duration || 4000,
       style: {
-        background: '#10B981',
-        color: '#fff',
+        background: '#ffffff',
+        color: '#10B981',
         fontSize: '14px',
-        fontWeight: '400',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-        maxWidth: '500px',
+        fontWeight: '500',
+        padding: '12px 24px',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        maxWidth: '400px',
         width: 'fit-content',
-        minWidth: '300px',
+        minWidth: '200px',
       },
       iconTheme: {
-        primary: '#fff',
-        secondary: '#10B981',
+        primary: '#10B981',
+        secondary: '#ffffff',
       },
     });
   },
@@ -28,20 +29,21 @@ export const customToast = {
     return toast.error(message, {
       duration: options?.duration || 5000,
       style: {
-        background: '#EF4444',
-        color: '#fff',
+        background: '#ffffff',
+        color: '#EF4444',
         fontSize: '14px',
-        fontWeight: '400',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-        maxWidth: '500px',
+        fontWeight: '500',
+        padding: '12px 24px',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        maxWidth: '400px',
         width: 'fit-content',
-        minWidth: '300px',
+        minWidth: '200px',
       },
       iconTheme: {
-        primary: '#fff',
-        secondary: '#EF4444',
+        primary: '#EF4444',
+        secondary: '#ffffff',
       },
     });
   },
@@ -49,16 +51,17 @@ export const customToast = {
   loading: (message: string, options?: { duration?: number }) => {
     return toast.loading(message, {
       style: {
-        background: '#6366F1',
-        color: '#fff',
+        background: '#ffffff',
+        color: '#6366F1',
         fontSize: '14px',
-        fontWeight: '400',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-        maxWidth: '500px',
+        fontWeight: '500',
+        padding: '12px 24px',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        maxWidth: '400px',
         width: 'fit-content',
-        minWidth: '300px',
+        minWidth: '200px',
       },
     });
   },
@@ -67,16 +70,17 @@ export const customToast = {
     return toast(message, {
       duration: options?.duration || 4000,
       style: {
-        background: '#6366F1',
-        color: '#fff',
+        background: '#ffffff',
+        color: '#6366F1',
         fontSize: '14px',
-        fontWeight: '400',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-        maxWidth: '500px',
+        fontWeight: '500',
+        padding: '12px 24px',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        maxWidth: '400px',
         width: 'fit-content',
-        minWidth: '300px',
+        minWidth: '200px',
       },
     });
   },
@@ -96,40 +100,39 @@ export const customToast = {
     return toast.promise(promise, messages, {
       style: {
         fontSize: '14px',
-        fontWeight: '400',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        maxWidth: '500px',
+        fontWeight: '500',
+        padding: '12px 24px',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        border: '1px solid #E5E7EB',
+        maxWidth: '400px',
         width: 'fit-content',
-        minWidth: '300px',
+        minWidth: '200px',
       },
       success: {
         style: {
-          background: '#10B981',
-          color: '#fff',
-          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          background: '#ffffff',
+          color: '#10B981',
         },
         iconTheme: {
-          primary: '#fff',
-          secondary: '#10B981',
+          primary: '#10B981',
+          secondary: '#ffffff',
         },
       },
       error: {
         style: {
-          background: '#EF4444',
-          color: '#fff',
-          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+          background: '#ffffff',
+          color: '#EF4444',
         },
         iconTheme: {
-          primary: '#fff',
-          secondary: '#EF4444',
+          primary: '#EF4444',
+          secondary: '#ffffff',
         },
       },
       loading: {
         style: {
-          background: '#6366F1',
-          color: '#fff',
-          boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+          background: '#ffffff',
+          color: '#6366F1',
         },
       },
     });

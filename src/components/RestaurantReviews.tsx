@@ -213,7 +213,7 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
     let hasNext = true;
     try {
       while (hasNext) {
-        const data = await reviewService.getRestaurantReviews(
+        const data = await reviewService.fetchRestaurantReviews(
           restaurantId,
           session?.accessToken,
           50,

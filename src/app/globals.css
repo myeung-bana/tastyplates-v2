@@ -145,6 +145,58 @@ main {
   margin-top: auto;
 }
 
+/* Custom Toast Animations - Fade In/Out */
+[data-sonner-toaster] {
+  --normal-bg: #ffffff;
+  --normal-border: #E5E7EB;
+  --normal-text: #374151;
+  --success-bg: #ffffff;
+  --success-border: #E5E7EB;
+  --success-text: #10B981;
+  --error-bg: #ffffff;
+  --error-border: #E5E7EB;
+  --error-text: #EF4444;
+  --info-bg: #ffffff;
+  --info-border: #E5E7EB;
+  --info-text: #6366F1;
+}
+
+/* Override react-hot-toast animations for fade effect */
+[data-hot-toast] {
+  animation: fadeInOut 0.3s ease-in-out !important;
+}
+
+[data-hot-toast][data-hot-toast-removing] {
+  animation: fadeOut 0.3s ease-in-out !important;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Ensure toast appears above mobile top bar */
+[data-hot-toast] {
+  z-index: 60 !important;
+}
+
 /* Ensure content doesn't get hidden behind bottom nav on mobile */
 @media (max-width: 767px) {
   body {

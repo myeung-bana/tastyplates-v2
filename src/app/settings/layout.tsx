@@ -1,4 +1,4 @@
-import Footer from "@/components/Footer"
+import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { Suspense } from "react";
 
@@ -10,7 +10,7 @@ export default function RootLayout({
   return (
     <section>
       <Suspense fallback={<div></div>}>
-        <Navbar />
+        <Navbar hasSearchBar />
         {children}
       </Suspense>
     </section>

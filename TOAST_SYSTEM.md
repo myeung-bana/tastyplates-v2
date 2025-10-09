@@ -1,16 +1,15 @@
 # Toast Notification System
 
-This application uses a standardized toast notification system built on top of `react-hot-toast` with custom styling and animations.
+This application uses a standardized toast notification system built on top of `react-hot-toast` with custom white pill-shape styling and fade animations.
 
 ## Features
 
-- **Wider toasts** with better spacing for longer messages
+- **White pill-shape design** with subtle shadows and borders
+- **Fade in/out animations** instead of slide animations
 - **Smaller font size** (14px) for better readability
-- **Responsive positioning**: 
-  - Desktop: Slides in from bottom center
-  - Mobile: Slides in from top center
+- **Consistent positioning**: Top center for all screen sizes
 - **Consistent styling** across all toast types
-- **Custom animations** with smooth slide-in/out effects
+- **Custom animations** with smooth fade effects
 
 ## Usage
 
@@ -60,38 +59,45 @@ toast.loading('Loading message');
 ## Toast Types
 
 ### Success Toast
+- **Background**: White (#ffffff)
 - **Color**: Green (#10B981)
 - **Duration**: 4 seconds
 - **Icon**: Checkmark
 
 ### Error Toast
+- **Background**: White (#ffffff)
 - **Color**: Red (#EF4444)
 - **Duration**: 5 seconds
 - **Icon**: X mark
 
 ### Loading Toast
+- **Background**: White (#ffffff)
 - **Color**: Blue (#6366F1)
 - **Duration**: Until dismissed
 - **Icon**: Spinner
 
 ### Info Toast
+- **Background**: White (#ffffff)
 - **Color**: Blue (#6366F1)
 - **Duration**: 4 seconds
 - **Icon**: Info
 
 ## Styling
 
-### Desktop (≥768px)
-- Position: Bottom center
-- Animation: Slide in from bottom
-- Max width: 500px
-- Min width: 300px
+### Design Specifications
+- **Shape**: Pill-shaped with 50px border radius
+- **Background**: White (#ffffff)
+- **Border**: Light gray (#E5E7EB)
+- **Shadow**: Subtle drop shadow (0 4px 20px rgba(0, 0, 0, 0.15))
+- **Padding**: 12px vertical, 24px horizontal
+- **Font**: 14px, medium weight (500)
+- **Max width**: 400px
+- **Min width**: 200px
 
-### Mobile (<768px)
-- Position: Top center
-- Animation: Slide in from top
-- Max width: 500px
-- Min width: 300px
+### Positioning
+- **Position**: Top center for all screen sizes
+- **Animation**: Fade in/out with subtle scale effect
+- **Z-index**: 60 (above mobile top bar)
 
 ## Customization
 
@@ -99,14 +105,14 @@ To modify toast styling, update the `toastOptions` in `src/app/layout.tsx`:
 
 ```typescript
 <Toaster 
-  position="bottom-center"
+  position="top-center"
   toastOptions={{
     style: {
       fontSize: '14px',        // Font size
-      padding: '12px 20px',   // Padding
-      borderRadius: '8px',    // Border radius
-      maxWidth: '500px',      // Max width
-      minWidth: '300px',      // Min width
+      padding: '12px 24px',    // Padding
+      borderRadius: '50px',    // Pill shape
+      maxWidth: '400px',       // Max width
+      minWidth: '200px',       // Min width
     },
     // ... other options
   }}
@@ -115,19 +121,31 @@ To modify toast styling, update the `toastOptions` in `src/app/layout.tsx`:
 
 ## Animation Customization
 
-To modify animations, update the CSS in `src/styles/global.scss`:
+To modify animations, update the CSS in `src/app/globals.css`:
 
-```scss
-// Desktop animations
-@keyframes slideInFromBottom {
-  from { transform: translateY(100px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+```css
+/* Fade in animation */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-// Mobile animations
-@keyframes slideInFromTop {
-  from { transform: translateY(-100px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+/* Fade out animation */
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 ```
 

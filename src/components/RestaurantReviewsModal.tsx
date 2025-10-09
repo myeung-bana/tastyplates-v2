@@ -75,7 +75,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen,
     if (!isOpen) return;
     setLoading(true);
     setError(null);
-    reviewService.getRestaurantReviews(restaurant.databaseId, session?.accessToken)
+    reviewService.fetchRestaurantReviews(restaurant.databaseId, session?.accessToken)
       .then((data) => {
         const reviewsData = (data.reviews || []) as unknown as ReviewData[];
         setReviews(reviewsData);

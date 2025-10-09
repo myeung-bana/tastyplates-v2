@@ -1,3 +1,289 @@
+@import "../base/variables";
+@import "../base/typography";
+
+// Settings Layout Styles - Mobile-First Design
+.settings-layout {
+  min-height: 100vh;
+  background-color: #ffffff;
+  
+  @media (max-width: 767px) {
+    background-color: #ffffff;
+  }
+}
+
+.settings-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.settings-back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  color: #31343F;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+}
+
+.settings-header-content {
+  flex: 1;
+  text-align: center;
+}
+
+.settings-mobile-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #31343F;
+  margin: 0;
+}
+
+.settings-mobile-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+}
+
+.settings-header-spacer {
+  width: 40px;
+}
+
+.settings-content {
+  padding: 20px;
+  
+  @media (min-width: 768px) {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    padding-top: 120px; // Add space for navbar
+  }
+}
+
+.settings-container {
+  width: 100%;
+}
+
+.settings-desktop-header {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+}
+
+.settings-desktop-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #31343F;
+  margin: 0 0 8px 0;
+  
+  @media (min-width: 768px) {
+    font-size: 28px;
+  }
+}
+
+.settings-desktop-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.settings-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-category {
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  
+  @media (min-width: 768px) {
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+  }
+}
+
+.settings-category-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-category-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  display: none;
+}
+
+.settings-category-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #31343F;
+  margin: 0;
+}
+
+.settings-category-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+  background-color: #ffffff;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover:not(.settings-item--disabled) {
+    background-color: #f8f9fa;
+  }
+  
+  &.settings-item--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.settings-item-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.settings-item-text {
+  flex: 1;
+}
+
+.settings-item-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #31343F;
+  margin: 0 0 4px 0;
+}
+
+.settings-item-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.settings-item-badge {
+  background-color: #E36B00;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 12px;
+}
+
+.settings-item-arrow {
+  color: #9ca3af;
+  width: 20px;
+  height: 20px;
+  margin-left: 12px;
+}
+
+// Individual settings page styling
+.settings-page {
+  background-color: #ffffff;
+  min-height: 100vh;
+  
+  @media (min-width: 768px) {
+    max-width: 600px;
+    margin: 0 auto;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+}
+
+.settings-page-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  
+  @media (min-width: 768px) {
+    padding: 32px 40px 24px;
+  }
+}
+
+.settings-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #31343F;
+  margin: 0 0 8px 0;
+  
+  @media (max-width: 767px) {
+    font-size: 20px;
+  }
+}
+
+.settings-page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.settings-page-content {
+  padding: 20px;
+  
+  @media (min-width: 768px) {
+    padding: 40px;
+  }
+}
+
+.settings-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #31343F;
+    margin: 0 0 12px 0;
+  }
+  
+  p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+// Legacy settings styles (for existing Settings component)
 .settings {
     min-height: 100vh;
     display: flex;

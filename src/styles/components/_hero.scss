@@ -1,19 +1,18 @@
 .hero {
-  padding: 10.5rem 0 8.75rem 0;
+  padding: 6rem 0 6.5rem 0; // Reduced from 8.5rem 0 8.75rem 0
   position: relative;
   background-image: url('/images/hero-bg.png');
   background-size: cover;
   background-position: 70% center;
   background-repeat: no-repeat;
-  min-height: 538px;
   width: 100%;
   margin: 0;
 
   @media (max-width: 767px) {
-    padding: 7.25rem 0 5rem 0;
+    padding: 5rem 0 3.5rem 0; // Reduced from 7.25rem 0 5rem 0
     background-image: url('/images/hero-bg-sp.png');
     background-position: left top;
-    min-height: 466px;
+    min-height: 400px; // Reduced from 466px
   }
 
   &__container {
@@ -44,15 +43,15 @@
   }
 
   &__title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 1.5rem;
+    font-size: 1.875rem; // Reduced from 2.5rem (30px)
+    font-weight: 600; // Reduced from 700
+    line-height: 1.2; // Increased from 1
+    margin-bottom: 1rem; // Reduced from 1.5rem
     text-align: center;
     color: #FCFCFC;
 
     @media (max-width: 767px) {
-      font-size: 1.5rem;
+      font-size: 1.25rem; // Reduced from 1.5rem (20px)
     }
 
     span {
@@ -61,15 +60,15 @@
   }
 
   &__description {
-    font-size: 1.5rem;
+    font-size: 1.125rem; // Reduced from 1.5rem (18px)
     color: #FCFCFC;
-    margin-bottom: 2rem;
-    line-height: 1.7;
-    font-weight: 500;
+    margin-bottom: 1.5rem; // Reduced from 2rem
+    line-height: 1.6; // Reduced from 1.7
+    font-weight: 400; // Reduced from 500
     text-align: center;
 
     @media (max-width: 767px) {
-      font-size: .875rem;
+      font-size: 0.75rem; // Reduced from .875rem (12px)
     }
   }
 

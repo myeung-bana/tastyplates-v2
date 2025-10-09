@@ -42,7 +42,7 @@ export default function FollowingPage() {
   // Redirect to sign-in if not authenticated
   if (!session) {
     return (
-      <div className="py-8 mt-16 md:mt-[88px]">
+      <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-16">
             <FaUsers className="mx-auto h-16 w-16 text-gray-400 mb-6" />
@@ -65,7 +65,7 @@ export default function FollowingPage() {
   }
 
   return (
-    <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
+    <div className="bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
