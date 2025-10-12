@@ -114,12 +114,12 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
       <div className="cuisine-filter">
         <button
           onClick={() => setIsModalOpen(true)}
-          className="cuisine-filter__button"
+          className="cuisine-filter__button font-neusans"
         >
-          <span className="cuisine-filter__button-text">
+          <span className="cuisine-filter__button-text font-neusans">
             Cuisine
             {activeFiltersCount > 0 && (
-              <span className="cuisine-filter__badge">{activeFiltersCount}</span>
+              <span className="cuisine-filter__badge font-neusans">{activeFiltersCount}</span>
             )}
           </span>
         </button>
@@ -128,10 +128,10 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
       {/* Slide-in Modal */}
       <div className={`cuisine-filter__modal ${isModalOpen ? 'cuisine-filter__modal--open' : ''}`}>
         <div className="cuisine-filter__overlay" onClick={() => setIsModalOpen(false)} />
-        <div className="cuisine-filter__content">
+        <div className="cuisine-filter__content font-neusans">
           {/* Header */}
           <div className="cuisine-filter__header">
-            <h2 className="cuisine-filter__title">Cuisine</h2>
+            <h2 className="cuisine-filter__title font-neusans">Cuisine</h2>
             <button
               onClick={() => setIsModalOpen(false)}
               className="cuisine-filter__close"
@@ -143,7 +143,7 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
           <div className="cuisine-filter__body">
             {/* Palate Section */}
             <div className="cuisine-filter__section">
-              <h3 className="cuisine-filter__section-title">Palate by Region</h3>
+              <h3 className="cuisine-filter__section-title font-neusans">Palate by Region</h3>
               <div className="cuisine-filter__palate-section">
                 {Object.entries(palateRegions).map(([region, palates]) => (
                   <div key={region} className="cuisine-filter__palate-category">
@@ -157,8 +157,8 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
                         checked={isRegionFullySelected(region)}
                         readOnly
                       />
-                      <h4 className="cuisine-filter__palate-category-title">{region}</h4>
-                      <span className="cuisine-filter__region-count">
+                      <h4 className="cuisine-filter__palate-category-title font-neusans">{region}</h4>
+                      <span className="cuisine-filter__region-count font-neusans">
                         ({palates.filter(palate => selectedPalatesSet.has(palate)).length}/{palates.length})
                       </span>
                     </div>
@@ -178,7 +178,7 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
                             checked={selectedPalatesSet.has(palate)}
                             readOnly
                           />
-                          <span className="cuisine-filter__checkbox-label">{palate}</span>
+                          <span className="cuisine-filter__checkbox-label font-neusans">{palate}</span>
                         </div>
                       ))}
                     </div>
@@ -192,13 +192,13 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
           <div className="cuisine-filter__footer">
             <button
               onClick={resetFilters}
-              className="cuisine-filter__button cuisine-filter__button--secondary"
+              className="cuisine-filter__button cuisine-filter__button--secondary font-neusans"
             >
               Reset
             </button>
             <button
               onClick={applyFilters}
-              className="cuisine-filter__button cuisine-filter__button--primary"
+              className="cuisine-filter__button cuisine-filter__button--primary font-neusans"
             >
               Apply
             </button>

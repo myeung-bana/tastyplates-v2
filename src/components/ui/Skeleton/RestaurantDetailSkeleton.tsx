@@ -2,7 +2,7 @@ import React  from "react";
 
 const RestaurantDetailSkeleton = () => {
     return (
-        <div className="restaurant-detail mt-4 md:mt-20 animate-pulse">
+        <div className="restaurant-detail mt-4 md:mt-20 animate-pulse font-neusans">
             <div className="restaurant-detail__container !pt-0">
                 {/* Mobile: Gallery First */}
                 <div className="md:hidden">

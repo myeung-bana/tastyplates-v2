@@ -35,7 +35,7 @@ const SigninModal: React.FC<SigninModalProps> = ({
       {/* Login Modal */}
       {!showForgotPassword && !showForgotLinkSuccess && (
         <div className="review-modal-overlay">
-          <div className="!max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[700px] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
+          <div className="!max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[700px] !p-0 !rounded-3xl font-neusans relative overflow-y-auto">
             <button className="review-modal__close !top-5" onClick={onClose}>
               <FiX />
             </button>

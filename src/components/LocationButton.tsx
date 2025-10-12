@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from 'react';
+import { FiChevronDown } from 'react-icons/fi';
 import { useLocation } from '@/contexts/LocationContext';
+import { LOCATION_HIERARCHY } from '@/constants/location';
 import LocationModal from './LocationModal';
 
 interface LocationButtonProps {
@@ -11,11 +13,35 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
   const { selectedLocation } = useLocation();
   const [showLocationModal, setShowLocationModal] = useState(false);
 
+  // Helper function to get parent country's short code for cities
+  const getParentCountryCode = (cityKey: string): string => {
+    for (const country of LOCATION_HIERARCHY.countries) {
+      const city = country.cities.find(c => c.key === cityKey);
+      if (city) {
+        return country.shortLabel;
+      }
+    }
+    return '';
+  };
+
+  // Smart display logic - always show City, Country format
+  const getDisplayText = () => {
+    if (selectedLocation.type === 'city') {
+      // For cities, show "City, Country" format (e.g., "Vancouver, CA")
+      const countryCode = getParentCountryCode(selectedLocation.key);
+      return `${selectedLocation.label}, ${countryCode}`;
+    } else if (selectedLocation.type === 'country') {
+      // For countries, show "Country, CountryCode" format (e.g., "Canada, CA")
+      return `${selectedLocation.label}, ${selectedLocation.shortLabel}`;
+    }
+    return selectedLocation.label;
+  };
+
   return (
     <>
       <button 
         onClick={() => setShowLocationModal(true)}
-        className={`bg-[#FCFCFC66]/40 rounded-[50px] text-sm h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 backdrop-blur-sm ${
+        className={`bg-[#FCFCFC66]/40 rounded-[50px] text-sm h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 backdrop-blur-sm font-neusans font-normal ${
           isTransparent ? 'text-white' : 'text-[#494D5D]'
         }`}
       >
@@ -24,9 +50,10 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
           alt={`${selectedLocation.label} flag`}
           className="w-5 h-4 object-cover rounded-sm"
         />
-        <span className={`text-sm font-semibold ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
-          {selectedLocation.label}
+        <span className={`text-sm ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
+          {getDisplayText()}
         </span>
+        <FiChevronDown className={`w-4 h-4 ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`} />
       </button>
 
       <LocationModal 

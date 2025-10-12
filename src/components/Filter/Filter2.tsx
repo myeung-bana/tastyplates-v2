@@ -147,7 +147,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
   return (
     <>
       {/* Filter Buttons */}
-      <div className="filter2__buttons text-sm">
+      <div className="filter2__buttons text-sm font-neusans">
         <CuisineFilter 
           onFilterChange={handleCuisineChange}
           selectedCuisines={selectedCuisines}
@@ -157,12 +157,12 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
         <div className="filter2">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="filter2__button"
+            className="filter2__button font-neusans"
           >
-            <span className="filter2__button-text text-sm">
+            <span className="filter2__button-text text-sm font-neusans">
               Filter
               {activeFiltersCount > 0 && (
-                <span className="filter2__badge">{activeFiltersCount}</span>
+                <span className="filter2__badge font-neusans">{activeFiltersCount}</span>
               )}
             </span>
           </button>
@@ -172,10 +172,10 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
       {/* Slide-in Modal (left) - match CuisineFilter behavior */}
       <div className={`filter2__modal ${isModalOpen ? 'filter2__modal--open' : ''}`}>
         <div className="filter2__overlay" onClick={() => setIsModalOpen(false)} />
-        <div className="filter2__content">
+        <div className="filter2__content font-neusans">
           {/* Header */}
           <div className="filter2__header">
-            <h2 className="filter2__title">Filter</h2>
+            <h2 className="filter2__title font-neusans">Filter</h2>
             <button onClick={() => setIsModalOpen(false)} className="filter2__close" />
           </div>
 
@@ -183,9 +183,9 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
           <div className="filter2__body">
             {/* Category Section */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title">Category</h3>
+              <h3 className="filter2__section-title font-neusans">Category</h3>
               <div className="filter2__subsection">
-                <label className="filter2__label">All Categories</label>
+                <label className="filter2__label font-neusans">All Categories</label>
                 <CustomPopover
                   isOpen={isCuisineOpen}
                   setIsOpen={setIsCuisineOpen}
@@ -193,9 +193,9 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                   trigger={
                     <button
                       onClick={() => setIsCuisineOpen(!isCuisineOpen)}
-                      className="filter2__select"
+                      className="filter2__select font-neusans"
                     >
-                      <span className="filter2__select-text">
+                      <span className="filter2__select-text font-neusans">
                         {selectedCuisines.length > 0
                           ? selectedCuisines.join(", ")
                           : "Select Categories"}
@@ -204,20 +204,20 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                     </button>
                   }
                   content={
-                    <div className="filter2__dropdown">
+                    <div className="filter2__dropdown font-neusans">
                       <div
                         onClick={() => setSelectedCuisines([])}
-                        className={`filter2__option ${selectedCuisines.length === 0 ? "filter2__option--active" : ""}`}
+                        className={`filter2__option font-neusans ${selectedCuisines.length === 0 ? "filter2__option--active" : ""}`}
                       >
                         All
                       </div>
                       {isLoadingCategories ? (
-                        <div className="filter2__option">Loading categories...</div>
+                        <div className="filter2__option font-neusans">Loading categories...</div>
                       ) : (
                         dbCuisines.map((item: { name: string, slug: string }, index: number) => (
                           <div
                             key={index}
-                            className="filter2__option filter2__option--checkbox"
+                            className="filter2__option filter2__option--checkbox font-neusans"
                             onClick={() => {
                               const newSelection = [...selectedCuisines];
                               const slug = item.slug || item.name;
@@ -234,7 +234,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                               checked={selectedCuisines.includes(item.slug || item.name)}
                               readOnly
                             />
-                            <label className="filter2__checkbox-label">
+                            <label className="filter2__checkbox-label font-neusans">
                               {item.name}
                             </label>
                           </div>
@@ -248,7 +248,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
 
             {/* Price Section */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title">Price</h3>
+              <h3 className="filter2__section-title font-neusans">Price</h3>
               <div className="filter2__price-grid">
                 {prices.map((item, index) => (
                   <div key={index} className="filter2__price-item">
@@ -264,7 +264,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                       />
                       <label
                         htmlFor={`price-${index}`}
-                        className="filter2__price-label"
+                        className="filter2__price-label font-neusans"
                       >
                         {item.name}
                       </label>
@@ -279,9 +279,9 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
 
             {/* Badges Section */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title">Badges</h3>
+              <h3 className="filter2__section-title font-neusans">Badges</h3>
               <div className="filter2__subsection">
-                <label className="filter2__label">Badges</label>
+                <label className="filter2__label font-neusans">Badges</label>
                 <CustomPopover
                   isOpen={isBadgeOpen}
                   setIsOpen={setIsBadgeOpen}
@@ -289,20 +289,20 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                   trigger={
                     <button
                       onClick={() => setIsBadgeOpen(!isBadgeOpen)}
-                      className="filter2__select"
+                      className="filter2__select font-neusans"
                     >
-                      <span className="filter2__select-text">
+                      <span className="filter2__select-text font-neusans">
                         {badge === "all" ? "All" : badges?.find(b => b.name === badge)?.value || "All"}
                       </span>
                       <PiCaretDown className="filter2__select-icon" />
                     </button>
                   }
                   content={
-                    <div className="filter2__dropdown">
+                    <div className="filter2__dropdown font-neusans">
                       {badges?.map((item: Record<string, unknown>, index: number) => (
                         <div
                           onClick={() => selectFilter(item.name as string, 'badge')}
-                          className={`filter2__option ${badge == item.name ? "filter2__option--active" : ""}`}
+                          className={`filter2__option font-neusans ${badge == item.name ? "filter2__option--active" : ""}`}
                           key={index}
                         >
                           {item.value as string}
@@ -313,7 +313,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                 />
               </div>
               <div className="filter2__subsection">
-                <label className="filter2__label">Sort By</label>
+                <label className="filter2__label font-neusans">Sort By</label>
                 <CustomPopover
                   isOpen={isSortOpen}
                   setIsOpen={setIsSortOpen}
@@ -321,20 +321,20 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                   trigger={
                     <button
                       onClick={() => setIsSortOpen(!isSortOpen)}
-                      className="filter2__select"
+                      className="filter2__select font-neusans"
                     >
-                      <span className="filter2__select-text">
+                      <span className="filter2__select-text font-neusans">
                         {sortOption === "none" ? "None" : sortOptions.find(s => s.name === sortOption)?.value || "None"}
                       </span>
                       <PiCaretDown className="filter2__select-icon" />
                     </button>
                   }
                   content={
-                    <div className="filter2__dropdown">
+                    <div className="filter2__dropdown font-neusans">
                       {sortOptions.map((item, index) => (
                         <div
                           onClick={() => selectFilter(item.name, 'sortOption')}
-                          className={`filter2__option ${sortOption == item.name ? "filter2__option--active" : ""}`}
+                          className={`filter2__option font-neusans ${sortOption == item.name ? "filter2__option--active" : ""}`}
                           key={index}
                         >
                           {item.value as string}
@@ -348,9 +348,9 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
 
             {/* Rating Section */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title">Rating</h3>
+              <h3 className="filter2__section-title font-neusans">Rating</h3>
               <div className="filter2__rating">
-                <label htmlFor="rating" className="filter2__rating-label">
+                <label htmlFor="rating" className="filter2__rating-label font-neusans">
                   Over {rating}
                 </label>
                 <input
@@ -364,11 +364,11 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
                   className="filter2__rating-slider"
                 />
                 <div className="filter2__rating-labels">
-                  <span>1</span>
-                  <span>2</span>
-                  <span>3</span>
-                  <span>4</span>
-                  <span>5</span>
+                  <span className="font-neusans">1</span>
+                  <span className="font-neusans">2</span>
+                  <span className="font-neusans">3</span>
+                  <span className="font-neusans">4</span>
+                  <span className="font-neusans">5</span>
                 </div>
               </div>
             </div>
@@ -376,8 +376,8 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
 
           {/* Footer */}
           <div className="filter2__footer">
-            <button onClick={resetFilter} className="filter2__button filter2__button--secondary">Reset</button>
-            <button onClick={applyFilters} className="filter2__button filter2__button--primary">Apply</button>
+            <button onClick={resetFilter} className="filter2__button filter2__button--secondary font-neusans">Reset</button>
+            <button onClick={applyFilters} className="filter2__button filter2__button--primary font-neusans">Apply</button>
           </div>
         </div>
       </div>

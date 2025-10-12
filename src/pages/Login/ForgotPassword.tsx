@@ -72,38 +72,38 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
             )}
             <div className="auth__container">
                 <div className="auth__card !px-0 !p-5">
-                    <h1 className="auth__title">Forgot Password</h1>
+                    <h1 className="auth__title font-neusans">Forgot Password</h1>
                     <div className="border-t border-[#CACACA]">
                         <form className="auth__form px-[2rem] !gap-4" onSubmit={handleSubmit}>
                             <div className="auth__form-group mt-6">
-                                <p className="text-sm text-[#31343F]">Enter your email address, and we’ll email you a link to reset your password.</p>
-                                <label htmlFor="email" className="auth__label !font-bold pt-2">
+                                <p className="text-sm text-[#31343F] font-neusans">Enter your email address, and we'll email you a link to reset your password.</p>
+                                <label htmlFor="email" className="auth__label !font-normal pt-2 font-neusans">
                                     Email
                                 </label>
                                 <div className="auth__input-group">
                                     <input
                                         type="text"
                                         id="email"
-                                        className="auth__input !border-[#797979]"
+                                        className="auth__input !border-[#797979] font-neusans"
                                         placeholder="Email"
                                         value={email}
                                         onChange={handleEmailChange}
                                     />
                                     {emailError && (
-                                        <div className="text-red-600 text-xs mt-2">{emailError}</div>
+                                        <div className="text-red-600 text-xs mt-2 font-neusans">{emailError}</div>
                                     )}
                                 </div>
                             </div>
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200"
+                                className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200 font-neusans"
                             >
                                 Send Reset Link
                             </button>
                             {message && (
                                 <div
-                                    className={`mt-4 text-center px-4 py-2 rounded-xl font-medium ${messageType == responseStatus.success
+                                    className={`mt-4 text-center px-4 py-2 rounded-xl font-normal font-neusans ${messageType == responseStatus.success
                                         ? "bg-green-100 text-green-700"
                                         : "bg-red-100 text-red-700"
                                         }`}

@@ -1,5 +1,6 @@
 // Restaurant Details V2 - Airbnb-inspired layout
 .restaurant-detail-v2 {
+  font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   // Hero section
   .hero-section {
     position: relative;
@@ -109,13 +110,15 @@
       border: 1px solid #e5e7eb;
       
       .metric-value {
+        font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 2.5rem;
-        font-weight: 700;
+        font-weight: 400;
         color: #111827;
         margin-bottom: 0.5rem;
       }
       
       .metric-label {
+        font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         color: #6b7280;
         font-size: 0.875rem;
       }
@@ -133,14 +136,16 @@
       margin-bottom: 1.5rem;
       
       .restaurant-title {
+        font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 2rem;
-        font-weight: 700;
+        font-weight: 400;
         color: #111827;
         margin-bottom: 0.5rem;
         line-height: 1.2;
       }
       
       .restaurant-meta {
+        font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         display: flex;
         align-items: center;
         gap: 1rem;
@@ -206,8 +211,9 @@
     border: 1px solid #e5e7eb;
     
     .section-title {
+      font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 1.125rem;
-      font-weight: 600;
+      font-weight: 400;
       color: #111827;
       margin-bottom: 1rem;
     }

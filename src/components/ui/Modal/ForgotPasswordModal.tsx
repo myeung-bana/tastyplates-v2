@@ -20,7 +20,7 @@ const ForgotPasswordModal: React.FC<ForgotPassowordModalProps> = ({
 
     return (
         <div className="review-modal-overlay">
-            <div className="!max-w-[488px] w-full !max-h-[auto] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
+            <div className="!max-w-[488px] w-full !max-h-[auto] !p-0 !rounded-3xl font-neusans relative overflow-y-auto">
                 <button className="review-modal__close !left-[1.5rem] !top-5 !w-fit" onClick={onClose}>
                     <FiChevronLeft className="stroke-[2] text-[28px] text-[#1C1B1F] hover:opacity-80" />
                 </button>

@@ -21,7 +21,7 @@ const SignupModal: React.FC<SignupModalProps> = ({
 
   return (
     <div className="review-modal-overlay">
-      <div className="!max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[800px] !p-0 !rounded-3xl font-inter relative overflow-y-auto">
+      <div className="!max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[800px] !p-0 !rounded-3xl font-neusans relative overflow-y-auto">
         <button className="review-modal__close !top-3 md:!top-5" onClick={onClose}>
           <FiX />
         </button>

@@ -119,13 +119,13 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
   return (
     <button
-      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors"
+      className="flex items-center gap-2 px-3 py-2 text-sm font-normal text-gray-700 hover:text-gray-900 hover:underline transition-colors font-neusans"
       onClick={handleToggle}
       disabled={loading}
       aria-pressed={checkedIn}
     >
       <FaMapMarkerAlt className={checkedIn ? "text-primary" : undefined} />
-      <span className={checkedIn ? "font-bold" : ""}>
+      <span className="font-normal">
         {checkedIn ? "Checked-in" : "Check-In"}
       </span>
       {error && <span className="text-xs text-red-500 ml-2">{error}</span>}

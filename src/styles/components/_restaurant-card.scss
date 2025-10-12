@@ -1,4 +1,5 @@
 .restaurant-card {
+  font-family: "Neusans", sans-serif;
   padding-bottom: 1rem;
   &__tags {
     display: flex;
@@ -8,6 +9,10 @@
 
     @media (max-width: 767px) {
       font-size: 10px;
+    }
+
+    span {
+      font-family: "Neusans", sans-serif;
     }
   }
 
@@ -21,6 +26,7 @@
     text-align: center;
     text-transform: none; // Optional: makes tags look more distinct
     letter-spacing: 0.025em; // Optional: slightly improves readability of uppercase text
+    font-family: "Neusans", sans-serif;
 
     @media (max-width: 767px) {
       font-size: 10px;

@@ -141,7 +141,7 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
         <>
             <div
                 onClick={() => small && setIsOpen(true)}
-                className={small ? "cursor-pointer" : ""}
+                className={`font-neusans ${small ? "cursor-pointer" : ""}`}
             >
                 <GoogleMap
                     mapContainerStyle={{

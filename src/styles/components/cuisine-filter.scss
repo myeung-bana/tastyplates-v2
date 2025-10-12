@@ -19,7 +19,8 @@
     -webkit-padding-start: 24px;
     -moz-padding-start: 24px;
     background-color: #0000;
-    font-weight: 600;
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
     color: #494D5D;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -75,8 +76,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 400;
   }
 
   // Modal Styles
@@ -147,8 +149,9 @@
   }
 
   &__title {
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 400;
     color: #31343F;
     margin: 0;
   }
@@ -185,8 +188,9 @@
   }
 
   &__section-title {
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 400;
     color: #31343F;
     margin: 0;
   }
@@ -231,8 +235,9 @@
   }
 
   &__checkbox-label {
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 400;
     color: #31343F;
     cursor: pointer;
     flex: 1;
@@ -292,17 +297,19 @@
   }
 
   &__palate-category-title {
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 400;
     color: #31343F;
     margin: 0;
     flex: 1;
   }
 
   &__region-count {
+    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 12px;
     color: #666;
-    font-weight: 500;
+    font-weight: 400;
   }
 
   &__palate-subcategory {

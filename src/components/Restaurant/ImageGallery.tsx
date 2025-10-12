@@ -33,7 +33,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
   return (
     <>
       {/* Main Gallery */}
-      <div className="relative group w-full h-full">
+      <div className="relative group w-full h-full font-neusans">
         {/* Main Image */}
         <div className="relative w-full h-full overflow-hidden">
           <Image

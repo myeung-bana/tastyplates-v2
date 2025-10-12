@@ -17,7 +17,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
 
   const recognitionMetrics = metrics || defaultMetrics;
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
       <h3 className="text-lg font-semibold mb-4">Community Recognition</h3>
       <div className="community-recognition w-full flex flex-col lg:flex-row items-center justify-center gap-6 my-5 lg:gap-0 lg:my-0">
         <div className="flex items-center w-full">
@@ -30,7 +30,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               alt="Flag icon"
             />
             <div className="rating-value">
-              <span className="text-lg md:text-xl font-medium">
+              <span className="text-lg md:text-xl font-normal">
                 {recognitionMetrics.mustRevisit}
               </span>
             </div>
@@ -45,7 +45,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               alt="phone icon"
             />
             <div className="rating-value">
-              <span className="text-lg md:text-xl font-medium">
+              <span className="text-lg md:text-xl font-normal">
                 {recognitionMetrics.instaWorthy}
               </span>
             </div>
@@ -62,7 +62,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               alt="cash icon"
             />
             <div className="rating-value">
-              <span className="text-lg md:text-xl font-medium">
+              <span className="text-lg md:text-xl font-normal">
                 {recognitionMetrics.valueForMoney}
               </span>
             </div>
@@ -77,7 +77,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               alt="helmet icon"
             />
             <div className="rating-value">
-              <span className="text-lg md:text-xl font-medium">
+              <span className="text-lg md:text-xl font-normal">
                 {recognitionMetrics.bestService}
               </span>
             </div>

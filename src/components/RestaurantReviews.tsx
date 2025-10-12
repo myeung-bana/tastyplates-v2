@@ -385,7 +385,7 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
 
   // Render
   return (
-    <section className="restaurant-reviews">
+    <section className="restaurant-reviews font-neusans">
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-3">
           <h2 className="text-lg font-bold text-[#31343F]">

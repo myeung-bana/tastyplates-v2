@@ -269,7 +269,7 @@
 
   &__palate-modal-title {
     font-size: 24px;
-    font-weight: 600;
+    font-weight: 500;
     color: #31343F;
     margin: 0;
   }
@@ -341,7 +341,7 @@
 
   &__palate-modal-region-title {
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 400;
     color: #31343F;
     margin: 0 0 16px 0;
   }
@@ -364,7 +364,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 400;
     color: #31343F;
 
     &:hover {
@@ -384,7 +384,7 @@
     }
 
     &--region {
-      font-weight: 600;
+      font-weight: 400;
       padding: 14px 20px;
       font-size: 16px;
     }
@@ -415,7 +415,7 @@
     border-radius: 24px;
     background: white;
     color: #6b7280;
-    font-weight: 500;
+    font-weight: 400;
     cursor: pointer;
     transition: all 0.2s ease;
 
@@ -431,7 +431,7 @@
     border-radius: 24px;
     background: #E36B00;
     color: white;
-    font-weight: 500;
+    font-weight: 400;
     cursor: pointer;
     transition: all 0.2s ease;
 
@@ -541,8 +541,8 @@
   }
 
   &__location-modal-title {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 400;
     color: #31343F;
     margin: 0;
   }
@@ -594,6 +594,7 @@
     font-size: 14px;
     font-weight: 500;
     width: fit-content;
+    font-family: "Neusans", sans-serif;
   }
 
   &__location-modal-current-flag {
@@ -631,7 +632,7 @@
     padding: 4px 12px;
     border-radius: 16px;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 400;
   }
 
   &__location-modal-selected-flag {
@@ -659,7 +660,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 400;
     color: #31343F;
 
     &:hover {
@@ -699,13 +700,153 @@
     border-radius: 24px;
     background: #E36B00;
     color: white;
-    font-weight: 500;
+    font-weight: 400;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
       background: #d55a00;
     }
+  }
+
+  // Enhanced location modal styles for hierarchical selection
+  &__location-modal-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #f3f4f6;
+    }
+  }
+
+  &__location-modal-back-icon {
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+  }
+
+  &__location-modal-country-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:hover {
+      border-color: #E36B00;
+      background: #fef7f0;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(227, 107, 0, 0.1);
+    }
+  }
+
+  &__location-modal-country-flag {
+    width: 48px;
+    height: 36px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__location-modal-country-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+
+  &__location-modal-country-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #111827;
+  }
+
+  &__location-modal-country-short {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  &__location-modal-country-cities {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 400;
+  }
+
+  &__location-modal-arrow {
+    width: 20px;
+    height: 20px;
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+
+  &__location-modal-city-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    &:hover {
+      border-color: #E36B00;
+      background: #fef7f0;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(227, 107, 0, 0.1);
+    }
+
+    &.selected {
+      border-color: #E36B00;
+      background: #fef7f0;
+    }
+  }
+
+  &__location-modal-city-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__location-modal-city-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #111827;
+  }
+
+  &__location-modal-city-short {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  &__location-modal-check {
+    width: 20px;
+    height: 20px;
+    color: #E36B00;
+    flex-shrink: 0;
   }
 
   // Mobile responsive styles for location modal
@@ -737,6 +878,28 @@
       width: 18px;
       height: 14px;
     }
+
+    &__location-modal-country-card {
+      padding: 12px;
+      gap: 12px;
+    }
+
+    &__location-modal-country-flag {
+      width: 40px;
+      height: 30px;
+    }
+
+    &__location-modal-country-name {
+      font-size: 15px;
+    }
+
+    &__location-modal-city-card {
+      padding: 12px;
+    }
+
+    &__location-modal-city-name {
+      font-size: 15px;
+    }
   }
 
   &__nav-item {
@@ -762,7 +925,7 @@
 
     h1 {
       font-size: 1.25rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #1f2937; // gray-800
     }
   }

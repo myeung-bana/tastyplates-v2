@@ -35,7 +35,13 @@ import BottomSheet from "@/components/ui/BottomSheet/BottomSheet";
 import { FiClock, FiPhone, FiDollarSign } from "react-icons/fi";
 
 // Save Restaurant Button Component
-function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
+function SaveRestaurantButton({ 
+  restaurantSlug, 
+  onShowSignin 
+}: { 
+  restaurantSlug: string;
+  onShowSignin: () => void;
+}) {
   const { data: session } = useSession();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,8 +65,8 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
 
   const toggleFavorite = useCallback(async () => {
     if (!session?.user) {
-      // Redirect to signin or show signin modal
-      window.location.href = '/auth/signin';
+      // Show signin modal instead of redirecting
+      onShowSignin();
       return;
     }
 
@@ -95,11 +101,17 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     } finally {
       setLoading(false);
     }
-  }, [saved, session?.user, session?.accessToken, restaurantSlug, restaurantService]);
+  }, [saved, session?.user, session?.accessToken, restaurantSlug, restaurantService, onShowSignin]);
 
   useEffect(() => {
     let isMounted = true;
-    if (!session || !restaurantSlug || initialized) return;
+    if (!restaurantSlug || initialized) return;
+    
+    // If user is not authenticated, mark as initialized without checking status
+    if (!session?.user) {
+      if (isMounted) setInitialized(true);
+      return;
+    }
     
     const fetchFavoriteStatus = async () => {
       try {
@@ -136,7 +148,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-semibold text-sm"
+      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
     >
       {loading ? (
         <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
@@ -145,7 +157,7 @@ function SaveRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
       ) : (
         <FaRegHeart className="text-gray-500" />
       )}
-      <span className="text-sm font-semibold">
+      <span className="text-sm font-normal">
         {saved ? "Saved" : "Save"}
       </span>
     </button>
@@ -336,7 +348,7 @@ export default function RestaurantDetail() {
   if (!restaurant) return notFound();
 
   return (
-    <div className="restaurant-detail mt-4 md:mt-20">
+    <div className="restaurant-detail mt-4 md:mt-20 font-neusans">
       <div className="restaurant-detail__container !pt-0">
         {/* Mobile: Gallery First */}
         <div className="md:hidden">
@@ -366,19 +378,19 @@ export default function RestaurantDetail() {
             <div className="flex flex-col md:flex-col">
               <div className="flex flex-col md:flex-row justify-between px-2">
                 <div className="mt-6 md:mt-0">
-                  <h1 className="restaurant-detail__name leading-7">{restaurant.title}</h1>
+                  <h1 className="restaurant-detail__name leading-7 font-neusans font-normal">{restaurant.title}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
                       {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
                         <div className="flex items-center gap-2" key={`palate-${index}`}>
                           {index > 0 && <span>&#8226;</span>}
-                          <span className="cuisine-tag hover:!bg-transparent">{palate.name}</span>
+                          <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal">{palate.name}</span>
                         </div>
                       ))}
                     </div>
                     &#8226;
                     <div className="restaurant-detail__price">
-                      <span>{restaurant.priceRange}</span>
+                      <span className="font-neusans font-normal">{restaurant.priceRange}</span>
                     </div>
                   </div>
                   
@@ -389,13 +401,13 @@ export default function RestaurantDetail() {
                         restaurant.listingCategories.nodes.map((category: { name: string, slug: string }, index: number) => (
                           <span
                             key={`category-${index}`}
-                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans"
                           >
                             {category.name}
                           </span>
                         ))
                       ) : (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans">
                           Uncategorized
                         </span>
                       )}
@@ -404,11 +416,14 @@ export default function RestaurantDetail() {
                 </div>
                 <div className="flex flex-row flex-wrap gap-3 items-center">
                   <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
-                  <button onClick={addReview} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors">
+                  <button onClick={addReview} className="flex items-center gap-2 px-3 py-2 text-sm font-normal text-gray-700 hover:text-gray-900 hover:underline transition-colors font-neusans">
                     <FaPen className="w-4 h-4" />
                     <span>Write a Review</span>
                   </button>
-                  <SaveRestaurantButton restaurantSlug={restaurant.slug} />
+                  <SaveRestaurantButton 
+                    restaurantSlug={restaurant.slug} 
+                    onShowSignin={() => setIsShowSignin(true)}
+                  />
                 </div>
               </div>
             </div>
@@ -437,17 +452,17 @@ export default function RestaurantDetail() {
                 </div>
               ) : (
                 <div className="hidden md:block h-64 md:h-80 rounded-2xl bg-gray-100 flex items-center justify-center">
-                  <span className="text-gray-500 text-xl font-medium">No Photos Available</span>
+                  <span className="text-gray-500 text-xl font-neusans">No Photos Available</span>
                 </div>
               )}
 
               {/* Restaurant Description Section */}
               {restaurant.content && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                  <h3 className="text-lg font-semibold mb-4">Restaurant Description</h3>
+                  <h3 className="text-lg mb-4 font-neusans font-normal">Restaurant Description</h3>
                   <div className="relative">
                     <div 
-                      className={`text-gray-700 leading-relaxed prose prose-sm max-w-none ${
+                      className={`text-gray-700 leading-relaxed prose prose-sm max-w-none font-neusans font-normal ${
                         restaurant.content.length > 300 && !isDescriptionExpanded ? 'line-clamp-4' : ''
                       }`}
                       dangerouslySetInnerHTML={{ __html: restaurant.content }}
@@ -492,8 +507,8 @@ export default function RestaurantDetail() {
           <div className="lg:w-[375px] lg:flex-shrink-0">
             <div className="lg:sticky lg:top-24 space-y-6">
             {/* Map and Address */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold mb-4">Location</h3>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
+              <h3 className="text-lg font-normal mb-4">Location</h3>
               <div className="space-y-4">
                 {(lat && lng) || address || restaurant?.listingDetails?.googleMapUrl ? (
                   <div className="h-64 rounded-xl overflow-hidden">
@@ -505,28 +520,28 @@ export default function RestaurantDetail() {
                     />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl">
+                  <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-500 rounded-xl font-neusans">
                     <FiMapPin className="w-5 h-5 mr-2" />
-                    <span>Map location not available</span>
+                    <span className="font-normal">Map location not available</span>
                   </div>
                 )}
                 
                 {address && address !== 'No address available' && (
                   <div className="flex items-start gap-3 pt-2">
                     <FiMapPin className="text-gray-500 mt-1" />
-                    <span className="text-gray-700">{address}</span>
+                    <span className="text-gray-700 font-neusans font-normal">{address}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
+              <h3 className="text-lg font-normal mb-4">Quick Actions</h3>
               <div className="space-y-3">           
                 <button 
                   onClick={addReview}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-neusans font-normal"
                 >
                   <FaPen className="w-4 h-4" />
                   <span className="text-white">Write a Review</span>
@@ -536,14 +551,14 @@ export default function RestaurantDetail() {
             </div>
 
             {/* Restaurant Details */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold mb-4">Restaurant Details</h3>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
+              <h3 className="text-lg font-normal mb-4">Restaurant Details</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <FiClock className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-500">Opening Hours</span>
-                    <span className="text-gray-700">
+                    <span className="text-sm font-normal text-gray-500">Opening Hours</span>
+                    <span className="text-gray-700 font-normal">
                       {restaurant.listingDetails?.openingHours || 'Not available'}
                     </span>
                   </div>
@@ -552,8 +567,8 @@ export default function RestaurantDetail() {
                 <div className="flex items-center gap-3">
                   <FiPhone className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-500">Phone</span>
-                    <span className="text-gray-700">
+                    <span className="text-sm font-normal text-gray-500">Phone</span>
+                    <span className="text-gray-700 font-normal">
                       {restaurant.listingDetails?.phone || 'Not available'}
                     </span>
                   </div>
@@ -562,8 +577,8 @@ export default function RestaurantDetail() {
                 <div className="flex items-center gap-3">
                   <FiDollarSign className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-gray-500">Price Range</span>
-                    <span className="text-gray-700">
+                    <span className="text-sm font-normal text-gray-500">Price Range</span>
+                    <span className="text-gray-700 font-normal">
                       {restaurant.priceRange || 'Not available'}
                     </span>
                   </div>

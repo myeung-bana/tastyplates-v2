@@ -15,6 +15,9 @@ import { DEFAULT_IMAGE } from "@/constants/images";
 import { getBestAddress } from "@/utils/addressUtils";
 import SuggestedRestaurants from './SuggestedRestaurants';
 import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
+import { useLocation } from '@/contexts/LocationContext';
+import { applyLocationFilter, sortByLocationRelevance } from '@/utils/locationUtils';
+import { LOCATION_HIERARCHY } from '@/constants/location';
 import '@/styles/components/suggested-restaurants.scss';
 
 export interface Restaurant {
@@ -58,6 +61,29 @@ const restaurantService = new RestaurantService();
 
 const RestaurantPage = () => {
   const { data: session } = useSession();
+  const { selectedLocation } = useLocation();
+
+  // Helper function to get parent country's short code for cities
+  const getParentCountryCode = (cityKey: string): string => {
+    for (const country of LOCATION_HIERARCHY.countries) {
+      const city = country.cities.find(c => c.key === cityKey);
+      if (city) {
+        return country.shortLabel;
+      }
+    }
+    return '';
+  };
+
+  // Helper function to format location display
+  const formatLocationDisplay = (location: any): string => {
+    if (location.type === 'city') {
+      const countryCode = getParentCountryCode(location.key);
+      return `${location.label}, ${countryCode}`;
+    } else if (location.type === 'country') {
+      return `${location.label}, ${location.shortLabel}`;
+    }
+    return location.label;
+  };
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -201,13 +227,26 @@ const RestaurantPage = () => {
       );
       const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
       
-      // Apply location filtering if searchAddress is provided
+      // Apply location filtering using the enhanced location system
       let filteredRestaurants = transformed;
+      
+      // First apply URL-based address filtering if provided
       if (searchAddress && searchAddress.trim()) {
         filteredRestaurants = transformed.filter(restaurant => {
           const relevance = restaurantService.calculateLocationRelevance(restaurant, searchAddress);
           return relevance > 0; // Only include restaurants with location relevance
         });
+      }
+      
+      // Then apply enhanced selected location filtering (city/country)
+      if (selectedLocation && selectedLocation.type) {
+        console.log('🎯 Applying enhanced location filter for:', selectedLocation.label, selectedLocation.type);
+        filteredRestaurants = applyLocationFilter(filteredRestaurants, selectedLocation, 100); // 100km radius
+        
+        // Sort by location relevance for better results
+        filteredRestaurants = sortByLocationRelevance(filteredRestaurants, selectedLocation);
+        
+        console.log('📍 Filtered restaurants count:', filteredRestaurants.length);
       }
       
       // Apply client-side sorting (location-based, palate-based, or regular)
@@ -232,7 +271,7 @@ const RestaurantPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm, filters.cuisine, filters.palates, filters.price, filters.badges, filters.sortOption, filters.rating, searchAddress, searchEthnic, mapListingToRestaurant]);
+  }, [debouncedSearchTerm, filters.cuisine, filters.palates, filters.price, filters.badges, filters.sortOption, filters.rating, searchAddress, searchEthnic, selectedLocation, mapListingToRestaurant]);
 
   const handleFilterChange = useCallback((
     newFilters:
@@ -271,7 +310,7 @@ const RestaurantPage = () => {
     isFirstLoad.current = true;
     fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, session?.accessToken, fetchRestaurants]);
+  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, selectedLocation, session?.accessToken, fetchRestaurants]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -339,15 +378,7 @@ const RestaurantPage = () => {
 
   return (
     <div className="restaurants">
-      <div className="restaurants__container">
-          {searchAddress && (
-            <div className="restaurants__title">
-              <p className="text-sm text-gray-600 mt-1">
-                Showing results for: <span className="font-medium">{searchAddress}</span>
-              </p>
-            </div>
-          )}
-        
+      <div className="restaurants__container">        
         <div className="restaurants__content">
           <Filter2 
             onFilterChange={handleFilterChange}
@@ -364,8 +395,8 @@ const RestaurantPage = () => {
           ) : restaurants.length === 0 ? (
             <div className="restaurants__no-results">
               <div className="text-center py-12">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-                <p className="text-gray-500">
+                <h3 className="text-lg font-normal text-gray-900 mb-2 font-neusans">No results found</h3>
+                <p className="text-gray-500 font-neusans">
                   Try adjusting your search criteria or filters to find more restaurants.
                 </p>
               </div>

@@ -14,11 +14,15 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedLocation, setSelectedLocationState] = useState<LocationOption>(
     SUPPORTED_LOCATIONS.find(loc => loc.key === DEFAULT_LOCATION) || SUPPORTED_LOCATIONS[0] || {
-      key: 'canada',
-      label: 'Canada',
+      key: 'toronto',
+      label: 'Toronto',
+      shortLabel: 'TO',
       flag: 'https://flagcdn.com/ca.svg',
       currency: 'CAD',
-      timezone: 'America/Toronto'
+      timezone: 'America/Toronto',
+      type: 'city',
+      parentKey: 'canada',
+      coordinates: { lat: 43.6532, lng: -79.3832 }
     }
   );
   const [isLoading, setIsLoading] = useState(true);
