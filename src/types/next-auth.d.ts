@@ -13,6 +13,7 @@ declare module 'next-auth' {
             palates?: string | null;
             about_me?: string | null;
             language?: string | null;
+            gender?: string | null;
         };
         accessToken?: string;
     }

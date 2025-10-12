@@ -136,7 +136,7 @@ export default function Navbar(props: Record<string, unknown>) {
       />
       <PasswordUpdatedModal isOpen={isOpenPasswordUpdate} onClose={() => setIsOpenPasswordUpdate(false)} />
       <nav
-        className={`navbar !z-[1000] hidden md:block ${isLandingPage
+        className={`navbar !z-[1000] hidden md:block font-neusans ${isLandingPage
           ? navBg ? 'bg-white border-b border-[#CACACA]' : "bg-transparent"
           : "bg-white border-b border-[#CACACA]"
           }`}
@@ -223,7 +223,7 @@ export default function Navbar(props: Record<string, unknown>) {
                       setIsOpenSignup(false)
                       setIsOpenSignin(true)
                     }}
-                    className={`navbar__button navbar__button--primary hover:rounded-[50px] border-none ${isLandingPage && !navBg ? '!bg-transparent !text-white' : ''} ${!isLandingPage ? '!bg-transparent' : ''} font-semibold hidden md:block`}
+                    className={`navbar__button navbar__button--primary hover:rounded-[50px] border-none ${isLandingPage && !navBg ? '!bg-transparent !text-white' : ''} ${!isLandingPage ? '!bg-transparent' : ''} hidden md:block`}
                   >
                     Log In
                   </button>
@@ -351,12 +351,12 @@ export default function Navbar(props: Record<string, unknown>) {
                 </div>
               </li>
               <li>
-                <div className="navbar__menu !flex justify-start">
+                <div className="font-neusans navbar__menu !flex justify-start">
                   {navigationItems.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
-                      className="text-[#494D5D]"
+                      className="font-neusans text-[#494D5D]"
                     >
                       {item.name}
                     </Link>
@@ -369,13 +369,13 @@ export default function Navbar(props: Record<string, unknown>) {
                     <>
                       <button
                         onClick={() => setIsOpenSignin(true)}
-                        className="navbar__button navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold"
+                        className="navbar__button font-neusans navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold"
                       >
                         Log In
                       </button>
                       <button
                         onClick={() => setIsOpenSignup(true)}
-                        className="navbar__button navbar__button--secondary rounded-[50px] !bg-white text-[#31343F] font-semibold hidden sm:block"
+                        className="navbar__button font-neusans navbar__button--secondary rounded-[50px] !bg-white text-[#31343F] font-semibold hidden sm:block"
                       >
                         Sign Up
                       </button>
@@ -385,7 +385,7 @@ export default function Navbar(props: Record<string, unknown>) {
                       <CustomPopover
                         align="bottom-end"
                         trigger={
-                          <button className="bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-2 sm:px-5 flex flex-row flex-nowrap items-center gap-2 text-white">
+                          <button className="font-neusans bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-2 sm:px-5 flex flex-row flex-nowrap items-center gap-2 text-white">
                             <span
                               className="text-[#494D5D] text-center font-semibold"
                             >
@@ -397,7 +397,7 @@ export default function Navbar(props: Record<string, unknown>) {
                           </button>
                         }
                         content={
-                          <div className="bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
+                          <div className="font-neusans bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
                             <Link
                               href={LISTING}
                               className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
@@ -406,7 +406,7 @@ export default function Navbar(props: Record<string, unknown>) {
                             </Link>
                             <Link
                               href={LISTING_EXPLANATION}
-                              className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
+                              className="font-neusans text-left pl-3.5 pr-12 py-3.5 font-semibold"
                             >
                               Add a Listing
                             </Link>

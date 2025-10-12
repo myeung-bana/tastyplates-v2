@@ -1,13 +1,102 @@
+// Neusans Font Family - Complete weight and style variations
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-lightitalic.woff') format('woff');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-book.woff') format('woff');
+  font-weight: 450;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-bookitalic.woff') format('woff');
+  font-weight: 450;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-mediumitalic.woff') format('woff');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-bolditalic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-black.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Neusans';
+  src: url('/fonts/neusans-blackitalic.woff') format('woff');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+// Inter Font (keeping for compatibility)
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/InterVF.woff') format('woff');
   font-weight: normal;
   font-style: normal;
-  font-display: swap; // optional but good for performance
+  font-display: swap;
 }
 
-// tastyplates-frontend/src/styles/base/_variables.scss
-// Typography
-$font-sans: "Nunito Sans", ui-sans-serif, system-ui, -apple-system,
-  BlinkMacSystemFont; // Replaced Circular Std with Nunito Sans
+// Typography Variables
+$font-sans: "Neusans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
 $font-inter: "Inter", sans-serif;
+$font-neusans: "Neusans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;

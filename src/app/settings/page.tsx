@@ -15,21 +15,12 @@ const SettingsPage = () => {
         {/* Settings Categories */}
         <div className="settings-categories">
           <SettingsCategory
-            title="General"
-            icon=""
-            items={[
-              { title: "Language", subtitle: "English", href: "/settings/general/language" },
-              { title: "Notifications", subtitle: "Manage alerts", href: "/settings/general/notifications" },
-              // { title: "Privacy", subtitle: "Control your data", href: "/settings/general/privacy" },
-            ]}
-          />
-          
-          <SettingsCategory
             title="Account & Security"
             icon=""
             items={[
-              { title: "Profile", subtitle: "Personal information", href: "/settings/account-security/profile" },
-              { title: "Password", subtitle: "Change password", href: "/settings/account-security/password" },
+              { title: "Profile", subtitle: "Email, birthdate, and gender", href: "/settings/account-security/profile" },
+              { title: "Password", subtitle: "Update your password", href: "/settings/account-security/password" },
+              { title: "Language", subtitle: "Choose your preferred language", href: "/settings/general/language" },
               // { title: "Two-Factor Authentication", subtitle: "Add extra security", href: "/settings/account-security/two-factor" },
             ]}
           />
@@ -59,7 +50,7 @@ const SettingsPage = () => {
             icon=""
             items={[
               { title: "Help Center", subtitle: "Get help", href: "/settings/support/help" },
-              { title: "Contact Us", subtitle: "Send us a message", href: "/settings/support/contact" },
+              { title: "About", subtitle: "App version and info", href: "/settings/support/about" },
             ]}
           />
         </div>

@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import MobileTopBar from "@/components/MobileTopBar";
 import AuthModalWrapper from "@/components/AuthModalWrapper";
 import Footer from "@/components/Footer";
+import { LanguageProvider } from '@/contexts/LanguageContext';
 export const metadata: Metadata = {
   title: "TastyPlates",
   description: "Tasty Plates",
@@ -46,17 +47,19 @@ export default function RootLayout({
         <FollowProvider>
           <LocationProvider>
             <SessionWrapper>
-              <InactivityLogout />
-              <AuthModalWrapper>
-                <div className="min-h-screen bg-white flex flex-col">
-                  <MobileTopBar />
-                  <main className="flex-1 pt-14 md:pt-0">
-                    {children}
-                  </main>
-                  <Footer />
-                  <BottomNav />
-                </div>
-              </AuthModalWrapper>
+              <LanguageProvider>
+                <InactivityLogout />
+                <AuthModalWrapper>
+                  <div className="min-h-screen bg-white flex flex-col">
+                    <MobileTopBar />
+                    <main className="flex-1 pt-14 md:pt-0">
+                      {children}
+                    </main>
+                    <Footer />
+                    <BottomNav />
+                  </div>
+                </AuthModalWrapper>
+              </LanguageProvider>
             </SessionWrapper>
           </LocationProvider>
         </FollowProvider>

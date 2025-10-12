@@ -33,21 +33,40 @@ export default function CustomDatePicker({
     id,
     formatValue = 'PPP',
 }: CustomDatePickerProps) {
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-        value ? parseISO(value) : undefined
-    )
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
+        if (value) {
+            try {
+                const parsed = parseISO(value);
+                return !isNaN(parsed.getTime()) ? parsed : undefined;
+            } catch {
+                return undefined;
+            }
+        }
+        return undefined;
+    });
 
     useEffect(() => {
         if (value && !selectedDate) {
-            setSelectedDate(parseISO(value))
+            try {
+                const parsed = parseISO(value);
+                if (!isNaN(parsed.getTime())) {
+                    setSelectedDate(parsed);
+                }
+            } catch {
+                // Invalid date, keep selectedDate as undefined
+            }
         }
     }, [value, selectedDate])
 
     const handleDateSelect = (date?: Date) => {
         setSelectedDate(date)
-        if (date && onChange) {
-            const formatted = format(date, formatValue)
-            onChange(formatted)
+        if (date && !isNaN(date.getTime()) && onChange) {
+            try {
+                const formatted = format(date, formatValue)
+                onChange(formatted)
+            } catch (error) {
+                console.error('Error formatting date:', error)
+            }
         }
     }
 
@@ -69,7 +88,7 @@ export default function CustomDatePicker({
                             buttonClassName
                         )}
                     >
-                        {selectedDate ? format(selectedDate, formatValue) : 'DD/MM/YYYY'}
+                        {selectedDate && !isNaN(selectedDate.getTime()) ? format(selectedDate, formatValue) : 'DD/MM/YYYY'}
                         <CalendarDaysIcon className="ml-2 h-5 w-5 opacity-70" />
                     </button>
                 </PopoverTrigger>

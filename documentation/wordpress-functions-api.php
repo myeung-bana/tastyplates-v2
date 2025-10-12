@@ -809,6 +809,11 @@ add_action('graphql_register_types', function() {
         'description' => 'Featured image URL for the listing (S3 bucket URL)',
     ));
     
+    register_graphql_field('UpdateListingInput', 'languagePreference', array(
+        'type' => 'String',
+        'description' => 'Language preference for the user',
+    ));
+    
     // Register GoogleMapUrlInput type
     register_graphql_input_type('GoogleMapUrlInput', array(
         'description' => 'Input for Google Maps URL details',
@@ -907,6 +912,18 @@ add_action('graphql_register_types', function() {
         'description' => 'Number of ratings for the listing',
         'resolve' => function($post) {
             return intval(get_post_meta($post->ID, 'ratings_count', true));
+        },
+    ));
+    
+    register_graphql_field('Listing', 'languagePreference', array(
+        'type' => 'String',
+        'description' => 'Language preference for the listing',
+        'resolve' => function($post) {
+            if (function_exists('get_field')) {
+                $acf_language = get_field('language_preference', $post->ID);
+                if ($acf_language) return $acf_language;
+            }
+            return get_post_meta($post->ID, 'language_preference', true);
         },
     ));
     
@@ -1206,6 +1223,10 @@ add_action('graphql_post_object_mutation_update_additional_data', function($post
         update_post_meta($post_id, 'ratings_count', intval($input['ratingsCount']));
     }
     
+    if (isset($input['languagePreference'])) {
+        update_post_meta($post_id, 'language_preference', sanitize_text_field($input['languagePreference']));
+    }
+    
     // Handle googleMapUrl
     if (isset($input['googleMapUrl']) && is_array($input['googleMapUrl'])) {
         TastyPlates_FieldProcessor::process_google_maps_data($input['googleMapUrl'], $post_id);
@@ -1248,6 +1269,10 @@ add_action('graphql_post_object_mutation_update_additional_data', function($post
         
         if (isset($input['listingStreet'])) {
             update_field('listing_street', $input['listingStreet'], $post_id);
+        }
+        
+        if (isset($input['languagePreference'])) {
+            update_field('language_preference', $input['languagePreference'], $post_id);
         }
     }
     

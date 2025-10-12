@@ -237,8 +237,8 @@ const Hero = () => {
       <section className="hero">
         <div className="hero__container mx-auto">
           <div className="hero__content mx-auto">
-          <h1 className="hero__title">Discover the Meal that fits Your Taste</h1>
-          <p className="hero__description">
+          <h1 className="hero__title font-neusans">Discover the Meal that fits Your Taste</h1>
+          <p className="hero__description font-neusans">
           Dine like a Brazilian in Tokyo - or Korean in New York?
           </p>
         </div>

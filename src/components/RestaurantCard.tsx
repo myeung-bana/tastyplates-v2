@@ -219,7 +219,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
   return (
     <>
-      <div className="restaurant-card">
+      <div className="restaurant-card font-neusans">
         <div className="restaurant-card__image relative">
           <a
             href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: palateParam } : {})}

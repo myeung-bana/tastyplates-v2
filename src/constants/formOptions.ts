@@ -194,7 +194,6 @@ export const languageOptions = [
     { value: "ca", label: "Catalan" },
     { value: "sq", label: "Albanian" },
     { value: "bs", label: "Bosnian" },
-    { value: "mk", label: "Macedonian" },
     { value: "az", label: "Azerbaijani" },
     { value: "hy", label: "Armenian" },
     { value: "ka", label: "Georgian" },

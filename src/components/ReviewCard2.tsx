@@ -26,7 +26,7 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
   const { data: session } = useSession();
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden font-neusans">
       <ReviewPopUpModal
         data={data as unknown as GraphQLReview}
         isOpen={isModalOpen}
@@ -170,7 +170,7 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
 
         {/* Review Title - Matching ReviewCard font sizes */}
         {data.reviewMainTitle && (
-          <p className="text-[12px] md:text-sm font-semibold text-[#31343F] mb-1 line-clamp-1 break-words">
+          <p className="text-[12px] md:text-sm text-[#31343F] mb-1 line-clamp-1 break-words">
             {capitalizeWords(stripTags(data.reviewMainTitle))}
           </p>
         )}

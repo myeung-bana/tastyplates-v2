@@ -35,7 +35,7 @@ export default function Footer({
   isShowCopyright = true
 }: Props) {
   return (
-    <footer className="footer">
+    <footer className="footer font-neusans">
       <div className={`footer__container ${isShowLinks ? 'footer__container--with-links' : ''}`}>
         {/* Main footer content */}
         {isShowLinks && (
@@ -105,7 +105,7 @@ export default function Footer({
               {/* Legal Column */}
               <div className="footer__links-column footer__links-column--legal">
                 <h3 className="footer__links-title">About</h3>
-                <ul className="footer__links-list">
+                <ul className="footer__links-list font-neusans">
                   {footerLinks.legal.map((link) => (
                     <li key={link.name} className="footer__links-item">
                       <a href={link.href} className="footer__links-link">
@@ -133,7 +133,7 @@ export default function Footer({
         )}
         {isShowCopyright && (
         <div className={`footer__copyright ${isShowLinks ? 'footer__copyright--with-border' : ''}`}>
-          <p className="footer__copyright-text">
+          <p className="footer__copyright-text font-neusans">
             &copy; {new Date().getFullYear()} TastyPlates. All rights
             reserved.
           </p>
