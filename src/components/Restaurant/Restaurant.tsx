@@ -87,14 +87,48 @@ const RestaurantPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Initialize URL parameters
+  // Initialize URL parameters - support both 'ethnic' and 'palates' parameters
   const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
+  const initialPalatesFromUrl = searchParams?.get("palates") ? decodeURIComponent(searchParams.get("palates") as string) : "";
   const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
   const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
   
+  // Helper function to expand region names to individual palates
+  const expandRegionsToPalates = (values: string[]): string[] => {
+    const expanded: string[] = [];
+    values.forEach(value => {
+      // Check if this value is a region name
+      if (RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS[value as keyof typeof RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS]) {
+        // It's a region, add all palates from that region
+        const regionPalates = RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS[value as keyof typeof RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS];
+        expanded.push(...regionPalates);
+      } else {
+        // It's an individual palate
+        expanded.push(value);
+      }
+    });
+    return expanded;
+  };
+  
+  // Convert URL parameters to palates array
+  const getInitialPalatesFromUrl = () => {
+    // Prefer 'palates' parameter over 'ethnic' for consistency with NavbarSearchBar
+    const paramValue = initialPalatesFromUrl || initialEthnicFromUrl;
+    if (!paramValue) return [];
+    
+    // Split by comma and clean up the values
+    const values = paramValue.split(',').map(val => val.trim()).filter(val => val);
+    
+    // Expand any region names to individual palates
+    return expandRegionsToPalates(values);
+  };
+  
   // Initialize state with URL parameters
   const [searchAddress] = useState(initialAddressFromUrl);
-  const [searchEthnic, setSearchEthnic] = useState("");
+  const [searchEthnic, setSearchEthnic] = useState(() => {
+    const palates = getInitialPalatesFromUrl();
+    return palates.join(',');
+  });
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -105,20 +139,18 @@ const RestaurantPage = () => {
   const [searchTerm] = useState(initialListingFromUrl);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-  // Convert ethnic URL parameter to palates array
-  const getInitialPalatesFromUrl = () => {
-    if (!initialEthnicFromUrl) return [];
-    
-    // Split by comma and clean up the values
-    const ethnicValues = initialEthnicFromUrl.split(',').map(val => val.trim()).filter(val => val);
-    
-    // Map ethnic values to palate names (this might need adjustment based on your data structure)
-    return ethnicValues;
-  };
+  const initialPalates = getInitialPalatesFromUrl();
+  
+  // Log initial palates for debugging
+  useEffect(() => {
+    if (initialPalates.length > 0) {
+      console.log('🎯 Initial palates from URL:', initialPalates);
+    }
+  }, []);
 
   const [filters, setFilters] = useState({
     cuisine: null as string[] | null,
-    palates: getInitialPalatesFromUrl(),
+    palates: initialPalates,
     price: null as string | null,
     rating: null as number | null,
     badges: null as string | null,
@@ -169,7 +201,12 @@ const RestaurantPage = () => {
   }, [initialListingFromUrl, router]);
 
   // Client-side sorting function for both palate-based and regular sorting
-  const sortRestaurants = (restaurants: Restaurant[], selectedPalates: string[], sortOption: string | null, locationKeyword?: string) => {
+  const sortRestaurants = (
+    restaurants: Restaurant[], 
+    selectedPalates: string[], 
+    sortOption: string | null, 
+    locationKeyword?: string
+  ) => {
     if (!restaurants || restaurants.length === 0) return restaurants;
     
     let sortedRestaurants = [...restaurants];
@@ -180,28 +217,77 @@ const RestaurantPage = () => {
     }
     
     return sortedRestaurants.sort((a, b) => {
-      // If palates are selected, prioritize palate-based sorting
+      // PALATE-BASED SORTING (when palates are selected)
       if (selectedPalates && selectedPalates.length > 0) {
-        const aPalateRating = a.searchPalateStats?.avg || 0;
-        const bPalateRating = b.searchPalateStats?.avg || 0;
+        const aPalateStats = a.searchPalateStats;
+        const bPalateStats = b.searchPalateStats;
         
-        // Sort by palate rating (descending), then by regular rating
-        if (bPalateRating !== aPalateRating) {
-          return bPalateRating - aPalateRating;
+        // Check if restaurants have valid palate ratings
+        const aHasValidPalateRating = aPalateStats && aPalateStats.count > 0 && aPalateStats.avg > 0;
+        const bHasValidPalateRating = bPalateStats && bPalateStats.count > 0 && bPalateStats.avg > 0;
+        
+        // Strategy: 
+        // Tier 1: Restaurants WITH matching palate reviews (sorted by palate rating)
+        // Tier 2: Restaurants WITHOUT matching palate reviews (sorted by overall rating)
+        
+        if (aHasValidPalateRating && bHasValidPalateRating) {
+          // Both have valid palate ratings - compare palate ratings
+          const diff = bPalateStats.avg - aPalateStats.avg;
+          if (Math.abs(diff) > 0.01) return diff; // Use 0.01 threshold for float comparison
+          
+          // If palate ratings are equal, use review count as tiebreaker
+          if (bPalateStats.count !== aPalateStats.count) {
+            return bPalateStats.count - aPalateStats.count;
+          }
+          
+          // Final tiebreaker: overall rating
+          return (b.rating || 0) - (a.rating || 0);
         }
         
-        return (b.rating || 0) - (a.rating || 0);
+        if (aHasValidPalateRating && !bHasValidPalateRating) {
+          // A has palate rating, B doesn't - A comes first (Tier 1 > Tier 2)
+          return -1;
+        }
+        
+        if (!aHasValidPalateRating && bHasValidPalateRating) {
+          // B has palate rating, A doesn't - B comes first (Tier 1 > Tier 2)
+          return 1;
+        }
+        
+        // Neither has valid palate ratings (both Tier 2) - fall back to overall rating
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
+        
+        // Final tiebreaker: total review count
+        return (b.ratingsCount || 0) - (a.ratingsCount || 0);
       }
       
-      // Regular sorting based on sortOption
+      // NO PALATE SELECTED - Sort by overall quality
+      // Priority order:
+      // 1. Overall rating (descending)
+      // 2. Number of reviews (more reviews = more reliable)
+      // 3. Recognition count (if available)
+      
       if (sortOption === 'ASC') {
+        // Ascending order (lowest to highest)
         return (a.rating || 0) - (b.rating || 0);
       } else if (sortOption === 'DESC') {
+        // Descending order (highest to lowest)
         return (b.rating || 0) - (a.rating || 0);
+      } else {
+        // Default: Smart sorting by quality
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        
+        // Only use rating as primary if difference is significant (>0.1 stars)
+        if (Math.abs(ratingDiff) > 0.1) return ratingDiff;
+        
+        // If ratings are similar, prefer more reviewed restaurants
+        const reviewCountDiff = (b.ratingsCount || 0) - (a.ratingsCount || 0);
+        if (reviewCountDiff !== 0) return reviewCountDiff;
+        
+        // Final tiebreaker: recognition count (if available)
+        return (b.recognitionCount || 0) - (a.recognitionCount || 0);
       }
-      
-      // Default: no sorting
-      return 0;
     });
   };
 
@@ -251,6 +337,21 @@ const RestaurantPage = () => {
       
       // Apply client-side sorting (location-based, palate-based, or regular)
       const sortedRestaurants = sortRestaurants(filteredRestaurants, filters.palates, filters.sortOption, searchAddress);
+      
+      // Log tier separation for debugging
+      if (filters.palates && filters.palates.length > 0) {
+        const tier1Count = sortedRestaurants.filter(r => r.searchPalateStats?.count && r.searchPalateStats.count > 0).length;
+        const tier2Count = sortedRestaurants.length - tier1Count;
+        console.log('🎯 Search Results by Tier:');
+        console.log(`  Tier 1 (WITH palate reviews): ${tier1Count} restaurants`);
+        console.log(`  Tier 2 (WITHOUT palate reviews): ${tier2Count} restaurants`);
+        if (tier1Count > 0) {
+          const topTier1 = sortedRestaurants.filter(r => r.searchPalateStats?.count && r.searchPalateStats.count > 0).slice(0, 3);
+          console.log('  Top 3 Tier 1:', topTier1.map(r => `${r.name}: ${r.searchPalateStats?.avg}★ (${r.searchPalateStats?.count} reviews)`));
+        }
+      } else {
+        console.log('📊 Showing all restaurants sorted by overall quality');
+      }
       
       setRestaurants((prev: Restaurant[]) => {
         if (reset || !after) return sortedRestaurants;

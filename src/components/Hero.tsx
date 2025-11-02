@@ -1,49 +1,25 @@
 "use client";
-import { FiSearch } from "react-icons/fi";
-import { MdStore } from "react-icons/md";
-import { useEffect, useRef, useState, useCallback } from "react";
-import "@/styles/components/_hero.scss";
-import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
-import { palateOptions } from "@/constants/formOptions";
-import { Key } from "@react-types/shared";
-import SelectOptions from "@/components/ui/Options/SelectOptions";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
+import React, { useState } from 'react';
+import { FiSearch, FiX, FiCommand } from 'react-icons/fi';
 import { useRouter } from "next/navigation";
-import { debounce } from "@/utils/debounce";
+import "@/styles/components/_hero.scss";
+import { palateOptions } from "@/constants/formOptions";
 import { RESTAURANTS } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
-// Removed Image import and image constants since we're using CSS backgrounds
 import Toast from "@/components/ui/Toast/Toast";
 
-const restaurantService = new RestaurantService();
+interface SelectedPalate {
+  key: string;
+  label: string;
+  isRegion?: boolean;
+}
 
 const Hero = () => {
   const router = useRouter();
-  const [location, setLocation] = useState("");
-  const [cuisine, setCuisine] = useState("");
-  // Removed unused state
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [isSearchListing, setIsSearchListing] = useState(false);
-  const [listing, setListing] = useState("");
-  const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationOptions, setLocationOptions] = useState<{
-    key: string;
-    label: string;
-    children?: Record<string, unknown>[];
-  }[]>([]);
-  const [showListingModal, setShowListingModal] = useState(false);
-  const [listingOptions, setListingOptions] = useState<{ key: string; label: string }[]>([]);
-  const [listingLoading, setListingLoading] = useState(false);
-  const fetchPalatesDebouncedRef = useRef<(values: Set<Key>) => void>();
-  const fetchListingsDebouncedRef = useRef<(input: string) => void>();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
-  const [listingHasNextPage, setListingHasNextPage] = useState(false);
-  const [listingCurrentPage, setListingCurrentPage] = useState(1);
+  const [searchValue, setSearchValue] = useState('');
+  const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
+  const [showPalateModal, setShowPalateModal] = useState(false);
+  const [searchMode, setSearchMode] = useState<'cuisine' | 'keyword'>('cuisine');
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   // Toast state
   const [toast, setToast] = useState<{
@@ -51,178 +27,127 @@ const Hero = () => {
     type: 'success' | 'error' | 'info';
   } | null>(null);
 
-  // Moved this useEffect after function declarations
-
-  // Removed unused function
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const queryParams = new URLSearchParams();
-
-    if (isSearchListing && listing) {
-      queryParams.set("listing", listing);
-    } else {
-      if (selectedPalates.size > 0) {
-        const selectedSlugs = Array.from(selectedPalates).map(key => key.toString());
-        queryParams.set("ethnic", selectedSlugs.join(','));
-      } else if (cuisine) { 
-        let ethnicValue = cuisine;
-        if (cuisine.startsWith("What ") && cuisine.endsWith(" like to eat?")) {
-          ethnicValue = cuisine.substring("What ".length, cuisine.length - " like to eat?".length);
-        }
-        if (ethnicValue) {
-            queryParams.set("ethnic", ethnicValue);
-        }
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    
+    if (searchMode === 'keyword') {
+      // For keyword search, use 'listing' parameter
+      if (searchValue) {
+        params.set('listing', encodeURIComponent(searchValue));
       }
-      if (location) queryParams.set("address", location);
+    } else {
+      // For cuisine search
+      if (searchValue) {
+        params.set('search', encodeURIComponent(searchValue));
+      }
+      // Only add palates parameter if palates are actually selected
+      if (selectedPalates.size > 0) {
+        params.set('palates', Array.from(selectedPalates).join(','));
+      }
+      // If no palates selected, navigate to /restaurants with no filters (All Cuisines)
     }
-
-    router.push(PAGE(RESTAURANTS, [], queryParams.toString()));
+    
+    const queryString = params.toString();
+    router.push(queryString ? `${RESTAURANTS}?${queryString}` : RESTAURANTS);
+    setShowPalateModal(false);
   };
 
-  const searchByListingName = () => {
-    setIsSearchListing(!isSearchListing);
-  };
-
-  const handlePalateInputClick = () => {
-    setShowSearchModal(true);
-  };
-
-  const handleLocationInputClick = async () => {
-    setShowLocationModal(true)
-  };
-
-  const fetchAddressByPalate = useCallback(async (values: Set<Key>, page = 1) => {
-    try {
-      setAddressLoading(true);
-      const slugs = Array.from(values).map((val) => val.toString());
-
-      const result = await restaurantService.fetchAddressByPalate("", slugs, 32, page === 1 ? null : endCursor);
-      const uniqueLocations = Array.from(
-        new Set(result.nodes.map((r: Record<string, unknown>) => (((r.listingDetails as Record<string, unknown>)?.googleMapUrl as Record<string, unknown>)?.streetAddress as string)?.toLowerCase().trim()))
-      ).filter(Boolean);
-
-      const locationOptionsFormatted = uniqueLocations.map((loc) => ({
-        key: loc as string,
-        label: loc as string,
-      }));
-
-      setLocationOptions(prev => page === 1 ? locationOptionsFormatted : [...prev, ...locationOptionsFormatted]);
-      setCurrentPage(page);
-      setEndCursor(result.endCursor);
-      setHasNextPage(result.hasNextPage);
-      setAddressLoading(false);
-    } catch (error) {
-      console.error("Failed to fetch restaurant locations by palate:", error);
-      setAddressLoading(false);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
-  }, [endCursor]);
+  };
 
-  const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
-    try {
-      setListingLoading(true);
-      const result = await restaurantService.fetchListingsName(
-        search,
-        32,
-        page === 1 ? null : listingEndCursor
-      );
-      const formatted = result.nodes.map((item: Record<string, unknown>) => ({
-        key: item.slug as string,
-        label: item.title as string,
-      }));
-      setListingOptions(prev => page === 1 ? formatted : [...prev, ...formatted]);
-      setListingCurrentPage(page);
-      setListingEndCursor(result.pageInfo.endCursor as string | null);
-      setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
-    } catch (err) {
-      console.error("Error loading listing options", err);
-      setListingOptions([]);
-    } finally {
-      setListingLoading(false);
+  const toggleSearchMode = () => {
+    setSearchMode(prevMode => prevMode === 'cuisine' ? 'keyword' : 'cuisine');
+    setSearchValue('');
+    setSelectedPalates(new Set());
+  };
+
+  const handleInputFocus = () => {
+    setIsInputFocused(true);
+    if (searchMode === 'cuisine') {
+      setShowPalateModal(true);
     }
-  }, [listingEndCursor]);
+  };
 
-  useEffect(() => {
-    // Initialize both debounced functions once
-    const [debouncedPalate] = debounce((...args: unknown[]) => {
-      fetchAddressByPalate(args[0] as Set<Key>, args[1] as number);
-    }, 500);
-    const [debouncedListing] = debounce((...args: unknown[]) => {
-      fetchListingsName(args[0] as string, args[1] as number);
-    }, 500);
+  const handleInputBlur = () => {
+    setIsInputFocused(false);
+  };
 
-    fetchPalatesDebouncedRef.current = debouncedPalate;
-    fetchListingsDebouncedRef.current = debouncedListing;
-    fetchPalatesDebouncedRef.current?.(new Set<Key>());
-    fetchListingsDebouncedRef.current?.('');
-  }, [fetchAddressByPalate, fetchListingsName]);
-
-  // Removed all geolocation functionality
-
-  const handlePalateChange = async (values: Set<Key>, selectedHeaderLabel: string | null) => {
-    setLocation('');
-    setListing('');
-    const childValues = new Set<Key>();
-
-    if (selectedHeaderLabel) {
-      const matchedGroup = palateOptions.find(
-        (group) => group.label == selectedHeaderLabel
-      );
-  
-      if (matchedGroup && matchedGroup.children) {
-        matchedGroup.children.forEach((child) => {
-          childValues.add(child.key);
+  const handlePalateSelection = (palateKey: string, isRegion: boolean = false) => {
+    const newSelection = new Set(selectedPalates);
+    
+    if (isRegion) {
+      // If selecting a region, remove all individual cuisines from that region
+      const region = palateOptions.find(r => r.key === palateKey);
+      if (region?.children) {
+        region.children.forEach(child => {
+          newSelection.delete(child.key);
         });
       }
-      // setCuisine(`What ${selectedHeaderLabel} like to eat?`);
-      setCuisine(selectedHeaderLabel)
-    } else if (values.size > 0) {
-      const selectedChildKey = Array.from(values)[0];
-      const selectedChild = palateOptions.flatMap(opt => opt.children || []).find(child => child.key === selectedChildKey);
-      if (selectedChild) {
-        // setCuisine(`What ${selectedChild.label} like to eat?`);
-        setCuisine(selectedChild.label)
+      
+      if (newSelection.has(palateKey)) {
+        newSelection.delete(palateKey);
       } else {
-        setCuisine('');
+        newSelection.add(palateKey);
       }
     } else {
-      setCuisine('');
+      // If selecting individual cuisine, remove the parent region if it exists
+      const parentRegion = palateOptions.find(region => 
+        region.children?.some(child => child.key === palateKey)
+      );
+      
+      if (parentRegion) {
+        newSelection.delete(parentRegion.key);
+      }
+      
+      if (newSelection.has(palateKey)) {
+        newSelection.delete(palateKey);
+      } else {
+        newSelection.add(palateKey);
+      }
     }
-
-    setSelectedPalates(values);
-    // if childValues size is 0, the header checkbox is not check
-    fetchPalatesDebouncedRef.current?.(childValues.size == 0 ? values : childValues);
+    
+    setSelectedPalates(newSelection);
   };
 
-  const handleCuisineChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocation('')
-    setListing('')
-    const inputValue = e.target.value;
-    setCuisine(inputValue);
-
-    setSelectedPalates(new Set<Key>());
+  const getSelectedPalateLabels = (): string[] => {
+    return Array.from(selectedPalates).map(key => {
+      // Check if it's a region
+      const region = palateOptions.find(r => r.key === key);
+      if (region) {
+        return region.label;
+      }
+      
+      // Check if it's an individual cuisine
+      for (const region of palateOptions) {
+        const cuisine = region.children?.find(c => c.key === key);
+        if (cuisine) {
+          return cuisine.label;
+        }
+      }
+      
+      return key;
+    });
   };
 
-  const handleListingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    setListing(inputValue);
-    setLocation('');
-    setCuisine('');
-    setShowListingModal(true);
-
-    const normalizedSearch = inputValue.trim().toLowerCase();
-    const alreadyExists = listingOptions.some(
-      (option) => option.label.toLowerCase().includes(normalizedSearch)
-    );
-
-    if (alreadyExists) return;
-    setListingLoading(true);
-
-    fetchListingsDebouncedRef.current?.(inputValue.trim());
-  };
-
-  const handleSearchModalClose = () => {
-    setShowSearchModal(false);
+  const getDisplayText = (): string => {
+    if (searchMode === 'keyword') {
+      return searchValue || 'Search by Keyword...';
+    }
+    
+    const labels = getSelectedPalateLabels();
+    if (labels.length === 0) {
+      return 'All Cuisines';
+    }
+    if (labels.length === 1) {
+      return labels[0] || 'All Cuisines';
+    }
+    if (labels.length === 2) {
+      return `${labels[0] || ''}, ${labels[1] || ''}`;
+    }
+    return `${labels[0] || ''}, ${labels[1] || ''} +${labels.length - 2} more`;
   };
 
   return (
@@ -237,13 +162,151 @@ const Hero = () => {
       <section className="hero">
         <div className="hero__container mx-auto">
           <div className="hero__content mx-auto">
-          <h1 className="hero__title font-neusans">Discover the Meal that fits Your Taste</h1>
-          <p className="hero__description font-neusans">
-          Dine like a Brazilian in Tokyo - or Korean in New York?
-          </p>
+            <h1 className="hero__title font-neusans">Discover the Meal that fits Your Taste</h1>
+            <p className="hero__description font-neusans">
+              Dine like a Brazilian in Tokyo - or Korean in New York?
+            </p>
+            
+            {/* Unified Search Bar */}
+            <div className="hero__search">
+              <div className={`hero__search-bar ${isInputFocused ? 'hero__search-bar--focused' : ''}`}>
+                <input
+                  type="text"
+                  placeholder={getDisplayText()}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
+                  className="hero__search-input"
+                  readOnly={searchMode === 'cuisine'}
+                />
+                <button
+                  onClick={toggleSearchMode}
+                  className="hero__search-mode-toggle"
+                  title={`Switch to ${searchMode === 'cuisine' ? 'Keyword' : 'Cuisine'} search`}
+                >
+                  <FiCommand className="hero__search-mode-icon" />
+                </button>
+                <button
+                  onClick={handleSearch}
+                  className="hero__search-button"
+                  disabled={searchMode === 'keyword' && !searchValue}
+                >
+                  <FiSearch className="hero__search-icon" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Full-Screen Palate Selection Modal */}
+      {showPalateModal && (
+        <div className="hero__palate-modal">
+          <div className="hero__palate-modal-overlay" onClick={() => setShowPalateModal(false)} />
+          <div className="hero__palate-modal-content">
+            {/* Header */}
+            <div className="hero__palate-modal-header">
+              <h2 className="hero__palate-modal-title">Discover By Palate</h2>
+              <button 
+                onClick={() => setShowPalateModal(false)}
+                className="hero__palate-modal-close"
+              >
+                <FiX className="hero__palate-modal-close-icon" />
+              </button>
+            </div>
+
+            {/* Selected Palates Display */}
+            {selectedPalates.size > 0 && (
+              <div className="hero__palate-modal-selected">
+                <h3 className="hero__palate-modal-selected-title">Selected:</h3>
+                <div className="hero__palate-modal-selected-tags">
+                  {getSelectedPalateLabels().map((label, index) => (
+                    <span key={index} className="hero__palate-modal-selected-tag">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Palate Options */}
+            <div className="hero__palate-modal-options">
+              <div className="hero__palate-modal-region">
+                <button
+                  onClick={() => {
+                    setSelectedPalates(new Set());
+                    setSearchValue('');
+                  }}
+                  className={`hero__palate-modal-pill hero__palate-modal-pill--region ${
+                    selectedPalates.size === 0 ? 'hero__palate-modal-pill--selected' : ''
+                  }`}
+                >
+                  All Cuisines
+                  {selectedPalates.size === 0 && (
+                    <span className="hero__palate-modal-all-badge">Default</span>
+                  )}
+                </button>
+              </div>
+              {palateOptions.map((region) => (
+                <div key={region.key} className="hero__palate-modal-region">
+                  <h3 className="hero__palate-modal-region-title">{region.label}</h3>
+                  
+                  {/* Region Button */}
+                  <button
+                    onClick={() => handlePalateSelection(region.key, true)}
+                    className={`hero__palate-modal-pill hero__palate-modal-pill--region ${
+                      selectedPalates.has(region.key) ? 'hero__palate-modal-pill--selected' : ''
+                    }`}
+                  >
+                    All {region.label}
+                  </button>
+
+                  {/* Individual Cuisine Buttons */}
+                  <div className="hero__palate-modal-cuisines">
+                    {region.children?.map((cuisine) => (
+                      <button
+                        key={cuisine.key}
+                        onClick={() => handlePalateSelection(cuisine.key, false)}
+                        className={`hero__palate-modal-pill hero__palate-modal-pill--cuisine ${
+                          selectedPalates.has(cuisine.key) ? 'hero__palate-modal-pill--selected' : ''
+                        }`}
+                      >
+                        <img 
+                          src={cuisine.flag || ''} 
+                          alt={`${cuisine.label} flag`}
+                          className="hero__palate-modal-flag"
+                        />
+                        {cuisine.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="hero__palate-modal-actions">
+              <button
+                onClick={() => {
+                  setSelectedPalates(new Set());
+                  setSearchValue('');
+                }}
+                className="hero__palate-modal-clear"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => setShowPalateModal(false)}
+                className="hero__palate-modal-done"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

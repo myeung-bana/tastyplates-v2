@@ -325,6 +325,62 @@
     font-weight: 500;
   }
 
+  // All Cuisines Section
+  &__palate-modal-all-cuisines {
+    padding: 16px 24px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  &__palate-modal-all-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 24px;
+    border: 2px solid #e5e7eb;
+    border-radius: 32px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    font-weight: 500;
+    color: #31343F;
+
+    &:hover {
+      border-color: #FF6B35;
+      background: #fef7f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(227, 107, 0, 0.15);
+    }
+
+    &--selected {
+      border-color: #FF6B35;
+      background: #FF6B35;
+      color: white;
+      box-shadow: 0 4px 16px rgba(227, 107, 0, 0.2);
+
+      &:hover {
+        background: #e55a1f;
+        border-color: #e55a1f;
+      }
+    }
+  }
+
+  &__palate-modal-all-icon {
+    font-size: 20px;
+  }
+
+  &__palate-modal-all-badge {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
   &__palate-modal-options {
     padding: 24px;
     max-height: 50vh;

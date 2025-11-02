@@ -188,10 +188,13 @@ export default function Navbar(props: Record<string, unknown>) {
                 />
               </div>
               
-              {/* Conditional Navigation - Only show when authenticated */}
-              {session && (
-                <div className="navbar__menu justify-start">
-                  {navigationItems.map((item) => (
+              {/* Navigation Menu - Always show Explore, Following only for authenticated users */}
+              <div className="navbar__menu justify-start">
+                {navigationItems.map((item) => {
+                  // Show all items if authenticated, only Explore if not authenticated
+                  if (!session && item.name !== "Explore") return null;
+                  
+                  return (
                     <Link
                       key={item.name}
                       href={item.href}
@@ -200,9 +203,9 @@ export default function Navbar(props: Record<string, unknown>) {
                     >
                       {item.name}
                     </Link>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
             <div className="navbar__auth">
               {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
@@ -352,15 +355,20 @@ export default function Navbar(props: Record<string, unknown>) {
               </li>
               <li>
                 <div className="font-neusans navbar__menu !flex justify-start">
-                  {navigationItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className="font-neusans text-[#494D5D]"
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
+                  {navigationItems.map((item) => {
+                    // Show all items if authenticated, only Explore if not authenticated
+                    if (status !== sessionStatus.authenticated && item.name !== "Explore") return null;
+                    
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className="font-neusans text-[#494D5D]"
+                      >
+                        {item.name}
+                      </Link>
+                    );
+                  })}
                 </div>
               </li>
               <li>

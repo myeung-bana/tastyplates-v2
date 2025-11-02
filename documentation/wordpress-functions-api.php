@@ -763,56 +763,65 @@ add_action('rest_api_init', function() {
  */
 add_action('graphql_register_types', function() {
     
-    // Register custom fields for GraphQL mutations
-    register_graphql_field('UpdateListingInput', 'priceRange', array(
-        'type' => 'String',
-        'description' => 'Price range for the listing',
-    ));
+    // Register custom fields for GraphQL mutations (both Update and Create)
+    $inputTypes = ['UpdateListingInput', 'CreateListingInput'];
     
-    register_graphql_field('UpdateListingInput', 'listingStreet', array(
-        'type' => 'String',
-        'description' => 'Street address for the listing',
-    ));
+    foreach ($inputTypes as $inputType) {
+        register_graphql_field($inputType, 'priceRange', array(
+            'type' => 'String',
+            'description' => 'Price range for the listing',
+        ));
     
-    register_graphql_field('UpdateListingInput', 'phone', array(
-        'type' => 'String',
-        'description' => 'Phone number for the listing',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'openingHours', array(
-        'type' => 'String',
-        'description' => 'Opening hours for the listing',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'averageRating', array(
-        'type' => 'Float',
-        'description' => 'Average rating for the listing',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'ratingsCount', array(
-        'type' => 'Int',
-        'description' => 'Number of ratings for the listing',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'googleMapUrl', array(
-        'type' => 'GoogleMapUrlInput',
-        'description' => 'Google Maps URL details for the listing',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'featuredImages', array(
-        'type' => array('list_of' => 'String'),
-        'description' => 'Array of featured image URLs for the listing (S3 bucket URLs)',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'featuredImage', array(
-        'type' => 'String',
-        'description' => 'Featured image URL for the listing (S3 bucket URL)',
-    ));
-    
-    register_graphql_field('UpdateListingInput', 'languagePreference', array(
-        'type' => 'String',
-        'description' => 'Language preference for the user',
-    ));
+        register_graphql_field($inputType, 'listingStreet', array(
+            'type' => 'String',
+            'description' => 'Street address for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'phone', array(
+            'type' => 'String',
+            'description' => 'Phone number for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'openingHours', array(
+            'type' => 'String',
+            'description' => 'Opening hours for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'menuUrl', array(
+            'type' => 'String',
+            'description' => 'Menu URL for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'averageRating', array(
+            'type' => 'Float',
+            'description' => 'Average rating for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'ratingsCount', array(
+            'type' => 'Int',
+            'description' => 'Number of ratings for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'googleMapUrl', array(
+            'type' => 'GoogleMapUrlInput',
+            'description' => 'Google Maps URL details for the listing',
+        ));
+        
+        register_graphql_field($inputType, 'featuredImages', array(
+            'type' => array('list_of' => 'String'),
+            'description' => 'Array of featured image URLs for the listing (S3 bucket URLs)',
+        ));
+        
+        register_graphql_field($inputType, 'featuredImage', array(
+            'type' => 'String',
+            'description' => 'Featured image URL for the listing (S3 bucket URL)',
+        ));
+        
+        register_graphql_field($inputType, 'languagePreference', array(
+            'type' => 'String',
+            'description' => 'Language preference for the user',
+        ));
+    }
     
     // Register GoogleMapUrlInput type
     register_graphql_input_type('GoogleMapUrlInput', array(
@@ -1269,6 +1278,101 @@ add_action('graphql_post_object_mutation_update_additional_data', function($post
         
         if (isset($input['listingStreet'])) {
             update_field('listing_street', $input['listingStreet'], $post_id);
+        }
+        
+        if (isset($input['languagePreference'])) {
+            update_field('language_preference', $input['languagePreference'], $post_id);
+        }
+    }
+    
+}, 10, 4);
+
+// Handle custom field creation in GraphQL mutations
+add_action('graphql_post_object_mutation_create_additional_data', function($post_id, $input, $post_type_object, $mutation_name) {
+    
+    if ($post_type_object->name !== 'listing') {
+        return;
+    }
+    
+    // Update custom fields if provided
+    if (isset($input['priceRange'])) {
+        update_post_meta($post_id, 'price_range', sanitize_text_field($input['priceRange']));
+    }
+    
+    if (isset($input['listingStreet'])) {
+        update_post_meta($post_id, 'listing_street', sanitize_text_field($input['listingStreet']));
+    }
+    
+    if (isset($input['phone'])) {
+        update_post_meta($post_id, 'phone', sanitize_text_field($input['phone']));
+    }
+    
+    if (isset($input['openingHours'])) {
+        update_post_meta($post_id, 'opening_hours', sanitize_text_field($input['openingHours']));
+    }
+    
+    if (isset($input['menuUrl'])) {
+        update_post_meta($post_id, 'menu_url', sanitize_text_field($input['menuUrl']));
+    }
+    
+    if (isset($input['averageRating'])) {
+        update_post_meta($post_id, 'average_rating', floatval($input['averageRating']));
+    }
+    
+    if (isset($input['ratingsCount'])) {
+        update_post_meta($post_id, 'ratings_count', intval($input['ratingsCount']));
+    }
+    
+    if (isset($input['languagePreference'])) {
+        update_post_meta($post_id, 'language_preference', sanitize_text_field($input['languagePreference']));
+    }
+    
+    // Handle googleMapUrl
+    if (isset($input['googleMapUrl']) && is_array($input['googleMapUrl'])) {
+        TastyPlates_FieldProcessor::process_google_maps_data($input['googleMapUrl'], $post_id);
+    }
+    
+    // Handle featured images
+    if (isset($input['featuredImages']) && is_array($input['featuredImages'])) {
+        TastyPlates_ImageHandler::process_featured_images($input['featuredImages'], $post_id);
+    }
+    
+    // Handle single featured image
+    if (isset($input['featuredImage']) && !empty($input['featuredImage'])) {
+        $attachment_id = TastyPlates_ImageHandler::upload_external_image($input['featuredImage'], $post_id);
+        if ($attachment_id) {
+            set_post_thumbnail($post_id, $attachment_id);
+            
+            if (function_exists('update_field')) {
+                update_field('featured_image', $attachment_id, $post_id);
+            }
+            
+            update_post_meta($post_id, 'featured_image', $attachment_id);
+            clean_post_cache($post_id);
+            wp_cache_delete($post_id, 'posts');
+        }
+    }
+    
+    // Update ACF fields if ACF is active
+    if (function_exists('update_field')) {
+        if (isset($input['phone'])) {
+            update_field('phone', $input['phone'], $post_id);
+        }
+        
+        if (isset($input['openingHours'])) {
+            update_field('opening_hours', $input['openingHours'], $post_id);
+        }
+        
+        if (isset($input['priceRange'])) {
+            update_field('price_range', $input['priceRange'], $post_id);
+        }
+        
+        if (isset($input['listingStreet'])) {
+            update_field('listing_street', $input['listingStreet'], $post_id);
+        }
+        
+        if (isset($input['menuUrl'])) {
+            update_field('menu_url', $input['menuUrl'], $post_id);
         }
         
         if (isset($input['languagePreference'])) {

@@ -39,12 +39,15 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
       if (searchValue) {
         params.set('search', encodeURIComponent(searchValue));
       }
+      // Only add palates parameter if palates are actually selected
       if (selectedPalates.size > 0) {
         params.set('palates', Array.from(selectedPalates).join(','));
       }
+      // If no palates selected, navigate to /restaurants with no filters (All Cuisines)
     }
     
-    router.push(`/restaurants?${params.toString()}`);
+    const queryString = params.toString();
+    router.push(queryString ? `/restaurants?${queryString}` : '/restaurants');
     setShowPalateModal(false);
   };
 
@@ -135,10 +138,10 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
     
     const labels = getSelectedPalateLabels();
     if (labels.length === 0) {
-      return 'Search Cuisine...';
+      return 'All Cuisines';
     }
     if (labels.length === 1) {
-      return labels[0] || 'Search Cuisine...';
+      return labels[0] || 'All Cuisines';
     }
     if (labels.length === 2) {
       return `${labels[0] || ''}, ${labels[1] || ''}`;
@@ -171,7 +174,7 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
           <button
             onClick={handleSearch}
             className="navbar__search-button"
-            disabled={!searchValue && selectedPalates.size === 0}
+            disabled={searchMode === 'keyword' && !searchValue}
           >
             <FiSearch className="navbar__search-icon" />
           </button>
@@ -210,6 +213,22 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
 
             {/* Palate Options */}
             <div className="navbar__palate-modal-options">
+              <div className="navbar__palate-modal-region">
+              <button
+                onClick={() => {
+                  setSelectedPalates(new Set());
+                  setSearchValue('');
+                }}
+                className={`navbar__palate-modal-pill navbar__palate-modal-pill--region ${
+                  selectedPalates.size === 0 ? 'navbar__palate-modal-pill--selected' : ''
+                }`}
+              >
+                All Cuisines
+                {selectedPalates.size === 0 && (
+                  <span className="navbar__palate-modal-all-badge">Default</span>
+                )}
+              </button>
+                </div>
               {palateOptions.map((region) => (
                 <div key={region.key} className="navbar__palate-modal-region">
                   <h3 className="navbar__palate-modal-region-title">{region.label}</h3>
