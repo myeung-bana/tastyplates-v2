@@ -50,7 +50,7 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
           alt={`${selectedLocation.label} flag`}
           className="w-5 h-4 object-cover rounded-sm"
         />
-        <span className={`text-sm ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
+        <span className={`font-neusans text-sm ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
           {getDisplayText()}
         </span>
         <FiChevronDown className={`w-4 h-4 ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`} />

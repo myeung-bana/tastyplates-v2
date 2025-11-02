@@ -216,7 +216,7 @@ const ReviewSubmissionPage = () => {
         review_stars,
         review_main_title,
         content,
-        review_images_idz: selectedFiles,
+        review_images: selectedFiles,
         recognitions: restaurant.recognition || [],
         mode,
       };
@@ -299,7 +299,7 @@ const ReviewSubmissionPage = () => {
   if (loading) return <ReviewSubmissionSkeleton />;
   return (
     <>
-      <div className="submitRestaurants mt-16 md:mt-20">
+      <div className="submitRestaurants mt-16 md:mt-20 font-neusans">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
           <RestaurantReviewHeader 
@@ -460,9 +460,10 @@ const ReviewSubmissionPage = () => {
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
                 <button
-                  className="submitRestaurants__button flex items-center gap-2"
+                  className={`submitRestaurants__button flex items-center gap-2 ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
                   type="submit"
                   onClick={(e) => submitReview(e, 'publish')}
+                  disabled={isLoading || isSavingAsDraft}
                 >
                   {isLoading && (
                     <svg
@@ -485,9 +486,10 @@ const ReviewSubmissionPage = () => {
                   Post Review
                 </button>
                 <button
-                  className="flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                  className={`flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
                   type="submit"
                   onClick={(e) => submitReview(e, 'draft')}
+                  disabled={isLoading || isSavingAsDraft}
                 >
                   {isSavingAsDraft && (
                     <svg

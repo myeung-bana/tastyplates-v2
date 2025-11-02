@@ -65,7 +65,7 @@ export default function FollowingPage() {
   }
 
   return (
-    <div className="bg-gray-50 py-8">
+    <div className="bg-gray-50 py-8 md:pt-[88px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">

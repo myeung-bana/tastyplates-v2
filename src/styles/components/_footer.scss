@@ -69,6 +69,7 @@
     &-link {
       color: inherit;
       transition: color 0.2s;
+      font-family: "Neusans", sans-serif;
 
       &:hover {
         color: #31343F;
@@ -142,6 +143,7 @@
       text-decoration: none;
       transition: color 0.2s;
       font-size: 0.85rem;
+      font-family: "Neusans", sans-serif;
 
       @media (min-width: 640px) {
         font-size: 0.85rem;

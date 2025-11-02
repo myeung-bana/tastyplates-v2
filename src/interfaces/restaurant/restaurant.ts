@@ -40,6 +40,7 @@ export interface Listing {
             sourceUrl: string;
         };
     };
+    imageGallery?: string[];
     listingCategories: {
         nodes: {
             id: number

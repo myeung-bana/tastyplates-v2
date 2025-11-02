@@ -251,7 +251,7 @@ export default function Navbar(props: Record<string, unknown>) {
                       <button className="bg-[#FCFCFC66]/40 rounded-[50px] text-sm h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white backdrop-blur-sm">
                         <span
                           className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
-                            } text-center font-semibold`}
+                            } text-center font-neusans`}
                         >
                           Review
                         </span>
@@ -263,10 +263,10 @@ export default function Navbar(props: Record<string, unknown>) {
                     }
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href={LISTING} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           Write a Review
                         </Link>
-                        <Link href={LISTING_EXPLANATION} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={LISTING_EXPLANATION} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           Add a Listing
                         </Link>
                       </div>
@@ -288,16 +288,16 @@ export default function Navbar(props: Record<string, unknown>) {
                     }
                     content={
                       <div className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-gray-200">
-                        <Link href={PROFILE} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={PROFILE} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           My Profile
                         </Link>
-                        <Link href={SETTINGS} className='text-left pl-3.5 pr-12 py-3.5 font-semibold'>
+                        <Link href={SETTINGS} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           Settings
                         </Link>
                         <div className="border-t border-gray-200 w-full" />
                         <button
                           onClick={handleLogout}
-                          className='text-left pl-3.5 pr-12 py-3.5 font-semibold'
+                          className='font-neusans text-left pl-3.5 pr-12 py-3.5'
                         >
                           Log Out
                         </button>
@@ -324,7 +324,7 @@ export default function Navbar(props: Record<string, unknown>) {
                 <div className="flex items-center sm:hidden">
                   <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="inline-flex items-center justify-center p-2 rounded-md"
+                    className="font-neusans inline-flex items-center justify-center p-2 rounded-md"
                   >
                     <svg
                       className="h-6 w-6"
@@ -395,7 +395,7 @@ export default function Navbar(props: Record<string, unknown>) {
                         trigger={
                           <button className="font-neusans bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-2 sm:px-5 flex flex-row flex-nowrap items-center gap-2 text-white">
                             <span
-                              className="text-[#494D5D] text-center font-semibold"
+                              className="font-neusans text-[#494D5D] text-center font-semibold"
                             >
                               Review
                             </span>

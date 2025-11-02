@@ -168,19 +168,14 @@ function SaveRestaurantButton({
 function getRestaurantImages(restaurant: Listing): string[] {
   const images: string[] = [];
   
-  // Add featured image if available
+  // First, check if imageGallery exists and has images
+  if (restaurant.imageGallery && restaurant.imageGallery.length > 0) {
+    return restaurant.imageGallery;
+  }
+  
+  // Fallback: use only featured image if gallery is empty
   if (restaurant.featuredImage?.node?.sourceUrl) {
     images.push(restaurant.featuredImage.node.sourceUrl);
-  }
-  
-  // If no featured image, return empty array to show "No Photos Available"
-  if (images.length === 0) {
-    return [];
-  }
-  
-  // Add placeholder images for demonstration (only if we have a featured image)
-  for (let i = 1; i <= 6; i++) {
-    images.push(`/placeholder-restaurant-${i}.jpg`);
   }
   
   return images;
@@ -251,6 +246,7 @@ export default function RestaurantDetail() {
           listingCategories?: { nodes?: Array<{ name: string }> };
           countries?: { nodes?: Array<{ name: string }> };
           featuredImage?: { node?: { sourceUrl?: string } };
+          imageGallery?: string[];
         };
         const transformed = {
           id: restaurantData.id,
@@ -288,6 +284,7 @@ export default function RestaurantDetail() {
             phone: restaurantData.listingDetails?.phone || "",
           },
           featuredImage: restaurantData.featuredImage,
+          imageGallery: restaurantData.imageGallery || [],
           listingCategories: {
             nodes: restaurantData.listingCategories?.nodes || []
           },
@@ -377,8 +374,22 @@ export default function RestaurantDetail() {
           <div className="restaurant-detail__info">
             <div className="flex flex-col md:flex-col">
               <div className="flex flex-col md:flex-row justify-between px-2">
-                <div className="mt-6 md:mt-0">
-                  <h1 className="restaurant-detail__name leading-7 font-neusans font-normal">{restaurant.title}</h1>
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-6 md:mt-0">
+                  {/* Circular Featured Image - Desktop Only */}
+                  {restaurant.featuredImage?.node?.sourceUrl && (
+                    <div className="hidden md:block flex-shrink-0">
+                      <div className="relative w-24 h-24 rounded-full overflow-hidden ring-2 ring-gray-200">
+                        <Image
+                          src={restaurant.featuredImage.node.sourceUrl}
+                          alt={restaurant.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h1 className="restaurant-detail__name leading-7 font-neusans font-normal">{restaurant.title}</h1>
                   <div className="restaurant-detail__meta">
                     <div className="restaurant-detail__cuisine">
                       {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
@@ -412,6 +423,7 @@ export default function RestaurantDetail() {
                         </span>
                       )}
                     </div>
+                  </div>
                   </div>
                 </div>
                 <div className="flex flex-row flex-wrap gap-3 items-center">

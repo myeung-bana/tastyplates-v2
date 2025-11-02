@@ -208,19 +208,81 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
-    throw new Error('Method not implemented');
+    try {
+      const response = await request.GET('/wp-json/wp/v2/api/review-drafts', {
+        headers: {
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        },
+      });
+      
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        return response;
+      }
+      
+      // If response has a data property (common REST API pattern)
+      if (response && typeof response === 'object' && 'data' in response) {
+        return Array.isArray((response as { data: unknown }).data) 
+          ? (response as { data: Record<string, unknown>[] }).data 
+          : [];
+      }
+      
+      // If response has a different structure, return empty array
+      return [];
+    } catch (error) {
+      console.error('Error fetching review drafts from API:', error);
+      // Return empty array instead of throwing to prevent UI breakage
+      return [];
+    }
   }
 
   async deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void> {
-    throw new Error('Method not implemented');
+    try {
+      await request.DELETE(
+        `/wp-json/wp/v2/api/review-drafts/${draftId}`,
+        {
+          headers: {
+            ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Error deleting review draft:', error);
+      throw error;
+    }
   }
 
   async updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
-    throw new Error('Method not implemented');
+    try {
+      const response = await request.PUT(
+        `/wp-json/wp/v2/api/review-drafts/${draftId}`,
+        {
+          body: JSON.stringify(data),
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response as { status: number; data: unknown };
+    } catch (error) {
+      console.error('Error updating review draft:', error);
+      throw error;
+    }
   }
 
   async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
-    throw new Error('Method not implemented');
+    try {
+      const response = await request.GET(`/wp-json/wp/v2/api/review-drafts/${reviewId}`, {
+        headers: {
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        },
+      });
+      return response as Record<string, unknown>;
+    } catch (error) {
+      console.error('Error fetching review by ID:', error);
+      throw error;
+    }
   }
 
   async likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {

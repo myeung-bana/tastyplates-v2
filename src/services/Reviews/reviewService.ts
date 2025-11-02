@@ -125,4 +125,44 @@ export class ReviewService {
             throw new Error('Failed to post review');
         }
     }
+
+    async fetchReviewDrafts(accessToken: string) {
+        try {
+            const response = await reviewRepo.getReviewDrafts(accessToken);
+            return response || [];
+        } catch (error) {
+            console.error('Error fetching review drafts:', error);
+            // Return empty array instead of throwing to prevent UI breakage
+            return [];
+        }
+    }
+
+    async deleteReviewDraft(draftId: number, accessToken: string, force?: boolean) {
+        try {
+            await reviewRepo.deleteReviewDraft(draftId, accessToken, force);
+        } catch (error) {
+            console.error('Error deleting review draft:', error);
+            throw new Error('Failed to delete review draft');
+        }
+    }
+
+    async getReviewById(reviewId: number, accessToken: string) {
+        try {
+            const response = await reviewRepo.getReviewById(reviewId, accessToken);
+            return response;
+        } catch (error) {
+            console.error('Error fetching review by ID:', error);
+            throw new Error('Failed to fetch review');
+        }
+    }
+
+    async updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string) {
+        try {
+            const response = await reviewRepo.updateReviewDraft(draftId, data, accessToken);
+            return response;
+        } catch (error) {
+            console.error('Error updating review draft:', error);
+            throw new Error('Failed to update review draft');
+        }
+    }
 }

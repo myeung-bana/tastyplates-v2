@@ -226,8 +226,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             onClick={async (e) => {
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
-              // Detect if the image was clicked and you're on the /listing page
-              if (pathname === "/listing" && clickedElement.dataset.role === "image") {
+              // Detect if the image was clicked and you're on the /review-listing page
+              if (pathname === "/review-listing" && clickedElement.dataset.role === "image") {
                 router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
                 return;
               }
@@ -290,7 +290,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
           onClick={async (e) => {
             e.preventDefault();
-            if (pathname === "/listing") {
+            if (pathname === "/review-listing") {
               router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
               return;
             }

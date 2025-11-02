@@ -10,9 +10,10 @@ import { PAGE } from "@/lib/utils";
 import { EDIT_REVIEW } from "@/constants/pages";
 import HashtagDisplay from "@/components/ui/HashtagDisplay/HashtagDisplay";
 
-export interface ReviewDraft {
+export interface DraftReviewData {
   author: number;
   authorName: string;
+  authorAvatar?: string;
   content: {
     rendered: string;
     raw: string;
@@ -33,18 +34,54 @@ export interface ReviewDraft {
   type: string;
 }
 
-interface ListingCardProps {
-  reviewDraft: ReviewDraft;
+interface DraftReviewCardProps {
+  reviewDraft: DraftReviewData;
   onDelete: () => void;
 }
 
-const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
+const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
   const router = useRouter();
 
   const handleEdit = () => {
     // Navigate to edit-review page with the review ID
-    // We'll use a placeholder slug since we don't have restaurant slug in the draft
     router.push(PAGE(EDIT_REVIEW, ["draft", reviewDraft.id.toString()]));
+  };
+
+  // Extract first image URL with better error handling
+  const getFirstImageUrl = (): string => {
+    console.log('=== DraftReviewCard Image Debug ===');
+    console.log('reviewDraft.id:', reviewDraft.id);
+    console.log('reviewDraft.reviewImages:', reviewDraft.reviewImages);
+    console.log('Is array?', Array.isArray(reviewDraft.reviewImages));
+    console.log('Array length:', reviewDraft.reviewImages?.length || 0);
+    
+    if (!reviewDraft.reviewImages || !Array.isArray(reviewDraft.reviewImages)) {
+      console.log('→ No reviewImages array, returning DEFAULT_IMAGE');
+      return DEFAULT_IMAGE;
+    }
+    
+    if (reviewDraft.reviewImages.length === 0) {
+      console.log('→ Empty reviewImages array, returning DEFAULT_IMAGE');
+      return DEFAULT_IMAGE;
+    }
+    
+    // Log all images
+    reviewDraft.reviewImages.forEach((img, idx) => {
+      console.log(`  Image ${idx}:`, img);
+      console.log(`    sourceUrl:`, img?.sourceUrl);
+      console.log(`    Has valid sourceUrl:`, !!(img?.sourceUrl && typeof img.sourceUrl === 'string' && img.sourceUrl.trim().length > 0));
+    });
+    
+    // Find first image with valid sourceUrl
+    const firstImage = reviewDraft.reviewImages.find(
+      (img) => img && img.sourceUrl && typeof img.sourceUrl === 'string' && img.sourceUrl.trim().length > 0
+    );
+    
+    console.log('First valid image found:', firstImage);
+    console.log('Returning URL:', firstImage?.sourceUrl || DEFAULT_IMAGE);
+    console.log('=== End Debug ===');
+    
+    return firstImage?.sourceUrl || DEFAULT_IMAGE;
   };
 
   return (
@@ -52,19 +89,7 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
       {/* Image Section - Matching ReviewCard2 aspect ratio */}
       <div className="relative aspect-[4.5/6] overflow-hidden rounded-2xl mb-2 group">
         <FallbackImage
-          src={
-            // Get first image from reviewImages array (from review_images backend field)
-            (reviewDraft.reviewImages && 
-             Array.isArray(reviewDraft.reviewImages) && 
-             reviewDraft.reviewImages.length > 0 && 
-             reviewDraft.reviewImages[0]?.sourceUrl) ||
-            // Fallback: check if reviewImages is a single object (edge case)
-            (typeof reviewDraft.reviewImages === 'object' && 
-             !Array.isArray(reviewDraft.reviewImages) && 
-             reviewDraft.reviewImages?.sourceUrl) ||
-            // Final fallback to default image
-            DEFAULT_IMAGE
-          }
+          src={getFirstImageUrl()}
           alt="Review Draft"
           width={450}
           height={600}
@@ -107,7 +132,7 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
         <div className="flex items-center gap-3 mb-2">
           {/* User Avatar */}
           <FallbackImage
-            src={DEFAULT_USER_ICON}
+            src={reviewDraft.authorAvatar || DEFAULT_USER_ICON}
             alt={reviewDraft.authorName || "User"}
             width={32}
             height={32}
@@ -155,4 +180,5 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
   );
 };
 
-export default ListingCard;
+export default DraftReviewCard;
+

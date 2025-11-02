@@ -318,8 +318,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             key={index}
             src={image}
             alt="Review"
-            width={100}
-            height={100}
+            width={130}
+            height={130}
             className="review-block__image"
             onClick={() => {
               setSelectedPhotoIndex(index);

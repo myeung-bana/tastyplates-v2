@@ -6,12 +6,14 @@ import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
 import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
+import DraftReviewCard from "./DraftReviewCard";
+import type { DraftReviewData } from "./DraftReviewCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { useSession } from "next-auth/react";
-import { ReviewDraft } from "@/components/Restaurant/Listing/ListingCard";
+// Using DraftReviewData from DraftReviewCard instead
 import SkeletonListingCard from "@/components/ui/Skeleton/SkeletonListingCard";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
@@ -30,6 +32,24 @@ interface Restaurant {
   priceRange: string;
   databaseId: number;
   palatesNames?: string[];
+  googleMapUrl?: {
+    streetAddress?: string;
+    streetNumber?: string;
+    streetName?: string;
+    city?: string;
+    state?: string;
+    stateShort?: string;
+    country?: string;
+    countryShort?: string;
+    postCode?: string;
+    latitude?: string;
+    longitude?: string;
+    placeId?: string;
+    zoom?: number;
+  };
+  averageRating?: number;
+  ratingsCount?: number;
+  status?: string;
 }
 
 const restaurantService = new RestaurantService();
@@ -45,50 +65,130 @@ const ListingPage = () => {
   const [loading, setLoading] = useState(false); // Changed initial state to false
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [reviewDrafts, setReviewDrafts] = useState<ReviewDraft[]>([]);
-  const [allDrafts, setAllDrafts] = useState<ReviewDraft[]>([]);
-  const [draftToDelete, setDraftToDelete] = useState<ReviewDraft | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<DraftReviewData[]>([]);
+  const [allDrafts, setAllDrafts] = useState<DraftReviewData[]>([]);
+  const [draftToDelete, setDraftToDelete] = useState<DraftReviewData | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   const [recentlyVisitedRestaurants, setRecentlyVisitedRestaurants] = useState<Restaurant[]>([]);
 
   // Helper: transform GraphQL node to Restaurant
   const transformNodes = useCallback((nodes: Record<string, unknown>[]): Restaurant[] => {
-    return nodes.map((item: Record<string, unknown>) => ({
-      id: item.id as string,
-      databaseId: (item.databaseId as number) || 0, // Default to 0 if not present
-      slug: item.slug as string,
-      name: item.title as string,
-      image: ((item.featuredImage as Record<string, unknown>)?.node as Record<string, unknown>)?.sourceUrl as string || DEFAULT_IMAGE,
-      rating: parseFloat(item.averageRating as string) || 0, // Default to 0 if not present
-      cuisineNames: (item.palates as string[]) || [],
-      countries: ((item.countries as Record<string, unknown>)?.nodes as Record<string, unknown>[])?.map((c: Record<string, unknown>) => c.name as string).join(", ") || "Default Location",
-      priceRange: (item.priceRange as string) || "" // Default price range
-    }));
+    return nodes.map((item: Record<string, unknown>) => {
+      // Extract palates names from palates.nodes array
+      const palatesNodes = ((item.palates as Record<string, unknown>)?.nodes as Record<string, unknown>[]) || [];
+      const palatesNames = palatesNodes.map((p: Record<string, unknown>) => p.name as string).filter(Boolean);
+
+      // Extract googleMapUrl from listingDetails
+      const listingDetails = (item.listingDetails as Record<string, unknown>) || {};
+      const googleMapUrl = (listingDetails.googleMapUrl as Record<string, unknown>) || {};
+
+      // Extract countries from countries.nodes or use googleMapUrl
+      const countriesNodes = ((item.countries as Record<string, unknown>)?.nodes as Record<string, unknown>[]) || [];
+      const countries = countriesNodes.map((c: Record<string, unknown>) => c.name as string).join(", ") || 
+                       ((googleMapUrl.country as string) || "Default Location");
+
+      return {
+        id: item.id as string,
+        databaseId: (item.databaseId as number) || 0,
+        slug: item.slug as string,
+        name: item.title as string,
+        image: ((item.featuredImage as Record<string, unknown>)?.node as Record<string, unknown>)?.sourceUrl as string || DEFAULT_IMAGE,
+        rating: parseFloat((item.averageRating as string) || "0") || 0,
+        cuisineNames: palatesNames,
+        countries: countries,
+        priceRange: (item.priceRange as string) || "",
+        // Add fields needed by RestaurantCard component
+        palatesNames: palatesNames,
+        googleMapUrl: Object.keys(googleMapUrl).length > 0 ? {
+          streetAddress: googleMapUrl.streetAddress as string | undefined,
+          streetNumber: googleMapUrl.streetNumber as string | undefined,
+          streetName: googleMapUrl.streetName as string | undefined,
+          city: googleMapUrl.city as string | undefined,
+          state: googleMapUrl.state as string | undefined,
+          stateShort: googleMapUrl.stateShort as string | undefined,
+          country: googleMapUrl.country as string | undefined,
+          countryShort: googleMapUrl.countryShort as string | undefined,
+          postCode: googleMapUrl.postCode as string | undefined,
+          latitude: googleMapUrl.latitude as string | undefined,
+          longitude: googleMapUrl.longitude as string | undefined,
+          placeId: googleMapUrl.placeId as string | undefined,
+          zoom: googleMapUrl.zoom as number | undefined,
+        } : undefined,
+        averageRating: parseFloat((item.averageRating as string) || "0") || 0,
+        ratingsCount: (item.ratingsCount as number) || 0,
+        status: item.status as string | undefined,
+      };
+    });
   }, []);
 
-  const transformReviewDrafts = useCallback((nodes: Record<string, unknown>[]): ReviewDraft[] => {
-    return nodes.map((item: Record<string, unknown>) => ({
-      id: item.id as number,
-      post: item.post as number,
-      author: item.author as number,
-      authorName: item.author_name as string,
-      content: {
-        rendered: (item.content as Record<string, unknown>)?.rendered as string || "",
-        raw: (item.content as Record<string, unknown>)?.raw as string || ""
-      },
-      date: item.date as string,
-      link: item.link as string,
-      status: item.status as string,
-      type: item.type as string,
-      recognitions: (item.recognitions as string[]) || ((item.meta as Record<string, unknown>)?.recognitions as string[]) || [],
-      reviewImages: ((item.review_images as Record<string, unknown>[]) || []).map((img: Record<string, unknown>) => ({
-        databaseId: parseInt(img.id as string),
-        id: (img.id as string).toString(),
-        sourceUrl: img.sourceUrl as string,
-      })),
-      reviewMainTitle: item.review_main_title as string,
-      reviewStars: item.review_stars as string,
-    }));
+  const transformReviewDrafts = useCallback((nodes: Record<string, unknown>[]): DraftReviewData[] => {
+    return nodes.map((item: Record<string, unknown>) => {
+      // Debug logging for images
+      console.log('=== Draft Review Transformation Debug ===');
+      console.log('Item ID:', item.id);
+      console.log('Raw item.review_images:', item.review_images);
+      console.log('Type of review_images:', typeof item.review_images);
+      console.log('Is array?', Array.isArray(item.review_images));
+      
+      if (Array.isArray(item.review_images)) {
+        console.log('review_images array length:', item.review_images.length);
+        item.review_images.forEach((img, idx) => {
+          console.log(`  Image ${idx}:`, img);
+          console.log(`    Type:`, typeof img);
+          console.log(`    Has sourceUrl:`, !!(img as Record<string, unknown>)?.sourceUrl);
+          console.log(`    Has id:`, !!(img as Record<string, unknown>)?.id);
+        });
+      }
+      
+      // Simplified transformation: Backend already returns {id, sourceUrl} - use directly like EditReviewSubmission does
+      const finalImages = ((item.review_images as Record<string, unknown>[]) || [])
+        .map((img: Record<string, unknown>) => {
+          console.log('Processing image:', img);
+          // Backend already returns {id, sourceUrl} - use directly
+          if (img && typeof img === 'object' && img.sourceUrl) {
+            const imageId = typeof img.id === 'number' 
+              ? img.id 
+              : (typeof img.id === 'string' ? parseInt(img.id, 10) : 0);
+            
+            console.log('  → Valid image with sourceUrl:', img.sourceUrl);
+            return {
+              databaseId: imageId || 0,
+              id: String(img.id || imageId || ''),
+              sourceUrl: img.sourceUrl as string,
+            };
+          }
+          console.log('  → Skipping invalid image');
+          return null;
+        })
+        .filter((img): img is { databaseId: number; id: string; sourceUrl: string } => 
+          img !== null && 
+          typeof img.sourceUrl === 'string' && 
+          img.sourceUrl.trim().length > 0
+        );
+      
+      console.log('Final reviewImages array:', finalImages);
+      console.log('=== End Debug ===');
+      
+      return {
+        id: item.id as number,
+        post: item.post as number,
+        author: item.author as number,
+        authorName: item.author_name as string,
+        authorAvatar: (item.author_avatar as string) || undefined,
+        content: {
+          rendered: (item.content as Record<string, unknown>)?.rendered as string || "",
+          raw: (item.content as Record<string, unknown>)?.raw as string || ""
+        },
+        date: item.date as string,
+        link: item.link as string,
+        status: item.status as string,
+        type: item.type as string,
+        recognitions: (item.recognitions as string[]) || ((item.meta as Record<string, unknown>)?.recognitions as string[]) || [],
+        reviewImages: finalImages,
+        reviewMainTitle: item.review_main_title as string,
+        reviewStars: item.review_stars as string,
+      };
+    });
   }, []);
 
   const fetchRestaurants = useCallback(async (search: string, first = 8, after: string | null = null) => {
@@ -165,7 +265,7 @@ const ListingPage = () => {
     setSearchTerm(listing);
   }
 
-  const removeListing = (item: ReviewDraft) => {
+  const removeListing = (item: DraftReviewData) => {
     setDraftToDelete(item);
     setIsShowDelete(true);
   }
@@ -198,24 +298,24 @@ const ListingPage = () => {
 
   return (
     <>
-      <div className="font-inter max-w-7xl mx-auto mt-16">
+      <div className="max-w-7xl mx-auto mt-20">
         <div className="py-6 md:py-8 flex flex-col justify-center items-center">
-          <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-medium">Find a listing to review</h1>
+          <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-neusans">Find a listing to review</h1>
           <form onSubmit={handleSearch} className="my-6 md:my-10 max-w-[525px] w-full px-6 lg:px-0">
             <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
-              <div className="hero__search-restaurant !bg-transparent">
-                <FiSearch className="hero__search-icon" />
+              <div className="flex items-center flex-1 gap-2">
+                <FiSearch className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 <input
                   type="text"
                   placeholder="Search by Listing Name"
-                  className="hero__search-input"
+                  className="font-neusans flex-1 border-none outline-none bg-transparent text-sm md:text-base text-[#31343F] placeholder-gray-400"
                   value={listing}
                   onChange={(e) => setListing(e.target.value)}
                 />
               </div>
               <button
                 type="submit"
-                className="rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00] md:leading-none"
+                className="font-neusans rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00] md:leading-none flex-shrink-0"
               >
                 Search
               </button>
@@ -224,7 +324,7 @@ const ListingPage = () => {
 
           {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
             <div className="w-full text-center mb-6">
-              <h2 className="text-lg md:text-xl text-[#31343F] font-medium">
+              <h2 className="text-lg md:text-xl text-[#31343F] font-neusans">
                 {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
               </h2>
             </div>
@@ -234,7 +334,7 @@ const ListingPage = () => {
           {!debouncedSearchTerm && (
             <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content">
-                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">My Review Drafts</h1>
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">My Review Drafts</h1>
                 {reviewDrafts.length === 0 && !loadingDrafts && (
                   <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
                     You don't have any review drafts.
@@ -242,7 +342,7 @@ const ListingPage = () => {
                 )}
                 <div className="restaurants__grid mt-6 md:mt-8">
                   {reviewDrafts.map((revDraft) => (
-                    <ListingCard
+                    <DraftReviewCard
                       key={revDraft.id}
                       reviewDraft={revDraft}
                       onDelete={() => removeListing(revDraft)}

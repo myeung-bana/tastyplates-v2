@@ -972,6 +972,42 @@ add_action('graphql_register_types', function() {
         },
     ));
     
+    register_graphql_field('Listing', 'imageGallery', array(
+        'type' => array('list_of' => 'String'),
+        'description' => 'Gallery images from ACF image_gallery field',
+        'resolve' => function($post) {
+            if (!function_exists('get_field')) {
+                return array();
+            }
+            
+            $gallery = get_field('image_gallery', $post->ID);
+            
+            if (empty($gallery)) {
+                return array();
+            }
+            
+            // If gallery is array of image IDs or objects
+            $urls = array();
+            foreach ($gallery as $image) {
+                if (is_numeric($image)) {
+                    // Image ID
+                    $url = wp_get_attachment_image_url($image, 'full');
+                    if ($url) {
+                        $urls[] = $url;
+                    }
+                } elseif (is_array($image) && isset($image['url'])) {
+                    // Image object with url
+                    $urls[] = $image['url'];
+                } elseif (is_string($image)) {
+                    // Direct URL
+                    $urls[] = $image;
+                }
+            }
+            
+            return $urls;
+        },
+    ));
+    
     register_graphql_field('ListingDetails', 'googleMapUrl', array(
         'type' => 'GoogleMapUrl',
         'description' => 'Google Maps URL details for the listing',

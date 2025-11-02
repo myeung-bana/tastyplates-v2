@@ -459,14 +459,14 @@
     justify-content: flex-start;
     align-items: center;
     gap: 8px;
-    max-height: 160px;
+    max-height: 180px;
     overflow: hidden;
   }
 
   &__image {
     border-radius: 6px;
-    width: 100px;
-    height: 100px;
+    width: 130px;
+    height: 130px;
     object-fit: cover;
     cursor: pointer;
     transition: transform 0.2s ease;

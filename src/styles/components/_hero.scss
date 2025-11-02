@@ -301,7 +301,7 @@
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 24px 24px 0 0;
-    animation: hero__palate-modal-slide-in 0.3s ease-out;
+    animation: hero__palate-modal-fade-in 0.3s ease-in;
 
     @media (min-width: 768px) {
       max-width: 700px;
@@ -310,13 +310,11 @@
     }
   }
 
-  @keyframes hero__palate-modal-slide-in {
+  @keyframes hero__palate-modal-fade-in {
     from {
-      transform: translateY(100%);
       opacity: 0;
     }
     to {
-      transform: translateY(0);
       opacity: 1;
     }
   }

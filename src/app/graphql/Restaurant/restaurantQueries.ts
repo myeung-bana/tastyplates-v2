@@ -157,6 +157,7 @@ export const GET_RESTAURANT_BY_SLUG = gql`
                     sourceUrl
                 }
             }
+        imageGallery
         listingCategories {
             nodes {
                 name

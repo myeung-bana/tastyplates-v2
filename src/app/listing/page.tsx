@@ -1,14 +1,8 @@
-import ListingPage from "@/components/Restaurant/Listing/Listing";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-const AddReviewPage = () => {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"></div>}>
-      <section>
-        <ListingPage />
-      </section>
-    </Suspense>
-  );
+// Redirect old /listing path to new /review-listing path for backwards compatibility
+const ListingPageRedirect = () => {
+  redirect("/review-listing");
 };
 
-export default AddReviewPage;
+export default ListingPageRedirect;

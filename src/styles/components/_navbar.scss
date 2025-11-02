@@ -221,9 +221,12 @@
     bottom: 0;
     z-index: 9999;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+    align-items: flex-end;
+
+    @media (min-width: 768px) {
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   &__palate-modal-overlay {
@@ -239,23 +242,25 @@
   &__palate-modal-content {
     position: relative;
     background: white;
-    border-radius: 16px;
     width: 100%;
-    max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-    animation: navbar__palate-modal-slide-in 0.3s ease-out;
+    border-radius: 24px 24px 0 0;
+    animation: navbar__palate-modal-fade-in 0.3s ease-in;
+
+    @media (min-width: 768px) {
+      max-width: 700px;
+      max-height: 85vh;
+      border-radius: 24px;
+    }
   }
 
-  @keyframes navbar__palate-modal-slide-in {
+  @keyframes navbar__palate-modal-fade-in {
     from {
       opacity: 0;
-      transform: translateY(-20px) scale(0.95);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
     }
   }
 

@@ -85,44 +85,21 @@ const EditReviewSubmissionPage = () => {
         // Fetch the review data first
         const reviewData = await reviewService.getReviewById(reviewId, session?.accessToken);
         
-        // Debug: Log the review data structure to understand what we're working with
-        console.log('Review data received:', reviewData);
-        console.log('Review data keys:', Object.keys(reviewData));
-        console.log('Review data.post:', reviewData.post);
-        console.log('Review data.post type:', typeof reviewData.post);
-        console.log('Review data.restaurantId:', reviewData.restaurantId);
-        console.log('Review data.restaurantId type:', typeof reviewData.restaurantId);
-        
         // Extract restaurant ID from review data
         const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
-        
-        console.log('Review data post field:', reviewData.post);
-        console.log('Review data restaurantId field:', reviewData.restaurantId);
-        console.log('Extracted restaurant ID:', restaurantIdFromReview);
-        console.log('Restaurant ID is valid number:', !isNaN(Number(restaurantIdFromReview)));
-        console.log('Restaurant ID as number:', Number(restaurantIdFromReview));
         
         if (restaurantIdFromReview && !isNaN(Number(restaurantIdFromReview))) {
           // Set the restaurant database ID for the submit function
           setRestaurantDatabaseId(Number(restaurantIdFromReview));
           
           try {
-            // Fetch restaurant data
-            console.log('Attempting to fetch restaurant with ID:', restaurantIdFromReview);
-            console.log('ID Type:', 'DATABASE_ID');
-            console.log('Access Token exists:', !!session?.accessToken);
             
             let restaurantData = await restaurantService.fetchRestaurantById(
               restaurantIdFromReview.toString(), 
               "DATABASE_ID", 
               session?.accessToken
             );
-            
-            console.log('Restaurant data received (DATABASE_ID):', restaurantData);
-            console.log('Restaurant data type:', typeof restaurantData);
-            console.log('Restaurant data is null:', restaurantData === null);
-            console.log('Restaurant data is undefined:', restaurantData === undefined);
-            
+
             // If DATABASE_ID fails, try with SLUG as fallback
             if (!restaurantData || restaurantData === null) {
               console.log('Trying with SLUG as fallback...');
@@ -143,6 +120,20 @@ const EditReviewSubmissionPage = () => {
               setRestaurantImage((restaurantData.featuredImage as any)?.node?.sourceUrl || '');
               setRestaurantLocation((restaurantData.address as string) || 'Location Not Available');
               setGoogleMapUrl((restaurantData.googleMapUrl as GoogleMapUrl) || null);
+              
+              // Populate full restaurant object state to match ReviewSubmission structure
+              setRestaurant(prev => ({
+                ...prev,
+                name: (restaurantData.title as string) || '',
+                image: (restaurantData.featuredImage as any)?.node?.sourceUrl || '',
+                location: (restaurantData.address as string) || '',
+                slug: (restaurantData.slug as string) || '',
+                address: (restaurantData.address as string) || '',
+                phone: (restaurantData.phone as string) || '',
+                priceRange: (restaurantData.priceRange as string) || '',
+                rating: parseFloat((restaurantData.averageRating as string) || '0') || 0,
+                cuisineIds: ((restaurantData.palates as any)?.nodes || []).map((p: any) => p.id || '').filter(Boolean),
+              }));
             } else {
               console.error('Restaurant data is null or invalid after all attempts:', restaurantData);
               setRestaurantName('Restaurant Name Not Available');
@@ -170,31 +161,98 @@ const EditReviewSubmissionPage = () => {
                            (reviewData.content as string) || '';
         setContent(contentValue);
         
-        setReviewStars((reviewData.review_stars as number) || (reviewData.reviewStars as number) || 0);
+        // Parse review_stars from string to number (backend returns as string)
+        const starsValue = typeof reviewData.review_stars === 'string' 
+          ? parseFloat(reviewData.review_stars) 
+          : (typeof reviewData.review_stars === 'number' 
+              ? reviewData.review_stars 
+              : (typeof reviewData.reviewStars === 'string' 
+                  ? parseFloat(reviewData.reviewStars) 
+                  : (typeof reviewData.reviewStars === 'number' ? reviewData.reviewStars : 0)));
+        setReviewStars(isNaN(starsValue) ? 0 : starsValue);
         
-        // Handle existing photos - check multiple possible field names
+        // Handle existing photos - backend returns review_images with sourceUrl and id
         let existingImages: string[] = [];
         
-        if (reviewData.review_images_idz && Array.isArray(reviewData.review_images_idz)) {
-          existingImages = reviewData.review_images_idz.map((img: any) => 
-            img.sourceUrl || img.url || img
-          ).filter(Boolean);
-        } else if (reviewData.reviewImages && Array.isArray(reviewData.reviewImages)) {
-          existingImages = reviewData.reviewImages.map((img: any) => 
-            img.sourceUrl || img.url || img
-          ).filter(Boolean);
+        console.log('Loading draft images from reviewData:', {
+          review_images: reviewData.review_images,
+          review_images_idz: reviewData.review_images_idz,
+          reviewImages: reviewData.reviewImages
+        });
+        
+        // Priority: review_images (from GET endpoint with URLs), then review_images_idz (IDs), then reviewImages (fallback)
+        if (reviewData.review_images && Array.isArray(reviewData.review_images) && reviewData.review_images.length > 0) {
+          // Backend returns review_images as array of { id, sourceUrl }
+          existingImages = reviewData.review_images
+            .map((img: any) => {
+              // Handle object with sourceUrl property
+              if (img && typeof img === 'object') {
+                return img.sourceUrl || img.url || null;
+              }
+              // Handle string URL
+              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
+                return img;
+              }
+              return null;
+            })
+            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
+        } else if (reviewData.review_images_idz && Array.isArray(reviewData.review_images_idz) && reviewData.review_images_idz.length > 0) {
+          // If we have IDs, try to extract URLs from objects
+          existingImages = reviewData.review_images_idz
+            .map((img: any) => {
+              // If it's already a URL string, use it
+              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
+                return img;
+              }
+              // If it's an object with sourceUrl, use that
+              if (img && typeof img === 'object' && img.sourceUrl) {
+                return img.sourceUrl;
+              }
+              // If it's an object with url, use that
+              if (img && typeof img === 'object' && img.url) {
+                return img.url;
+              }
+              // IDs without URLs can't be displayed - return null
+              return null;
+            })
+            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
+        } else if (reviewData.reviewImages && Array.isArray(reviewData.reviewImages) && reviewData.reviewImages.length > 0) {
+          // Fallback: try reviewImages field
+          existingImages = reviewData.reviewImages
+            .map((img: any) => {
+              if (img && typeof img === 'object') {
+                return img.sourceUrl || img.url || null;
+              }
+              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
+                return img;
+              }
+              return null;
+            })
+            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
         }
+        
+        console.log('Extracted existing images:', existingImages);
         
         if (existingImages.length > 0) {
           setSelectedFiles(existingImages);
           setIsDoneSelecting(true);
+          console.log('Successfully loaded', existingImages.length, 'images for display');
+        } else {
+          console.log('No valid image URLs found in review data');
+          setSelectedFiles([]);
+          setIsDoneSelecting(false);
         }
         
-        // Set recognition tags if available
+        // Set recognition tags if available - keep original names for saving, normalize only for comparison
         if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
+          // Store original tag names as received from backend (preserve case)
+          const recognitions = (reviewData.recognitions as string[])
+            .map(rec => rec.trim())
+            .filter(Boolean);
+          
           setRestaurant(prev => ({
             ...prev,
-            recognition: reviewData.recognitions as string[]
+            recognition: recognitions
           }));
         }
 
@@ -220,8 +278,8 @@ const EditReviewSubmissionPage = () => {
     },
     {
       id: 2,
-      name: "Insta Worthy",
-      icon: HELMET,
+      name: "Insta-Worthy",
+      icon: PHONE,
     },
     {
       id: 3,
@@ -231,7 +289,7 @@ const EditReviewSubmissionPage = () => {
     {
       id: 4,
       name: "Best Service",
-      icon: PHONE,
+      icon: HELMET,
     },
   ];
 
@@ -284,66 +342,87 @@ const EditReviewSubmissionPage = () => {
     }
 
     try {
+      // Prepare image data - convert URLs back to IDs if needed, or keep existing format
+      let imageData = selectedFiles;
+      
+      // If selectedFiles contains URLs, we need to extract IDs or let backend handle
+      // Backend PUT endpoint can handle URLs and convert them back to IDs
+      // For now, send as-is and let backend handle the conversion
+      
       const reviewData = {
         restaurantId: restaurantDatabaseId, // Use the actual restaurant database ID
         authorId: session?.user?.userId,
         review_stars,
         review_main_title,
         content,
-        review_images_idz: selectedFiles,
+        review_images: imageData, // Backend will handle URL to ID conversion
         recognitions: restaurant.recognition || [],
         mode,
       };
 
       console.log('Submitting review data:', reviewData);
       console.log('Review ID:', reviewId);
+      console.log('Is editing draft:', !!reviewId);
       console.log('Access token exists:', !!session?.accessToken);
 
-      const res = await reviewService.updateReviewDraft(reviewId, reviewData, session?.accessToken ?? "");
+      // If editing an existing draft (reviewId exists), use updateReviewDraft
+      if (reviewId && !isNaN(reviewId)) {
+        const res = await reviewService.updateReviewDraft(reviewId, reviewData, session?.accessToken ?? "");
       
-      console.log('Update response:', res);
-      
-      if (mode === 'publish') {
-        if (res.status === code.created || res.status === 200) {
-          setIsSubmitted(true);
-        } else if (res.status === code.conflict) {
-          toast.error(commentDuplicateError);
-          setIsLoading(false);
-          return
-        } else if (res.status === code.duplicate_week) {
-          toast.error(commentDuplicateWeekError);
-          setIsLoading(false);
-          return;
-        } else if ((res.data as any)?.code === 'comment_flood') {
-          toast.error(commentFloodError);
-          setIsLoading(false);
-          return;
-        } else {
-          toast.error(errorOccurred);
-          setIsLoading(false);
-          return;
+        console.log('Update response:', res);
+        
+        // Handle response - updateReviewDraft returns { status, message, data }
+        const responseStatus = res.status || (res as any)?.data?.status || 200;
+        
+        if (mode === 'publish') {
+          if (responseStatus === code.created || responseStatus === 200) {
+            setIsSubmitted(true);
+            toast.success('Review published successfully');
+            router.push(LISTING);
+          } else if (responseStatus === code.conflict) {
+            toast.error(commentDuplicateError);
+            setIsLoading(false);
+            return;
+          } else if (responseStatus === code.duplicate_week) {
+            toast.error(commentDuplicateWeekError);
+            setIsLoading(false);
+            return;
+          } else if ((res.data as any)?.code === 'comment_flood') {
+            toast.error(commentFloodError);
+            setIsLoading(false);
+            return;
+          } else {
+            toast.error(errorOccurred);
+            setIsLoading(false);
+            return;
+          }
+        } else if (mode === 'draft') {
+          if (responseStatus === code.created || responseStatus === 200) {
+            toast.success(savedAsDraft);
+            router.push(LISTING);
+          } else if (responseStatus === code.duplicate_week) {
+            toast.error(commentDuplicateWeekError);
+            setIsSavingAsDraft(false);
+            return;
+          } else if (responseStatus === code.conflict) {
+            toast.error(commentDuplicateError);
+            setIsSavingAsDraft(false);
+            return;
+          } else if ((res.data as any)?.code === 'comment_flood') {
+            toast.error(commentFloodError);
+            setIsLoading(false);
+            return;
+          } else {
+            toast.error(errorOccurred);
+            setIsSavingAsDraft(false);
+            return;
+          }
         }
-      } else if (mode === 'draft') {
-        if (res.status === code.created || res.status === 200) {
-          toast.success(savedAsDraft);
-          router.push(LISTING);
-        } else if (res.status === code.duplicate_week) {
-          toast.error(commentDuplicateWeekError);
-          setIsSavingAsDraft(false);
-          return;
-        } else if (res.status === code.conflict) {
-          toast.error(commentDuplicateError);
-          setIsSavingAsDraft(false);
-          return;
-        } else if ((res.data as any)?.code === 'comment_flood') {
-          toast.error(commentFloodError);
-          setIsLoading(false);
-          return;
-        } else {
-          toast.error(errorOccurred);
-          setIsSavingAsDraft(false);
-          return;
-        }
+      } else {
+        // This shouldn't happen in EditReviewSubmission, but handle gracefully
+        toast.error('Review ID not found. Cannot update review.');
+        setIsLoading(false);
+        return;
       }
 
       // Reset form fields here:
@@ -365,12 +444,19 @@ const EditReviewSubmissionPage = () => {
   };
 
   const handleChangeRecognition = (tagName: string) => {
-    setRestaurant((prev) => ({
-      ...prev,
-      recognition: prev.recognition?.includes(tagName)
-        ? prev.recognition.filter((name) => name !== tagName)
-        : [...(prev.recognition || []), tagName],
-    }));
+    setRestaurant((prev) => {
+      // Normalize both arrays for comparison (case-insensitive)
+      const normalizedTagName = tagName.trim().toLowerCase();
+      const normalizedRecognitions = prev.recognition?.map(r => r.trim().toLowerCase()) || [];
+      const isSelected = normalizedRecognitions.includes(normalizedTagName);
+      
+      return {
+        ...prev,
+        recognition: isSelected
+          ? prev.recognition?.filter(name => name.trim().toLowerCase() !== normalizedTagName) || []
+          : [...(prev.recognition || []), tagName], // Use original tagName for saving
+      };
+    });
   };
 
   const deleteSelectedFile = (index: string) => {
@@ -381,7 +467,7 @@ const EditReviewSubmissionPage = () => {
   
   return (
     <>
-      <div className="submitRestaurants mt-16 md:mt-20">
+      <div className="submitRestaurants mt-16 md:mt-20 font-neusans">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
             <RestaurantReviewHeader 
@@ -499,28 +585,29 @@ const EditReviewSubmissionPage = () => {
                   {uploadedImageError && (
                     <p className="text-red-600 text-sm mt-1">{uploadedImageError}</p>
                   )}
-                  {(isDoneSelecting || selectedFiles.length > 0) && (
-                    <div className="submitRestaurants__selected-files">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="submitRestaurants__file-item">
-                          <Image
-                            src={file}
-                            alt={`Selected file ${index + 1}`}
-                            width={80}
-                            height={80}
-                            className="rounded-2xl object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => deleteSelectedFile(file)}
-                            className="submitRestaurants__delete-btn"
-                          >
-                            <MdClose className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="flex flex-wrap gap-2">
+                  {(isDoneSelecting || selectedFiles.length > 0) &&
+                    selectedFiles.map((item: string, index: number) => (
+                      <div className="rounded-2xl relative" key={`image-${index}-${item.substring(0, 20)}`}>
+                        <button
+                          type="button"
+                          onClick={() => deleteSelectedFile(item)}
+                          className="absolute top-3 right-3 rounded-full bg-[#FCFCFC] p-2 z-10 hover:bg-[#E0E0E0] transition-colors"
+                          aria-label="Remove image"
+                        >
+                          <MdClose className="size-3 md:size-4" />
+                        </button>
+                        <Image
+                          src={item}
+                          alt={`Review image ${index + 1}`}
+                          width={187}
+                          height={140}
+                          className="rounded-2xl object-cover"
+                          unoptimized={item.startsWith('data:')}
+                        />
+                      </div>
+                    ))}
+                </div>
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -529,7 +616,10 @@ const EditReviewSubmissionPage = () => {
                 </label>
                 <div className="submitRestaurants__cuisine-checkbox-grid">
                   {tags.map((tag) => {
-                    const isSelected = restaurant.recognition?.includes(tag.name);
+                    // Normalize both saved recognitions and tag names for case-insensitive comparison
+                    const normalizedTagName = tag.name.trim().toLowerCase();
+                    const normalizedRecognitions = restaurant.recognition?.map(r => r.trim().toLowerCase()) || [];
+                    const isSelected = normalizedRecognitions.includes(normalizedTagName);
                     return (
                       <div
                         key={tag.name}
@@ -556,9 +646,10 @@ const EditReviewSubmissionPage = () => {
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
                 <button
-                  className="submitRestaurants__button flex items-center gap-2"
+                  className={`submitRestaurants__button flex items-center gap-2 ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
                   type="submit"
                   onClick={(e) => submitReview(e, 'publish')}
+                  disabled={isLoading || isSavingAsDraft}
                 >
                   {isLoading && (
                     <svg
@@ -581,9 +672,10 @@ const EditReviewSubmissionPage = () => {
                   Update Review
                 </button>
                 <button
-                  className="flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center"
+                  className={`flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
                   type="submit"
                   onClick={(e) => submitReview(e, 'draft')}
+                  disabled={isLoading || isSavingAsDraft}
                 >
                   {isSavingAsDraft && (
                     <svg
