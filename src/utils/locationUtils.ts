@@ -91,6 +91,66 @@ export const applyLocationFilter = (
   selectedLocation: LocationOption,
   radiusKm: number = 100
 ): any[] => {
+  // Special case: If a Hong Kong city is selected, search entire Hong Kong region
+  const isHongKongCity = selectedLocation.type === 'city' && 
+                         (selectedLocation.key === 'hong_kong_island' || 
+                          selectedLocation.key === 'kowloon' ||
+                          selectedLocation.key === 'new_territories');
+  
+  if (isHongKongCity) {
+    // Treat as Hong Kong country-wide search
+    return restaurants.filter(restaurant => {
+      // Strategy 1: Match by Hong Kong country code
+      if (restaurant.listingDetails?.googleMapUrl?.countryShort === 'HK') {
+        return true;
+      }
+      
+      // Strategy 2: Match by address containing "Hong Kong" or districts
+      const fullAddress = getBestAddress(
+        restaurant.listingDetails?.googleMapUrl,
+        restaurant.streetAddress,
+        ''
+      ).toLowerCase();
+      
+      if (fullAddress.includes('hong kong') || 
+          fullAddress.includes('hongkong') ||
+          fullAddress.includes('new territories') ||
+          fullAddress.includes('new_territories') ||
+          fullAddress.includes('kowloon') ||
+          fullAddress.includes('hong kong island')) {
+        return true;
+      }
+      
+      // Strategy 3: City name matching for any Hong Kong district
+      const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase() || '';
+      if (restaurantCity && (
+        restaurantCity.includes('hong kong') ||
+        restaurantCity.includes('hongkong') ||
+        restaurantCity.includes('kowloon') ||
+        restaurantCity.includes('territories') ||
+        restaurantCity.includes('island')
+      )) {
+        return true;
+      }
+      
+      // Strategy 4: State/Province matching (New Territories might be in state field)
+      const restaurantState = (restaurant.listingDetails?.googleMapUrl?.state?.toLowerCase() || 
+                               restaurant.listingDetails?.googleMapUrl?.stateShort?.toLowerCase() || '');
+      if (restaurantState && (
+        restaurantState.includes('new territories') ||
+        restaurantState.includes('new_territories') ||
+        restaurantState.includes('territories') ||
+        restaurantState.includes('hong kong') ||
+        restaurantState.includes('hongkong') ||
+        restaurantState.includes('kowloon')
+      )) {
+        return true;
+      }
+      
+      return false;
+    });
+  }
+  
   if (selectedLocation.type === 'city') {
     return restaurants.filter(restaurant => {
       // Strategy 1: Coordinate-based filtering (within radius)
@@ -141,6 +201,9 @@ export const applyLocationFilter = (
       return false;
     });
   } else if (selectedLocation.type === 'country') {
+    // Special case: Enhanced matching for Hong Kong country
+    const isHongKongCountry = selectedLocation.key === 'hongkong';
+    
     return restaurants.filter(restaurant => {
       // Strategy 1: Exact country code match
       if (restaurant.listingDetails?.googleMapUrl?.countryShort === selectedLocation.shortLabel) {
@@ -168,6 +231,44 @@ export const applyLocationFilter = (
       
       if (fullAddress.includes(selectedCountry)) {
         return true;
+      }
+      
+      // Strategy 4: For Hong Kong, check all districts in address
+      if (isHongKongCountry) {
+        if (fullAddress.includes('hong kong') || 
+            fullAddress.includes('hongkong') ||
+            fullAddress.includes('new territories') ||
+            fullAddress.includes('new_territories') ||
+            fullAddress.includes('kowloon') ||
+            fullAddress.includes('hong kong island')) {
+          return true;
+        }
+        
+        // Check city field for Hong Kong districts
+        const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase() || '';
+        if (restaurantCity && (
+          restaurantCity.includes('hong kong') ||
+          restaurantCity.includes('hongkong') ||
+          restaurantCity.includes('kowloon') ||
+          restaurantCity.includes('territories') ||
+          restaurantCity.includes('island')
+        )) {
+          return true;
+        }
+        
+        // Check state field for Hong Kong districts
+        const restaurantState = (restaurant.listingDetails?.googleMapUrl?.state?.toLowerCase() || 
+                                 restaurant.listingDetails?.googleMapUrl?.stateShort?.toLowerCase() || '');
+        if (restaurantState && (
+          restaurantState.includes('new territories') ||
+          restaurantState.includes('new_territories') ||
+          restaurantState.includes('territories') ||
+          restaurantState.includes('hong kong') ||
+          restaurantState.includes('hongkong') ||
+          restaurantState.includes('kowloon')
+        )) {
+          return true;
+        }
       }
       
       return false;

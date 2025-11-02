@@ -137,6 +137,17 @@ export const LOCATION_HIERARCHY: { countries: CountryLocation[] } = {
           flag: "https://flagcdn.com/hk.svg",
           currency: "HKD",
           timezone: "Asia/Hong_Kong"
+        },
+        {
+          key: "new_territories",
+          label: "New Territories", 
+          shortLabel: "NT",
+          parentKey: "hongkong",
+          coordinates: { lat: 22.4350, lng: 114.1095 },
+          type: 'city',
+          flag: "https://flagcdn.com/hk.svg",
+          currency: "HKD",
+          timezone: "Asia/Hong_Kong"
         }
       ]
     },

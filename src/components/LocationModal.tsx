@@ -27,6 +27,14 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose }) => {
 
   // Helper function to format location display
   const formatLocationDisplay = (location: LocationOption): string => {
+    // Special case: If Hong Kong city is selected, display as "Hong Kong, HK"
+    if (location.type === 'city' && 
+        (location.key === 'hong_kong_island' || 
+         location.key === 'kowloon' || 
+         location.key === 'new_territories')) {
+      return 'Hong Kong, HK';
+    }
+    
     if (location.type === 'city') {
       const countryCode = getParentCountryCode(location.key);
       return `${location.label}, ${countryCode}`;
@@ -37,6 +45,29 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleCountrySelect = (countryKey: string) => {
+    // Special case: Hong Kong should be selectable directly as a unified region
+    if (countryKey === 'hongkong') {
+      const hongKongCountry = LOCATION_HIERARCHY.countries.find(c => c.key === 'hongkong');
+      if (hongKongCountry) {
+        // Create a country-level location option for Hong Kong
+        const hongKongLocation: LocationOption = {
+          key: hongKongCountry.key,
+          label: hongKongCountry.label,
+          shortLabel: hongKongCountry.shortLabel,
+          flag: hongKongCountry.flag,
+          currency: hongKongCountry.currency,
+          timezone: hongKongCountry.timezone,
+          type: 'country'
+        };
+        setSelectedLocation(hongKongLocation);
+        onClose();
+        setSelectedCountry(null);
+        setViewMode('countries');
+        return;
+      }
+    }
+    
+    // For other countries, show city selection as normal
     setSelectedCountry(countryKey);
     setViewMode('cities');
   };

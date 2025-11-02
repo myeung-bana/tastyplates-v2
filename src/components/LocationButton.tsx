@@ -26,6 +26,14 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
 
   // Smart display logic - always show City, Country format
   const getDisplayText = () => {
+    // Special case: If Hong Kong city is selected, display as "Hong Kong, HK"
+    if (selectedLocation.type === 'city' && 
+        (selectedLocation.key === 'hong_kong_island' || 
+         selectedLocation.key === 'kowloon' || 
+         selectedLocation.key === 'new_territories')) {
+      return 'Hong Kong, HK';
+    }
+    
     if (selectedLocation.type === 'city') {
       // For cities, show "City, Country" format (e.g., "Vancouver, CA")
       const countryCode = getParentCountryCode(selectedLocation.key);
