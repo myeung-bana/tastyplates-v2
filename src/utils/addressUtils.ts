@@ -105,9 +105,10 @@ export function getCardAddress(
 
 /**
  * Get city and country for restaurant cards
+ * Unified format: "City, CountryCode" or "District, CountryCode" for Hong Kong
  * @param googleMapUrl - GoogleMapUrl object
  * @param fallbackText - Default text if no city/country available
- * @returns City, Country format or fallback text
+ * @returns City, CountryCode format or fallback text
  */
 export function getCityCountry(
   googleMapUrl?: GoogleMapUrl | null,
@@ -115,20 +116,33 @@ export function getCityCountry(
 ): string {
   if (!googleMapUrl) return fallbackText;
   
-  const city = googleMapUrl.city?.trim();
-  const country = googleMapUrl.country?.trim() || googleMapUrl.countryShort?.trim();
+  // Always use country code (countryShort) instead of full country name
+  const countryCode = googleMapUrl.countryShort?.trim();
   
-  if (city && country) {
-    return `${city}, ${country}`;
+  // Get city/district name
+  const city = googleMapUrl.city?.trim();
+  
+  // For Hong Kong: Keep district names (Kowloon, Hong Kong Island, New Territories)
+  // Show as "District, HK"
+  if (countryCode === 'HK' && city) {
+    return `${city}, ${countryCode}`;
   }
   
+  // Standard format: "City, CountryCode"
+  if (city && countryCode) {
+    return `${city}, ${countryCode}`;
+  }
+  
+  // Fallback: If only city is available
   if (city) {
     return city;
   }
   
-  if (country) {
-    return country;
+  // Fallback: If only country code is available
+  if (countryCode) {
+    return countryCode;
   }
   
+  // Final fallback
   return fallbackText;
 }

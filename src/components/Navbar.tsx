@@ -287,14 +287,14 @@ export default function Navbar(props: Record<string, unknown>) {
                       </div>
                     }
                     content={
-                      <div className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-gray-200">
+                      <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link href={PROFILE} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           My Profile
                         </Link>
                         <Link href={SETTINGS} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
                           Settings
                         </Link>
-                        <div className="border-t border-gray-200 w-full" />
+                        <div className={`border-t ${!isLandingPage || navBg ? 'border-[#CACACA]' : 'border-gray-200'} w-full`} />
                         <button
                           onClick={handleLogout}
                           className='font-neusans text-left pl-3.5 pr-12 py-3.5'

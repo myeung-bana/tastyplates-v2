@@ -71,6 +71,17 @@ export const LOCATION_HIERARCHY: { countries: CountryLocation[] } = {
           flag: "https://flagcdn.com/ca.svg",
           currency: "CAD",
           timezone: "America/Toronto"
+        },
+        {
+          key: "calgary",
+          label: "Calgary",
+          shortLabel: "YYC",
+          parentKey: "canada",
+          coordinates: { lat: 51.0447, lng: -114.0719 },
+          type: 'city',
+          flag: "https://flagcdn.com/ca.svg",
+          currency: "CAD",
+          timezone: "America/Edmonton"
         }
       ]
     },
