@@ -7,7 +7,7 @@ export const checkImageType = (image: string) => {
 export const RESTAURANT_CONSTANTS = {
   // Pagination settings
   DEFAULT_RESULTS_PER_PAGE: 8,
-  INITIAL_LOAD_RESULTS: 16,
+  INITIAL_LOAD_RESULTS: 100, // Increased to improve location filtering results (e.g., Hong Kong)
   SUGGESTED_RESULTS_THRESHOLD: 10, // Show suggestions if results < 10
   SUGGESTED_RESULTS_COUNT: 4, // Number of suggested restaurants to show
   

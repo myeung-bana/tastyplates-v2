@@ -7,10 +7,9 @@ import {
   FiHome, 
   FiSearch, 
   FiUser,
-  FiSettings,
   FiPlusSquare
 } from "react-icons/fi";
-import { HOME, RESTAURANTS, PROFILE, SETTINGS, LISTING_STEP_ONE } from "@/constants/pages";
+import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages";
 import { useAuthModal } from "./AuthModalWrapper";
 
 const BottomNav: React.FC = () => {
@@ -107,13 +106,6 @@ const BottomNav: React.FC = () => {
       requiresAuth: true,
       isAvatar: true,
       showWhenUnauthenticated: true, // Always show profile button
-    },
-    {
-      name: "Settings",
-      href: SETTINGS,
-      icon: FiSettings,
-      activePaths: [SETTINGS, "/settings/"],
-      requiresAuth: true,
     },
   ];
 

@@ -365,8 +365,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
             panel: "py-0 px-0 justify-start w-full",
             tabList: "gap-0 md:gap-4 w-fit relative rounded-none p-0 flex no-scrollbar sm:overflow-x-hidden",
             cursor: "w-full bg-[#31343F]",
-            tab: "px-4 sm:px-6 py-3 h-[44px] font-semibold font-inter whitespace-nowrap",
-            tabContent: "group-data-[selected=true]:text-[#31343F] text-xs sm:text-base font-semibold",
+            tab: "px-4 sm:px-6 py-3 h-[44px] font-neusans whitespace-nowrap",
+            tabContent: "group-data-[selected=true]:text-[#31343F] text-xs sm:text-base font-neusans",
           }}
           variant="underlined"
         >

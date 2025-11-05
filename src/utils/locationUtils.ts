@@ -91,6 +91,13 @@ export const applyLocationFilter = (
   selectedLocation: LocationOption,
   radiusKm: number = 100
 ): any[] => {
+  console.log('🔍 applyLocationFilter called with:', {
+    restaurantCount: restaurants.length,
+    selectedLocation: selectedLocation.label,
+    locationType: selectedLocation.type,
+    locationKey: selectedLocation.key
+  });
+  
   // Special case: If a Hong Kong city is selected, search entire Hong Kong region
   const isHongKongCity = selectedLocation.type === 'city' && 
                          (selectedLocation.key === 'hong_kong_island' || 
@@ -98,19 +105,36 @@ export const applyLocationFilter = (
                           selectedLocation.key === 'new_territories');
   
   if (isHongKongCity) {
+    console.log('🇭🇰 Hong Kong city filter activated');
     // Treat as Hong Kong country-wide search
-    return restaurants.filter(restaurant => {
+    const filtered = restaurants.filter((restaurant, index) => {
+      // Log first 3 restaurants for debugging
+      if (index < 3) {
+        console.log(`Restaurant ${index}:`, {
+          name: restaurant.name,
+          hasGoogleMapUrl: !!restaurant.googleMapUrl,
+          countryShort: restaurant.googleMapUrl?.countryShort,
+          city: restaurant.googleMapUrl?.city,
+          state: restaurant.googleMapUrl?.state,
+          country: restaurant.googleMapUrl?.country,
+          streetAddress: restaurant.streetAddress
+        });
+      }
+      
       // Strategy 1: Match by Hong Kong country code
-      if (restaurant.listingDetails?.googleMapUrl?.countryShort === 'HK') {
+      if (restaurant.googleMapUrl?.countryShort === 'HK') {
+        if (index < 3) console.log(`  ✅ Restaurant ${index} matched by country code`);
         return true;
       }
       
       // Strategy 2: Match by address containing "Hong Kong" or districts
       const fullAddress = getBestAddress(
-        restaurant.listingDetails?.googleMapUrl,
+        restaurant.googleMapUrl,
         restaurant.streetAddress,
         ''
       ).toLowerCase();
+      
+      if (index < 3) console.log(`  Address for restaurant ${index}:`, fullAddress);
       
       if (fullAddress.includes('hong kong') || 
           fullAddress.includes('hongkong') ||
@@ -118,11 +142,12 @@ export const applyLocationFilter = (
           fullAddress.includes('new_territories') ||
           fullAddress.includes('kowloon') ||
           fullAddress.includes('hong kong island')) {
+        if (index < 3) console.log(`  ✅ Restaurant ${index} matched by address`);
         return true;
       }
       
       // Strategy 3: City name matching for any Hong Kong district
-      const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase() || '';
+      const restaurantCity = restaurant.googleMapUrl?.city?.toLowerCase() || '';
       if (restaurantCity && (
         restaurantCity.includes('hong kong') ||
         restaurantCity.includes('hongkong') ||
@@ -130,12 +155,13 @@ export const applyLocationFilter = (
         restaurantCity.includes('territories') ||
         restaurantCity.includes('island')
       )) {
+        if (index < 3) console.log(`  ✅ Restaurant ${index} matched by city:`, restaurantCity);
         return true;
       }
       
       // Strategy 4: State/Province matching (New Territories might be in state field)
-      const restaurantState = (restaurant.listingDetails?.googleMapUrl?.state?.toLowerCase() || 
-                               restaurant.listingDetails?.googleMapUrl?.stateShort?.toLowerCase() || '');
+      const restaurantState = (restaurant.googleMapUrl?.state?.toLowerCase() || 
+                               restaurant.googleMapUrl?.stateShort?.toLowerCase() || '');
       if (restaurantState && (
         restaurantState.includes('new territories') ||
         restaurantState.includes('new_territories') ||
@@ -144,23 +170,27 @@ export const applyLocationFilter = (
         restaurantState.includes('hongkong') ||
         restaurantState.includes('kowloon')
       )) {
+        if (index < 3) console.log(`  ✅ Restaurant ${index} matched by state:`, restaurantState);
         return true;
       }
       
+      if (index < 3) console.log(`  ❌ Restaurant ${index} no match`);
       return false;
     });
+    console.log(`🇭🇰 Hong Kong filter result: ${filtered.length} restaurants`);
+    return filtered;
   }
   
   if (selectedLocation.type === 'city') {
     return restaurants.filter(restaurant => {
       // Strategy 1: Coordinate-based filtering (within radius)
       if (selectedLocation.coordinates && 
-          restaurant.listingDetails?.googleMapUrl?.latitude && 
-          restaurant.listingDetails?.googleMapUrl?.longitude) {
+          restaurant.googleMapUrl?.latitude && 
+          restaurant.googleMapUrl?.longitude) {
         
         const restaurantCoords = {
-          lat: parseFloat(restaurant.listingDetails.googleMapUrl.latitude),
-          lng: parseFloat(restaurant.listingDetails.googleMapUrl.longitude)
+          lat: parseFloat(restaurant.googleMapUrl.latitude),
+          lng: parseFloat(restaurant.googleMapUrl.longitude)
         };
         
         const distance = calculateDistance(selectedLocation.coordinates!, restaurantCoords);
@@ -170,7 +200,7 @@ export const applyLocationFilter = (
       }
       
       // Strategy 2: City name matching (fuzzy)
-      const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase();
+      const restaurantCity = restaurant.googleMapUrl?.city?.toLowerCase();
       const selectedCity = selectedLocation.label.toLowerCase();
       
       if (restaurantCity && (
@@ -183,7 +213,7 @@ export const applyLocationFilter = (
       
       // Strategy 3: Address string matching
       const fullAddress = getBestAddress(
-        restaurant.listingDetails?.googleMapUrl,
+        restaurant.googleMapUrl,
         restaurant.streetAddress,
         ''
       ).toLowerCase();
@@ -194,7 +224,7 @@ export const applyLocationFilter = (
       
       // Strategy 4: Parent country fallback
       const parentCountry = getParentCountryFromCity(selectedLocation.key);
-      if (parentCountry && restaurant.listingDetails?.googleMapUrl?.countryShort === parentCountry.shortLabel) {
+      if (parentCountry && restaurant.googleMapUrl?.countryShort === parentCountry.shortLabel) {
         return true;
       }
       
@@ -204,14 +234,32 @@ export const applyLocationFilter = (
     // Special case: Enhanced matching for Hong Kong country
     const isHongKongCountry = selectedLocation.key === 'hongkong';
     
-    return restaurants.filter(restaurant => {
+    if (isHongKongCountry) {
+      console.log('🇭🇰 Hong Kong country filter activated');
+    }
+    
+    const filtered = restaurants.filter((restaurant, index) => {
+      // Log first 3 restaurants for Hong Kong
+      if (isHongKongCountry && index < 3) {
+        console.log(`Restaurant ${index}:`, {
+          name: restaurant.name,
+          hasGoogleMapUrl: !!restaurant.googleMapUrl,
+          countryShort: restaurant.googleMapUrl?.countryShort,
+          country: restaurant.googleMapUrl?.country,
+          city: restaurant.googleMapUrl?.city,
+          state: restaurant.googleMapUrl?.state,
+          streetAddress: restaurant.streetAddress
+        });
+      }
+      
       // Strategy 1: Exact country code match
-      if (restaurant.listingDetails?.googleMapUrl?.countryShort === selectedLocation.shortLabel) {
+      if (restaurant.googleMapUrl?.countryShort === selectedLocation.shortLabel) {
+        if (isHongKongCountry && index < 3) console.log(`  ✅ Restaurant ${index} matched by country code`);
         return true;
       }
       
       // Strategy 2: Country name matching (fuzzy)
-      const restaurantCountry = restaurant.listingDetails?.googleMapUrl?.country?.toLowerCase();
+      const restaurantCountry = restaurant.googleMapUrl?.country?.toLowerCase();
       const selectedCountry = selectedLocation.label.toLowerCase();
       
       if (restaurantCountry && (
@@ -219,17 +267,21 @@ export const applyLocationFilter = (
         restaurantCountry.includes(selectedCountry) ||
         selectedCountry.includes(restaurantCountry)
       )) {
+        if (isHongKongCountry && index < 3) console.log(`  ✅ Restaurant ${index} matched by country name:`, restaurantCountry);
         return true;
       }
       
       // Strategy 3: Address string matching
       const fullAddress = getBestAddress(
-        restaurant.listingDetails?.googleMapUrl,
+        restaurant.googleMapUrl,
         restaurant.streetAddress,
         ''
       ).toLowerCase();
       
+      if (isHongKongCountry && index < 3) console.log(`  Address:`, fullAddress);
+      
       if (fullAddress.includes(selectedCountry)) {
+        if (isHongKongCountry && index < 3) console.log(`  ✅ Restaurant ${index} matched by address containing country`);
         return true;
       }
       
@@ -241,11 +293,12 @@ export const applyLocationFilter = (
             fullAddress.includes('new_territories') ||
             fullAddress.includes('kowloon') ||
             fullAddress.includes('hong kong island')) {
+          if (index < 3) console.log(`  ✅ Restaurant ${index} matched by HK district in address`);
           return true;
         }
         
         // Check city field for Hong Kong districts
-        const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase() || '';
+        const restaurantCity = restaurant.googleMapUrl?.city?.toLowerCase() || '';
         if (restaurantCity && (
           restaurantCity.includes('hong kong') ||
           restaurantCity.includes('hongkong') ||
@@ -253,12 +306,13 @@ export const applyLocationFilter = (
           restaurantCity.includes('territories') ||
           restaurantCity.includes('island')
         )) {
+          if (index < 3) console.log(`  ✅ Restaurant ${index} matched by HK city:`, restaurantCity);
           return true;
         }
         
         // Check state field for Hong Kong districts
-        const restaurantState = (restaurant.listingDetails?.googleMapUrl?.state?.toLowerCase() || 
-                                 restaurant.listingDetails?.googleMapUrl?.stateShort?.toLowerCase() || '');
+        const restaurantState = (restaurant.googleMapUrl?.state?.toLowerCase() || 
+                                 restaurant.googleMapUrl?.stateShort?.toLowerCase() || '');
         if (restaurantState && (
           restaurantState.includes('new territories') ||
           restaurantState.includes('new_territories') ||
@@ -267,12 +321,21 @@ export const applyLocationFilter = (
           restaurantState.includes('hongkong') ||
           restaurantState.includes('kowloon')
         )) {
+          if (index < 3) console.log(`  ✅ Restaurant ${index} matched by HK state:`, restaurantState);
           return true;
         }
+        
+        if (index < 3) console.log(`  ❌ Restaurant ${index} no match`);
       }
       
       return false;
     });
+    
+    if (isHongKongCountry) {
+      console.log(`🇭🇰 Hong Kong country filter result: ${filtered.length} restaurants`);
+    }
+    
+    return filtered;
   }
   
   return restaurants;
@@ -293,12 +356,12 @@ export const getLocationRelevance = (
   if (selectedLocation.type === 'city') {
     // Exact coordinate match (highest score)
     if (selectedLocation.coordinates && 
-        restaurant.listingDetails?.googleMapUrl?.latitude && 
-        restaurant.listingDetails?.googleMapUrl?.longitude) {
+        restaurant.googleMapUrl?.latitude && 
+        restaurant.googleMapUrl?.longitude) {
       
       const restaurantCoords = {
-        lat: parseFloat(restaurant.listingDetails.googleMapUrl.latitude),
-        lng: parseFloat(restaurant.listingDetails.googleMapUrl.longitude)
+        lat: parseFloat(restaurant.googleMapUrl.latitude),
+        lng: parseFloat(restaurant.googleMapUrl.longitude)
       };
       
       const distance = calculateDistance(selectedLocation.coordinates!, restaurantCoords);
@@ -310,7 +373,7 @@ export const getLocationRelevance = (
     }
     
     // City name exact match
-    const restaurantCity = restaurant.listingDetails?.googleMapUrl?.city?.toLowerCase();
+    const restaurantCity = restaurant.googleMapUrl?.city?.toLowerCase();
     const selectedCity = selectedLocation.label.toLowerCase();
     
     if (restaurantCity === selectedCity) {
@@ -321,7 +384,7 @@ export const getLocationRelevance = (
     
     // Address contains city
     const fullAddress = getBestAddress(
-      restaurant.listingDetails?.googleMapUrl,
+      restaurant.googleMapUrl,
       restaurant.streetAddress,
       ''
     ).toLowerCase();
@@ -332,12 +395,12 @@ export const getLocationRelevance = (
     
   } else if (selectedLocation.type === 'country') {
     // Exact country code match
-    if (restaurant.listingDetails?.googleMapUrl?.countryShort === selectedLocation.shortLabel) {
+    if (restaurant.googleMapUrl?.countryShort === selectedLocation.shortLabel) {
       score = 1.0;
     }
     
     // Country name match
-    const restaurantCountry = restaurant.listingDetails?.googleMapUrl?.country?.toLowerCase();
+    const restaurantCountry = restaurant.googleMapUrl?.country?.toLowerCase();
     const selectedCountry = selectedLocation.label.toLowerCase();
     
     if (restaurantCountry === selectedCountry) {
@@ -348,7 +411,7 @@ export const getLocationRelevance = (
     
     // Address contains country
     const fullAddress = getBestAddress(
-      restaurant.listingDetails?.googleMapUrl,
+      restaurant.googleMapUrl,
       restaurant.streetAddress,
       ''
     ).toLowerCase();

@@ -294,10 +294,21 @@ const RestaurantPage = () => {
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
+      const firstValue = firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE);
+      
+      console.log('📊 Fetch restaurants params:', {
+        reset,
+        after,
+        firstOverride,
+        isFirstLoad: isFirstLoad.current,
+        INITIAL_LOAD_RESULTS: RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS,
+        DEFAULT_RESULTS_PER_PAGE: RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE,
+        finalFirstValue: firstValue
+      });
 
       const data = await restaurantService.fetchAllRestaurants(
         debouncedSearchTerm,
-        firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE),
+        firstValue,
         after,
         filters.cuisine,
         filters.palates,
@@ -409,7 +420,7 @@ const RestaurantPage = () => {
     setEndCursor(null);
     setHasNextPage(true);
     isFirstLoad.current = true;
-    fetchRestaurants(true, null, isFirstLoad.current ? 16 : 8);
+    fetchRestaurants(true, null, RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS);
     isFirstLoad.current = false;
   }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, selectedLocation, session?.accessToken, fetchRestaurants]);
 

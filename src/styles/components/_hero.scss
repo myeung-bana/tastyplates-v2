@@ -34,7 +34,7 @@
     flex: 1;
     text-align: center;
     position: relative;
-    z-index: 100;
+    z-index: 10;
 
     @media (min-width: 1024px) {
       text-align: left;
@@ -127,6 +127,8 @@
     margin-right: auto;
     display: flex;
     justify-content: center;
+    position: relative;
+    z-index: 10;
 
     @media (max-width: 767px) {
       max-width: 90%;
@@ -144,6 +146,8 @@
     transition: all 0.3s ease;
     width: 100%;
     max-width: 600px;
+    position: relative;
+    z-index: 10;
 
     &:hover {
       border-color: #d1d5db;

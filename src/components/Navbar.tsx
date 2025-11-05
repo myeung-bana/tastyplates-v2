@@ -8,7 +8,6 @@ import "@/styles/components/_navbar.scss";
 import "@/styles/components/_hero.scss";
 import SignupModal from "./SignupModal";
 import SigninModal from "./SigninModal";
-import { FiSearch } from "react-icons/fi";
 import Image from "next/image";
 import CustomPopover from "./ui/Popover/Popover";
 import { PiCaretDown } from "react-icons/pi";
@@ -29,12 +28,11 @@ import CustomModal from "./ui/Modal/Modal";
 import { MdArrowBackIos } from "react-icons/md";
 import NavbarSearchBar from "./NavbarSearchBar";
 import LocationButton from "./LocationButton";
+import MobileMenu from "./MobileMenu";
 
 const navigationItems = [
   { name: "Explore", href: RESTAURANTS },
   { name: "Following", href: "/following" },
-  // { name: "Dashboard", href: "/dashboard" },
-  // { name: "Submit Listing", href: "/submit-restaurant" },
 ];
 
 export default function Navbar(props: Record<string, unknown>) {
@@ -311,123 +309,13 @@ export default function Navbar(props: Record<string, unknown>) {
         </div>
 
         {/* Mobile menu */}
-        <aside
-          id="separator-sidebar"
-          className={`fixed top-0 left-0 z-40 w-[189px] h-screen transition-transform ${isOpen ? "" : "-translate-x-full"
-            } sm:translate-x-0 sm:hidden`}
-          aria-label="Sidebar"
-        >
-          <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800">
-            <ul className="space-y-2 font-medium">
-              <li className="flex gap-2 items-center">
-                {/* Mobile menu button */}
-                <div className="flex items-center sm:hidden">
-                  <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="font-neusans inline-flex items-center justify-center p-2 rounded-md"
-                  >
-                    <svg
-                      className="h-6 w-6"
-                      stroke="#31343F"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <div className="navbar__brand">
-                  <Link href={HOME} className="flex-shrink-0 flex items-center">
-                    <Image
-                      src="/TastyPlates_Logo_Black.svg"
-                      className="h-5 w-auto object-contain"
-                      height={20}
-                      width={184}
-                      alt="TastyPlates Logo"
-                    />
-                  </Link>
-                </div>
-              </li>
-              <li>
-                <div className="font-neusans navbar__menu !flex justify-start">
-                  {navigationItems.map((item) => {
-                    // Show all items if authenticated, only Explore if not authenticated
-                    if (status !== sessionStatus.authenticated && item.name !== "Explore") return null;
-                    
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="font-neusans text-[#494D5D]"
-                      >
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </li>
-              <li>
-                <div className="navbar__auth">
-                  {status !== sessionStatus.authenticated ? (
-                    <>
-                      <button
-                        onClick={() => setIsOpenSignin(true)}
-                        className="navbar__button font-neusans navbar__button--primary bg-transparent hover:rounded-[50px] border-none text-white font-semibold"
-                      >
-                        Log In
-                      </button>
-                      <button
-                        onClick={() => setIsOpenSignup(true)}
-                        className="navbar__button font-neusans navbar__button--secondary rounded-[50px] !bg-white text-[#31343F] font-semibold hidden sm:block"
-                      >
-                        Sign Up
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <CustomPopover
-                        align="bottom-end"
-                        trigger={
-                          <button className="font-neusans bg-[#FCFCFC66]/40 rounded-[50px] h-11 px-2 sm:px-5 flex flex-row flex-nowrap items-center gap-2 text-white">
-                            <span
-                              className="font-neusans text-[#494D5D] text-center font-semibold"
-                            >
-                              Review
-                            </span>
-                            <PiCaretDown
-                              className="fill-[#494D5D] size-5"
-                            />
-                          </button>
-                        }
-                        content={
-                          <div className="font-neusans bg-transparent flex flex-col rounded-2xl text-[#494D5D]">
-                            <Link
-                              href={LISTING}
-                              className="text-left pl-3.5 pr-12 py-3.5 font-semibold"
-                            >
-                              Write a Review
-                            </Link>
-                            <Link
-                              href={LISTING_EXPLANATION}
-                              className="font-neusans text-left pl-3.5 pr-12 py-3.5 font-semibold"
-                            >
-                              Add a Listing
-                            </Link>
-                          </div>
-                        }
-                      />
-                    </>
-                  )}
-                </div>
-              </li>
-            </ul>
-          </div>
-        </aside>
+        <MobileMenu
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          status={status}
+          onOpenSignin={() => setIsOpenSignin(true)}
+          onOpenSignup={() => setIsOpenSignup(true)}
+        />
       </nav>
     </>
   );

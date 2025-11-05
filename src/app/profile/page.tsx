@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { generateProfileUrl } from "@/lib/utils";
+import ProfileHeaderSkeleton from "@/components/Profile/ProfileHeaderSkeleton";
 
 const ProfilePage = () => {
   const { data: session, status } = useSession();
@@ -22,10 +23,10 @@ const ProfilePage = () => {
     router.replace(profileUrl);
   }, [session, status, router]);
 
-  // Show loading while redirecting
+  // Show skeleton loading while redirecting
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-[#31343F]">
-      Loading user session...
+    <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-4 md:mt-20 text-[#31343F]">
+      <ProfileHeaderSkeleton />
     </div>
   );
 };

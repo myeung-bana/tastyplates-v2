@@ -105,7 +105,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 font-neusans">
+    <div className="fixed inset-0 z-[10001] font-neusans">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black bg-opacity-50" 
@@ -115,7 +115,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       {/* Bottom Sheet */}
       <div 
         ref={sheetRef}
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl flex flex-col ${className} ${isClosing ? 'pointer-events-none' : ''}`}
+        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl flex flex-col w-full ${className} ${isClosing ? 'pointer-events-none' : ''}`}
         style={{
           maxHeight,
           transform: `translateY(${sheetPosition}px)`,
