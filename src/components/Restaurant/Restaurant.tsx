@@ -1,7 +1,7 @@
 // pages/RestaurantPage.tsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import RestaurantCard from "@/components/RestaurantCard";
+import RestaurantCard from "@/components/restaurant/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";

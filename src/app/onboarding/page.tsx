@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import Footer from "@/components/Footer";
+import Footer from "@/components/layout/Footer";
 import OnboardingOnePage from "@/pages/Register/OnboardingOne";
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/layout/Navbar";
 
 const OnboardingPage = () => {
   return (

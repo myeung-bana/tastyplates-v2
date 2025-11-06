@@ -3,15 +3,15 @@ import { Tab, Tabs } from "@heroui/tabs";
 import { Masonry } from "masonic";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import Photos from "./Restaurant/Details/Photos";
-import Pagination from "./Pagination";
-import ReviewBlock from "./ReviewBlock";
-import ReviewBlockSkeleton from "./ui/Skeleton/ReviewBlockSkeleton";
+import Photos from "./Details/Photos";
+import Pagination from "../common/Pagination";
+import ReviewBlock from "../review/ReviewBlock";
+import ReviewBlockSkeleton from "../ui/Skeleton/ReviewBlockSkeleton";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from '@/services/user/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
-import CustomPopover from "./ui/Popover/Popover";
+import CustomPopover from "../ui/Popover/Popover";
 import { GraphQLReview } from "@/types/graphql";
 
 // Type definitions for raw review data from API

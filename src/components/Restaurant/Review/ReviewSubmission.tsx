@@ -1,6 +1,6 @@
 "use client";
 import React, { FormEvent, useEffect, useState } from "react";
-import Footer from "@/components/Footer";
+import Footer from "@/components/layout/Footer";
 import "@/styles/pages/_submit-restaurants.scss";
 import Rating from "./Rating";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";

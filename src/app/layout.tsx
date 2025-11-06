@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import "@/styles/global.scss";
-import SessionWrapper from "@/components/SessionWrapper";
+import SessionWrapper from "@/components/auth/SessionWrapper";
 import { Toaster } from 'react-hot-toast';
 import { FollowProvider } from "@/components/FollowContext";
 import { LocationProvider } from "@/contexts/LocationContext";
-import InactivityLogout from "@/components/InactivityLogout";
-import BottomNav from "@/components/BottomNav";
-import MobileTopBar from "@/components/MobileTopBar";
-import AuthModalWrapper from "@/components/AuthModalWrapper";
-import Footer from "@/components/Footer";
+import InactivityLogout from "@/components/common/InactivityLogout";
+import BottomNav from "@/components/layout/BottomNav";
+import MobileTopBar from "@/components/layout/MobileTopBar";
+import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
+import Footer from "@/components/layout/Footer";
 import { LanguageProvider } from '@/contexts/LanguageContext';
 export const metadata: Metadata = {
   title: "TastyPlates",

@@ -9,12 +9,12 @@ import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link"; // Import Link
 import { useSession } from "next-auth/react";
-import SignupModal from "./SignupModal";
-import SigninModal from "./SigninModal";
+import SignupModal from "../auth/SignupModal";
+import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
 import "@/styles/pages/_reviews.scss";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import {
   DEFAULT_IMAGE,
   DEFAULT_USER_ICON,

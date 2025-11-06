@@ -1,6 +1,6 @@
-import Footer from "@/components/Footer"
+import Footer from "@/components/layout/Footer"
 import OnboardingTwoPage from "@/pages/Register/OnboardingTwo"
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/layout/Navbar";
 import { Suspense } from "react";
 
 const OnboardingPage = () => {

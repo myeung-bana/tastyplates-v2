@@ -1,6 +1,6 @@
 import Hero from "@/components/Hero";
-import Navbar from "@/components/Navbar";
-import ClientOnlyReviews from "@/components/ClientOnlyReviews";
+import Navbar from "@/components/layout/Navbar";
+import ClientOnlyReviews from "@/components/review/ClientOnlyReviews";
 import { Suspense } from "react";
 
 export default function Home() {

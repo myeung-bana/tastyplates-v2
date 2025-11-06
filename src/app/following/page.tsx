@@ -3,8 +3,8 @@ import React, { useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useFollowingReviewsGraphQL } from '@/hooks/useFollowingReviewsGraphQL';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import SuggestedUsers from '@/components/SuggestedUsers';
-import FollowingReviews from '@/components/FollowingReviews';
+import SuggestedUsers from '@/components/common/SuggestedUsers';
+import FollowingReviews from '@/components/review/FollowingReviews';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 import { FaUsers } from 'react-icons/fa';
 

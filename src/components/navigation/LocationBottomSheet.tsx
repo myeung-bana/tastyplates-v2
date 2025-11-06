@@ -1,16 +1,17 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiArrowLeft, FiChevronRight, FiCheck } from 'react-icons/fi';
 import { useLocation } from '@/contexts/LocationContext';
 import { LOCATION_HIERARCHY, LocationOption } from '@/constants/location';
-import BottomSheet from './ui/BottomSheet/BottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
-interface LocationModalMobileProps {
+interface LocationBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClose }) => {
+const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClose }) => {
   const { selectedLocation, setSelectedLocation } = useLocation();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'countries' | 'cities'>('countries');
@@ -93,14 +94,22 @@ const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClo
     setViewMode('countries');
   };
 
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const bottomSheetContent = (
     <BottomSheet
       isOpen={isOpen}
       onClose={handleClose}
       title={viewMode === 'countries' ? 'Select Country' : 'Select City'}
       maxHeight="85vh"
+      className="w-full"
     >
-      <div className="px-4 pb-6">
+      <div className="px-4 pb-6 w-full">
         {/* Current Selection Display */}
         {selectedLocation && (
           <div className="mb-4 pb-4 border-b border-gray-200">
@@ -130,7 +139,7 @@ const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClo
         )}
 
         {/* Location Options */}
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           {viewMode === 'countries' ? (
             // Country Selection View
             LOCATION_HIERARCHY.countries.map((country) => (
@@ -147,15 +156,15 @@ const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClo
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base font-medium text-gray-900 font-neusans">
+                  <div className="flex items-center gap-2 mb-0">
+                    <span className="text-base font-normal text-gray-900 font-neusans mb-0">
                       {country.label}
                     </span>
-                    <span className="text-sm text-gray-500 font-neusans">
+                    <span className="text-sm font-normal text-gray-500 font-neusans mb-0">
                       {country.shortLabel}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500 font-neusans">
+                  <span className="text-xs text-gray-500 font-neusans mb-0">
                     {country.cities.length} cities
                   </span>
                 </div>
@@ -176,7 +185,7 @@ const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClo
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <span className={`text-base font-medium font-neusans ${
+                    <span className={`mb-0 text-base font-medium font-neusans ${
                       selectedLocation.key === city.key ? 'text-white' : 'text-gray-900'
                     }`}>
                       {city.label}
@@ -199,7 +208,13 @@ const LocationModalMobile: React.FC<LocationModalMobileProps> = ({ isOpen, onClo
       </div>
     </BottomSheet>
   );
+
+  if (!mounted) return null;
+
+  // Render the BottomSheet directly to document.body using a portal
+  // This ensures it's not constrained by the sidebar's width
+  return createPortal(bottomSheetContent, document.body);
 };
 
-export default LocationModalMobile;
+export default LocationBottomSheet;
 

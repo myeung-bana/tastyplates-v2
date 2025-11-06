@@ -17,7 +17,7 @@ import {
 import { ageLimit } from '@/constants/validation';
 import { emailExistCode, sessionProvider as provider } from '@/constants/response';
 import { formatDateForInput, validEmail } from '@/lib/utils';
-import CustomDatePicker from '@/components/CustomDatepicker';
+import CustomDatePicker from '@/components/common/CustomDatepicker';
 
 const userService = new UserService();
 

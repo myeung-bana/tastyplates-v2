@@ -38,7 +38,7 @@ import toast from "react-hot-toast";
 import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
-import PhotoCropModal from "../PhotoCropModal";
+import PhotoCropModal from "../common/PhotoCropModal";
 
 const userService = new UserService()
 

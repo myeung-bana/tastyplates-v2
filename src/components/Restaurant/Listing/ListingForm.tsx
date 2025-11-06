@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import Footer from "@/components/Footer";
+import Footer from "@/components/layout/Footer";
 import type { Restaurant } from "@/data/dummyRestaurants";
 import { FiMail } from "react-icons/fi";
 import { palates } from "@/data/dummyPalate";

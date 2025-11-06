@@ -2,7 +2,7 @@
 import React from 'react';
 import { GraphQLReview } from '@/types/graphql';
 import ReviewCard2 from './ReviewCard2';
-import ReviewCardSkeleton from './ui/Skeleton/ReviewCardSkeleton';
+import ReviewCardSkeleton from '../ui/Skeleton/ReviewCardSkeleton';
 
 interface FollowingReviewsProps {
   reviews: GraphQLReview[];
@@ -21,10 +21,12 @@ const FollowingReviews: React.FC<FollowingReviewsProps> = ({
     <div className="following-reviews">
       {/* Reviews Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {reviews.map((review) => (
+        {reviews.map((review, index) => (
           <ReviewCard2 
             key={review.id}
             data={review as any} // GraphQLReview is compatible with ReviewedDataProps
+            reviews={reviews}
+            reviewIndex={index}
           />
         ))}
       </div>

@@ -6,7 +6,7 @@ import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from 'firebase/app';
 import { UserService } from '@/services/user/userService';
-import Spinner from "@/components/LoadingSpinner";
+import Spinner from "@/components/common/LoadingSpinner";
 import { signIn } from "next-auth/react";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";

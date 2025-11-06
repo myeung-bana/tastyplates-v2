@@ -1,0 +1,190 @@
+.comments-slide-in {
+  &__backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10002; // Increased to ensure it's above SwipeableReviewViewer (z-index: 9999)
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  &__panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10003; // Ensure panel is above backdrop
+    background: white;
+    border-radius: 24px 24px 0 0;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    touch-action: pan-y;
+    will-change: transform;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden; // Prevent content from showing outside during animation
+  }
+
+  &__handle {
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 0;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+  
+  &__header {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__handle-bar {
+    width: 40px;
+    height: 4px;
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    color: #111827;
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6b7280;
+    font-size: 0.9375rem;
+  }
+
+  &__input-container {
+    padding: 1rem 1.5rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #e5e7eb;
+    background: white;
+  }
+
+  &__input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    resize: none;
+    margin-bottom: 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: #e36b00;
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  &__submit {
+    width: 100%;
+    padding: 0.75rem;
+    background: #e36b00;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: #c55a00;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Mobile optimizations
+@media (max-width: 767px) {
+  .comments-slide-in {
+    &__panel {
+      max-height: 90vh;
+    }
+
+    &__header {
+      padding: 0.875rem 1rem;
+    }
+
+    &__content {
+      padding: 0.75rem 1rem;
+    }
+
+    &__input-container {
+      padding: 0.875rem 1rem;
+      padding-bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+

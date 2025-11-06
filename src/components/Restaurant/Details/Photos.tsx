@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ReviewPopUpModal from "@/components/ReviewPopUpModal";
+import ReviewPopUpModal from "@/components/review/ReviewPopUpModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";

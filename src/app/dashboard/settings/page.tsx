@@ -2,7 +2,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { lists } from "@/data/dummyList";
-import RestaurantCard from "@/components/RestaurantCard";
+import RestaurantCard from "@/components/restaurant/RestaurantCard";
 import "@/styles/pages/_lists.scss";
 
 import { RestaurantService } from "@/services/restaurant/restaurantService";

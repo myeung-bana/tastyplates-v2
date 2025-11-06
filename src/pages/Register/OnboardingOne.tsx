@@ -24,7 +24,7 @@ import {
   palateRequired,
 } from "@/constants/messages";
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
-import CustomDatePicker from "@/components/CustomDatepicker";
+import CustomDatePicker from "@/components/common/CustomDatepicker";
 import { HOME, ONBOARDING_TWO } from "@/constants/pages";
 import { formatDateForInput } from "@/lib/utils";
 import { REGISTRATION_KEY } from "@/constants/session";

@@ -10,7 +10,7 @@ import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPass
 import { ageLimit, minimumPassword } from "@/constants/validation";
 import toast from "react-hot-toast";
 import { emailExistCode, sessionProvider as provider, responseStatusCode as code } from "@/constants/response";
-import CustomDatePicker from "../CustomDatepicker";
+import CustomDatePicker from "../common/CustomDatepicker";
 import { formatDateForInput, validEmail } from "@/lib/utils";
 
 enum Field {

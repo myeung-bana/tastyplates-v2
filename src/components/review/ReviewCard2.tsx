@@ -1,37 +1,59 @@
 // ReviewCard2.tsx - Optimized for Grid Layout
 import Image from "next/image";
 import ReviewPopUpModal from "./ReviewPopUpModal";
-import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
+import SwipeableReviewViewer from "./SwipeableReviewViewer";
+import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
 import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import SignupModal from "./SignupModal";
-import SigninModal from "./SigninModal";
+import SignupModal from "../auth/SignupModal";
+import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import HashtagDisplay from "./ui/HashtagDisplay/HashtagDisplay";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import HashtagDisplay from "../ui/HashtagDisplay/HashtagDisplay";
+import { useIsMobile } from "@/utils/deviceUtils";
 import {
   DEFAULT_IMAGE,
   DEFAULT_USER_ICON,
   STAR_FILLED,
 } from "@/constants/images";
 
-const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
+interface ReviewCard2Props extends Omit<ReviewCardProps, 'width' | 'index'> {
+  reviews?: GraphQLReview[];
+  reviewIndex?: number;
+}
+
+const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: session } = useSession();
 
+  const handleCardClick = () => {
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="overflow-hidden font-neusans">
-      <ReviewPopUpModal
-        data={data as unknown as GraphQLReview}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {/* Mobile: SwipeableReviewViewer, Desktop: ReviewPopUpModal */}
+      {isMobile && reviews && typeof reviewIndex === 'number' ? (
+        <SwipeableReviewViewer
+          reviews={reviews}
+          initialIndex={reviewIndex}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      ) : (
+        <ReviewPopUpModal
+          data={data as unknown as GraphQLReview}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
       
       {/* Auth modals */}
       {showAuthModal === "signup" && (
@@ -61,7 +83,7 @@ const ReviewCard2 = ({ data }: Omit<ReviewCardProps, 'width' | 'index'>) => {
           width={450}
           height={600}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200 cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleCardClick}
         />
       </div>
 

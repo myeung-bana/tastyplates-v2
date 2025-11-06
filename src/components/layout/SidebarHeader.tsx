@@ -15,7 +15,7 @@ import {
 } from "react-icons/fi";
 import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME } from "@/constants/pages";
 import { useLocation } from "@/contexts/LocationContext";
-import LocationBottomSheet from "./LocationBottomSheet";
+import LocationBottomSheet from "../navigation/LocationBottomSheet";
 import { useState } from "react";
 import { logOutSuccessfull } from "@/constants/messages";
 import { LOGOUT_KEY } from "@/constants/session";

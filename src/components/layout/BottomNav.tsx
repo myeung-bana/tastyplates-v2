@@ -10,7 +10,7 @@ import {
   FiPlusSquare
 } from "react-icons/fi";
 import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages";
-import { useAuthModal } from "./AuthModalWrapper";
+import { useAuthModal } from "../auth/AuthModalWrapper";
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();

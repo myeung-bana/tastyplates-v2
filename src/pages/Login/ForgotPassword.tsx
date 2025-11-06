@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import "@/styles/pages/_auth.scss";
-import Spinner from "@/components/LoadingSpinner";
+import Spinner from "@/components/common/LoadingSpinner";
 import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { validEmail } from "@/lib/utils";

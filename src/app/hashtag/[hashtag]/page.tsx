@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import client from '@/app/graphql/client';
 import { SEARCH_REVIEWS_BY_HASHTAG } from '@/app/graphql/Reviews/reviewsQueries';
 import { GraphQLReview } from '@/types/graphql';
-import ReviewCard2 from '@/components/ReviewCard2';
+import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 
 const HashtagPage = () => {

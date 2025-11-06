@@ -3,7 +3,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { GraphQLReview } from "@/types/graphql";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard2 from "./ReviewCard2";
-import ReviewCardSkeleton from "./ui/Skeleton/ReviewCardSkeleton";
+import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
@@ -77,10 +77,10 @@ const Reviews = () => {
   }, [loading, hasNextPage, hasReachedLimit, reviews.length, endCursor, session?.accessToken]);
 
   useEffect(() => {
-    if (!initialLoaded && status !== "loading") {
+    if (!initialLoaded) {
       setInitialLoaded(true);
     }
-  }, [session, initialLoaded]);
+  }, [initialLoaded]);
 
   // Call loadMore only when initialLoaded becomes true
   useEffect(() => {
@@ -140,10 +140,12 @@ const Reviews = () => {
 
         {/* Standard Grid Layout */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
-          {reviews.map((review) => (
+          {reviews.map((review, index) => (
             <ReviewCard2 
               key={review.id}
               data={mapToReviewedDataProps(review)}
+              reviews={reviews}
+              reviewIndex={index}
             />
           ))}
         </div>

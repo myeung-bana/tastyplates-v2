@@ -74,7 +74,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-1 min-w-0">
           {/* Username and Follow Button */}
           <div className="mb-2 flex items-center gap-3">
-            <h1 className="text-base md:text-2xl font-medium truncate">
+            <h1 className="font-neusans text-base md:text-2xl font-normal truncate">
               {nameLoading ? (
                 <span className="inline-block w-32 h-6 bg-gray-200 rounded animate-pulse" />
               ) : (
@@ -93,9 +93,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   }
                 }}
                 disabled={followLoading}
-                className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
+                className={`px-4 py-2 text-xs font-neusans rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                   isFollowing 
-                    ? 'bg-white text-black border border-black' 
+                    ? 'bg-white font-neusans text-black border border-black' 
                     : 'bg-[#E36B00] text-[#FCFCFC]'
                 } disabled:opacity-50 disabled:pointer-events-none`}
               >
@@ -118,7 +118,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <span className="cursor-default">
               <span className="font-semibold">
                 {followersLoading || followingLoading ? (
-                  <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
+                  <span className="inline-block w-6 h-4 bg-gray-200 font-semibold rounded animate-pulse" />
                 ) : (
                   userReviewCount
                 )}
@@ -136,7 +136,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               }}
               disabled={followersLoading || followers.length === 0}
             >
-              <span className="font-semibold">
+              <span className="font-neusans font-normal">
                 {followersLoading ? (
                   <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (

@@ -4,7 +4,7 @@ import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
 import { useRouter } from 'next/navigation';
-import Spinner from "@/components/LoadingSpinner";
+import Spinner from "@/components/common/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";

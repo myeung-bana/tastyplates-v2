@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Spinner from "@/components/LoadingSpinner";
+import Spinner from "@/components/common/LoadingSpinner";
 import { UserService } from "@/services/user/userService";
 import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, unfinishedSaved, welcomeProfile } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";

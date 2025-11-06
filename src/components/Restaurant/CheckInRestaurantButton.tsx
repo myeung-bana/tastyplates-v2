@@ -1,8 +1,8 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
-import SignupModal from "@/components/SignupModal";
-import SigninModal from "@/components/SigninModal";
+import SignupModal from "@/components/auth/SignupModal";
+import SigninModal from "@/components/auth/SigninModal";
 import toast from "react-hot-toast";
 import { checkInStatusError, checkInRestaurantSuccess, uncheckInRestaurantSuccess } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";

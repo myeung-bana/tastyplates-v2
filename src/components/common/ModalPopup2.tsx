@@ -4,8 +4,8 @@ import { FiX, FiThumbsUp, FiMessageSquare } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import Image from "next/image";
 import { stripTags, formatDate } from "../lib/utils"
-import SignupModal from "./SignupModal";
-import SigninModal from "./SigninModal";
+import SignupModal from "../auth/SignupModal";
+import SigninModal from "../auth/SigninModal";
 import { RxCaretLeft, RxCaretRight } from "react-icons/rx";
 import Slider from "react-slick";
 import { ReviewService } from "@/services/Reviews/reviewService";

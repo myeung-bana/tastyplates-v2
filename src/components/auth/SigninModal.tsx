@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import LoginPage from "@/pages/Login/Login";
-import ForgotPasswordModal from "./ui/Modal/ForgotPasswordModal";
-import ForgotPassLinkModal from "./ui/Modal/ForgotPassLinkModal";
+import ForgotPasswordModal from "../ui/Modal/ForgotPasswordModal";
+import ForgotPassLinkModal from "../ui/Modal/ForgotPassLinkModal";
 
 interface SigninModalProps {
   isOpen: boolean;

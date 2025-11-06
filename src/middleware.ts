@@ -72,7 +72,13 @@ export default function middleware(request: NextRequest) {
     });
   }
 
-  // For API routes, add CORS and skip auth
+  // CRITICAL: Skip middleware entirely for NextAuth API routes
+  // NextAuth handles its own routing and responses
+  if (request.nextUrl.pathname.startsWith('/api/auth/')) {
+    return NextResponse.next();
+  }
+
+  // For other API routes, add CORS and skip auth
   if (request.nextUrl.pathname.startsWith('/api/')) {
     const response = NextResponse.next();
     return addCorsHeaders(response);
@@ -84,7 +90,9 @@ export default function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/api/:path*",
+    // Note: /api/auth/* routes are excluded via early return in middleware function
+    // Only match specific API routes we need to process
+    "/api/graphql-proxy",
     "/settings",
     "/profile",
     "/profile/edit",

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { GraphQLReview } from "@/types/graphql";
-import { capitalizeWords, stripTags, PAGE, formatDate, generateProfileUrl } from "../lib/utils";
+import { capitalizeWords, stripTags, PAGE, formatDate, generateProfileUrl } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 
 interface ReplyItemProps {

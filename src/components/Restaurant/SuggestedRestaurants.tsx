@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Restaurant } from './Restaurant';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import { getRegionalPalatesForSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
-import RestaurantCard from '../RestaurantCard';
+import RestaurantCard from './RestaurantCard';
 import { Listing } from '@/interfaces/restaurant/restaurant';
 import { getBestAddress } from '@/utils/addressUtils';
 

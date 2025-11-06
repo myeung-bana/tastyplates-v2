@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Masonry } from 'masonic';
-import ReviewCard2 from '../ReviewCard2';
+import ReviewCard2 from '../review/ReviewCard2';
 import ReviewCardSkeleton2 from '../ui/Skeleton/ReviewCardSkeleton2';
 import { ReviewedDataProps } from '@/interfaces/Reviews/review';
 import { ReviewService } from '@/services/Reviews/reviewService';

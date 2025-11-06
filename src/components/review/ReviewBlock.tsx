@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { BiLike } from "react-icons/bi";
-import SignupModal from "./SignupModal";
-import SigninModal from "./SigninModal";
-import PhotoSlider from "./Restaurant/Details/PhotoSlider";
+import SignupModal from "../auth/SignupModal";
+import SigninModal from "../auth/SigninModal";
+import PhotoSlider from "../Restaurant/Details/PhotoSlider";
 import { GraphQLReview } from "@/types/graphql";
 
 // Styles
