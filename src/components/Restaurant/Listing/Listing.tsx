@@ -1,7 +1,7 @@
 // Listing.tsx
 "use client";
 import React, { FormEvent, useEffect, useState, useCallback } from "react";
-import RestaurantCard from "@/components/restaurant/RestaurantCard";
+import RestaurantCard from "@/components/Restaurant/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
 import { FiSearch } from "react-icons/fi";

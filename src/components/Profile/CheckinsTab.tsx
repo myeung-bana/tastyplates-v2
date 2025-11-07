@@ -1,5 +1,5 @@
 import React from 'react';
-import RestaurantCard from '../restaurant/RestaurantCard';
+import RestaurantCard from '../Restaurant/RestaurantCard';
 import RestaurantCardSkeleton from '../ui/Skeleton/RestaurantCardSkeleton';
 import TabContentGrid from '../ui/TabContentGrid/TabContentGrid';
 
