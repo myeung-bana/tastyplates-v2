@@ -83,8 +83,13 @@ const HashtagPage = () => {
         ) : reviews.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {reviews.map((review) => (
-                <ReviewCard2 key={review.id} data={review as any} />
+              {reviews.map((review, index) => (
+                <ReviewCard2 
+                  key={review.id} 
+                  data={review as any}
+                  reviews={reviews}
+                  reviewIndex={index}
+                />
               ))}
             </div>
 

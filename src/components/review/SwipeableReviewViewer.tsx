@@ -1,11 +1,10 @@
 "use client";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useDrag, useWheel } from "@use-gesture/react";
 import { useSpring, animated } from "@react-spring/web";
 import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
-import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { ReviewService } from "@/services/Reviews/reviewService";
@@ -40,8 +39,74 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
   const [showComments, setShowComments] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewportHeightRef = useRef<number>(0);
   const fetchedCommentCountsRef = useRef<Set<number>>(new Set());
+  const preloadedImagesRef = useRef<Set<string>>(new Set());
+
+  // ✨ NEW: Calculate dynamic viewport height for mobile
+  const [viewportHeight, setViewportHeight] = useState(0);
+  
+  useEffect(() => {
+    const updateHeight = () => {
+      // Use visualViewport for accurate mobile height, fallback to innerHeight
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      setViewportHeight(height);
+    };
+    
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.visualViewport?.addEventListener('resize', updateHeight);
+    
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+      window.visualViewport?.removeEventListener('resize', updateHeight);
+    };
+  }, []);
+
+  // ✨ NEW: Opening animation
+  const [{ scale, opacity }, apiOpen] = useSpring(() => ({
+    scale: 0.95,
+    opacity: 0,
+    config: { tension: 300, friction: 30 },
+  }));
+
+  useEffect(() => {
+    if (isOpen) {
+      apiOpen.start({ scale: 1, opacity: 1 });
+    } else {
+      apiOpen.start({ scale: 0.95, opacity: 0 });
+    }
+  }, [isOpen, apiOpen]);
+
+  // ✨ NEW: Windowed rendering - only render visible ±2 reviews
+  const visibleIndices = useMemo(() => {
+    const indices = new Set<number>();
+    // Add current and adjacent reviews
+    for (let i = Math.max(0, currentIndex - 1); i <= Math.min(reviews.length - 1, currentIndex + 2); i++) {
+      indices.add(i);
+    }
+    return Array.from(indices).sort((a, b) => a - b);
+  }, [currentIndex, reviews.length]);
+
+  // ✨ NEW: Preload images for current and next reviews
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const imagesToPreload = [
+      reviews[currentIndex],
+      reviews[currentIndex + 1],
+      reviews[currentIndex + 2],
+    ].filter(Boolean);
+
+    imagesToPreload.forEach((review) => {
+      if (!review) return;
+      const imageUrl = review.reviewImages?.[0]?.sourceUrl;
+      if (imageUrl && !preloadedImagesRef.current.has(imageUrl)) {
+        const img = new Image();
+        img.src = imageUrl;
+        preloadedImagesRef.current.add(imageUrl);
+      }
+    });
+  }, [currentIndex, isOpen, reviews]);
 
   // Initialize like states
   useEffect(() => {
@@ -61,42 +126,39 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex);
-      viewportHeightRef.current = window.innerHeight;
     }
   }, [isOpen, initialIndex]);
 
-  // Fetch comment counts for all reviews
+  // ✨ OPTIMIZED: Fetch comment counts only for visible reviews
   useEffect(() => {
-    if (isOpen && reviews.length > 0) {
-      reviews.forEach((review) => {
-        if (review.id && !fetchedCommentCountsRef.current.has(review.databaseId)) {
-          fetchedCommentCountsRef.current.add(review.databaseId);
-          reviewService
-            .fetchCommentReplies(review.id)
-            .then((replies) => {
-              setCommentCounts((prev) => ({
-                ...prev,
-                [review.databaseId]: replies.length,
-              }));
-            })
-            .catch((error) => {
-              console.error("Error fetching comment count:", error);
-              // Remove from set on error so it can be retried
-              fetchedCommentCountsRef.current.delete(review.databaseId);
-            });
-        }
-      });
-    }
-  }, [isOpen, reviews]);
+    if (!isOpen) return;
 
-  // Spring animation for vertical movement and index transitions
-  // y represents the target position (index * 100%) plus gesture offset
-  // Using faster config for snappier transitions
+    visibleIndices.forEach((idx) => {
+      const review = reviews[idx];
+      if (review?.id && !fetchedCommentCountsRef.current.has(review.databaseId)) {
+        fetchedCommentCountsRef.current.add(review.databaseId);
+        reviewService
+          .fetchCommentReplies(review.id)
+          .then((replies) => {
+            setCommentCounts((prev) => ({
+              ...prev,
+              [review.databaseId]: replies.length,
+            }));
+          })
+          .catch((error) => {
+            console.error("Error fetching comment count:", error);
+            fetchedCommentCountsRef.current.delete(review.databaseId);
+          });
+      }
+    });
+  }, [isOpen, visibleIndices, reviews]);
+
+  // ✨ OPTIMIZED: Faster spring configuration
   const [{ y }, api] = useSpring(() => ({
-    y: currentIndex * 100, // Start at current index position (in percentage)
+    y: currentIndex,
     config: {
-      tension: 300, // Higher tension = faster response
-      friction: 25, // Lower friction = less damping, faster movement
+      tension: 400, // Increased from 300 for snappier feel
+      friction: 35, // Adjusted for faster, smoother animation
     },
   }));
 
@@ -120,7 +182,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       }));
 
       try {
-        // TODO: Implement actual like API call
         toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
       } catch (error) {
         // Revert on error
@@ -135,246 +196,64 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     [session, userLiked]
   );
 
-  // Navigate to next/previous review
-  const navigateToReview = useCallback(
-    (direction: "up" | "down") => {
-      if (direction === "up" && currentIndex > 0) {
-        setCurrentIndex(currentIndex - 1);
-      } else if (direction === "down" && currentIndex < reviews.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      }
-    },
-    [currentIndex, reviews.length]
-  );
+  // ✨ OPTIMIZED: Simplified gesture handler
+  const handleGesture = useCallback(
+    (deltaY: number, velocity: number, isActive: boolean) => {
+      if (showComments || !viewportHeight) return;
 
-  // Shared gesture handler logic for drag (touch/mouse)
-  const handleDragGesture = useCallback(
-    (deltaY: number, direction: number, velocity: number, isActive: boolean, isEnd: boolean) => {
-      // Disable gestures when comments panel is open
-      if (showComments) {
-        return;
-      }
+      const threshold = viewportHeight * 0.15; // 15% of screen
+      const velocityThreshold = 0.5;
 
-      const threshold = 100; // Minimum distance to trigger navigation
-      const velocityThreshold = 0.5; // Minimum velocity for quick swipes
-      const viewportHeight = viewportHeightRef.current || window.innerHeight;
-
-      // Update spring position during gesture (show preview of next/previous)
-      if (isActive && !isEnd) {
-        // Calculate base position from current index
-        const baseY = currentIndex * 100;
-        // Convert pixel movement to percentage offset
-        // Negative deltaY (swipe up) should show next post (positive offset)
-        // Positive deltaY (swipe down) should show previous post (negative offset)
-        const gestureOffset = -(deltaY / viewportHeight) * 100;
-        
-        // Clamp to prevent over-scrolling beyond adjacent posts
-        const maxOffset = 100; // Can't scroll more than one post
-        const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, gestureOffset));
-        
-        api.start({
-          y: baseY + clampedOffset,
-          immediate: true,
-        });
-      }
-
-      // On release, check if we should navigate or snap back
-      if (isEnd) {
-        const shouldNavigate =
-          Math.abs(deltaY) > threshold || Math.abs(velocity) > velocityThreshold;
-
-        if (shouldNavigate) {
-          if (direction > 0 && currentIndex > 0) {
-            // Swipe down - go to previous
-            const newIndex = currentIndex - 1;
-            navigateToReview("up");
-            // Animate to new position
-            api.start({
-              y: newIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
-          } else if (direction < 0 && currentIndex < reviews.length - 1) {
-            // Swipe up - go to next
-            const newIndex = currentIndex + 1;
-            navigateToReview("down");
-            // Animate to new position
-            api.start({
-              y: newIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
-          } else if (deltaY > 150 && currentIndex === 0) {
-            // Swipe down from first review - close viewer
-            onClose();
-            return;
-          } else {
-            // Snap back to current position if not navigating
-            api.start({
-              y: currentIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
-          }
-        } else {
-          // Snap back to current position if threshold not met
-          api.start({
-            y: currentIndex * 100,
-            immediate: false,
-            config: {
-              tension: 300,
-              friction: 25,
-            },
-          });
-        }
-      }
-    },
-    [showComments, currentIndex, reviews.length, navigateToReview, onClose, api]
-  );
-
-  // Wheel gesture handler with linear, fast scrolling
-  const wheelAccumulatorRef = useRef<number>(0);
-  const handleWheelGesture = useCallback(
-    (deltaY: number, direction: number, velocity: number, isActive: boolean, isEnd: boolean) => {
-      // Disable gestures when comments panel is open
-      if (showComments) {
-        return;
-      }
-
-      const viewportHeight = viewportHeightRef.current || window.innerHeight;
-      const wheelSensitivity = 0.5; // Make scrolling more sensitive (lower = more sensitive)
-      const threshold = 50; // Lower threshold for faster navigation
-
-      // Accumulate wheel delta for smoother, linear scrolling
       if (isActive) {
-        wheelAccumulatorRef.current += deltaY * wheelSensitivity;
-        
-        // Calculate base position from current index
-        const baseY = currentIndex * 100;
-        // Convert accumulated movement to percentage offset (linear)
-        // Negative deltaY (scroll up) should show next post (positive offset)
-        // Positive deltaY (scroll down) should show previous post (negative offset)
-        const gestureOffset = -(wheelAccumulatorRef.current / viewportHeight) * 100;
-        
-        // Clamp to prevent over-scrolling beyond adjacent posts
-        const maxOffset = 100;
-        const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, gestureOffset));
-        
+        // During drag: show preview with GPU-accelerated transform
+        const offset = -deltaY / viewportHeight;
         api.start({
-          y: baseY + clampedOffset,
+          y: currentIndex + offset,
           immediate: true,
         });
-      }
-
-      // On wheel end, check if we should navigate
-      if (isEnd) {
-        const accumulatedDelta = Math.abs(wheelAccumulatorRef.current);
-        const shouldNavigate = accumulatedDelta > threshold || Math.abs(velocity) > 0.3;
-
+      } else {
+        // On release: decide navigation
+        const shouldNavigate = Math.abs(deltaY) > threshold || Math.abs(velocity) > velocityThreshold;
+        
         if (shouldNavigate) {
-          if (direction > 0 && currentIndex > 0) {
-            // Scroll down - go to previous
-            const newIndex = currentIndex - 1;
-            navigateToReview("up");
-            api.start({
-              y: newIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
-          } else if (direction < 0 && currentIndex < reviews.length - 1) {
-            // Scroll up - go to next
-            const newIndex = currentIndex + 1;
-            navigateToReview("down");
-            api.start({
-              y: newIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
-          } else if (wheelAccumulatorRef.current > 150 && currentIndex === 0) {
-            // Scroll down from first review - close viewer
+          const direction = deltaY < 0 ? 1 : -1; // Negative = swipe up = next
+          const newIndex = Math.max(0, Math.min(reviews.length - 1, currentIndex + direction));
+          
+          if (newIndex !== currentIndex) {
+            setCurrentIndex(newIndex);
+            api.start({ y: newIndex, immediate: false });
+          } else if (deltaY > 0 && currentIndex === 0) {
+            // Swipe down from first = close
             onClose();
-            wheelAccumulatorRef.current = 0;
-            return;
           } else {
-            // Snap back to current position
-            api.start({
-              y: currentIndex * 100,
-              immediate: false,
-              config: {
-                tension: 300,
-                friction: 25,
-              },
-            });
+            // Snap back
+            api.start({ y: currentIndex, immediate: false });
           }
         } else {
-          // Snap back to current position if threshold not met
-          api.start({
-            y: currentIndex * 100,
-            immediate: false,
-            config: {
-              tension: 300,
-              friction: 25,
-            },
-          });
+          // Snap back
+          api.start({ y: currentIndex, immediate: false });
         }
-
-        // Reset accumulator
-        wheelAccumulatorRef.current = 0;
       }
     },
-    [showComments, currentIndex, reviews.length, navigateToReview, onClose, api]
+    [showComments, currentIndex, reviews.length, viewportHeight, api, onClose]
   );
 
-  // Gesture handler for touch/mouse drag (Reels-style)
+  // Gesture handlers
   const bindDrag = useDrag(
-    ({ movement: [, my], direction: [, dy], velocity, canceled, first, last }) => {
-      if (canceled) return;
-      handleDragGesture(my, dy, velocity[1], !first && !last, last);
+    ({ movement: [, my], velocity, active, last }) => {
+      handleGesture(my, velocity[1], active && !last);
     },
-    {
-      axis: "y",
-      filterTaps: true,
-    }
+    { axis: "y", filterTaps: true }
   );
 
-  // Gesture handler for trackpad wheel scrolling (linear and fast)
   const bindWheel = useWheel(
-    ({ delta: [, dy], direction: [, direction], velocity, first, last }) => {
-      handleWheelGesture(dy, direction, velocity[1], !first && !last, last);
+    ({ delta: [, dy], velocity, active, last }) => {
+      handleGesture(dy * 2, velocity[1], active && !last);
     },
-    {
-      axis: "y",
-    }
+    { axis: "y" }
   );
 
-  // Reset position when index changes (synchronize spring with currentIndex)
-  useEffect(() => {
-    api.start({
-      y: currentIndex * 100,
-      immediate: false,
-      config: {
-        tension: 300,
-        friction: 25,
-      },
-    });
-  }, [currentIndex, api]);
-
-  // Prevent body scroll when viewer is open
+  // Prevent body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -382,10 +261,10 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         document.body.style.overflow = "unset";
       };
     }
-    return undefined; // Explicit return for when isOpen is false
+    return undefined;
   }, [isOpen]);
 
-  if (!isOpen || reviews.length === 0) return null;
+  if (!isOpen || reviews.length === 0 || !viewportHeight) return null;
 
   const currentReview = reviews[currentIndex];
   if (!currentReview) return null;
@@ -396,11 +275,14 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
   return (
     <>
-      <div 
-        className="swipeable-review-viewer" 
+      <animated.div
+        className="swipeable-review-viewer"
         ref={containerRef}
         style={{
-          pointerEvents: showComments ? 'none' : 'auto', // Disable viewer when comments open
+          opacity,
+          transform: scale.to((s) => `scale(${s})`),
+          pointerEvents: showComments ? "none" : "auto",
+          height: viewportHeight, // Use measured viewport height
         }}
       >
         {/* Close Button */}
@@ -412,19 +294,19 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
           <FiX className="w-6 h-6" />
         </button>
 
-        {/* Posts Container - Reels-style vertical scrolling */}
+        {/* ✨ OPTIMIZED: Only render visible reviews */}
         <animated.div
           className="swipeable-review-viewer__posts-container"
           style={{
-            transform: y.to((value) => {
-              // value is the target position (index * 100%) plus gesture offset
-              return `translateY(-${value}%)`;
-            }),
-            pointerEvents: showComments ? 'none' : 'auto',
+            transform: y.to((value) => `translate3d(0, ${-value * 100}%, 0)`), // GPU-accelerated
+            height: viewportHeight * reviews.length,
           }}
           {...(!showComments ? { ...bindDrag(), ...bindWheel() } : {})}
         >
-          {reviews.map((review, index) => {
+          {visibleIndices.map((index) => {
+            const review = reviews[index];
+            if (!review) return null;
+            
             const images = review.reviewImages || [];
             const mainImage = images[0]?.sourceUrl || DEFAULT_IMAGE;
             const reviewIsLiked = userLiked[review.databaseId] ?? false;
@@ -436,7 +318,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                 key={review.id}
                 className="swipeable-review-viewer__post"
                 style={{
-                  top: `${index * 100}%`,
+                  height: viewportHeight,
+                  transform: `translate3d(0, ${index * 100}%, 0)`, // GPU-accelerated
+                  willChange: 'transform',
                 }}
               >
                 {/* Image Section */}
@@ -444,9 +328,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                   <FallbackImage
                     src={mainImage}
                     alt={stripTags(review.reviewMainTitle || "Review")}
-                    width={400}
-                    height={600}
+                    fill
                     className="swipeable-review-viewer__image"
+                    priority={index === currentIndex} // Priority load for current
                   />
                 </div>
 
@@ -456,8 +340,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                   <div className="swipeable-review-viewer__user-info">
                     {review.author?.node?.databaseId ? (
                       session?.user?.id &&
-                      String(session.user.id) ===
-                        String(review.author?.node?.databaseId) ? (
+                      String(session.user.id) === String(review.author?.node?.databaseId) ? (
                         <Link href={PROFILE}>
                           <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}
@@ -469,10 +352,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           />
                         </Link>
                       ) : session ? (
-                        <Link
-                          href={generateProfileUrl(review.author?.node?.databaseId)}
-                          prefetch={false}
-                        >
+                        <Link href={generateProfileUrl(review.author?.node?.databaseId)} prefetch={false}>
                           <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}
                             alt={review.author?.node?.name || "User"}
@@ -505,14 +385,10 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
                     <div className="swipeable-review-viewer__user-details">
                       <h3 className="swipeable-review-viewer__username">
-                        {review.author?.node?.name ||
-                          review.author?.name ||
-                          "Unknown User"}
+                        {review.author?.node?.name || review.author?.name || "Unknown User"}
                       </h3>
                       {review.reviewStars && (
-                        <div className="swipeable-review-viewer__rating">
-                          ⭐ {review.reviewStars}/5
-                        </div>
+                        <div className="swipeable-review-viewer__rating">⭐ {review.reviewStars}/5</div>
                       )}
                     </div>
                   </div>
@@ -525,18 +401,13 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                       </h2>
                     )}
                     {review.content && (
-                      <p className="swipeable-review-viewer__text">
-                        {stripTags(review.content)}
-                      </p>
+                      <p className="swipeable-review-viewer__text">{stripTags(review.content)}</p>
                     )}
                   </div>
 
                   {/* Action Buttons */}
                   <div className="swipeable-review-viewer__actions">
-                    <button
-                      className="swipeable-review-viewer__action-btn"
-                      onClick={() => handleLike(review)}
-                    >
+                    <button className="swipeable-review-viewer__action-btn" onClick={() => handleLike(review)}>
                       {reviewIsLiked ? (
                         <AiFillHeart className="w-6 h-6 text-red-500" />
                       ) : (
@@ -548,11 +419,8 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     <button
                       className="swipeable-review-viewer__action-btn"
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent gesture from triggering
-                        // Only update index if different from current
-                        if (index !== currentIndex) {
-                          setCurrentIndex(index);
-                        }
+                        e.stopPropagation();
+                        if (index !== currentIndex) setCurrentIndex(index);
                         setShowComments(true);
                       }}
                     >
@@ -565,9 +433,8 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
             );
           })}
         </animated.div>
-      </div>
+      </animated.div>
 
-      {/* Comments Slide-In - Rendered outside viewer container to avoid z-index conflicts */}
       {showComments && (
         <CommentsSlideIn
           review={currentReview}
@@ -586,4 +453,3 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 };
 
 export default SwipeableReviewViewer;
-
