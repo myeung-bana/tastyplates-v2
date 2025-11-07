@@ -18,11 +18,11 @@ import ReviewPopUpModal from "./ReviewPopUpModal";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
-import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
-import PalateTags from "./ui/PalateTags/PalateTags";
+import PalateTags from "../ui/PalateTags/PalateTags";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
