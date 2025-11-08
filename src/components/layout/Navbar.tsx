@@ -170,9 +170,9 @@ export default function Navbar(props: Record<string, unknown>) {
                 <Link href={HOME} className="flex-shrink-0 flex items-center">
                   <Image
                     src={`${isLandingPage ? !navBg ? TASTYPLATES_LOGO_WHITE : TASTYPLATES_LOGO_BLACK : TASTYPLATES_LOGO_COLOUR}`}
-                    className="h-5 md:h-6 w-auto object-contain"
-                    height={24}
-                    width={120}
+                    className="h-4 md:h-5 w-auto object-contain" // Reduced from h-5 md:h-6
+                    height={20} // Reduced from 24
+                    width={100} // Reduced from 120
                     alt="TastyPlates Logo"
                   />
                 </Link>
@@ -206,12 +206,12 @@ export default function Navbar(props: Record<string, unknown>) {
               </div>
             </div>
             <div className="navbar__auth">
-              {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-11 h-11 rounded-full overflow-hidden">
+              {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-9 h-9 rounded-full overflow-hidden">
                 <Image
                   src={DEFAULT_USER_ICON}
                   alt={"Profile"}
-                  width={44}
-                  height={44}
+                  width={36} // Reduced from 44
+                  height={36} // Reduced from 44
                   className="w-full h-full object-cover rounded-full"
                 />
               </div> : (status !== sessionStatus.authenticated) ? (
@@ -246,7 +246,7 @@ export default function Navbar(props: Record<string, unknown>) {
                   <CustomPopover
                     align="bottom-end"
                     trigger={
-                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] text-sm h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 text-white backdrop-blur-sm">
+                      <button className="bg-[#FCFCFC66]/40 rounded-[50px] text-xs h-9 px-4 hidden md:flex flex-row flex-nowrap items-center gap-1.5 text-white backdrop-blur-sm">
                         <span
                           className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                             } text-center font-neusans`}
@@ -255,7 +255,7 @@ export default function Navbar(props: Record<string, unknown>) {
                         </span>
                         <PiCaretDown
                           className={`${isLandingPage && !navBg ? "fill-white" : "fill-[#494D5D]"
-                            } size-5`}
+                            } size-4`}
                         />
                       </button>
                     }
@@ -273,12 +273,12 @@ export default function Navbar(props: Record<string, unknown>) {
                   <CustomPopover
                     align="bottom-end"
                     trigger={
-                      <div className="w-11 h-11 rounded-full overflow-hidden">
+                      <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
                           src={session?.user?.image || DEFAULT_USER_ICON}
                           alt={session?.user?.name || "Profile"}
-                          width={44}
-                          height={44}
+                          width={36} // Reduced from 44
+                          height={36} // Reduced from 44
                           className="w-full h-full object-cover rounded-full"
                           type={FallbackImageType.Icon}
                         />

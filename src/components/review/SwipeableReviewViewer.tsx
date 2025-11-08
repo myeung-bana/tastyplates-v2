@@ -42,12 +42,17 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const fetchedCommentCountsRef = useRef<Set<number>>(new Set());
   const preloadedImagesRef = useRef<Set<string>>(new Set());
 
-  // ✨ NEW: Calculate dynamic viewport height for mobile
-  const [viewportHeight, setViewportHeight] = useState(0);
+  // ✅ FIX 1: Initialize viewport height immediately to prevent glitch
+  const [viewportHeight, setViewportHeight] = useState(() => {
+    // Get initial height synchronously
+    if (typeof window !== 'undefined') {
+      return window.visualViewport?.height ?? window.innerHeight;
+    }
+    return 0;
+  });
   
   useEffect(() => {
     const updateHeight = () => {
-      // Use visualViewport for accurate mobile height, fallback to innerHeight
       const height = window.visualViewport?.height ?? window.innerHeight;
       setViewportHeight(height);
     };
@@ -62,32 +67,33 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     };
   }, []);
 
-  // ✨ NEW: Opening animation
+  // ✅ FIX 2: Opening animation - start from current scale when opening
   const [{ scale, opacity }, apiOpen] = useSpring(() => ({
-    scale: 0.95,
-    opacity: 0,
+    scale: 1, // Start at full scale to prevent flash
+    opacity: 1,
     config: { tension: 300, friction: 30 },
   }));
 
   useEffect(() => {
     if (isOpen) {
-      apiOpen.start({ scale: 1, opacity: 1 });
+      // Animate from 0.95 to 1 when opening
+      apiOpen.start({ from: { scale: 0.95, opacity: 0 }, to: { scale: 1, opacity: 1 } });
     } else {
-      apiOpen.start({ scale: 0.95, opacity: 0 });
+      // Reset to hidden state
+      apiOpen.set({ scale: 0.95, opacity: 0 });
     }
   }, [isOpen, apiOpen]);
 
-  // ✨ NEW: Windowed rendering - only render visible ±2 reviews
+  // Windowed rendering - only render visible ±2 reviews
   const visibleIndices = useMemo(() => {
     const indices = new Set<number>();
-    // Add current and adjacent reviews
     for (let i = Math.max(0, currentIndex - 1); i <= Math.min(reviews.length - 1, currentIndex + 2); i++) {
       indices.add(i);
     }
     return Array.from(indices).sort((a, b) => a - b);
   }, [currentIndex, reviews.length]);
 
-  // ✨ NEW: Preload images for current and next reviews
+  // Preload images for current and next reviews
   useEffect(() => {
     if (!isOpen) return;
 
@@ -129,7 +135,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [isOpen, initialIndex]);
 
-  // ✨ OPTIMIZED: Fetch comment counts only for visible reviews
+  // Fetch comment counts only for visible reviews
   useEffect(() => {
     if (!isOpen) return;
 
@@ -153,12 +159,12 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     });
   }, [isOpen, visibleIndices, reviews]);
 
-  // ✨ OPTIMIZED: Faster spring configuration
+  // Faster spring configuration
   const [{ y }, api] = useSpring(() => ({
     y: currentIndex,
     config: {
-      tension: 400, // Increased from 300 for snappier feel
-      friction: 35, // Adjusted for faster, smoother animation
+      tension: 400,
+      friction: 35,
     },
   }));
 
@@ -174,7 +180,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       const currentLiked = userLiked[reviewId] ?? false;
       const newLikedState = !currentLiked;
 
-      // Optimistic update
       setUserLiked((prev) => ({ ...prev, [reviewId]: newLikedState }));
       setLikesCount((prev) => ({
         ...prev,
@@ -184,7 +189,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       try {
         toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
       } catch (error) {
-        // Revert on error
         setUserLiked((prev) => ({ ...prev, [reviewId]: currentLiked }));
         setLikesCount((prev) => ({
           ...prev,
@@ -196,41 +200,56 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     [session, userLiked]
   );
 
-  // ✨ OPTIMIZED: Simplified gesture handler
+  // ✅ FIX 3: Improved gesture handler with proper close threshold
   const handleGesture = useCallback(
     (deltaY: number, velocity: number, isActive: boolean) => {
       if (showComments || !viewportHeight) return;
 
-      const threshold = viewportHeight * 0.15; // 15% of screen
-      const velocityThreshold = 0.5;
+      // ✅ FIX 4: Increased thresholds
+      const navigationThreshold = viewportHeight * 0.3; // 30% for navigation
+      const closeThreshold = viewportHeight * 0.4; // 40% for closing (more intentional)
+      const velocityThreshold = 0.8; // Increased for more deliberate swipes
 
       if (isActive) {
-        // During drag: show preview with GPU-accelerated transform
+        // During drag: show preview
         const offset = -deltaY / viewportHeight;
+        
+        // ✅ ADDED: Limit preview range to prevent over-scrolling
+        const clampedOffset = Math.max(-1.5, Math.min(1.5, offset));
+        
         api.start({
-          y: currentIndex + offset,
+          y: currentIndex + clampedOffset,
           immediate: true,
         });
       } else {
         // On release: decide navigation
-        const shouldNavigate = Math.abs(deltaY) > threshold || Math.abs(velocity) > velocityThreshold;
+        
+        // ✅ FIX 5: Only close from first post with STRONG downward swipe
+        if (currentIndex === 0 && deltaY > closeThreshold && velocity > velocityThreshold) {
+          // Strong pull down from first post = close
+          onClose();
+          return;
+        }
+        
+        // Regular navigation logic
+        const shouldNavigate = 
+          Math.abs(deltaY) > navigationThreshold || 
+          Math.abs(velocity) > velocityThreshold;
         
         if (shouldNavigate) {
           const direction = deltaY < 0 ? 1 : -1; // Negative = swipe up = next
           const newIndex = Math.max(0, Math.min(reviews.length - 1, currentIndex + direction));
           
           if (newIndex !== currentIndex) {
+            // Navigate to new post
             setCurrentIndex(newIndex);
             api.start({ y: newIndex, immediate: false });
-          } else if (deltaY > 0 && currentIndex === 0) {
-            // Swipe down from first = close
-            onClose();
           } else {
-            // Snap back
+            // ✅ Can't navigate further - just snap back (no close)
             api.start({ y: currentIndex, immediate: false });
           }
         } else {
-          // Snap back
+          // Below threshold - snap back to current
           api.start({ y: currentIndex, immediate: false });
         }
       }
@@ -243,28 +262,44 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     ({ movement: [, my], velocity, active, last }) => {
       handleGesture(my, velocity[1], active && !last);
     },
-    { axis: "y", filterTaps: true }
+    { 
+      axis: "y", 
+      filterTaps: true,
+      // ✅ ADDED: Prevent default to stop page scrolling
+      preventDefault: true,
+    }
   );
 
   const bindWheel = useWheel(
     ({ delta: [, dy], velocity, active, last }) => {
       handleGesture(dy * 2, velocity[1], active && !last);
     },
-    { axis: "y" }
+    { 
+      axis: "y",
+      // ✅ ADDED: Prevent default to stop page scrolling
+      preventDefault: true,
+    }
   );
 
   // Prevent body scroll
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // ✅ ADDED: Prevent iOS bounce scrolling
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      
       return () => {
         document.body.style.overflow = "unset";
+        document.body.style.position = "unset";
+        document.body.style.width = "unset";
       };
     }
     return undefined;
   }, [isOpen]);
 
-  if (!isOpen || reviews.length === 0 || !viewportHeight) return null;
+  // ✅ FIX 6: Always render structure, just hide with CSS
+  if (!isOpen || reviews.length === 0) return null;
 
   const currentReview = reviews[currentIndex];
   if (!currentReview) return null;
@@ -282,24 +317,28 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
           opacity,
           transform: scale.to((s) => `scale(${s})`),
           pointerEvents: showComments ? "none" : "auto",
-          height: viewportHeight, // Use measured viewport height
+          // ✅ FIX 7: Use fallback height to prevent glitch
+          height: viewportHeight || '100vh',
         }}
       >
-        {/* Close Button */}
+        {/* Close Button - Only closes on click */}
         <button
           className="swipeable-review-viewer__close"
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           aria-label="Close"
         >
           <FiX className="w-6 h-6" />
         </button>
 
-        {/* ✨ OPTIMIZED: Only render visible reviews */}
+        {/* Only render visible reviews */}
         <animated.div
           className="swipeable-review-viewer__posts-container"
           style={{
-            transform: y.to((value) => `translate3d(0, ${-value * 100}%, 0)`), // GPU-accelerated
-            height: viewportHeight * reviews.length,
+            transform: y.to((value) => `translate3d(0, ${-value * 100}%, 0)`),
+            height: (viewportHeight || window.innerHeight) * reviews.length,
           }}
           {...(!showComments ? { ...bindDrag(), ...bindWheel() } : {})}
         >
@@ -318,8 +357,8 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                 key={review.id}
                 className="swipeable-review-viewer__post"
                 style={{
-                  height: viewportHeight,
-                  transform: `translate3d(0, ${index * 100}%, 0)`, // GPU-accelerated
+                  height: viewportHeight || '100vh',
+                  transform: `translate3d(0, ${index * 100}%, 0)`,
                   willChange: 'transform',
                 }}
               >
@@ -330,7 +369,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     alt={stripTags(review.reviewMainTitle || "Review")}
                     fill
                     className="swipeable-review-viewer__image"
-                    priority={index === currentIndex} // Priority load for current
+                    priority={index === currentIndex}
                   />
                 </div>
 

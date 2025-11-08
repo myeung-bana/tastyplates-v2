@@ -2,6 +2,7 @@
 import Image from "next/image";
 import ReviewPopUpModal from "./ReviewPopUpModal";
 import SwipeableReviewViewer from "./SwipeableReviewViewer";
+import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
 import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
 import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
@@ -39,9 +40,16 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
 
   return (
     <div className="overflow-hidden font-neusans">
-      {/* Mobile: SwipeableReviewViewer, Desktop: ReviewPopUpModal */}
+      {/* Mobile: SwipeableReviewViewer, Desktop: SwipeableReviewViewerDesktop */}
       {isMobile && reviews && typeof reviewIndex === 'number' ? (
         <SwipeableReviewViewer
+          reviews={reviews}
+          initialIndex={reviewIndex}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      ) : reviews && typeof reviewIndex === 'number' ? (
+        <SwipeableReviewViewerDesktop
           reviews={reviews}
           initialIndex={reviewIndex}
           isOpen={isModalOpen}
