@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
-import { FiX, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
+import { FiX, FiMessageCircle, FiHeart, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -13,28 +13,29 @@ import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
 import toast from "react-hot-toast";
-import CommentsBottomSheet from "@/components/review/CommentsBottomSheet";
+import CommentsBottomSheet from "../review/CommentsBottomSheet";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import PalateTags from "../ui/PalateTags/PalateTags";
-import "@/styles/components/_swipeable-review-viewer.scss";
+import "@/styles/components/_restaurant-reviews-viewer-modal.scss";
 
-interface SwipeableReviewViewerProps {
+interface RestaurantReviewsViewerModalProps {
   reviews: GraphQLReview[];
-  initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  initialIndex?: number;
+  restaurantId?: number;
   onLoadMore?: () => Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }>;
   hasNextPage?: boolean;
 }
 
 const reviewService = new ReviewService();
 
-const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
+const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> = ({
   reviews: initialReviews,
-  initialIndex,
   isOpen,
   onClose,
+  initialIndex = 0,
   onLoadMore,
   hasNextPage = false,
 }) => {
@@ -52,22 +53,16 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const postRefs = useRef<Record<number, HTMLDivElement>>({});
 
-  // Update reviews when initialReviews changes
   useEffect(() => {
     setReviews(initialReviews);
   }, [initialReviews]);
 
-  // Initialize likes and comment counts
   useEffect(() => {
     if (reviews.length > 0) {
       const initialLiked: Record<number, boolean> = {};
-      const initialCounts: Record<number, number> = {};
-      
       reviews.forEach((review) => {
         initialLiked[review.databaseId] = review.userLiked ?? false;
-        initialCounts[review.databaseId] = 0; // Will be updated when we fetch comment counts
       });
-      
       setUserLiked(initialLiked);
       setLikesCount((prev) => {
         const updated = { ...prev };
@@ -79,23 +74,15 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [reviews]);
 
-  // Helper function to fetch first comment for a review
   const fetchFirstCommentForReview = useCallback(async (reviewId: string, databaseId: number) => {
     if (!reviewId || loadingFirstComments[reviewId]) return;
-    
     setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: true }));
-    
     try {
       const replies = await reviewService.fetchCommentReplies(reviewId);
       const firstComment = replies && replies.length > 0 ? replies[0] : null;
       setFirstComments((prev) => ({ ...prev, [reviewId]: firstComment ?? null }));
-      
-      // Update comment count
       if (replies) {
-        setCommentCounts((prev) => ({
-          ...prev,
-          [databaseId]: replies.length,
-        }));
+        setCommentCounts((prev) => ({ ...prev, [databaseId]: replies.length }));
       }
     } catch (error) {
       console.error(`Error fetching first comment for review ${reviewId}:`, error);
@@ -105,13 +92,10 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [loadingFirstComments]);
 
-  // Helper function to format relative time
   const formatRelativeTime = useCallback((dateString: string): string => {
     if (!dateString) return '';
-    
     try {
       let date: Date;
-      
       if (dateString.includes('T') && dateString.includes('Z')) {
         date = new Date(dateString);
       } else if (dateString.includes('T')) {
@@ -119,7 +103,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       } else {
         date = new Date(dateString);
       }
-      
       if (isNaN(date.getTime())) {
         const parts = dateString.split('-');
         if (parts.length === 3) {
@@ -133,7 +116,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         }
         return formatDate(dateString);
       }
-      
       const relativeTime = formatDistanceToNow(date, { addSuffix: true });
       return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
     } catch {
@@ -141,7 +123,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, []);
 
-  // Scroll to initial index on open
   useEffect(() => {
     if (isOpen && scrollContainerRef.current && initialIndex >= 0 && initialIndex < reviews.length) {
       const targetPost = postRefs.current[initialIndex];
@@ -153,19 +134,14 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [isOpen, initialIndex, reviews.length]);
 
-  // Fetch first comment for initial post and adjacent posts immediately
   useEffect(() => {
     if (isOpen && initialIndex >= 0 && initialIndex < reviews.length) {
       const initialReview = reviews[initialIndex];
       const prevReview = reviews[initialIndex - 1];
       const nextReview = reviews[initialIndex + 1];
-      
-      // Fetch for initial post (only if not already fetched or confirmed no comments)
       if (initialReview?.id && firstComments[initialReview.id] === undefined && !loadingFirstComments[initialReview.id]) {
         fetchFirstCommentForReview(initialReview.id, initialReview.databaseId);
       }
-      
-      // Pre-fetch for adjacent posts (only if not already fetched or confirmed no comments)
       [prevReview, nextReview].forEach(review => {
         if (review?.id && firstComments[review.id] === undefined && !loadingFirstComments[review.id]) {
           fetchFirstCommentForReview(review.id, review.databaseId);
@@ -174,45 +150,34 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [isOpen, initialIndex, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  // Use Intersection Observer to detect visible posts and lazy load comments
   useEffect(() => {
     if (!isOpen) return;
-    
     const observers = new Map<string, IntersectionObserver>();
-    
     reviews.forEach((review, index) => {
       const postElement = postRefs.current[index];
       if (!postElement || !review.id) return;
-      
       const observer = new IntersectionObserver(
         (entries) => {
           const entry = entries[0];
           if (entry && entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            // Post is visible, fetch first comment if not already fetched or confirmed no comments
-            // Only fetch if firstComments[review.id] is undefined (not fetched yet)
-            // Skip if it's null (confirmed no comments) or already has a comment
             const currentFirstComment = firstComments[review.id!];
             if (currentFirstComment === undefined && !loadingFirstComments[review.id!]) {
               fetchFirstCommentForReview(review.id!, review.databaseId);
             }
           }
         },
-        { threshold: 0.5, rootMargin: '100px' } // Start loading 100px before visible
+        { threshold: 0.5, rootMargin: '100px' }
       );
-      
       observer.observe(postElement);
       observers.set(review.id, observer);
     });
-    
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
   }, [isOpen, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  // Infinite scroll
   const loadMore = useCallback(async (): Promise<void> => {
     if (loadingMore || !onLoadMore || !hasNextPage) return;
-    
     setLoadingMore(true);
     try {
       const { reviews: newReviews } = await onLoadMore();
@@ -234,23 +199,18 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     loading: loadingMore,
   });
 
-  // Handle like
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
     if (!session?.accessToken) {
       toast.error("Please sign in to like reviews");
       return;
     }
-
     const isLiked = userLiked[review.databaseId] ?? false;
     const currentLikes = likesCount[review.databaseId] ?? 0;
-
-    // Optimistic update
     setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
     setLikesCount((prev) => ({
       ...prev,
       [review.databaseId]: isLiked ? currentLikes - 1 : currentLikes + 1,
     }));
-
     try {
       if (isLiked) {
         await reviewService.unlikeComment(review.databaseId, session.accessToken);
@@ -260,7 +220,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         toast.success(commentLikedSuccess);
       }
     } catch (error) {
-      // Revert on error
       setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
       setLikesCount((prev) => ({
         ...prev,
@@ -271,13 +230,11 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [session, userLiked, likesCount]);
 
-  // Handle comment click
   const handleCommentClick = useCallback((review: GraphQLReview) => {
     setSelectedReview(review);
     setShowComments(true);
   }, []);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -292,18 +249,15 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
   return (
     <>
-      <div className="swipeable-review-viewer" ref={scrollContainerRef}>
-        {/* Close Button */}
+      <div className="restaurant-reviews-viewer-modal" ref={scrollContainerRef}>
         <button
-          className="swipeable-review-viewer__close"
+          className="restaurant-reviews-viewer-modal__close"
           onClick={onClose}
           aria-label="Close"
         >
           <FiX className="w-6 h-6" />
         </button>
-
-        {/* Scroll Container */}
-        <div className="swipeable-review-viewer__scroll-container">
+        <div className="restaurant-reviews-viewer-modal__scroll-container">
           {reviews.map((review, index) => {
             const images = review.reviewImages || [];
             const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
@@ -311,7 +265,11 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
             const reviewLikes = likesCount[review.databaseId] ?? 0;
             const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
             const firstComment = firstComments[review.id || ""] || null;
-            const isLoadingComment = loadingFirstComments[review.id || ""] || false;
+            const palateNames = review.palates 
+              ? (typeof review.palates === 'string' 
+                  ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
+                  : [])
+              : [];
 
             return (
               <div
@@ -319,23 +277,19 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                 ref={(el) => {
                   if (el) postRefs.current[index] = el;
                 }}
-                className="swipeable-review-viewer__post"
+                className="restaurant-reviews-viewer-modal__post"
               >
-                {/* Image Section - 60-70% */}
-                <div className="swipeable-review-viewer__image-section">
+                <div className="restaurant-reviews-viewer-modal__image-section">
                   <FallbackImage
                     src={mainImage}
                     alt={stripTags(review.reviewMainTitle || "Review")}
                     fill
-                    className="swipeable-review-viewer__image"
+                    className="restaurant-reviews-viewer-modal__image"
                     priority={index < 3}
                   />
                 </div>
-
-                {/* Content Section - 30-40% */}
-                <div className="swipeable-review-viewer__content-section">
-                  {/* User Info */}
-                  <div className="swipeable-review-viewer__user-info">
+                <div className="restaurant-reviews-viewer-modal__content-section">
+                  <div className="restaurant-reviews-viewer-modal__user-info">
                     {review.author?.node?.databaseId ? (
                       session?.user?.id &&
                       String(session.user.id) === String(review.author?.node?.databaseId) ? (
@@ -345,7 +299,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                             alt={review.author?.node?.name || "User"}
                             width={40}
                             height={40}
-                            className="swipeable-review-viewer__avatar"
+                            className="restaurant-reviews-viewer-modal__avatar"
                             type={FallbackImageType.Icon}
                           />
                         </Link>
@@ -356,7 +310,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                             alt={review.author?.node?.name || "User"}
                             width={40}
                             height={40}
-                            className="swipeable-review-viewer__avatar"
+                            className="restaurant-reviews-viewer-modal__avatar"
                             type={FallbackImageType.Icon}
                           />
                         </Link>
@@ -366,7 +320,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           alt={review.author?.node?.name || "User"}
                           width={40}
                           height={40}
-                          className="swipeable-review-viewer__avatar"
+                          className="restaurant-reviews-viewer-modal__avatar"
                           type={FallbackImageType.Icon}
                         />
                       )
@@ -376,53 +330,33 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         alt={review.author?.node?.name || "User"}
                         width={40}
                         height={40}
-                        className="swipeable-review-viewer__avatar"
+                        className="restaurant-reviews-viewer-modal__avatar"
                         type={FallbackImageType.Icon}
                       />
                     )}
-
-                    <div className="swipeable-review-viewer__user-details">
-                      <div className="swipeable-review-viewer__user-header">
-                        <div className="swipeable-review-viewer__user-info-left">
-                          <h3 className="swipeable-review-viewer__username">
+                    <div className="restaurant-reviews-viewer-modal__user-details">
+                      <div className="restaurant-reviews-viewer-modal__user-header">
+                        <div className="restaurant-reviews-viewer-modal__user-info-left">
+                          <h3 className="restaurant-reviews-viewer-modal__username">
                             {review.author?.node?.name || review.author?.name || "Unknown User"}
                           </h3>
-                          {review.commentedOn?.node?.title && (
-                            <Link
-                              href={`/restaurants/${review.commentedOn.node.slug}`}
-                              className="swipeable-review-viewer__restaurant-link"
-                            >
-                              <FiMapPin className="w-3 h-3" />
-                              <span>{review.commentedOn.node.title}</span>
-                            </Link>
-                          )}
                         </div>
                         {review.date && (
-                          <span className="swipeable-review-viewer__timestamp">
+                          <span className="restaurant-reviews-viewer-modal__timestamp">
                             {formatRelativeTime(review.date)}
                           </span>
                         )}
                       </div>
-                      {/* Palate Tags */}
-                      {(() => {
-                        const palateNames = review.palates 
-                          ? (typeof review.palates === 'string' 
-                              ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
-                              : [])
-                          : [];
-                        return palateNames.length > 0 ? (
-                          <div className="swipeable-review-viewer__palates">
-                            <PalateTags palateNames={palateNames} maxTags={2} />
-                          </div>
-                        ) : null;
-                      })()}
+                      {palateNames.length > 0 && (
+                        <div className="restaurant-reviews-viewer-modal__palates">
+                          <PalateTags palateNames={palateNames} maxTags={2} />
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Review Content */}
-                  <div className="swipeable-review-viewer__review-content">
+                  <div className="restaurant-reviews-viewer-modal__review-content">
                     {review.reviewMainTitle && (
-                      <h2 className="swipeable-review-viewer__title">
+                      <h2 className="restaurant-reviews-viewer-modal__title">
                         {capitalizeWords(stripTags(review.reviewMainTitle))}
                       </h2>
                     )}
@@ -434,15 +368,14 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                       const displayText = isExpanded || !shouldTruncate 
                         ? reviewContent 
                         : reviewContent.slice(0, MAX_CHARS) + "...";
-                      
                       return (
-                        <div className="swipeable-review-viewer__text-container">
-                          <p className="swipeable-review-viewer__text">
+                        <div className="restaurant-reviews-viewer-modal__text-container">
+                          <p className="restaurant-reviews-viewer-modal__text">
                             {displayText}
                           </p>
                           {shouldTruncate && (
                             <button
-                              className="swipeable-review-viewer__see-more"
+                              className="restaurant-reviews-viewer-modal__see-more"
                               onClick={() => setIsTextExpanded(prev => ({
                                 ...prev,
                                 [review.databaseId]: !isExpanded
@@ -454,63 +387,52 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         </div>
                       );
                     })()}
-                    
-                    {/* Rating */}
                     {review.reviewStars && (
-                      <div className="swipeable-review-viewer__rating">
+                      <div className="restaurant-reviews-viewer-modal__rating">
                         <FiStar className="w-3 h-3" />
                         <span>{review.reviewStars}/5</span>
                       </div>
                     )}
                   </div>
-
-                  {/* First Comment Preview */}
                   {(() => {
                     const reviewId = review.id || "";
                     const isLoading = loadingFirstComments[reviewId] || false;
                     const firstComment = firstComments[reviewId];
                     const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
-                    
-                    // Hide section entirely if we've confirmed there are no comments
-                    // firstComment === null means we fetched and confirmed no comments exist
                     if (firstComment === null && !isLoading) {
                       return null;
                     }
-                    
-                    // Show skeleton only while loading and haven't confirmed no comments
                     if (isLoading && firstComment === undefined) {
                       return (
-                        <div className="swipeable-review-viewer__comment-preview">
+                        <div className="restaurant-reviews-viewer-modal__comment-preview">
                           <ReplySkeleton count={1} />
                         </div>
                       );
                     }
-                    
-                    // Show first comment if it exists
                     if (firstComment) {
                       return (
-                        <div className="swipeable-review-viewer__comment-preview">
-                          <div className="swipeable-review-viewer__comment-item">
+                        <div className="restaurant-reviews-viewer-modal__comment-preview">
+                          <div className="restaurant-reviews-viewer-modal__comment-item">
                             <FallbackImage
                               src={firstComment.userAvatar || DEFAULT_USER_ICON}
                               alt={firstComment.author?.node?.name || "User"}
                               width={24}
                               height={24}
-                              className="swipeable-review-viewer__comment-avatar"
+                              className="restaurant-reviews-viewer-modal__comment-avatar"
                               type={FallbackImageType.Icon}
                             />
-                            <div className="swipeable-review-viewer__comment-content">
-                              <span className="swipeable-review-viewer__comment-author">
+                            <div className="restaurant-reviews-viewer-modal__comment-content">
+                              <span className="restaurant-reviews-viewer-modal__comment-author">
                                 {firstComment.author?.node?.name || firstComment.author?.name || "Unknown"}
                               </span>
-                              <span className="swipeable-review-viewer__comment-text">
+                              <span className="restaurant-reviews-viewer-modal__comment-text">
                                 {stripTags(firstComment.content || "")}
                               </span>
                             </div>
                           </div>
                           {reviewCommentCount > 1 && (
                             <button
-                              className="swipeable-review-viewer__view-all-comments"
+                              className="restaurant-reviews-viewer-modal__view-all-comments"
                               onClick={() => handleCommentClick(review)}
                             >
                               View all {reviewCommentCount} comments
@@ -519,15 +441,11 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         </div>
                       );
                     }
-                    
-                    // Don't render anything if we haven't fetched yet (firstComment is undefined)
                     return null;
                   })()}
-
-                  {/* Action Buttons */}
-                  <div className="swipeable-review-viewer__actions">
+                  <div className="restaurant-reviews-viewer-modal__actions">
                     <button
-                      className="swipeable-review-viewer__action-btn"
+                      className="restaurant-reviews-viewer-modal__action-btn"
                       onClick={() => handleLike(review)}
                     >
                       {reviewIsLiked ? (
@@ -537,9 +455,8 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                       )}
                       <span>{reviewLikes}</span>
                     </button>
-
                     <button
-                      className="swipeable-review-viewer__action-btn"
+                      className="restaurant-reviews-viewer-modal__action-btn"
                       onClick={() => handleCommentClick(review)}
                     >
                       <FiMessageCircle className="w-6 h-6" />
@@ -550,17 +467,15 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
               </div>
             );
           })}
-
-          {/* Infinite Scroll Trigger & Loading Skeleton */}
           {onLoadMore && hasNextPage && (
-            <div ref={observerRef} className="swipeable-review-viewer__load-more">
+            <div ref={observerRef} className="restaurant-reviews-viewer-modal__load-more">
               {loadingMore && (
-                <div className="swipeable-review-viewer__skeleton-post">
-                  <div className="swipeable-review-viewer__skeleton-image" />
-                  <div className="swipeable-review-viewer__skeleton-content">
-                    <div className="swipeable-review-viewer__skeleton-avatar" />
-                    <div className="swipeable-review-viewer__skeleton-text" />
-                    <div className="swipeable-review-viewer__skeleton-text" />
+                <div className="restaurant-reviews-viewer-modal__skeleton-post">
+                  <div className="restaurant-reviews-viewer-modal__skeleton-image" />
+                  <div className="restaurant-reviews-viewer-modal__skeleton-content">
+                    <div className="restaurant-reviews-viewer-modal__skeleton-avatar" />
+                    <div className="restaurant-reviews-viewer-modal__skeleton-text" />
+                    <div className="restaurant-reviews-viewer-modal__skeleton-text" />
                   </div>
                 </div>
               )}
@@ -568,8 +483,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
           )}
         </div>
       </div>
-
-      {/* Comments Modal */}
       {showComments && selectedReview && (
         <CommentsBottomSheet
           review={selectedReview}
@@ -583,7 +496,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
               ...prev,
               [selectedReview.databaseId]: count,
             }));
-            // Refresh first comment if count changed
             if (count > 0 && !firstComments[selectedReview.id || ""]) {
               reviewService
                 .fetchCommentReplies(selectedReview.id || "")
@@ -604,4 +516,4 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   );
 };
 
-export default SwipeableReviewViewer;
+export default RestaurantReviewsViewerModal;

@@ -1,387 +1,581 @@
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { ReviewService } from "@/services/Reviews/reviewService";
-import { MdOutlineThumbUp } from "react-icons/md";
+"use client";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { GraphQLReview } from "@/types/graphql";
+import { FiX, FiMessageCircle, FiHeart, FiStar } from "react-icons/fi";
+import { AiFillHeart } from "react-icons/ai";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
-import PalateTags from "@/components/ui/PalateTags/PalateTags";
-import SignupModal from "../auth/SignupModal";
-import SigninModal from "../auth/SigninModal";
-import toast from 'react-hot-toast';
-import { commentLikedSuccess, commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
-import { DEFAULT_USER_ICON, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
-import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
-import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
-import { capitalizeWords, PAGE, truncateText, generateProfileUrl } from "@/lib/utils";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { capitalizeWords, stripTags, generateProfileUrl, formatDate } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
-
-interface Restaurant {
-  id: string;
-  databaseId: number;
-  slug: string;
-  name: string;
-  image: string;
-  rating: number;
-  palatesNames?: string[];
-  countries: string;
-  priceRange: string;
-}
-
-interface ReviewAuthor {
-  name?: string;
-  node?: {
-    id?: string;
-    name?: string;
-  };
-}
-
-interface ReviewData {
-  id: string;
-  databaseId: number;
-  reviewMainTitle?: string;
-  reviewStars?: string | number;
-  userAvatar?: string;
-  palates?: string;
-  author?: ReviewAuthor;
-  userId?: string;
-  date: string;
-  content: string;
-  commentLikes?: number;
-  userLiked?: boolean;
-  likes?: number;
-  userHasLiked?: boolean;
-}
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
+import toast from "react-hot-toast";
+import CommentsBottomSheet from "../review/CommentsBottomSheet";
+import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import PalateTags from "../ui/PalateTags/PalateTags";
+import "@/styles/components/_restaurant-reviews-modal.scss";
 
 interface RestaurantReviewsModalProps {
+  reviews: GraphQLReview[];
   isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  restaurant: Restaurant;
+  onClose: () => void;
+  initialIndex?: number;
+  restaurantId?: number;
+  onLoadMore?: () => Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }>;
+  hasNextPage?: boolean;
 }
 
 const reviewService = new ReviewService();
 
-const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({ isOpen, setIsOpen, restaurant }) => {
-  const [reviews, setReviews] = useState<ReviewData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [likeLoading, setLikeLoading] = useState<{ [key: string]: boolean }>({});
+const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
+  reviews: initialReviews,
+  isOpen,
+  onClose,
+  initialIndex = 0,
+  onLoadMore,
+  hasNextPage = false,
+}) => {
   const { data: session } = useSession();
-  const [isShowSignup, setIsShowSignup] = useState(false);
-  const [isShowSignin, setIsShowSignin] = useState(false);
-  const [expandedTitles, setExpandedTitles] = useState<{ [id: string]: boolean }>({});
-  const [expandedContents, setExpandedContents] = useState<{ [id: string]: boolean }>({});
-  const [isClosing, setIsClosing] = useState(false);
+  const [reviews, setReviews] = useState<GraphQLReview[]>(initialReviews);
+  const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
+  const [likesCount, setLikesCount] = useState<Record<number, number>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
+  const [firstComments, setFirstComments] = useState<Record<string, GraphQLReview | null>>({});
+  const [loadingFirstComments, setLoadingFirstComments] = useState<Record<string, boolean>>({});
+  const [showComments, setShowComments] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<GraphQLReview | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState<Record<number, boolean>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const postRefs = useRef<Record<number, HTMLDivElement>>({});
 
+  // Update reviews when initialReviews changes
+  useEffect(() => {
+    setReviews(initialReviews);
+  }, [initialReviews]);
+
+  // Initialize likes and comment counts
+  useEffect(() => {
+    if (reviews.length > 0) {
+      const initialLiked: Record<number, boolean> = {};
+      const initialCounts: Record<number, number> = {};
+      
+      reviews.forEach((review) => {
+        initialLiked[review.databaseId] = review.userLiked ?? false;
+        initialCounts[review.databaseId] = 0;
+      });
+      
+      setUserLiked(initialLiked);
+      setLikesCount((prev) => {
+        const updated = { ...prev };
+        reviews.forEach((review) => {
+          updated[review.databaseId] = review.commentLikes ?? 0;
+        });
+        return updated;
+      });
+    }
+  }, [reviews]);
+
+  // Helper function to fetch first comment for a review
+  const fetchFirstCommentForReview = useCallback(async (reviewId: string, databaseId: number) => {
+    if (!reviewId || loadingFirstComments[reviewId]) return;
+    
+    setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: true }));
+    
+    try {
+      const replies = await reviewService.fetchCommentReplies(reviewId);
+      const firstComment = replies && replies.length > 0 ? replies[0] : null;
+      setFirstComments((prev) => ({ ...prev, [reviewId]: firstComment ?? null }));
+      
+      if (replies) {
+        setCommentCounts((prev) => ({
+          ...prev,
+          [databaseId]: replies.length,
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching first comment for review ${reviewId}:`, error);
+      setFirstComments((prev) => ({ ...prev, [reviewId]: null }));
+    } finally {
+      setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  }, [loadingFirstComments]);
+
+  // Helper function to format relative time
+  const formatRelativeTime = useCallback((dateString: string): string => {
+    if (!dateString) return '';
+    
+    try {
+      let date: Date;
+      
+      if (dateString.includes('T') && dateString.includes('Z')) {
+        date = new Date(dateString);
+      } else if (dateString.includes('T')) {
+        date = new Date(dateString + 'Z');
+      } else {
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts;
+          if (!year || !month || !day) return formatDate(dateString);
+          const validDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(validDate.getTime())) {
+            const relativeTime = formatDistanceToNow(validDate, { addSuffix: true });
+            return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+          }
+        }
+        return formatDate(dateString);
+      }
+      
+      const relativeTime = formatDistanceToNow(date, { addSuffix: true });
+      return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+    } catch {
+      return formatDate(dateString);
+    }
+  }, []);
+
+  // Scroll to initial index on open
+  useEffect(() => {
+    if (isOpen && scrollContainerRef.current && initialIndex >= 0 && initialIndex < reviews.length) {
+      const targetPost = postRefs.current[initialIndex];
+      if (targetPost) {
+        setTimeout(() => {
+          targetPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, [isOpen, initialIndex, reviews.length]);
+
+  // Fetch first comment for initial post and adjacent posts immediately
+  useEffect(() => {
+    if (isOpen && initialIndex >= 0 && initialIndex < reviews.length) {
+      const initialReview = reviews[initialIndex];
+      const prevReview = reviews[initialIndex - 1];
+      const nextReview = reviews[initialIndex + 1];
+      
+      if (initialReview?.id && firstComments[initialReview.id] === undefined && !loadingFirstComments[initialReview.id]) {
+        fetchFirstCommentForReview(initialReview.id, initialReview.databaseId);
+      }
+      
+      [prevReview, nextReview].forEach(review => {
+        if (review?.id && firstComments[review.id] === undefined && !loadingFirstComments[review.id]) {
+          fetchFirstCommentForReview(review.id, review.databaseId);
+        }
+      });
+    }
+  }, [isOpen, initialIndex, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
+
+  // Use Intersection Observer to detect visible posts and lazy load comments
   useEffect(() => {
     if (!isOpen) return;
-    setLoading(true);
-    setError(null);
-    reviewService.fetchRestaurantReviews(restaurant.databaseId, session?.accessToken)
-      .then((data) => {
-        const reviewsData = (data.reviews || []) as unknown as ReviewData[];
-        setReviews(reviewsData);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [isOpen, restaurant.databaseId, session?.accessToken]);
+    
+    const observers = new Map<string, IntersectionObserver>();
+    
+    reviews.forEach((review, index) => {
+      const postElement = postRefs.current[index];
+      if (!postElement || !review.id) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry && entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const currentFirstComment = firstComments[review.id!];
+            if (currentFirstComment === undefined && !loadingFirstComments[review.id!]) {
+              fetchFirstCommentForReview(review.id!, review.databaseId);
+            }
+          }
+        },
+        { threshold: 0.5, rootMargin: '100px' }
+      );
+      
+      observer.observe(postElement);
+      observers.set(review.id, observer);
+    });
+    
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
+  }, [isOpen, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  const handleLike = async (review: ReviewData) => {
-    if (!session?.user) {
-      setIsShowSignin(true);
+  // Infinite scroll
+  const loadMore = useCallback(async (): Promise<void> => {
+    if (loadingMore || !onLoadMore || !hasNextPage) return;
+    
+    setLoadingMore(true);
+    try {
+      const { reviews: newReviews } = await onLoadMore();
+      setReviews((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const uniqueNew = newReviews.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...uniqueNew];
+      });
+    } catch (error) {
+      console.error("Error loading more reviews:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, onLoadMore, hasNextPage]);
+
+  const { observerRef } = useInfiniteScroll({
+    loadMore,
+    hasNextPage: hasNextPage && !!onLoadMore,
+    loading: loadingMore,
+  });
+
+  // Handle like
+  const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
+    if (!session?.accessToken) {
+      toast.error("Please sign in to like reviews");
       return;
     }
-    setLikeLoading((prev) => ({ ...prev, [review.id]: true }));
-    // Always use the latest userLiked from the review object
-    const alreadyLiked = !!review.userLiked;
+
+    const isLiked = userLiked[review.databaseId] ?? false;
+    const currentLikes = likesCount[review.databaseId] ?? 0;
+
+    setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
+    setLikesCount((prev) => ({
+      ...prev,
+      [review.databaseId]: isLiked ? currentLikes - 1 : currentLikes + 1,
+    }));
+
     try {
-      let response;
-      const commentId = Number(review.databaseId);
-      const accessToken = session.accessToken || "";
-      if (alreadyLiked) {
-        response = await reviewService.unlikeComment(commentId, accessToken);
+      if (isLiked) {
+        await reviewService.unlikeComment(review.databaseId, session.accessToken);
         toast.success(commentUnlikedSuccess);
       } else {
-        response = await reviewService.likeComment(commentId, accessToken);
+        await reviewService.likeComment(review.databaseId, session.accessToken);
         toast.success(commentLikedSuccess);
       }
-      // Update the review in the reviews array with the new like state/count
-      setReviews((prevReviews) => prevReviews.map((r) =>
-        (r.id === review.id || r.databaseId === review.databaseId)
-          ? { ...r, userLiked: response.userLiked, commentLikes: response.likesCount }
-          : r
-      ));
-    } catch {
-      toast.error(updateLikeFailed);
-    } finally {
-      setLikeLoading((prev) => ({ ...prev, [review.id]: false }));
+    } catch (error) {
+      setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
+      setLikesCount((prev) => ({
+        ...prev,
+        [review.databaseId]: currentLikes,
+      }));
+      console.error("Error toggling like:", error);
+      toast.error("Failed to update like");
     }
-  };
+  }, [session, userLiked, likesCount]);
 
-  const toggleTitle = (id: string) => {
-    setExpandedTitles(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Handle comment click
+  const handleCommentClick = useCallback((review: GraphQLReview) => {
+    setSelectedReview(review);
+    setShowComments(true);
+  }, []);
 
-  const toggleContent = (id: string) => {
-    setExpandedContents(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "unset";
+      };
+    }
+    return undefined;
+  }, [isOpen]);
 
-  const handleCloseWithAnimation = () => {
-    if (isClosing) return;
-    setIsClosing(true);
-    setTimeout(() => {
-      setIsOpen(false);
-      setIsClosing(false);
-    }, 300); // Match CSS animation duration
-  };
-
-  if (!isOpen) return null;
+  if (!isOpen || reviews.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] flex justify-end">
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-200"
-        onClick={handleCloseWithAnimation}
-      />
-      {/* Right-side modal (compact) */}
-      <div className={`relative w-full max-w-md h-full bg-white shadow-xl flex flex-col overflow-y-auto ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}` }>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-1">
-            <h2 className="text-base font-semibold text-[#31343F]">Reviews</h2>
-            <span className="text-sm text-[#494D5D]">·</span>
-            <span className="text-sm text-[#494D5D]">{reviews.length}</span>
-          </div>
-          <button
-            className="text-xl text-gray-400 hover:text-gray-700 p-1"
-            onClick={handleCloseWithAnimation}
-            aria-label="Close"
-          >
-            &times;
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loading && (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex animate-pulse gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-32" />
-                    <div className="h-3 bg-gray-100 rounded w-24" />
-                    <div className="h-3 bg-gray-100 rounded w-5/6" />
-                    <div className="h-3 bg-gray-100 rounded w-4/6" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {error && <div className="text-center text-red-500 text-sm py-4">Failed to load reviews.</div>}
-          {!loading && !error && reviews.length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-4">No reviews</div>
-          )}
-          {!loading && !error && reviews.map((review) => {
-            const reviewTitle = review.reviewMainTitle || '';
-            const reviewStars = Number(review.reviewStars) || 0;
-            const userAvatar = review.userAvatar || DEFAULT_USER_ICON;
-            const palateNames = review.palates
-              ? review.palates
-                .split("|")
-                .map((s: string) => capitalizeWords(s.trim()))
-                .filter((s) => s)
+    <>
+      <div className="restaurant-reviews-modal" ref={scrollContainerRef}>
+        {/* Close Button */}
+        <button
+          className="restaurant-reviews-modal__close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <FiX className="w-6 h-6" />
+        </button>
+
+        {/* Scroll Container */}
+        <div className="restaurant-reviews-modal__scroll-container">
+          {reviews.map((review, index) => {
+            const images = review.reviewImages || [];
+            const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
+            const reviewIsLiked = userLiked[review.databaseId] ?? false;
+            const reviewLikes = likesCount[review.databaseId] ?? 0;
+            const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
+            const firstComment = firstComments[review.id || ""] || null;
+            const palateNames = review.palates 
+              ? (typeof review.palates === 'string' 
+                  ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
+                  : [])
               : [];
+
             return (
-              <div key={review.id || review.databaseId} className="mb-4 pb-3 border-b border-gray-100 last:border-b-0 last:pb-0">
-                <div className="flex items-start gap-2 mb-2">
-                  {(review.author?.node?.id || review.userId) ? (
-                    session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
-                      <a href={PROFILE}>
-                        <Image
-                          src={userAvatar}
-                          alt={review.author?.name || "User"}
-                          width={32}
-                          height={32}
-                          className="rounded-full object-cover cursor-pointer flex-shrink-0"
-                        />
-                      </a>
-                    ) : session ? (
-                      <a href={generateProfileUrl(review.author?.node?.id || review.userId || "")}>
-                        <Image
-                          src={userAvatar}
-                          alt={review.author?.name || "User"}
-                          width={32}
-                          height={32}
-                          className="rounded-full object-cover cursor-pointer flex-shrink-0"
-                        />
-                      </a>
-                    ) : (
-                      <Image
-                        src={userAvatar}
-                        alt={review.author?.name || "User"}
-                        width={32}
-                        height={32}
-                        className="rounded-full object-cover cursor-pointer flex-shrink-0"
-                        onClick={() => setIsShowSignin(true)}
-                      />
-                    )
-                  ) : (
-                    <FallbackImage
-                      src={userAvatar}
-                      alt={review.author?.name || "User"}
-                      width={32}
-                      height={32}
-                      className="rounded-full object-cover flex-shrink-0"
-                    type={FallbackImageType.Icon}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    {(review.author?.node?.id || review.userId) ? (
-                      session?.user?.id && String(session.user.id) === String(review.author?.node?.id || review.userId) ? (
-                        <a href={PROFILE}>
-                          <div className="font-medium text-sm text-[#31343F] cursor-pointer truncate">
-                            {review.author?.name || review.author?.node?.name || "Unknown User"}
-                          </div>
-                        </a>
+              <div
+                key={review.id || `review-${index}`}
+                ref={(el) => {
+                  if (el) postRefs.current[index] = el;
+                }}
+                className="restaurant-reviews-modal__post"
+              >
+                {/* Image Section - 60-70% */}
+                <div className="restaurant-reviews-modal__image-section">
+                  <FallbackImage
+                    src={mainImage}
+                    alt={stripTags(review.reviewMainTitle || "Review")}
+                    fill
+                    className="restaurant-reviews-modal__image"
+                    priority={index < 3}
+                  />
+                </div>
+
+                {/* Content Section - 30-40% */}
+                <div className="restaurant-reviews-modal__content-section">
+                  {/* User Info */}
+                  <div className="restaurant-reviews-modal__user-info">
+                    {review.author?.node?.databaseId ? (
+                      session?.user?.id &&
+                      String(session.user.id) === String(review.author?.node?.databaseId) ? (
+                        <Link href={PROFILE}>
+                          <FallbackImage
+                            src={review.userAvatar || DEFAULT_USER_ICON}
+                            alt={review.author?.node?.name || "User"}
+                            width={40}
+                            height={40}
+                            className="restaurant-reviews-modal__avatar"
+                            type={FallbackImageType.Icon}
+                          />
+                        </Link>
                       ) : session ? (
-                        <a href={generateProfileUrl(review.author?.node?.id || review.userId || "")}>
-                          <div className="font-medium text-sm text-[#31343F] cursor-pointer truncate">
-                            {review.author?.name || review.author?.node?.name || "Unknown User"}
-                          </div>
-                        </a>
+                        <Link href={generateProfileUrl(review.author?.node?.databaseId)} prefetch={false}>
+                          <FallbackImage
+                            src={review.userAvatar || DEFAULT_USER_ICON}
+                            alt={review.author?.node?.name || "User"}
+                            width={40}
+                            height={40}
+                            className="restaurant-reviews-modal__avatar"
+                            type={FallbackImageType.Icon}
+                          />
+                        </Link>
                       ) : (
-                        <div
-                          className="font-medium text-sm text-[#31343F] cursor-pointer truncate"
-                          onClick={() => setIsShowSignin(true)}
-                        >
-                          {review.author?.name || review.author?.node?.name || "Unknown User"}
-                        </div>
+                        <FallbackImage
+                          src={review.userAvatar || DEFAULT_USER_ICON}
+                          alt={review.author?.node?.name || "User"}
+                          width={40}
+                          height={40}
+                          className="restaurant-reviews-modal__avatar"
+                          type={FallbackImageType.Icon}
+                        />
                       )
                     ) : (
-                      <div className="font-medium text-sm text-[#31343F] truncate">
-                        {review.author?.name || review.author?.node?.name || "Unknown User"}
+                      <FallbackImage
+                        src={review.userAvatar || DEFAULT_USER_ICON}
+                        alt={review.author?.node?.name || "User"}
+                        width={40}
+                        height={40}
+                        className="restaurant-reviews-modal__avatar"
+                        type={FallbackImageType.Icon}
+                      />
+                    )}
+
+                    <div className="restaurant-reviews-modal__user-details">
+                      <div className="restaurant-reviews-modal__user-header">
+                        <div className="restaurant-reviews-modal__user-info-left">
+                          <h3 className="restaurant-reviews-modal__username">
+                            {review.author?.node?.name || review.author?.name || "Unknown User"}
+                          </h3>
+                        </div>
+                        {review.date && (
+                          <span className="restaurant-reviews-modal__timestamp">
+                            {formatRelativeTime(review.date)}
+                          </span>
+                        )}
+                      </div>
+                      {/* Palate Tags */}
+                      {palateNames.length > 0 && (
+                        <div className="restaurant-reviews-modal__palates">
+                          <PalateTags palateNames={palateNames} maxTags={2} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Review Content */}
+                  <div className="restaurant-reviews-modal__review-content">
+                    {review.reviewMainTitle && (
+                      <h2 className="restaurant-reviews-modal__title">
+                        {capitalizeWords(stripTags(review.reviewMainTitle))}
+                      </h2>
+                    )}
+                    {review.content && (() => {
+                      const MAX_CHARS = 300;
+                      const reviewContent = stripTags(review.content);
+                      const shouldTruncate = reviewContent.length > MAX_CHARS;
+                      const isExpanded = isTextExpanded[review.databaseId] || false;
+                      const displayText = isExpanded || !shouldTruncate 
+                        ? reviewContent 
+                        : reviewContent.slice(0, MAX_CHARS) + "...";
+                      
+                      return (
+                        <div className="restaurant-reviews-modal__text-container">
+                          <p className="restaurant-reviews-modal__text">
+                            {displayText}
+                          </p>
+                          {shouldTruncate && (
+                            <button
+                              className="restaurant-reviews-modal__see-more"
+                              onClick={() => setIsTextExpanded(prev => ({
+                                ...prev,
+                                [review.databaseId]: !isExpanded
+                              }))}
+                            >
+                              {isExpanded ? "See Less" : "See More"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Rating */}
+                    {review.reviewStars && (
+                      <div className="restaurant-reviews-modal__rating">
+                        <FiStar className="w-3 h-3" />
+                        <span>{review.reviewStars}/5</span>
                       </div>
                     )}
-                    <PalateTags palateNames={palateNames} maxTags={2} className="!mb-0" />
                   </div>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-[#494D5D] mb-1">
-                  {Array.from({ length: 5 }, (_, i) => {
-                    const full = i + 1 <= reviewStars;
-                    const half = !full && i + 0.5 <= reviewStars;
-                    return full ? (
-                      <Image src={STAR_FILLED} key={i} width={12} height={12} className="w-3 h-3" alt="star rating" />
-                    ) : half ? (
-                      <Image src={STAR_HALF} key={i} width={12} height={12} className="w-3 h-3" alt="half star rating" />
-                    ) : (
-                      <Image src={STAR} key={i} width={12} height={12} className="w-3 h-3" alt="star rating" />
-                    );
-                  })}
-                  <span>·</span>
-                  <span>{new Date(review.date).toLocaleDateString()}</span>
-                </div>
-                {reviewTitle && (
-                  <div className="text-sm font-medium mb-1 text-[#31343F] break-words">
-                    {expandedTitles[review.id]
-                      ? capitalizeWords(reviewTitle)
-                      : capitalizeWords(truncateText(reviewTitle, reviewTitleDisplayLimit)) + "… "}
-                    {" "}
-                    {reviewTitle.length > reviewTitleDisplayLimit && (
-                      <button
-                        className="hover:underline font-medium text-xs"
-                        onClick={() => toggleTitle(review.id)}
-                      >
-                        {expandedTitles[review.id] ? " [Show Less]" : "[See More]"}
-                      </button>
-                    )}
+
+                  {/* First Comment Preview */}
+                  {(() => {
+                    const reviewId = review.id || "";
+                    const isLoading = loadingFirstComments[reviewId] || false;
+                    const firstComment = firstComments[reviewId];
+                    const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
+                    
+                    if (firstComment === null && !isLoading) {
+                      return null;
+                    }
+                    
+                    if (isLoading && firstComment === undefined) {
+                      return (
+                        <div className="restaurant-reviews-modal__comment-preview">
+                          <ReplySkeleton count={1} />
+                        </div>
+                      );
+                    }
+                    
+                    if (firstComment) {
+                      return (
+                        <div className="restaurant-reviews-modal__comment-preview">
+                          <div className="restaurant-reviews-modal__comment-item">
+                            <FallbackImage
+                              src={firstComment.userAvatar || DEFAULT_USER_ICON}
+                              alt={firstComment.author?.node?.name || "User"}
+                              width={24}
+                              height={24}
+                              className="restaurant-reviews-modal__comment-avatar"
+                              type={FallbackImageType.Icon}
+                            />
+                            <div className="restaurant-reviews-modal__comment-content">
+                              <span className="restaurant-reviews-modal__comment-author">
+                                {firstComment.author?.node?.name || firstComment.author?.name || "Unknown"}
+                              </span>
+                              <span className="restaurant-reviews-modal__comment-text">
+                                {stripTags(firstComment.content || "")}
+                              </span>
+                            </div>
+                          </div>
+                          {reviewCommentCount > 1 && (
+                            <button
+                              className="restaurant-reviews-modal__view-all-comments"
+                              onClick={() => handleCommentClick(review)}
+                            >
+                              View all {reviewCommentCount} comments
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+                    
+                    return null;
+                  })()}
+
+                  {/* Action Buttons */}
+                  <div className="restaurant-reviews-modal__actions">
+                    <button
+                      className="restaurant-reviews-modal__action-btn"
+                      onClick={() => handleLike(review)}
+                    >
+                      {reviewIsLiked ? (
+                        <AiFillHeart className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <FiHeart className="w-6 h-6" />
+                      )}
+                      <span>{reviewLikes}</span>
+                    </button>
+
+                    <button
+                      className="restaurant-reviews-modal__action-btn"
+                      onClick={() => handleCommentClick(review)}
+                    >
+                      <FiMessageCircle className="w-6 h-6" />
+                      <span>{reviewCommentCount}</span>
+                    </button>
                   </div>
-                )}
-                <div className="text-sm text-[#31343F] leading-relaxed break-words">
-                  {review.content.length > reviewDescriptionDisplayLimit ? (
-                    <>
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: expandedContents[review.id]
-                            ? capitalizeWords(review.content)
-                            : capitalizeWords(truncateText(review.content, reviewDescriptionDisplayLimit)) + "…",
-                        }}
-                      />
-                      <button
-                        className="text-xs hover:underline font-medium"
-                        onClick={() => toggleContent(review.id)}
-                      >
-                        {expandedContents[review.id] ? "[Show Less]" : "[See More]"}
-                      </button>
-                    </>
-                  ) : (
-                    <div dangerouslySetInnerHTML={{ __html: capitalizeWords(review.content) }} />
-                  )}
-                </div>
-                <div className="flex items-center gap-1 text-xs text-[#494D5D] mt-2">
-                  <button
-                    onClick={() => handleLike(review)}
-                    disabled={likeLoading[review.id]}
-                    aria-pressed={review.userLiked}
-                    aria-label={review.userLiked ? "Unlike comment" : "Like comment"}
-                    className="focus:outline-none cursor-pointer"
-                  >
-                    {likeLoading[review.id] ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-[1px] border-blue-400 border-t-transparent"></div>
-                    ) : (
-                      <MdOutlineThumbUp
-                        className={`shrink-0 w-4 h-4 stroke-[#494D5D] transition-colors duration-200 ${review.userLiked ? 'text-blue-600' : ''}`}
-                      />
-                    )}
-                  </button>
-                  <span>{review.commentLikes ?? 0}</span>
                 </div>
               </div>
             );
           })}
+
+          {/* Infinite Scroll Trigger & Loading Skeleton */}
+          {onLoadMore && hasNextPage && (
+            <div ref={observerRef} className="restaurant-reviews-modal__load-more">
+              {loadingMore && (
+                <div className="restaurant-reviews-modal__skeleton-post">
+                  <div className="restaurant-reviews-modal__skeleton-image" />
+                  <div className="restaurant-reviews-modal__skeleton-content">
+                    <div className="restaurant-reviews-modal__skeleton-avatar" />
+                    <div className="restaurant-reviews-modal__skeleton-text" />
+                    <div className="restaurant-reviews-modal__skeleton-text" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <SignupModal
-          isOpen={isShowSignup}
-          onClose={() => setIsShowSignup(false)}
-          onOpenSignin={() => {
-            setIsShowSignup(false);
-            setIsShowSignin(true);
-          }}
-        />
-        <SigninModal
-          isOpen={isShowSignin}
-          onClose={() => setIsShowSignin(false)}
-          onOpenSignup={() => {
-            setIsShowSignin(false);
-            setIsShowSignup(true);
-          }}
-        />
       </div>
-      <style jsx global>{`
-        .animate-slide-in-right {
-          animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .animate-slide-out-right {
-          animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-      `}</style>
-    </div>
+
+      {/* Comments Modal */}
+      {showComments && selectedReview && (
+        <CommentsBottomSheet
+          review={selectedReview}
+          isOpen={showComments}
+          onClose={() => {
+            setShowComments(false);
+            setSelectedReview(null);
+          }}
+          onCommentCountChange={(count) => {
+            setCommentCounts((prev) => ({
+              ...prev,
+              [selectedReview.databaseId]: count,
+            }));
+            if (count > 0 && !firstComments[selectedReview.id || ""]) {
+              reviewService
+                .fetchCommentReplies(selectedReview.id || "")
+                .then((replies) => {
+                  if (replies && replies.length > 0) {
+                    setFirstComments((prev) => ({
+                      ...prev,
+                      [selectedReview.id || ""]: replies[0] ?? null,
+                    }));
+                  }
+                })
+                .catch(console.error);
+            }
+          }}
+        />
+      )}
+    </>
   );
 };
 

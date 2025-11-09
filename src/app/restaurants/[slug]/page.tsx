@@ -7,7 +7,10 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/Restaurant/RestaurantReviews";
+import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMobile";
+import RestaurantReviewsViewerModal from "@/components/Restaurant/RestaurantReviewsViewerModal";
 import RestaurantDetailSkeleton from "@/components/ui/Skeleton/RestaurantDetailSkeleton";
+import { useIsMobile } from "@/utils/deviceUtils";
 import RestaurantMap from "@/components/Restaurant/Details/RestaurantMap";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -209,6 +212,8 @@ export default function RestaurantDetail() {
   });
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
   const palatesParam = searchParams?.get("ethnic") || null;
@@ -520,7 +525,7 @@ export default function RestaurantDetail() {
             <div className="lg:sticky lg:top-24 space-y-6">
             {/* Map and Address */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
-              <h3 className="text-lg font-normal mb-4">Location</h3>
+              <h3 className="text-lg font-normal font-neusans mb-4">Location</h3>
               <div className="space-y-4">
                 {(lat && lng) || address || restaurant?.listingDetails?.googleMapUrl ? (
                   <div className="h-64 rounded-xl overflow-hidden">
@@ -541,7 +546,7 @@ export default function RestaurantDetail() {
                 {address && address !== 'No address available' && (
                   <div className="flex items-start gap-3 pt-2">
                     <FiMapPin className="text-gray-500 mt-1" />
-                    <span className="text-gray-700 font-neusans font-normal">{address}</span>
+                    <span className="text-gray-700 font-neusans text-sm font-normal">{address}</span>
                   </div>
                 )}
               </div>
@@ -549,14 +554,14 @@ export default function RestaurantDetail() {
 
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
-              <h3 className="text-lg font-normal mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-normal font-neusans mb-4">Quick Actions</h3>
               <div className="space-y-3">           
                 <button 
                   onClick={addReview}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-neusans font-normal"
                 >
                   <FaPen className="w-4 h-4" />
-                  <span className="text-white">Write a Review</span>
+                  <span className="font-neusans font-normal text-white">Write a Review</span>
                 </button>
                 
               </div>
@@ -564,13 +569,13 @@ export default function RestaurantDetail() {
 
             {/* Restaurant Details */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
-              <h3 className="text-lg font-normal mb-4">Restaurant Details</h3>
+              <h3 className="text-lg font-normal font-neusans mb-4">Restaurant Details</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <FiClock className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-normal text-gray-500">Opening Hours</span>
-                    <span className="text-gray-700 font-normal">
+                    <span className="text-sm font-normal font-neusans text-gray-500">Opening Hours</span>
+                    <span className="text-gray-700 font-neusans font-normal">
                       {restaurant.listingDetails?.openingHours || 'Not available'}
                     </span>
                   </div>
@@ -579,8 +584,8 @@ export default function RestaurantDetail() {
                 <div className="flex items-center gap-3">
                   <FiPhone className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-normal text-gray-500">Phone</span>
-                    <span className="text-gray-700 font-normal">
+                    <span className="text-sm font-normal font-neusans text-gray-500">Phone</span>
+                    <span className="text-gray-700 font-neusans font-normal">
                       {restaurant.listingDetails?.phone || 'Not available'}
                     </span>
                   </div>
@@ -589,8 +594,8 @@ export default function RestaurantDetail() {
                 <div className="flex items-center gap-3">
                   <FiDollarSign className="w-5 h-5 text-gray-500" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-normal text-gray-500">Price Range</span>
-                    <span className="text-gray-700 font-normal">
+                    <span className="text-sm font-normal font-neusans text-gray-500">Price Range</span>
+                    <span className="text-gray-700 font-neusans font-normal">
                       {restaurant.priceRange || 'Not available'}
                     </span>
                   </div>
@@ -604,14 +609,22 @@ export default function RestaurantDetail() {
         {/* Full-Width Reviews Section */}
         <div className="mt-12">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-            <RestaurantReviews 
-              restaurantId={restaurant.databaseId || 0} 
-              reviewCount={calculateOverallRating(restaurantReviews).count}
-              onReviewsUpdate={(reviews) => {
-                setRestaurantReviews(reviews);
-                setAllReviews(reviews);
-              }}
-            />
+            {isMobile ? (
+              <RestaurantReviewsMobile
+                reviews={allReviews.length > 0 ? allReviews : restaurantReviews}
+                restaurantId={restaurant.databaseId || 0}
+                onOpenModal={() => setShowReviewsModal(true)}
+              />
+            ) : (
+              <RestaurantReviews 
+                restaurantId={restaurant.databaseId || 0} 
+                reviewCount={calculateOverallRating(restaurantReviews).count}
+                onReviewsUpdate={(reviews) => {
+                  setRestaurantReviews(reviews);
+                  setAllReviews(reviews);
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -649,6 +662,17 @@ export default function RestaurantDetail() {
           />
         </div>
       </BottomSheet>
+
+      {/* Restaurant Reviews Modal */}
+      {isMobile && (
+        <RestaurantReviewsViewerModal
+          reviews={allReviews.length > 0 ? allReviews : restaurantReviews}
+          isOpen={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          initialIndex={0}
+          restaurantId={restaurant.databaseId || 0}
+        />
+      )}
     </div>
   );
 }

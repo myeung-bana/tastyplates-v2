@@ -388,7 +388,7 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
     <section className="restaurant-reviews font-neusans">
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-3">
-          <h2 className="text-lg font-bold text-[#31343F]">
+          <h2 className="text-lg font-normal text-[#31343F]">
             Recommended Reviews ({reviewCount || allReviews.length})
           </h2>
         </div>

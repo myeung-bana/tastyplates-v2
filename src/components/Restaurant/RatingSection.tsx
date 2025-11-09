@@ -15,13 +15,13 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
       <h3 className="text-lg font-neusans mb-4">Rating</h3>
       <div className="rating-summary w-full">
         <div className="rating-column">
-          <h3 className="font-neusans">Overall Rating</h3>
+          <h3 className="font-neusans font-normal text-sm">Overall Rating</h3>
           <div className="rating-value">
-            <span className="text-[#E36B00] text-lg md:text-2xl font-normal">
+            <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
               {ratingMetrics.overallRating.toFixed(1)}
             </span>
           </div>
-          <span className="review-count">
+          <span className="review-count font-neusans text-sm">
             {ratingMetrics.overallCount > 0
               ? `${ratingMetrics.overallCount} reviews`
               : "No reviews yet"}
@@ -31,13 +31,13 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
         <div className="h-[85%] border-l border-[#CACACA]"></div>
         
         <div className="rating-column font-neusans">
-          <h3 className="font-neusans">Search Rating</h3>
+          <h3 className="font-neusans font-normal text-sm">Search Rating</h3>
           <div className="rating-value">
-            <span className="text-[#E36B00] text-lg md:text-2xl font-normal">
+            <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
               {ratingMetrics.searchRating.toFixed(1)}
             </span>
           </div>
-          <span className="review-count">
+          <span className="review-count font-neusans text-sm">
             {palatesParam 
               ? (ratingMetrics.searchCount > 0
                   ? `${ratingMetrics.searchCount} reviews from ${palatesParam}`
@@ -54,11 +54,11 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
             <div className="rating-column font-neusans">
               <h3 className="font-neusans">My Preference</h3>
               <div className="rating-value">
-                  <span className="text-[#E36B00] text-lg md:text-2xl font-normal">
+                  <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
                     {ratingMetrics.myPreferenceRating.toFixed(1)}
                   </span>
               </div>
-              <span className="review-count">
+              <span className="review-count font-neusans text-sm">
                 {ratingMetrics.myPreferenceCount > 0
                   ? `${ratingMetrics.myPreferenceCount} reviews from similar palates`
                   : "No reviews from similar palates"}
