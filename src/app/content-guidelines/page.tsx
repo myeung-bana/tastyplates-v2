@@ -16,7 +16,7 @@ export default async function ContentGuidelines() {
       <Navbar />
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
-          <h1 className="text-[32px] font-bold text-center text-[#31343F] mb-8 max-w-xl w-full">
+          <h1 className="font-neusans text-[32px] font-normal text-center text-[#31343F] mb-8 max-w-xl w-full">
             {data.title || "Content Guidelines"}
           </h1>
         </div>
@@ -25,14 +25,12 @@ export default async function ContentGuidelines() {
           <div className="w-full max-w-xl">
             <section>
               <div
-                className="prose prose-xs max-w-none text-[#31343F] text-justify"
+                className="font-neusans prose prose-xs max-w-none text-[#31343F] text-justify"
                 dangerouslySetInnerHTML={{ __html: data.content }}
               />
             </section>
           </div>
         </div>
-
-        <Footer />
       </main>
     </>
   );
