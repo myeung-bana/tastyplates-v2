@@ -58,7 +58,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
           onClick={() => setShowAllImages(true)}
         >
           <Image
-            src={images[selectedImage] || '/default-image.png'}
+            src={images[selectedImage] || '/images/tastyplates_placeholder_landscape.jpg'}
             alt={`${restaurantTitle} - Image ${selectedImage + 1}`}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -144,7 +144,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
               onClick={(e) => e.stopPropagation()}
             >
               <Image
-                src={images[selectedImage] || '/default-image.png'}
+                src={images[selectedImage] || '/images/tastyplates_placeholder_landscape.jpg'}
                 alt={`${restaurantTitle} - Image ${selectedImage + 1}`}
                 fill
                 className="object-contain"

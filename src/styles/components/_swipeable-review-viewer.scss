@@ -6,22 +6,22 @@
   bottom: 0;
   z-index: 10000;
   background: #000;
-  touch-action: pan-y;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; // iOS smooth scroll
+  scroll-behavior: smooth;
   
-  // ✨ NEW: Support for iPhone safe areas
+  // Support for iPhone safe areas
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 
   &__close {
-    position: absolute;
-    top: max(1rem, env(safe-area-inset-top));
+    position: fixed;
+    top: max(1rem, calc(env(safe-area-inset-top) + 1rem));
     left: 1rem;
-    z-index: 10;
+    z-index: 10001;
     background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
     border: none;
     border-radius: 50%;
     width: 40px;
@@ -31,196 +31,422 @@
     justify-content: center;
     color: white;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
 
     &:hover {
       background: rgba(0, 0, 0, 0.7);
+      transform: scale(1.05);
     }
   }
 
-  &__index {
-    position: absolute;
-    top: env(safe-area-inset-top, 1rem);
-    right: 1rem;
-    z-index: 10;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  &__posts-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    will-change: transform;
-    // ✨ OPTIMIZED: Use GPU acceleration
-    transform: translate3d(0, 0, 0);
+  &__scroll-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
   &__post {
-    position: absolute;
-    left: 0;
-    right: 0;
-    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh; // Dynamic viewport height for mobile
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    // ✨ NEW: GPU acceleration
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-  }
-
-  &__content {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    will-change: transform;
-  }
-
-  &__image-container {
-    flex: 1;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
     background: #000;
+  }
+
+  // Image Section - 60-70% of viewport
+  &__image-section {
+    position: relative;
+    width: 100%;
+    height: 65vh; // 65% of viewport height
+    height: 65dvh; // Dynamic viewport height
+    min-height: 0;
+    flex-shrink: 0;
+    background: #000;
+    overflow: hidden;
   }
 
   &__image {
     width: 100%;
     height: 100%;
-    // ✨ CHANGED: Use 'cover' for full-screen images (Instagram-style)
     object-fit: cover;
-    // ✨ NEW: GPU acceleration hint
-    transform: translate3d(0, 0, 0);
+    object-position: center;
   }
 
-  &__overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
-    padding: 1.5rem;
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    color: white;
-    z-index: 2;
+  // Content Section - 30-40% of viewport
+  &__content-section {
+    flex: 1;
+    min-height: 35vh;
+    min-height: 35dvh;
+    background: #fff;
+    padding: 1rem 1.25rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   &__user-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.25rem;
   }
 
   &__avatar {
-    width: 40px;
-    height: 40px;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid white;
+    flex-shrink: 0;
   }
 
   &__user-details {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__user-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  &__user-info-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   &__username {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #31343F;
     margin: 0;
-    color: white;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  &__rating {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin-top: 0.25rem;
+  &__timestamp {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  &__restaurant-link {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    
+    &:hover {
+      color: #E36B00;
+    }
   }
 
   &__review-content {
-    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
   }
 
   &__title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: white;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #31343F;
+    margin: 0;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
     line-height: 1.4;
   }
 
-  &__text {
-    font-size: 0.9375rem;
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  &__text-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
+  &__text {
+    font-size: 0.875rem;
+    color: #494D5D;
+    margin: 0;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  &__see-more {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    align-self: flex-start;
+    
+    &:hover {
+      color: #E36B00;
+    }
+  }
+
+  &__rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #31343F;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    
+    svg {
+      color: #31343F;
+      stroke-width: 1.5;
+    }
+  }
+
+  // Comment Preview Section
+  &__comment-preview {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  &__no-comments {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    text-align: center;
+    padding: 0.5rem 0;
+  }
+
+  &__comment-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__comment-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  &__comment-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  &__comment-author {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #31343F;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+  }
+
+  &__comment-text {
+    font-size: 0.75rem;
+    color: #494D5D;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+
+  &__view-all-comments {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    text-align: left;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    
+    &:hover {
+      color: #E36B00;
+    }
+  }
+
+  // Action Buttons
   &__actions {
     display: flex;
-    gap: 1.5rem;
     align-items: center;
+    gap: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
   }
 
   &__action-btn {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
     background: none;
     border: none;
-    color: white;
+    color: #31343F;
     cursor: pointer;
-    padding: 0.5rem;
-    transition: opacity 0.2s;
-    // ✨ NEW: Larger tap target for mobile
-    min-width: 44px;
-    min-height: 44px;
+    font-size: 0.875rem;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+    padding: 0.5rem 0;
+    transition: color 0.2s;
 
-    &:active {
-      opacity: 0.7;
+    &:hover {
+      color: #E36B00;
     }
 
-    span {
-      font-size: 0.75rem;
-      font-weight: 500;
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  // Infinite Scroll Loading
+  &__load-more {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  // Skeleton Loading for Posts
+  &__skeleton-post {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+
+  &__skeleton-image {
+    width: 100%;
+    height: 65vh;
+    height: 65dvh;
+    background: linear-gradient(
+      90deg,
+      #1a1a1a 0%,
+      #2a2a2a 50%,
+      #1a1a1a 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  &__skeleton-content {
+    flex: 1;
+    min-height: 35vh;
+    min-height: 35dvh;
+    background: #fff;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(
+      90deg,
+      #e5e7eb 0%,
+      #d1d5db 50%,
+      #e5e7eb 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  &__skeleton-text {
+    height: 0.875rem;
+    border-radius: 4px;
+    background: linear-gradient(
+      90deg,
+      #e5e7eb 0%,
+      #d1d5db 50%,
+      #e5e7eb 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+
+    &:first-of-type {
+      width: 60%;
+    }
+
+    &:last-of-type {
+      width: 80%;
     }
   }
 }
 
-// ✨ OPTIMIZED: Mobile-specific adjustments
-@media (max-width: 767px) {
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Mobile optimizations
+@media (max-width: 768px) {
   .swipeable-review-viewer {
-    &__overlay {
+    &__image-section {
+      height: 60vh;
+      height: 60dvh;
+    }
+
+    &__content-section {
+      min-height: 40vh;
+      min-height: 40dvh;
       padding: 1rem;
-      padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 1rem));
     }
 
     &__title {
-      font-size: 1rem;
+      font-size: 0.9375rem;
     }
 
     &__text {
-      font-size: 0.875rem;
-      -webkit-line-clamp: 2;
+      font-size: 0.8125rem;
     }
-    
-    &__user-info {
-      margin-bottom: 0.75rem;
+  }
+}
+
+// Tablet and larger
+@media (min-width: 769px) {
+  .swipeable-review-viewer {
+    &__image-section {
+      height: 70vh;
+      height: 70dvh;
+    }
+
+    &__content-section {
+      min-height: 30vh;
+      min-height: 30dvh;
+      padding: 1.5rem;
     }
   }
 }

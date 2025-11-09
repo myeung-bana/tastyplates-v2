@@ -20,7 +20,7 @@ import toast from 'react-hot-toast';
 import { useDebounce } from "use-debounce"; // Import useDebounce
 import Link from "next/link";
 import { LISTING_EXPLANATION } from "@/constants/pages";
-import { DEFAULT_IMAGE } from "@/constants/images";
+import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 
 interface Restaurant {
   id: string;
@@ -92,7 +92,7 @@ const ListingPage = () => {
         databaseId: (item.databaseId as number) || 0,
         slug: item.slug as string,
         name: item.title as string,
-        image: ((item.featuredImage as Record<string, unknown>)?.node as Record<string, unknown>)?.sourceUrl as string || DEFAULT_IMAGE,
+        image: ((item.featuredImage as Record<string, unknown>)?.node as Record<string, unknown>)?.sourceUrl as string || DEFAULT_RESTAURANT_IMAGE,
         rating: parseFloat((item.averageRating as string) || "0") || 0,
         cuisineNames: palatesNames,
         countries: countries,

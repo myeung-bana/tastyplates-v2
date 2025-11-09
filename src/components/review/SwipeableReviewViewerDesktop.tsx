@@ -13,7 +13,7 @@ import { FollowService } from "@/services/follow/followService";
 import { useFollowContext } from "../FollowContext";
 import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { commentLikedSuccess, commentUnlikedSuccess, authorIdMissing, errorOccurred } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
@@ -551,7 +551,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
   const reviewImages = currentReview.reviewImages || [];
   const hasMultipleImages = reviewImages.length > 1;
-  const currentImage = reviewImages[currentImageIndex]?.sourceUrl || DEFAULT_IMAGE;
+  const currentImage = reviewImages[currentImageIndex]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
   const isLiked = userLiked[currentReview.databaseId] ?? false;
   const likes = likesCount[currentReview.databaseId] ?? 0;
   const commentCount = commentCounts[currentReview.databaseId] ?? 0;

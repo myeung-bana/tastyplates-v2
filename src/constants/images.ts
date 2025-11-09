@@ -1,7 +1,9 @@
 // Default Images
 export const DEFAULT_USER_IMAGE = "/images/default-user-profile.jpg";
 export const DEFAULT_USER_ICON = "/profile-icon.svg";
-export const DEFAULT_IMAGE = "/images/default-image.png";
+export const DEFAULT_IMAGE = "/images/tastyplates_placeholder_portrait.jpg"; // Deprecated - use DEFAULT_REVIEW_IMAGE or DEFAULT_RESTAURANT_IMAGE
+export const DEFAULT_REVIEW_IMAGE = "/images/tastyplates_placeholder_portrait.jpg";
+export const DEFAULT_RESTAURANT_IMAGE = "/images/tastyplates_placeholder_landscape.jpg";
 
 // Flag icons
 export const FLAG = "/flag.svg";

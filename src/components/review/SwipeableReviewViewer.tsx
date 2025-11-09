@@ -1,20 +1,21 @@
 "use client";
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useDrag, useWheel } from "@use-gesture/react";
-import { useSpring, animated } from "@react-spring/web";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
-import { FiX, FiMessageCircle, FiHeart } from "react-icons/fi";
+import { FiX, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, stripTags, generateProfileUrl, formatDate } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
 import toast from "react-hot-toast";
-import CommentsSlideIn from "@/components/review/CommentsSlideIn";
+import CommentsBottomSheet from "@/components/review/CommentsBottomSheet";
+import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import "@/styles/components/_swipeable-review-viewer.scss";
 
 interface SwipeableReviewViewerProps {
@@ -22,359 +23,316 @@ interface SwipeableReviewViewerProps {
   initialIndex: number;
   isOpen: boolean;
   onClose: () => void;
+  onLoadMore?: () => Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }>;
+  hasNextPage?: boolean;
 }
 
 const reviewService = new ReviewService();
 
 const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
-  reviews,
+  reviews: initialReviews,
   initialIndex,
   isOpen,
   onClose,
+  onLoadMore,
+  hasNextPage = false,
 }) => {
   const { data: session } = useSession();
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [reviews, setReviews] = useState<GraphQLReview[]>(initialReviews);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
+  const [firstComments, setFirstComments] = useState<Record<string, GraphQLReview | null>>({});
+  const [loadingFirstComments, setLoadingFirstComments] = useState<Record<string, boolean>>({});
   const [showComments, setShowComments] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const fetchedCommentCountsRef = useRef<Set<number>>(new Set());
-  const preloadedImagesRef = useRef<Set<string>>(new Set());
+  const [selectedReview, setSelectedReview] = useState<GraphQLReview | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState<Record<number, boolean>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const postRefs = useRef<Record<number, HTMLDivElement>>({});
 
-  // ✅ FIX 1: Initialize viewport height immediately to prevent glitch
-  const [viewportHeight, setViewportHeight] = useState(() => {
-    // Get initial height synchronously
-    if (typeof window !== 'undefined') {
-      return window.visualViewport?.height ?? window.innerHeight;
-    }
-    return 0;
-  });
-  
+  // Update reviews when initialReviews changes
   useEffect(() => {
-    const updateHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      setViewportHeight(height);
-    };
-    
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    window.visualViewport?.addEventListener('resize', updateHeight);
-    
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      window.visualViewport?.removeEventListener('resize', updateHeight);
-    };
-  }, []);
+    setReviews(initialReviews);
+  }, [initialReviews]);
 
-  // ✅ FIX 2: Opening animation - start from current scale when opening
-  const [{ scale, opacity }, apiOpen] = useSpring(() => ({
-    scale: 1, // Start at full scale to prevent flash
-    opacity: 1,
-    config: { tension: 300, friction: 30 },
-  }));
-
-  useEffect(() => {
-    if (isOpen) {
-      // Animate from 0.95 to 1 when opening
-      apiOpen.start({ from: { scale: 0.95, opacity: 0 }, to: { scale: 1, opacity: 1 } });
-    } else {
-      // Reset to hidden state
-      apiOpen.set({ scale: 0.95, opacity: 0 });
-    }
-  }, [isOpen, apiOpen]);
-
-  // Windowed rendering - only render visible ±2 reviews
-  const visibleIndices = useMemo(() => {
-    const indices = new Set<number>();
-    for (let i = Math.max(0, currentIndex - 1); i <= Math.min(reviews.length - 1, currentIndex + 2); i++) {
-      indices.add(i);
-    }
-    return Array.from(indices).sort((a, b) => a - b);
-  }, [currentIndex, reviews.length]);
-
-  // Preload images for current and next reviews
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const imagesToPreload = [
-      reviews[currentIndex],
-      reviews[currentIndex + 1],
-      reviews[currentIndex + 2],
-    ].filter(Boolean);
-
-    imagesToPreload.forEach((review) => {
-      if (!review) return;
-      const imageUrl = review.reviewImages?.[0]?.sourceUrl;
-      if (imageUrl && !preloadedImagesRef.current.has(imageUrl)) {
-        const img = new Image();
-        img.src = imageUrl;
-        preloadedImagesRef.current.add(imageUrl);
-      }
-    });
-  }, [currentIndex, isOpen, reviews]);
-
-  // Initialize like states
+  // Initialize likes and comment counts
   useEffect(() => {
     if (reviews.length > 0) {
       const initialLiked: Record<number, boolean> = {};
       const initialCounts: Record<number, number> = {};
+      
       reviews.forEach((review) => {
         initialLiked[review.databaseId] = review.userLiked ?? false;
-        initialCounts[review.databaseId] = review.commentLikes ?? 0;
+        initialCounts[review.databaseId] = 0; // Will be updated when we fetch comment counts
       });
+      
       setUserLiked(initialLiked);
-      setLikesCount(initialCounts);
+      setLikesCount((prev) => {
+        const updated = { ...prev };
+        reviews.forEach((review) => {
+          updated[review.databaseId] = review.commentLikes ?? 0;
+        });
+        return updated;
+      });
     }
   }, [reviews]);
 
-  // Reset index when initialIndex changes
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentIndex(initialIndex);
+  // Helper function to fetch first comment for a review
+  const fetchFirstCommentForReview = useCallback(async (reviewId: string, databaseId: number) => {
+    if (!reviewId || loadingFirstComments[reviewId]) return;
+    
+    setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: true }));
+    
+    try {
+      const replies = await reviewService.fetchCommentReplies(reviewId);
+      const firstComment = replies && replies.length > 0 ? replies[0] : null;
+      setFirstComments((prev) => ({ ...prev, [reviewId]: firstComment ?? null }));
+      
+      // Update comment count
+      if (replies) {
+        setCommentCounts((prev) => ({
+          ...prev,
+          [databaseId]: replies.length,
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching first comment for review ${reviewId}:`, error);
+      setFirstComments((prev) => ({ ...prev, [reviewId]: null }));
+    } finally {
+      setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: false }));
     }
-  }, [isOpen, initialIndex]);
+  }, [loadingFirstComments]);
 
-  // Fetch comment counts only for visible reviews
+  // Helper function to format relative time
+  const formatRelativeTime = useCallback((dateString: string): string => {
+    if (!dateString) return '';
+    
+    try {
+      let date: Date;
+      
+      if (dateString.includes('T') && dateString.includes('Z')) {
+        date = new Date(dateString);
+      } else if (dateString.includes('T')) {
+        date = new Date(dateString + 'Z');
+      } else {
+        date = new Date(dateString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts;
+          if (!year || !month || !day) return formatDate(dateString);
+          const validDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          if (!isNaN(validDate.getTime())) {
+            const relativeTime = formatDistanceToNow(validDate, { addSuffix: true });
+            return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+          }
+        }
+        return formatDate(dateString);
+      }
+      
+      const relativeTime = formatDistanceToNow(date, { addSuffix: true });
+      return relativeTime.replace('about ', '').replace('less than a minute ago', 'just now');
+    } catch {
+      return formatDate(dateString);
+    }
+  }, []);
+
+  // Scroll to initial index on open
+  useEffect(() => {
+    if (isOpen && scrollContainerRef.current && initialIndex >= 0 && initialIndex < reviews.length) {
+      const targetPost = postRefs.current[initialIndex];
+      if (targetPost) {
+        setTimeout(() => {
+          targetPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, [isOpen, initialIndex, reviews.length]);
+
+  // Fetch first comment for initial post and adjacent posts immediately
+  useEffect(() => {
+    if (isOpen && initialIndex >= 0 && initialIndex < reviews.length) {
+      const initialReview = reviews[initialIndex];
+      const prevReview = reviews[initialIndex - 1];
+      const nextReview = reviews[initialIndex + 1];
+      
+      // Fetch for initial post (only if not already fetched or confirmed no comments)
+      if (initialReview?.id && firstComments[initialReview.id] === undefined && !loadingFirstComments[initialReview.id]) {
+        fetchFirstCommentForReview(initialReview.id, initialReview.databaseId);
+      }
+      
+      // Pre-fetch for adjacent posts (only if not already fetched or confirmed no comments)
+      [prevReview, nextReview].forEach(review => {
+        if (review?.id && firstComments[review.id] === undefined && !loadingFirstComments[review.id]) {
+          fetchFirstCommentForReview(review.id, review.databaseId);
+        }
+      });
+    }
+  }, [isOpen, initialIndex, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
+
+  // Use Intersection Observer to detect visible posts and lazy load comments
   useEffect(() => {
     if (!isOpen) return;
-
-    visibleIndices.forEach((idx) => {
-      const review = reviews[idx];
-      if (review?.id && !fetchedCommentCountsRef.current.has(review.databaseId)) {
-        fetchedCommentCountsRef.current.add(review.databaseId);
-        reviewService
-          .fetchCommentReplies(review.id)
-          .then((replies) => {
-            setCommentCounts((prev) => ({
-              ...prev,
-              [review.databaseId]: replies.length,
-            }));
-          })
-          .catch((error) => {
-            console.error("Error fetching comment count:", error);
-            fetchedCommentCountsRef.current.delete(review.databaseId);
-          });
-      }
+    
+    const observers = new Map<string, IntersectionObserver>();
+    
+    reviews.forEach((review, index) => {
+      const postElement = postRefs.current[index];
+      if (!postElement || !review.id) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry && entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            // Post is visible, fetch first comment if not already fetched or confirmed no comments
+            // Only fetch if firstComments[review.id] is undefined (not fetched yet)
+            // Skip if it's null (confirmed no comments) or already has a comment
+            const currentFirstComment = firstComments[review.id!];
+            if (currentFirstComment === undefined && !loadingFirstComments[review.id!]) {
+              fetchFirstCommentForReview(review.id!, review.databaseId);
+            }
+          }
+        },
+        { threshold: 0.5, rootMargin: '100px' } // Start loading 100px before visible
+      );
+      
+      observer.observe(postElement);
+      observers.set(review.id, observer);
     });
-  }, [isOpen, visibleIndices, reviews]);
+    
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
+  }, [isOpen, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  // Faster spring configuration
-  const [{ y }, api] = useSpring(() => ({
-    y: currentIndex,
-    config: {
-      tension: 400,
-      friction: 35,
-    },
-  }));
+  // Infinite scroll
+  const loadMore = useCallback(async (): Promise<void> => {
+    if (loadingMore || !onLoadMore || !hasNextPage) return;
+    
+    setLoadingMore(true);
+    try {
+      const { reviews: newReviews } = await onLoadMore();
+      setReviews((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const uniqueNew = newReviews.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...uniqueNew];
+      });
+    } catch (error) {
+      console.error("Error loading more reviews:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, onLoadMore, hasNextPage]);
 
-  // Handle like/unlike
-  const handleLike = useCallback(
-    async (review: GraphQLReview) => {
-      if (!session?.user) {
-        toast.error("Please sign in to like reviews");
-        return;
+  const { observerRef } = useInfiniteScroll({
+    loadMore,
+    hasNextPage: hasNextPage && !!onLoadMore,
+    loading: loadingMore,
+  });
+
+  // Handle like
+  const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
+    if (!session?.accessToken) {
+      toast.error("Please sign in to like reviews");
+      return;
+    }
+
+    const isLiked = userLiked[review.databaseId] ?? false;
+    const currentLikes = likesCount[review.databaseId] ?? 0;
+
+    // Optimistic update
+    setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
+    setLikesCount((prev) => ({
+      ...prev,
+      [review.databaseId]: isLiked ? currentLikes - 1 : currentLikes + 1,
+    }));
+
+    try {
+      if (isLiked) {
+        await reviewService.unlikeComment(review.databaseId, session.accessToken);
+        toast.success(commentUnlikedSuccess);
+      } else {
+        await reviewService.likeComment(review.databaseId, session.accessToken);
+        toast.success(commentLikedSuccess);
       }
-
-      const reviewId = review.databaseId;
-      const currentLiked = userLiked[reviewId] ?? false;
-      const newLikedState = !currentLiked;
-
-      setUserLiked((prev) => ({ ...prev, [reviewId]: newLikedState }));
+    } catch (error) {
+      // Revert on error
+      setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
       setLikesCount((prev) => ({
         ...prev,
-        [reviewId]: (prev[reviewId] ?? 0) + (newLikedState ? 1 : -1),
+        [review.databaseId]: currentLikes,
       }));
-
-      try {
-        toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
-      } catch (error) {
-        setUserLiked((prev) => ({ ...prev, [reviewId]: currentLiked }));
-        setLikesCount((prev) => ({
-          ...prev,
-          [reviewId]: (prev[reviewId] ?? 0) + (newLikedState ? -1 : 1),
-        }));
-        console.error("Like error:", error);
-      }
-    },
-    [session, userLiked]
-  );
-
-  // ✅ FIX 3: Improved gesture handler with proper close threshold
-  const handleGesture = useCallback(
-    (deltaY: number, velocity: number, isActive: boolean) => {
-      if (showComments || !viewportHeight) return;
-
-      // ✅ FIX 4: Increased thresholds
-      const navigationThreshold = viewportHeight * 0.3; // 30% for navigation
-      const closeThreshold = viewportHeight * 0.4; // 40% for closing (more intentional)
-      const velocityThreshold = 0.8; // Increased for more deliberate swipes
-
-      if (isActive) {
-        // During drag: show preview
-        const offset = -deltaY / viewportHeight;
-        
-        // ✅ ADDED: Limit preview range to prevent over-scrolling
-        const clampedOffset = Math.max(-1.5, Math.min(1.5, offset));
-        
-        api.start({
-          y: currentIndex + clampedOffset,
-          immediate: true,
-        });
-      } else {
-        // On release: decide navigation
-        
-        // ✅ FIX 5: Only close from first post with STRONG downward swipe
-        if (currentIndex === 0 && deltaY > closeThreshold && velocity > velocityThreshold) {
-          // Strong pull down from first post = close
-          onClose();
-          return;
-        }
-        
-        // Regular navigation logic
-        const shouldNavigate = 
-          Math.abs(deltaY) > navigationThreshold || 
-          Math.abs(velocity) > velocityThreshold;
-        
-        if (shouldNavigate) {
-          const direction = deltaY < 0 ? 1 : -1; // Negative = swipe up = next
-          const newIndex = Math.max(0, Math.min(reviews.length - 1, currentIndex + direction));
-          
-          if (newIndex !== currentIndex) {
-            // Navigate to new post
-            setCurrentIndex(newIndex);
-            api.start({ y: newIndex, immediate: false });
-          } else {
-            // ✅ Can't navigate further - just snap back (no close)
-            api.start({ y: currentIndex, immediate: false });
-          }
-        } else {
-          // Below threshold - snap back to current
-          api.start({ y: currentIndex, immediate: false });
-        }
-      }
-    },
-    [showComments, currentIndex, reviews.length, viewportHeight, api, onClose]
-  );
-
-  // Gesture handlers
-  const bindDrag = useDrag(
-    ({ movement: [, my], velocity, active, last }) => {
-      handleGesture(my, velocity[1], active && !last);
-    },
-    { 
-      axis: "y", 
-      filterTaps: true,
-      // ✅ ADDED: Prevent default to stop page scrolling
-      preventDefault: true,
+      console.error("Error toggling like:", error);
+      toast.error("Failed to update like");
     }
-  );
+  }, [session, userLiked, likesCount]);
 
-  const bindWheel = useWheel(
-    ({ delta: [, dy], velocity, active, last }) => {
-      handleGesture(dy * 2, velocity[1], active && !last);
-    },
-    { 
-      axis: "y",
-      // ✅ ADDED: Prevent default to stop page scrolling
-      preventDefault: true,
-    }
-  );
+  // Handle comment click
+  const handleCommentClick = useCallback((review: GraphQLReview) => {
+    setSelectedReview(review);
+    setShowComments(true);
+  }, []);
 
-  // Prevent body scroll
+  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      // ✅ ADDED: Prevent iOS bounce scrolling
-      document.body.style.position = "fixed";
-      document.body.style.width = "100%";
-      
       return () => {
         document.body.style.overflow = "unset";
-        document.body.style.position = "unset";
-        document.body.style.width = "unset";
       };
     }
     return undefined;
   }, [isOpen]);
 
-  // ✅ FIX 6: Always render structure, just hide with CSS
   if (!isOpen || reviews.length === 0) return null;
-
-  const currentReview = reviews[currentIndex];
-  if (!currentReview) return null;
-
-  const isLiked = userLiked[currentReview.databaseId] ?? false;
-  const likes = likesCount[currentReview.databaseId] ?? 0;
-  const commentCount = commentCounts[currentReview.databaseId] ?? 0;
 
   return (
     <>
-      <animated.div
-        className="swipeable-review-viewer"
-        ref={containerRef}
-        style={{
-          opacity,
-          transform: scale.to((s) => `scale(${s})`),
-          pointerEvents: showComments ? "none" : "auto",
-          // ✅ FIX 7: Use fallback height to prevent glitch
-          height: viewportHeight || '100vh',
-        }}
-      >
-        {/* Close Button - Only closes on click */}
+      <div className="swipeable-review-viewer" ref={scrollContainerRef}>
+        {/* Close Button */}
         <button
           className="swipeable-review-viewer__close"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
+          onClick={onClose}
           aria-label="Close"
         >
           <FiX className="w-6 h-6" />
         </button>
 
-        {/* Only render visible reviews */}
-        <animated.div
-          className="swipeable-review-viewer__posts-container"
-          style={{
-            transform: y.to((value) => `translate3d(0, ${-value * 100}%, 0)`),
-            height: (viewportHeight || window.innerHeight) * reviews.length,
-          }}
-          {...(!showComments ? { ...bindDrag(), ...bindWheel() } : {})}
-        >
-          {visibleIndices.map((index) => {
-            const review = reviews[index];
-            if (!review) return null;
-            
+        {/* Scroll Container */}
+        <div className="swipeable-review-viewer__scroll-container">
+          {reviews.map((review, index) => {
             const images = review.reviewImages || [];
-            const mainImage = images[0]?.sourceUrl || DEFAULT_IMAGE;
+            const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
             const reviewIsLiked = userLiked[review.databaseId] ?? false;
             const reviewLikes = likesCount[review.databaseId] ?? 0;
             const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
+            const firstComment = firstComments[review.id || ""] || null;
+            const isLoadingComment = loadingFirstComments[review.id || ""] || false;
 
             return (
               <div
-                key={review.id}
-                className="swipeable-review-viewer__post"
-                style={{
-                  height: viewportHeight || '100vh',
-                  transform: `translate3d(0, ${index * 100}%, 0)`,
-                  willChange: 'transform',
+                key={review.id || `review-${index}`}
+                ref={(el) => {
+                  if (el) postRefs.current[index] = el;
                 }}
+                className="swipeable-review-viewer__post"
               >
-                {/* Image Section */}
-                <div className="swipeable-review-viewer__image-container">
+                {/* Image Section - 60-70% */}
+                <div className="swipeable-review-viewer__image-section">
                   <FallbackImage
                     src={mainImage}
                     alt={stripTags(review.reviewMainTitle || "Review")}
                     fill
                     className="swipeable-review-viewer__image"
-                    priority={index === currentIndex}
+                    priority={index < 3}
                   />
                 </div>
 
-                {/* Content Overlay */}
-                <div className="swipeable-review-viewer__overlay">
+                {/* Content Section - 30-40% */}
+                <div className="swipeable-review-viewer__content-section">
                   {/* User Info */}
                   <div className="swipeable-review-viewer__user-info">
                     {review.author?.node?.databaseId ? (
@@ -423,12 +381,27 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     )}
 
                     <div className="swipeable-review-viewer__user-details">
-                      <h3 className="swipeable-review-viewer__username">
-                        {review.author?.node?.name || review.author?.name || "Unknown User"}
-                      </h3>
-                      {review.reviewStars && (
-                        <div className="swipeable-review-viewer__rating">⭐ {review.reviewStars}/5</div>
-                      )}
+                      <div className="swipeable-review-viewer__user-header">
+                        <div className="swipeable-review-viewer__user-info-left">
+                          <h3 className="swipeable-review-viewer__username">
+                            {review.author?.node?.name || review.author?.name || "Unknown User"}
+                          </h3>
+                          {review.commentedOn?.node?.title && (
+                            <Link
+                              href={`/restaurants/${review.commentedOn.node.slug}`}
+                              className="swipeable-review-viewer__restaurant-link"
+                            >
+                              <FiMapPin className="w-3 h-3" />
+                              <span>{review.commentedOn.node.title}</span>
+                            </Link>
+                          )}
+                        </div>
+                        {review.date && (
+                          <span className="swipeable-review-viewer__timestamp">
+                            {formatRelativeTime(review.date)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -439,14 +412,110 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         {capitalizeWords(stripTags(review.reviewMainTitle))}
                       </h2>
                     )}
-                    {review.content && (
-                      <p className="swipeable-review-viewer__text">{stripTags(review.content)}</p>
+                    {review.content && (() => {
+                      const MAX_CHARS = 300;
+                      const reviewContent = stripTags(review.content);
+                      const shouldTruncate = reviewContent.length > MAX_CHARS;
+                      const isExpanded = isTextExpanded[review.databaseId] || false;
+                      const displayText = isExpanded || !shouldTruncate 
+                        ? reviewContent 
+                        : reviewContent.slice(0, MAX_CHARS) + "...";
+                      
+                      return (
+                        <div className="swipeable-review-viewer__text-container">
+                          <p className="swipeable-review-viewer__text">
+                            {displayText}
+                          </p>
+                          {shouldTruncate && (
+                            <button
+                              className="swipeable-review-viewer__see-more"
+                              onClick={() => setIsTextExpanded(prev => ({
+                                ...prev,
+                                [review.databaseId]: !isExpanded
+                              }))}
+                            >
+                              {isExpanded ? "See Less" : "See More"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    
+                    {/* Rating */}
+                    {review.reviewStars && (
+                      <div className="swipeable-review-viewer__rating">
+                        <FiStar className="w-3 h-3" />
+                        <span>{review.reviewStars}/5</span>
+                      </div>
                     )}
                   </div>
 
+                  {/* First Comment Preview */}
+                  {(() => {
+                    const reviewId = review.id || "";
+                    const isLoading = loadingFirstComments[reviewId] || false;
+                    const firstComment = firstComments[reviewId];
+                    const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
+                    
+                    // Hide section entirely if we've confirmed there are no comments
+                    // firstComment === null means we fetched and confirmed no comments exist
+                    if (firstComment === null && !isLoading) {
+                      return null;
+                    }
+                    
+                    // Show skeleton only while loading and haven't confirmed no comments
+                    if (isLoading && firstComment === undefined) {
+                      return (
+                        <div className="swipeable-review-viewer__comment-preview">
+                          <ReplySkeleton count={1} />
+                        </div>
+                      );
+                    }
+                    
+                    // Show first comment if it exists
+                    if (firstComment) {
+                      return (
+                        <div className="swipeable-review-viewer__comment-preview">
+                          <div className="swipeable-review-viewer__comment-item">
+                            <FallbackImage
+                              src={firstComment.userAvatar || DEFAULT_USER_ICON}
+                              alt={firstComment.author?.node?.name || "User"}
+                              width={24}
+                              height={24}
+                              className="swipeable-review-viewer__comment-avatar"
+                              type={FallbackImageType.Icon}
+                            />
+                            <div className="swipeable-review-viewer__comment-content">
+                              <span className="swipeable-review-viewer__comment-author">
+                                {firstComment.author?.node?.name || firstComment.author?.name || "Unknown"}
+                              </span>
+                              <span className="swipeable-review-viewer__comment-text">
+                                {stripTags(firstComment.content || "")}
+                              </span>
+                            </div>
+                          </div>
+                          {reviewCommentCount > 1 && (
+                            <button
+                              className="swipeable-review-viewer__view-all-comments"
+                              onClick={() => handleCommentClick(review)}
+                            >
+                              View all {reviewCommentCount} comments
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+                    
+                    // Don't render anything if we haven't fetched yet (firstComment is undefined)
+                    return null;
+                  })()}
+
                   {/* Action Buttons */}
                   <div className="swipeable-review-viewer__actions">
-                    <button className="swipeable-review-viewer__action-btn" onClick={() => handleLike(review)}>
+                    <button
+                      className="swipeable-review-viewer__action-btn"
+                      onClick={() => handleLike(review)}
+                    >
                       {reviewIsLiked ? (
                         <AiFillHeart className="w-6 h-6 text-red-500" />
                       ) : (
@@ -457,11 +526,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
                     <button
                       className="swipeable-review-viewer__action-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (index !== currentIndex) setCurrentIndex(index);
-                        setShowComments(true);
-                      }}
+                      onClick={() => handleCommentClick(review)}
                     >
                       <FiMessageCircle className="w-6 h-6" />
                       <span>{reviewCommentCount}</span>
@@ -471,19 +536,53 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
               </div>
             );
           })}
-        </animated.div>
-      </animated.div>
 
-      {showComments && (
-        <CommentsSlideIn
-          review={currentReview}
+          {/* Infinite Scroll Trigger & Loading Skeleton */}
+          {onLoadMore && hasNextPage && (
+            <div ref={observerRef} className="swipeable-review-viewer__load-more">
+              {loadingMore && (
+                <div className="swipeable-review-viewer__skeleton-post">
+                  <div className="swipeable-review-viewer__skeleton-image" />
+                  <div className="swipeable-review-viewer__skeleton-content">
+                    <div className="swipeable-review-viewer__skeleton-avatar" />
+                    <div className="swipeable-review-viewer__skeleton-text" />
+                    <div className="swipeable-review-viewer__skeleton-text" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Comments Modal */}
+      {showComments && selectedReview && (
+        <CommentsBottomSheet
+          review={selectedReview}
           isOpen={showComments}
-          onClose={() => setShowComments(false)}
+          onClose={() => {
+            setShowComments(false);
+            setSelectedReview(null);
+          }}
           onCommentCountChange={(count) => {
             setCommentCounts((prev) => ({
               ...prev,
-              [currentReview.databaseId]: count,
+              [selectedReview.databaseId]: count,
             }));
+            // Refresh first comment if count changed
+            if (count > 0 && !firstComments[selectedReview.id || ""]) {
+              reviewService
+                .fetchCommentReplies(selectedReview.id || "")
+                .then((replies) => {
+                  if (replies && replies.length > 0) {
+                    setFirstComments((prev) => ({
+                      ...prev,
+                      [selectedReview.id || ""]: replies[0] ?? null,
+                    }));
+                  }
+                })
+                .catch(console.error);
+            }
           }}
         />
       )}

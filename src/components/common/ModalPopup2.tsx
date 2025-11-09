@@ -21,7 +21,7 @@ import 'slick-carousel/slick/slick.css'
 import toast from "react-hot-toast";
 import { authorIdMissing, userFollowedFailed, userUnfollowedFailed } from "@/constants/messages";
 import FallbackImage, { FallbackImageType } from "./ui/Image/FallbackImage";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { UserService } from "@/services/user/userService";
 import { responseStatusCode as code } from "@/constants/response";
 
@@ -278,7 +278,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
                 ))
               ) : (
                 <Image
-                  src={DEFAULT_IMAGE}
+                  src={DEFAULT_REVIEW_IMAGE}
                   alt="Default"
                   width={400}
                   height={400}

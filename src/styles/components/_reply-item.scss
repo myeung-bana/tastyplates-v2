@@ -1,0 +1,106 @@
+.reply-item {
+  font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+
+  &__container {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  &__avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  &__username {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    margin-bottom: 0;
+    color: #31343F;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+  }
+
+  &__like-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+      opacity: 0.7;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  &__heart {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    transition: all 0.2s;
+
+    &--liked {
+      color: #ef4444;
+    }
+  }
+
+  &__like-count {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+  }
+
+  &__spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #6b7280;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  &__text {
+    font-size: 0.8125rem;
+    color: #494D5D;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin: 0;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

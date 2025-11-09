@@ -1,7 +1,7 @@
 // ListingCardDraft.tsx
 import React, { useState } from 'react';
 import { IoMdClose } from "react-icons/io";
-import Photo from "../../../../public/images/default-image.png";
+import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 import { useSession } from 'next-auth/react';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import ReviewModal from "@/components/ui/Modal/ReviewModal"; 
@@ -34,7 +34,7 @@ interface ListingCardProps {
 const restaurantService = new RestaurantService();
 
 const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSuccess }) => {
-    const imageUrl = restaurant.featuredImage?.node?.sourceUrl || Photo;
+    const imageUrl = restaurant.featuredImage?.node?.sourceUrl || DEFAULT_RESTAURANT_IMAGE;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
     const countryNames = restaurant.listingDetails?.googleMapUrl.streetAddress || restaurant.listingStreet || 'Unknown Location';
     const { data: session } = useSession();

@@ -3,7 +3,7 @@ import ReviewPopUpModal from "@/components/review/ReviewPopUpModal";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
-import { DEFAULT_IMAGE } from "@/constants/images";
+import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 import FallbackImage from "@/components/ui/Image/FallbackImage";
 
 interface PhotosProps {
@@ -28,7 +28,7 @@ const Photos = ({ index, data, image }: PhotosProps) => {
         initialPhotoIndex={index}
       />
       <FallbackImage
-        src={image.sourceUrl || DEFAULT_IMAGE}
+        src={image.sourceUrl || DEFAULT_RESTAURANT_IMAGE}
         alt={'Review image'}
         fill
         className="review-card__image !object-cover rounded-2xl w-full h-full hover:cursor-pointer"

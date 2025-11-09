@@ -17,7 +17,7 @@ import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import HashtagDisplay from "../ui/HashtagDisplay/HashtagDisplay";
 import { useIsMobile } from "@/utils/deviceUtils";
 import {
-  DEFAULT_IMAGE,
+  DEFAULT_REVIEW_IMAGE,
   DEFAULT_USER_ICON,
   STAR_FILLED,
 } from "@/constants/images";
@@ -84,8 +84,8 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-              ? data.reviewImages[0]?.sourceUrl || DEFAULT_IMAGE
-              : DEFAULT_IMAGE
+              ? data.reviewImages[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE
+              : DEFAULT_REVIEW_IMAGE
           }
           alt="Review"
           width={450}

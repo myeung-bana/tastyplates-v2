@@ -4,7 +4,7 @@ import RestaurantCardSkeleton from '../ui/Skeleton/RestaurantCardSkeleton';
 import TabContentGrid from '../ui/TabContentGrid/TabContentGrid';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import { Listing } from '@/interfaces/restaurant/restaurant';
-import { DEFAULT_IMAGE } from '@/constants/images';
+import { DEFAULT_RESTAURANT_IMAGE } from '@/constants/images';
 
 interface Restaurant {
   id: string;
@@ -45,7 +45,7 @@ const ListingsTab: React.FC<ListingsTabProps> = ({ targetUserId, isViewingOwnPro
         id: item.id || '',
         slug: item.slug || '',
         name: item.title || 'Untitled',
-        image: item.featuredImage?.node?.sourceUrl || DEFAULT_IMAGE,
+        image: item.featuredImage?.node?.sourceUrl || DEFAULT_RESTAURANT_IMAGE,
         rating: item.averageRating || 0,
         databaseId: item.databaseId || 0,
         palatesNames: Array.isArray(item?.palates?.nodes)

@@ -16,7 +16,7 @@ import { generateProfileUrl } from "@/lib/utils";
 import "@/styles/pages/_reviews.scss";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import {
-  DEFAULT_IMAGE,
+  DEFAULT_REVIEW_IMAGE,
   DEFAULT_USER_ICON,
   STAR_FILLED,
 } from "@/constants/images";
@@ -53,8 +53,8 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
         <FallbackImage
           src={
             Array.isArray(data.reviewImages) && data.reviewImages.length > 0
-              ? data.reviewImages[0]?.sourceUrl || DEFAULT_IMAGE
-              : DEFAULT_IMAGE
+              ? data.reviewImages[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE
+              : DEFAULT_REVIEW_IMAGE
           }
           alt="Review"
           width={400}

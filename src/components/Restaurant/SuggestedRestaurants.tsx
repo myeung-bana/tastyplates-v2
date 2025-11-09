@@ -25,7 +25,7 @@ const SuggestedRestaurants: React.FC<SuggestedRestaurantsProps> = ({
     id: item.id,
     slug: item.slug,
     name: item.title,
-    image: item.featuredImage?.node.sourceUrl || '/images/default-image.png',
+    image: item.featuredImage?.node.sourceUrl || '/images/tastyplates_placeholder_landscape.jpg',
     rating: item.averageRating,
     databaseId: item.databaseId || 0,
     palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],

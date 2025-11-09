@@ -5,7 +5,7 @@ import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { stripTags, capitalizeWords } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "@/components/ui/Image/FallbackImage";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
 import { PAGE } from "@/lib/utils";
 import { EDIT_REVIEW } from "@/constants/pages";
 import HashtagDisplay from "@/components/ui/HashtagDisplay/HashtagDisplay";
@@ -56,13 +56,13 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
     console.log('Array length:', reviewDraft.reviewImages?.length || 0);
     
     if (!reviewDraft.reviewImages || !Array.isArray(reviewDraft.reviewImages)) {
-      console.log('→ No reviewImages array, returning DEFAULT_IMAGE');
-      return DEFAULT_IMAGE;
+      console.log('→ No reviewImages array, returning DEFAULT_REVIEW_IMAGE');
+      return DEFAULT_REVIEW_IMAGE;
     }
     
     if (reviewDraft.reviewImages.length === 0) {
-      console.log('→ Empty reviewImages array, returning DEFAULT_IMAGE');
-      return DEFAULT_IMAGE;
+      console.log('→ Empty reviewImages array, returning DEFAULT_REVIEW_IMAGE');
+      return DEFAULT_REVIEW_IMAGE;
     }
     
     // Log all images
@@ -78,10 +78,10 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
     );
     
     console.log('First valid image found:', firstImage);
-    console.log('Returning URL:', firstImage?.sourceUrl || DEFAULT_IMAGE);
+    console.log('Returning URL:', firstImage?.sourceUrl || DEFAULT_REVIEW_IMAGE);
     console.log('=== End Debug ===');
     
-    return firstImage?.sourceUrl || DEFAULT_IMAGE;
+    return firstImage?.sourceUrl || DEFAULT_REVIEW_IMAGE;
   };
 
   return (

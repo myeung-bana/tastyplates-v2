@@ -5,7 +5,7 @@ import { FaEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { stripTags, capitalizeWords } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "@/components/ui/Image/FallbackImage";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
 import { PAGE } from "@/lib/utils";
 import { EDIT_REVIEW } from "@/constants/pages";
 import HashtagDisplay from "@/components/ui/HashtagDisplay/HashtagDisplay";
@@ -63,7 +63,7 @@ const ListingCard = ({ reviewDraft, onDelete }: ListingCardProps) => {
              !Array.isArray(reviewDraft.reviewImages) && 
              reviewDraft.reviewImages?.sourceUrl) ||
             // Final fallback to default image
-            DEFAULT_IMAGE
+            DEFAULT_REVIEW_IMAGE
           }
           alt="Review Draft"
           width={450}

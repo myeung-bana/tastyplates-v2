@@ -15,7 +15,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import { responseStatusCode as code } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
+import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { authorIdMissing, commentedSuccess, commentLikedSuccess, commentUnlikedSuccess, errorOccurred, maximumCommentReplies, updateLikeFailed } from "@/constants/messages";
 import SignupModal from "../auth/SignupModal";
@@ -448,7 +448,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
           {images.length > 0 ? (
             <div className="relative h-full">
               <Image
-                src={images[currentImageIndex]?.sourceUrl || DEFAULT_IMAGE}
+                src={images[currentImageIndex]?.sourceUrl || DEFAULT_REVIEW_IMAGE}
                 alt={`Review image ${currentImageIndex + 1}`}
                 fill
                 className="object-contain max-h-full"
@@ -485,7 +485,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
           ) : (
             <div className="flex items-center justify-center h-full">
               <Image
-                src={DEFAULT_IMAGE}
+                src={DEFAULT_REVIEW_IMAGE}
                 alt="No image available"
                 width={400}
                 height={400}

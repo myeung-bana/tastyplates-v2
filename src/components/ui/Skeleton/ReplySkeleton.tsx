@@ -9,22 +9,18 @@ const ReplySkeleton: React.FC<ReplySkeletonProps> = ({ count = 3 }) => {
   return (
     <>
       {Array.from({ length: count }).map((_, index) => (
-        <div key={`skeleton-${index}`} className="space-y-2 animate-pulse">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <div className="h-3 bg-gray-300 rounded w-20" />
-                <div className="h-3 bg-gray-200 rounded w-16" />
-              </div>
-              <div className="h-3 bg-gray-300 rounded w-full mb-1" />
-              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1">
-                  <div className="w-4 h-4 bg-gray-300 rounded" />
-                  <div className="h-3 bg-gray-200 rounded w-4" />
+        <div key={`skeleton-${index}`} className="reply-item animate-pulse" style={{ marginBottom: index < count - 1 ? '1.25rem' : '0' }}>
+          <div className="reply-item__container">
+            <div className="reply-item__avatar bg-gray-300 rounded-full flex-shrink-0" style={{ width: '32px', height: '32px' }} />
+            <div className="reply-item__content">
+              <div className="reply-item__header">
+                <div className="reply-item__username bg-gray-300 rounded" style={{ width: '80px', height: '13px' }} />
+                <div className="reply-item__like-btn">
+                  <div className="bg-gray-300 rounded" style={{ width: '16px', height: '16px' }} />
                 </div>
               </div>
+              <div className="reply-item__text bg-gray-200 rounded" style={{ width: '100%', height: '13px', marginTop: '0.5rem' }} />
+              <div className="reply-item__text bg-gray-200 rounded" style={{ width: '75%', height: '13px', marginTop: '0.25rem' }} />
             </div>
           </div>
         </div>

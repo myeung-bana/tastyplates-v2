@@ -11,7 +11,7 @@ import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { debounce } from "@/utils/debounce";
-import { DEFAULT_IMAGE } from "@/constants/images";
+import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 import { getBestAddress } from "@/utils/addressUtils";
 import SuggestedRestaurants from './SuggestedRestaurants';
 import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
@@ -170,7 +170,7 @@ const RestaurantPage = () => {
     id: item.id,
     slug: item.slug,
     name: item.title,
-    image: item.featuredImage?.node.sourceUrl || DEFAULT_IMAGE,
+    image: item.featuredImage?.node.sourceUrl || DEFAULT_RESTAURANT_IMAGE,
     rating: item.averageRating,
     databaseId: item.databaseId || 0,
     palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
