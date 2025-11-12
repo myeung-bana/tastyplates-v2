@@ -2,6 +2,17 @@ import Hero from "@/components/Hero";
 import Navbar from "@/components/layout/Navbar";
 import ClientOnlyReviews from "@/components/review/ClientOnlyReviews";
 import { Suspense } from "react";
+import { generateMetadata as generateSEOMetadata, siteConfig } from "@/lib/seo";
+import type { Metadata } from "next";
+
+// Homepage metadata
+export const metadata: Metadata = generateSEOMetadata({
+  title: "Discover Amazing Food Experiences",
+  description: "Discover the meal that fits your taste. Dine like a Brazilian in Tokyo - or Korean in New York? Find and share amazing food experiences with TastyPlates.",
+  canonical: siteConfig.url,
+  type: "website",
+  tags: ["food reviews", "restaurant reviews", "food discovery", "dining", "cuisine", "food experiences"],
+});
 
 export default function Home() {
   return (

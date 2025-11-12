@@ -277,10 +277,38 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     setShowComments(true);
   }, []);
 
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open and hide TopNav on mobile
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // Add class to hide TopNav on mobile
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        // Add class immediately for fade transition
+        document.body.classList.add("swipeable-review-viewer-open");
+        // Set display: none after fade completes (300ms)
+        const timeoutId = setTimeout(() => {
+          const topBar = document.querySelector(".mobile-top-bar") as HTMLElement;
+          if (topBar) {
+            topBar.style.display = "none";
+          }
+        }, 300);
+        
+        return () => {
+          document.body.style.overflow = "unset";
+          // Restore display first (but keep it invisible)
+          const topBar = document.querySelector(".mobile-top-bar") as HTMLElement;
+          if (topBar) {
+            topBar.style.display = "";
+          }
+          // Remove class after a brief delay to allow display to be restored
+          // This ensures the fade-in transition works
+          setTimeout(() => {
+            document.body.classList.remove("swipeable-review-viewer-open");
+          }, 10);
+          clearTimeout(timeoutId);
+        };
+      }
       return () => {
         document.body.style.overflow = "unset";
       };

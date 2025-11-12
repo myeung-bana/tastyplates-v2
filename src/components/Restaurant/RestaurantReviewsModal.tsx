@@ -287,13 +287,13 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
     <>
       <div className="restaurant-reviews-modal" ref={scrollContainerRef}>
         {/* Close Button */}
-        <button
+          <button
           className="restaurant-reviews-modal__close"
           onClick={onClose}
-          aria-label="Close"
-        >
+            aria-label="Close"
+          >
           <FiX className="w-6 h-6" />
-        </button>
+          </button>
 
         {/* Scroll Container */}
         <div className="restaurant-reviews-modal__scroll-container">
@@ -304,7 +304,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
             const reviewLikes = likesCount[review.databaseId] ?? 0;
             const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
             const firstComment = firstComments[review.id || ""] || null;
-            const palateNames = review.palates 
+            const palateNames = review.palates
               ? (typeof review.palates === 'string' 
                   ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
                   : [])
@@ -337,14 +337,14 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                       session?.user?.id &&
                       String(session.user.id) === String(review.author?.node?.databaseId) ? (
                         <Link href={PROFILE}>
-                          <FallbackImage
+                    <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}
                             alt={review.author?.node?.name || "User"}
                             width={40}
                             height={40}
                             className="restaurant-reviews-modal__avatar"
-                            type={FallbackImageType.Icon}
-                          />
+                    type={FallbackImageType.Icon}
+                    />
                         </Link>
                       ) : session ? (
                         <Link href={generateProfileUrl(review.author?.node?.databaseId)} prefetch={false}>
@@ -395,8 +395,8 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                       {palateNames.length > 0 && (
                         <div className="restaurant-reviews-modal__palates">
                           <PalateTags palateNames={palateNames} maxTags={2} />
-                        </div>
-                      )}
+                      </div>
+                    )}
                     </div>
                   </div>
 
@@ -432,7 +432,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                               {isExpanded ? "See Less" : "See More"}
                             </button>
                           )}
-                        </div>
+                </div>
                       );
                     })()}
                     
@@ -441,7 +441,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                       <div className="restaurant-reviews-modal__rating">
                         <FiStar className="w-3 h-3" />
                         <span>{review.reviewStars}/5</span>
-                      </div>
+                </div>
                     )}
                   </div>
 
@@ -486,14 +486,14 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                             </div>
                           </div>
                           {reviewCommentCount > 1 && (
-                            <button
+                      <button
                               className="restaurant-reviews-modal__view-all-comments"
                               onClick={() => handleCommentClick(review)}
-                            >
+                      >
                               View all {reviewCommentCount} comments
-                            </button>
-                          )}
-                        </div>
+                      </button>
+                  )}
+                </div>
                       );
                     }
                     
@@ -502,9 +502,9 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
 
                   {/* Action Buttons */}
                   <div className="restaurant-reviews-modal__actions">
-                    <button
+                  <button
                       className="restaurant-reviews-modal__action-btn"
-                      onClick={() => handleLike(review)}
+                    onClick={() => handleLike(review)}
                     >
                       {reviewIsLiked ? (
                         <AiFillHeart className="w-6 h-6 text-red-500" />
@@ -520,7 +520,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                     >
                       <FiMessageCircle className="w-6 h-6" />
                       <span>{reviewCommentCount}</span>
-                    </button>
+                  </button>
                   </div>
                 </div>
               </div>

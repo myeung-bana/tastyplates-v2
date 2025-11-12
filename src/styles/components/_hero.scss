@@ -120,7 +120,7 @@
   }
 
   &__search {
-    margin-top: 2rem;
+    margin-top: 1rem; // Reduced from 2rem
     width: 100%;
     max-width: 650px;
     margin-left: auto;
@@ -131,8 +131,8 @@
     z-index: 10;
 
     @media (max-width: 767px) {
-      max-width: 90%;
-      padding: 0 1rem;
+      max-width: 100%; // Increased from 90%
+      padding: 0 0.5rem; // Reduced from 1rem
     }
   }
 
@@ -164,8 +164,9 @@
     }
 
     @media (max-width: 767px) {
-      padding: 10px 16px;
+      padding: 8px 12px; // Reduced from 10px 16px to give more space
       border-radius: 28px;
+      max-width: 100%; // Remove max-width constraint on mobile
     }
   }
 
@@ -183,8 +184,9 @@
     }
 
     @media (max-width: 767px) {
-      font-size: 14px;
-      padding: 4px 8px;
+      font-size: 15px; // Increased from 14px
+      padding: 4px 6px; // Reduced from 4px 8px to maximize input width
+      min-width: 0; // Allow flex to work properly
     }
   }
 
@@ -257,7 +259,7 @@
     @media (max-width: 767px) {
       width: 32px;
       height: 32px;
-      margin-right: 8px;
+      margin-right: 6px; // Reduced from 8px to give more space to input
     }
   }
 

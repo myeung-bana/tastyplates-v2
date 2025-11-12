@@ -1,9 +1,7 @@
-import Restaurant from "@/components/Restaurant/Restaurant";
+"use client";
 
-const RestaurantPage = () => {
-  return (
-    <Restaurant />
-  );
-};
+import RestaurantPage from "@/components/Restaurant/Restaurant";
 
-export default RestaurantPage;
+export default function RestaurantsPage() {
+  return <RestaurantPage />;
+}
