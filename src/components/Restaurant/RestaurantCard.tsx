@@ -9,6 +9,8 @@ import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
 import RestaurantReviewsModal from "./RestaurantReviewsModal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { ReviewService } from "@/services/Reviews/reviewService";
+import { GraphQLReview } from "@/types/graphql";
 import { PAGE } from "@/lib/utils";
 import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
@@ -58,6 +60,7 @@ export interface RestaurantCardProps {
 }
 
 const restaurantService = new RestaurantService();
+const reviewService = new ReviewService();
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick }: RestaurantCardProps) => {
   // Safety check for restaurant object
@@ -71,6 +74,10 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [restaurantReviews, setRestaurantReviews] = useState<GraphQLReview[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -210,9 +217,53 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     handleToggle(e);
   };
 
-  const handleCommentButtonClick = (e: React.MouseEvent) => {
+  const handleCommentButtonClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsReviewModalOpen(true);
+    
+    // Fetch reviews for the restaurant
+    if (restaurant.databaseId) {
+      setLoadingReviews(true);
+      try {
+        const response = await reviewService.fetchRestaurantReviews(
+          restaurant.databaseId,
+          session?.accessToken,
+          10 // Initial load of 10 reviews
+        );
+        setRestaurantReviews(response.reviews);
+        setHasNextPage(response.pageInfo.hasNextPage);
+        setEndCursor(response.pageInfo.endCursor);
+      } catch (error) {
+        console.error('Error fetching restaurant reviews:', error);
+        setRestaurantReviews([]);
+        toast.error('Failed to load reviews');
+      } finally {
+        setLoadingReviews(false);
+      }
+    }
+  };
+
+  const handleLoadMoreReviews = async (): Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }> => {
+    if (!restaurant.databaseId || !endCursor) {
+      return { reviews: [], hasNextPage: false };
+    }
+    
+    try {
+      const response = await reviewService.fetchRestaurantReviews(
+        restaurant.databaseId,
+        session?.accessToken,
+        10,
+        endCursor
+      );
+      const newReviews = [...restaurantReviews, ...response.reviews];
+      setRestaurantReviews(newReviews);
+      setHasNextPage(response.pageInfo.hasNextPage);
+      setEndCursor(response.pageInfo.endCursor);
+      return { reviews: response.reviews, hasNextPage: response.pageInfo.hasNextPage };
+    } catch (error) {
+      console.error('Error loading more reviews:', error);
+      return { reviews: [], hasNextPage: false };
+    }
   };
 
   const address = getCityCountry(restaurant.googleMapUrl, 'Location not available');
@@ -357,12 +408,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
       />
       {isReviewModalOpen && (
         <RestaurantReviewsModal
+          reviews={restaurantReviews}
           isOpen={isReviewModalOpen}
-          setIsOpen={setIsReviewModalOpen}
-          restaurant={{
-            ...restaurant,
-            countries: restaurant.countries ?? '',
-          }}
+          onClose={() => setIsReviewModalOpen(false)}
+          restaurantId={restaurant.databaseId}
+          onLoadMore={handleLoadMoreReviews}
+          hasNextPage={hasNextPage}
         />
       )}
     </>
