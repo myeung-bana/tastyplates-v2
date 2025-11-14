@@ -1,9 +1,8 @@
 'use client';
-import React, { useRef } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useFollowingReviewsGraphQL } from '@/hooks/useFollowingReviewsGraphQL';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import SuggestedUsers from '@/components/common/SuggestedUsers';
 import FollowingReviews from '@/components/review/FollowingReviews';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 import { FaUsers } from 'react-icons/fa';
@@ -15,8 +14,7 @@ export default function FollowingPage() {
     loading, 
     initialLoading, 
     hasMore, 
-    loadMore, 
-    refreshFollowingReviews 
+    loadMore
   } = useFollowingReviewsGraphQL();
   
   const { observerRef } = useInfiniteScroll({

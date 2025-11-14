@@ -49,7 +49,7 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
     <>
       <button 
         onClick={() => setShowLocationModal(true)}
-        className={`bg-[#FCFCFC66]/40 rounded-[50px] text-sm h-11 px-6 hidden md:flex flex-row flex-nowrap items-center gap-2 backdrop-blur-sm font-neusans font-normal ${
+        className={`bg-[#FCFCFC66]/40 rounded-[50px] text-xs h-9 px-4 hidden md:flex flex-row flex-nowrap items-center gap-1.5 backdrop-blur-sm font-neusans font-normal ${
           isTransparent ? 'text-white' : 'text-[#494D5D]'
         }`}
       >
@@ -58,7 +58,7 @@ const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }
           alt={`${selectedLocation.label} flag`}
           className="w-5 h-4 object-cover rounded-sm"
         />
-        <span className={`font-neusans text-sm ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
+        <span className={`font-neusans text-xs ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`}>
           {getDisplayText()}
         </span>
         <FiChevronDown className={`w-4 h-4 ${isTransparent ? 'text-white' : 'text-[#494D5D]'}`} />

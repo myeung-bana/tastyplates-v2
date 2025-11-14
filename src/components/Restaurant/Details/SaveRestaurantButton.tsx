@@ -115,7 +115,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
   if (!initialized) {
     return (
       <button
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-semibold text-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-semibold text-sm font-neusans"
         disabled
       >
         <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />

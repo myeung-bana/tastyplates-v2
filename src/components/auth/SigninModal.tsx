@@ -42,6 +42,7 @@ const SigninModal: React.FC<SigninModalProps> = ({
             <LoginPage
               onOpenSignup={onOpenSignup}
               onOpenForgotPassword={() => setShowForgotPassword(true)}
+              onLoginSuccess={onClose}
             />
           </div>
         </div>

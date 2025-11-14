@@ -11,17 +11,29 @@ const RestaurantDetailSkeleton = () => {
 
                 <div className="restaurant-detail__header">
                     <div className="restaurant-detail__info">
-                        <div className="flex flex-col md:flex-col">
-                            <div className="flex flex-col md:flex-row justify-between px-2">
-                                <div className="mt-6 md:mt-0 space-y-3">
-                                    <div className="h-10 w-48 bg-gray-300 rounded"></div>
-                                    <div className="flex gap-2">
-                                        <div className="h-6 w-20 bg-gray-300 rounded"></div>
-                                        <div className="h-6 w-16 bg-gray-300 rounded"></div>
-                                        <div className="h-6 w-16 bg-gray-300 rounded"></div>
+                        <div className="flex flex-col">
+                            <div className="flex flex-col md:flex-row justify-between px-2 gap-4 md:gap-0">
+                                {/* Left Section: Image + Title/Categories */}
+                                <div className="flex gap-3 md:gap-4 mt-6 md:mt-0">
+                                    {/* Circular Image Skeleton */}
+                                    <div className="flex-shrink-0">
+                                        <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gray-300"></div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-3">
+                                        <div className="h-7 md:h-8 w-48 md:w-64 bg-gray-300 rounded"></div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            <div className="h-5 w-20 bg-gray-300 rounded"></div>
+                                            <div className="h-5 w-16 bg-gray-300 rounded"></div>
+                                            <div className="h-5 w-16 bg-gray-300 rounded"></div>
+                                        </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            <div className="h-6 w-20 bg-gray-300 rounded-full"></div>
+                                            <div className="h-6 w-24 bg-gray-300 rounded-full"></div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-row gap-3 items-center">
+                                {/* Right Section: Action Buttons */}
+                                <div className="flex flex-row gap-3 items-center md:items-start">
                                     <div className="h-10 w-32 bg-gray-300 rounded"></div>
                                     <div className="h-10 w-32 bg-gray-300 rounded"></div>
                                     <div className="h-10 w-24 bg-gray-300 rounded"></div>

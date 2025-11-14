@@ -19,9 +19,9 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
       <h3 className="text-lg font-normal font-neusans mb-4">Community Recognition</h3>
-      <div className="community-recognition w-full flex flex-col lg:flex-row items-center justify-center gap-6 my-5 lg:gap-0 lg:my-0">
-        <div className="flex items-center w-full">
-          <div className="rating-column w-full border-r border-[#CACACA]">
+      <div className="community-recognition w-full flex flex-row items-center justify-center gap-0 my-5 lg:my-0">
+        <div className="rating-column w-full border-r border-[#CACACA]">
+          <div className="rating-value">
             <Image
               src={FLAG}
               height={40}
@@ -29,14 +29,14 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="Flag icon"
             />
-            <div className="rating-value">
-              <span className="text-lg md:text-xl font-normal">
-                {recognitionMetrics.mustRevisit}
-              </span>
-            </div>
-            <span className="text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
+            <span className="font-neusans text-2xl md:text-4xl font-normal">
+              {recognitionMetrics.mustRevisit}
+            </span>
           </div>
-          <div className="rating-column w-full lg:border-r border-[#CACACA]">
+          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
+        </div>
+        <div className="rating-column w-full border-r border-[#CACACA]">
+          <div className="rating-value">
             <Image
               src={PHONE}
               height={40}
@@ -44,16 +44,14 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="phone icon"
             />
-            <div className="rating-value">
-              <span className="text-lg md:text-xl font-normal">
-                {recognitionMetrics.instaWorthy}
-              </span>
-            </div>
-            <span className="text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
+            <span className="font-neusans text-2xl md:text-4xl font-normal">
+              {recognitionMetrics.instaWorthy}
+            </span>
           </div>
+          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
         </div>
-        <div className="flex items-center w-full">
-          <div className="rating-column w-full border-r border-[#CACACA]">
+        <div className="rating-column w-full border-r border-[#CACACA]">
+          <div className="rating-value">
             <Image
               src={CASH}
               height={40}
@@ -61,14 +59,14 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="cash icon"
             />
-            <div className="rating-value">
-              <span className="text-lg md:text-xl font-normal">
-                {recognitionMetrics.valueForMoney}
-              </span>
-            </div>
-            <span className="text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
+            <span className="font-neusans text-2xl md:text-4xl font-normal">
+              {recognitionMetrics.valueForMoney}
+            </span>
           </div>
-          <div className="rating-column w-full">
+          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
+        </div>
+        <div className="rating-column w-full">
+          <div className="rating-value">
             <Image
               src={HELMET}
               height={40}
@@ -76,13 +74,11 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="helmet icon"
             />
-            <div className="rating-value">
-              <span className="text-lg md:text-xl font-normal">
-                {recognitionMetrics.bestService}
-              </span>
-            </div>
-            <span className="text-[10px] lg:text-sm whitespace-pre">Best Service</span>
+            <span className="font-neusans text-2xl md:text-4xl font-normal">
+              {recognitionMetrics.bestService}
+            </span>
           </div>
+          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Best Service</span>
         </div>
       </div>
     </div>

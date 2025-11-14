@@ -7,6 +7,8 @@ import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
+import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 
 const reviewService = new ReviewService();
 
@@ -31,23 +33,40 @@ const mapToReviewedDataProps = (review: GraphQLReview): ReviewedDataProps => {
   };
 };
 
+type TabType = 'trending' | 'foryou';
+
 const Reviews = () => {
-  const [reviews, setReviews] = useState<GraphQLReview[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('trending');
   const { data: session } = useSession();
-  // Removed unused state variables
+  const { showSignin } = useAuthModal();
+  
+  // Trending reviews state
+  const [trendingReviews, setTrendingReviews] = useState<GraphQLReview[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Cap reviews at 25
   const MAX_REVIEWS = 25;
   const [hasReachedLimit, setHasReachedLimit] = useState(false);
-
   const observerRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
-  const loadMore = useCallback(async () => {
+  // For You reviews (using the hook)
+  const {
+    reviews: forYouReviews,
+    loading: forYouLoading,
+    initialLoading: forYouInitialLoading,
+    hasMore: forYouHasMore,
+    loadMore: loadMoreForYou
+  } = useFollowingReviewsGraphQL();
+
+  // Get current reviews based on active tab
+  const currentReviews = activeTab === 'trending' ? trendingReviews : forYouReviews;
+  const currentLoading = activeTab === 'trending' ? loading : forYouLoading;
+  const currentInitialLoading = activeTab === 'trending' ? !initialLoaded : forYouInitialLoading;
+  const currentHasMore = activeTab === 'trending' ? hasNextPage && !hasReachedLimit : forYouHasMore;
+
+  const loadMoreTrending = useCallback(async () => {
     if (loading || !hasNextPage || hasReachedLimit) return;
     
     setLoading(true);
@@ -55,11 +74,11 @@ const Reviews = () => {
     const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, session?.accessToken);
     
     // Calculate how many reviews we can add without exceeding the limit
-    const currentCount = reviews.length;
+    const currentCount = trendingReviews.length;
     const remainingSlots = MAX_REVIEWS - currentCount;
     const reviewsToAdd = newReviews.slice(0, remainingSlots);
     
-    setReviews(prev => [...prev, ...reviewsToAdd]);
+    setTrendingReviews(prev => [...prev, ...reviewsToAdd]);
     setEndCursor(pageInfo.endCursor);
     setHasNextPage(pageInfo.hasNextPage);
     
@@ -74,29 +93,28 @@ const Reviews = () => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
     }
-  }, [loading, hasNextPage, hasReachedLimit, reviews.length, endCursor, session?.accessToken]);
+  }, [loading, hasNextPage, hasReachedLimit, trendingReviews.length, endCursor, session?.accessToken]);
 
+  // Load trending reviews on mount or when switching to trending tab
   useEffect(() => {
-    if (!initialLoaded) {
+    if (activeTab === 'trending' && !initialLoaded) {
       setInitialLoaded(true);
     }
-  }, [initialLoaded]);
+  }, [activeTab, initialLoaded]);
 
-  // Call loadMore only when initialLoaded becomes true
   useEffect(() => {
-    if (initialLoaded) {
-      loadMore();
+    if (activeTab === 'trending' && initialLoaded) {
+      loadMoreTrending();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialLoaded]);
+  }, [activeTab, initialLoaded, loadMoreTrending]);
 
-  // Setup Intersection Observer, but only after initial load
+  // Setup Intersection Observer for trending
   useEffect(() => {
-    if (!initialLoaded || hasReachedLimit) return;
+    if (activeTab !== 'trending' || !initialLoaded || hasReachedLimit) return;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting && hasNextPage && !loading && !hasReachedLimit) {
-          loadMore();
+          loadMoreTrending();
         }
       },
       { threshold: 1.0 }
@@ -108,18 +126,71 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, initialLoaded, hasReachedLimit, loadMore]);
+  }, [hasNextPage, loading, initialLoaded, hasReachedLimit, loadMoreTrending, activeTab]);
 
-  if (!initialLoaded) {
+  // Setup Intersection Observer for For You
+  useEffect(() => {
+    if (activeTab !== 'foryou' || !session?.accessToken) return;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting && forYouHasMore && !forYouLoading && !forYouInitialLoading) {
+          loadMoreForYou();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const current = observerRef.current;
+    if (current) observer.observe(current);
+
+    return () => {
+      if (current) observer.unobserve(current);
+    };
+  }, [forYouHasMore, forYouLoading, forYouInitialLoading, loadMoreForYou, activeTab, session?.accessToken]);
+
+  const handleTabClick = (tab: TabType) => {
+    if (tab === 'foryou' && !session?.user) {
+      showSignin();
+      return;
+    }
+    setActiveTab(tab);
+  };
+
+  if (currentInitialLoading) {
     return (
       <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
         <div className="reviews__container xl:!px-0">
-          <h2 className="reviews__title">Latest Reviews</h2>
-          <p className="reviews__subtitle">
-            See what others are saying about their dining experiences
-          </p>
+          {/* Tabs - Centered */}
+          <div className="flex justify-center gap-1 mb-6 border-b border-gray-200">
+            <button
+              onClick={() => handleTabClick('trending')}
+              className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                activeTab === 'trending'
+                  ? 'text-[#E36B00]'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Trending
+              {activeTab === 'trending' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+              )}
+            </button>
+            <button
+              onClick={() => handleTabClick('foryou')}
+              className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                activeTab === 'foryou'
+                  ? 'text-[#E36B00]'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              For You
+              {activeTab === 'foryou' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+              )}
+            </button>
+          </div>
           
-          {/* Skeleton loading for initial load */}
+          {/* Skeleton loading */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
             {Array.from({ length: 10 }, (_, i) => (
               <ReviewCardSkeleton key={`skeleton-${i}`} />
@@ -133,47 +204,85 @@ const Reviews = () => {
   return (
     <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
       <div className="reviews__container xl:!px-0">
-        <h2 className="reviews__title">Latest Reviews</h2>
-        <p className="reviews__subtitle">
-          See what others are saying about their dining experiences
-        </p>
+        {/* Tabs - Centered */}
+        <div className="flex justify-center gap-1 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => handleTabClick('trending')}
+            className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+              activeTab === 'trending'
+                ? 'text-[#E36B00]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Trending
+            {activeTab === 'trending' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+            )}
+          </button>
+          <button
+            onClick={() => handleTabClick('foryou')}
+            className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+              activeTab === 'foryou'
+                ? 'text-[#E36B00]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            For You
+            {activeTab === 'foryou' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+            )}
+          </button>
+        </div>
 
-        {/* Standard Grid Layout */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
-          {reviews.map((review, index) => (
-            <ReviewCard2 
-              key={review.id}
-              data={mapToReviewedDataProps(review)}
-              reviews={reviews}
-              reviewIndex={index}
-            />
-          ))}
-        </div>
-        
-        {/* Loading more content with skeletons */}
-        {loading && !hasReachedLimit && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
-            {Array.from({ length: 5 }, (_, i) => (
-              <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
-            ))}
-          </div>
-        )}
-        
-        <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-          {hasReachedLimit && (
-            <div className="text-center">
-              <p className="text-gray-400 text-sm mb-2">
-                Showing {reviews.length} of the latest reviews
-              </p>
-              <p className="text-gray-500 text-xs">
-                Visit our restaurants page to see more reviews
-              </p>
+        {/* Reviews Grid */}
+        {currentReviews.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+              {currentReviews.map((review, index) => (
+                <ReviewCard2 
+                  key={review.id}
+                  data={mapToReviewedDataProps(review)}
+                  reviews={currentReviews}
+                  reviewIndex={index}
+                />
+              ))}
             </div>
-          )}
-          {!hasNextPage && !loading && !hasReachedLimit && (
-            <p className="text-gray-400 text-sm">No more content to load.</p>
-          )}
-        </div>
+            
+            {/* Loading more content with skeletons */}
+            {currentLoading && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
+                ))}
+              </div>
+            )}
+            
+            <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
+              {activeTab === 'trending' && hasReachedLimit && (
+                <div className="text-center">
+                  <p className="text-gray-400 text-sm mb-2">
+                    Showing {currentReviews.length} of the latest reviews
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    Visit our restaurants page to see more reviews
+                  </p>
+                </div>
+              )}
+              {!currentHasMore && !currentLoading && activeTab === 'foryou' && (
+                <p className="text-gray-400 text-sm">No more reviews to load.</p>
+              )}
+            </div>
+          </>
+        ) : activeTab === 'foryou' && session?.user ? (
+          <div className="text-center py-12 mt-10">
+            <p className="text-gray-500 font-neusans">
+              {forYouInitialLoading 
+                ? 'Loading...'
+                : 'No reviews yet from people you follow. Start following food lovers to see their reviews here!'
+              }
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );

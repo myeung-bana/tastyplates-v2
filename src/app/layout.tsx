@@ -92,7 +92,7 @@ export default function RootLayout({
                 <AuthModalWrapper>
                   <div className="min-h-screen bg-white flex flex-col">
                     <MobileTopBar />
-                    <main className="flex-1 pt-14 md:pt-0">
+                    <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
                       {children}
                     </main>
                     <Footer />

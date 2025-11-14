@@ -21,7 +21,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
               {ratingMetrics.overallRating.toFixed(1)}
             </span>
           </div>
-          <span className="review-count font-neusans text-sm">
+          <span className="review-count font-neusans text-sm font-normal">
             {ratingMetrics.overallCount > 0
               ? `${ratingMetrics.overallCount} reviews`
               : "No reviews yet"}
@@ -37,7 +37,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
               {ratingMetrics.searchRating.toFixed(1)}
             </span>
           </div>
-          <span className="review-count font-neusans text-sm">
+          <span className="review-count font-neusans text-sm font-normal">
             {palatesParam 
               ? (ratingMetrics.searchCount > 0
                   ? `${ratingMetrics.searchCount} reviews from ${palatesParam}`
@@ -52,13 +52,13 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
             <div className="h-[85%] border-l border-[#CACACA]"></div>
             
             <div className="rating-column font-neusans">
-              <h3 className="font-neusans">My Preference</h3>
+              <h3 className="font-neusans font-normal text-sm">My Preference</h3>
               <div className="rating-value">
                   <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
                     {ratingMetrics.myPreferenceRating.toFixed(1)}
                   </span>
               </div>
-              <span className="review-count font-neusans text-sm">
+              <span className="review-count font-neusans text-sm font-normal">
                 {ratingMetrics.myPreferenceCount > 0
                   ? `${ratingMetrics.myPreferenceCount} reviews from similar palates`
                   : "No reviews from similar palates"}

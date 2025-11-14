@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
 import "@/styles/pages/_auth.scss";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import {
@@ -21,18 +20,31 @@ import {
   palateMaxLimit,
   usernameCheckError,
   usernameValidationLimit,
+  usernameRequired,
+  usernameTooShort,
+  usernameTooLong,
+  usernameNoSpaces,
+  usernameInvalidCharacters,
+  usernameCannotStartWithSpecial,
+  usernameCannotEndWithSpecial,
+  usernameCannotBeAllNumbers,
+  usernameNoConsecutiveSpecial,
   palateRequired,
 } from "@/constants/messages";
 import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 import CustomDatePicker from "@/components/common/CustomDatepicker";
-import { HOME, ONBOARDING_TWO } from "@/constants/pages";
-import { formatDateForInput } from "@/lib/utils";
+import { formatDateForInput, validateUsername } from "@/lib/utils";
 import { REGISTRATION_KEY } from "@/constants/session";
+import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
 
 const userService = new UserService()
 
-const OnboardingOnePage = () => {
-  const router = useRouter();
+interface OnboardingStepOneProps {
+  onNext: () => void;
+  currentStep: number;
+}
+
+const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentStep }) => {
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -48,7 +60,7 @@ const OnboardingOnePage = () => {
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true); // Ensures code only runs after client-side mount
+    setHasMounted(true);
   }, []);
 
   // Move initialization logic to a separate useEffect
@@ -70,33 +82,7 @@ const OnboardingOnePage = () => {
         : parsedData.palates.split(",");
       setSelectedPalates(new Set(palatesArray));
     }
-
-    setHasMounted(true);
   }, [hasMounted]);
-
-  // Navigation protection effects
-  useEffect(() => {
-    if (!hasMounted) return;
-    let storedData = localStorage.getItem(REGISTRATION_KEY);
-    const googleAuth = Cookies.get('googleAuth');
-    const email = Cookies.get('email');
-    const username = Cookies.get('username');
-    
-    if (!storedData && googleAuth === 'true') {
-      const registrationData = {
-        username: username || "",
-        email: email || "",
-        password: "",
-        googleAuth: true
-      };
-      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
-      storedData = JSON.stringify(registrationData);
-    }
-
-    if (!storedData) {
-      router.replace(HOME);
-    }
-  }, [router, hasMounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,9 +108,22 @@ const OnboardingOnePage = () => {
 
       let formattedBirthdate = "";
 
-      // Username validation
-      if (!name || name.length > userNameMaxLimit) {
-        setUsernameError(usernameValidationLimit(userNameMinLimit, userNameMaxLimit));
+      // Username validation using comprehensive policy
+      const usernameValidation = validateUsername(name);
+      if (!usernameValidation.isValid) {
+        // Map error codes to messages
+        const errorMessages: Record<string, string> = {
+          usernameRequired,
+          usernameTooShort,
+          usernameTooLong,
+          usernameNoSpaces,
+          usernameInvalidCharacters,
+          usernameCannotStartWithSpecial,
+          usernameCannotEndWithSpecial,
+          usernameCannotBeAllNumbers,
+          usernameNoConsecutiveSpecial,
+        };
+        setUsernameError(errorMessages[usernameValidation.error || ''] || usernameValidationLimit(userNameMinLimit, userNameMaxLimit));
         setIsLoading(false);
         return;
       }
@@ -185,7 +184,7 @@ const OnboardingOnePage = () => {
         setIsLoading(false);
         return;
       }
-      if (!hasMounted) return null;
+      if (!hasMounted) return;
 
       // Update localStorage with new data while preserving onboarding2 data
       const updatedData = {
@@ -207,12 +206,12 @@ const OnboardingOnePage = () => {
 
       localStorage.setItem(REGISTRATION_KEY, JSON.stringify(updatedData));
       setIsLoading(false);
-      router.push(ONBOARDING_TWO);
-      return; // Explicit return
+      onNext(); // Navigate to next step
+      return;
     } catch (error) {
       console.error('Error in form submission:', error);
       setIsLoading(false);
-      return; // Explicit return
+      return;
     }
   };
 
@@ -227,23 +226,46 @@ const OnboardingOnePage = () => {
   };
 
   const handlePalateChange = (keys: Set<Key>) => {
-    // Remove immediate validation
     setSelectedPalates(keys);
-    setPalateError(null); // Clear any existing error
+    setPalateError(null);
   };
 
   const baseFormFields = [
     {
       label: "Username",
       type: "text",
-      placeholder: "Username",
+      placeholder: "Enter Username",
       value: name,
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setName(value);
+        // Real-time validation as user types
+        if (value.trim()) {
+          const validation = validateUsername(value);
+          if (!validation.isValid && validation.error) {
+            const errorMessages: Record<string, string> = {
+              usernameTooShort,
+              usernameTooLong,
+              usernameNoSpaces,
+              usernameInvalidCharacters,
+              usernameCannotStartWithSpecial,
+              usernameCannotEndWithSpecial,
+              usernameCannotBeAllNumbers,
+              usernameNoConsecutiveSpecial,
+            };
+            setUsernameError(errorMessages[validation.error] || '');
+          } else {
+            setUsernameError(null);
+          }
+        } else {
+          setUsernameError(null);
+        }
+      },
       disabled: isLoading,
-      className: "!rounded-[10px] !h-10 md:!h-[48px]"
+      className: "!rounded-[10px] !h-10 md:!h-[48px] font-neusans font-normal placeholder:font-neusans placeholder:font-normal"
     },
     {
-      label: "Birthdate",
+      label: "Date of Birth",
       type: "date",
       placeholder: "DD/MM/YYYY",
       value: birthdate,
@@ -256,7 +278,7 @@ const OnboardingOnePage = () => {
       type: "select",
       placeholder: "Select your gender",
       defaultValue: gender || "0",
-      className: `auth__input auth__select !h-10 md:!h-[48px] rounded-[10px] focus:!text-[#31343f] ${gender ? '!text-[#31343f]' : '!text-[#797979]'}`,
+      className: `auth__input auth__select !h-10 md:!h-[48px] rounded-[10px] focus:!text-[#31343f] font-neusans font-normal ${gender ? '!text-[#31343f]' : '!text-[#797979]'}`,
       value: gender,
       onChange: handleGenderChange,
       items: genderOptions,
@@ -272,14 +294,14 @@ const OnboardingOnePage = () => {
       value: customGender,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomGender(e.target.value),
       disabled: isLoading,
-      className: "auth__input h-10 md:h-[48px] rounded-[10px]",
+      className: "auth__input h-10 md:h-[48px] rounded-[10px] font-neusans font-normal",
     },
     {
       label: "Pronoun",
       type: "select",
       placeholder: "Select your pronoun",
       defaultValue: pronoun || "0",
-      className: `auth__input auth__select h-10 md:h-[48px] rounded-[10px] focus:!text-[#31343f] ${pronoun ? '!text-[#31343f]' : '!text-[#797979]'}`,
+      className: `auth__input auth__select h-10 md:h-[48px] rounded-[10px] focus:!text-[#31343f] font-neusans font-normal ${pronoun ? '!text-[#31343f]' : '!text-[#797979]'}`,
       value: pronoun,
       onChange: (value: string) => setPronoun(value),
       items: pronounOptions,
@@ -287,7 +309,6 @@ const OnboardingOnePage = () => {
     },
   ] : [];
 
-  // Update the palate field
   const formFields = [
     ...baseFormFields,
     ...(gender === "custom" ? customGenderFields : []),
@@ -307,18 +328,17 @@ const OnboardingOnePage = () => {
   return (
     <div className="px-2 pt-8 sm:px-1 h-auto">
       <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
-        <h1 className="auth__header text-2xl sm:text-3xl">Create Account</h1>
+        <h1 className="auth__header text-2xl sm:text-3xl mb-6 font-neusans font-normal">Create Account</h1>
+        <OnboardingStepIndicator currentStep={currentStep} totalSteps={2} />
         <div className="auth__card py-4 !rounded-[24px] border border-[#CACACA] w-full sm:!w-[672px] bg-white">
-          <p className="auth__subtitle text-sm sm:text-base">Step 1 of 2</p>
-          <h1 className="auth__title">
-            Basic Information
-          </h1>
+          <p className="text-sm sm:text-base text-[#494D5D] text-center mb-6 px-4 font-neusans font-normal">
+            To provide you with the best dining experience, tell us a bit about yourself. This helps us recommend hidden gems and dishes you'll absolutely love.
+          </p>
           <form
             className="auth__form max-w-full sm:!max-w-[672px] w-full border-[#CACACA] gap-4 pb-6"
             onSubmit={handleSubmit}
           >
             {formFields.map((field: Record<string, unknown>, index: number) => {
-              // Check if current field is custom gender and previous field was gender
               const isCustomGenderField = gender === "custom" && field.label === "";
               const groupClassName = isCustomGenderField
                 ? "auth__form-group w-full shrink-0 -mt-4"
@@ -326,7 +346,7 @@ const OnboardingOnePage = () => {
 
               return (
                 <div key={index} className={groupClassName}>
-                  <label htmlFor={String(field.label || "").toLowerCase()} className="font-semibold text-sm sm:text-base">
+                  <label htmlFor={String(field.label || "").toLowerCase()} className="font-neusans font-normal text-sm sm:text-base">
                     {String(field.label || "")}
                   </label>
                   <div className={`auth__input-group ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
@@ -341,11 +361,9 @@ const OnboardingOnePage = () => {
                           disabled={Boolean(field.disabled)}
                         />
                     ) : field.type === "select" ? (
-                      // <CustomSelect {...field} />
-                      <select className={String(field.className || "")} value={String(field.value || "")} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => (field.onChange as (val: string) => void)(e.target.value)} disabled={Boolean(field.disabled)}>
+                      <select className={`${String(field.className || "")} font-neusans font-normal`} value={String(field.value || "")} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => (field.onChange as (val: string) => void)(e.target.value)} disabled={Boolean(field.disabled)}>
                         <option value="">{String(field.placeholder || "")}</option>
                         {(field.items as Array<Record<string, unknown>> || []).map((option: Record<string, unknown>) => {
-                          // Safely get option properties with fallbacks
                           const optionKey = option?.key || "";
                           const optionValue = option?.value ?? option?.key ?? "";
                           const optionContent = option?.content ?? option?.label ?? "";
@@ -360,7 +378,6 @@ const OnboardingOnePage = () => {
                         value={field.value instanceof Set ? field.value : new Set<Key>()}
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         onChange={(keys: Set<any>) => {
-                          // Call the field onChange handler (which is handlePalateChange)
                           if (field.onChange) {
                             (field.onChange as (keys: Set<Key>) => void)(keys);
                           }
@@ -373,36 +390,45 @@ const OnboardingOnePage = () => {
                       <input
                         type={String(field.type || "text")}
                         id={String(field.label || "").toLowerCase()}
-                        className={`auth__input text-sm sm:text-base ${String(field.className || '')}`}
+                        className={`auth__input text-sm sm:text-base font-neusans font-normal placeholder:font-neusans placeholder:font-normal ${String(field.className || '')}`}
                         placeholder={String(field.placeholder || "")}
                         value={String(field.value || "")}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => (field.onChange as (val: string) => void)(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          if (field.onChange) {
+                            // For text inputs, onChange expects the full event object
+                            // For other input types, it might expect just the value
+                            if (field.type === "text") {
+                              (field.onChange as (e: React.ChangeEvent<HTMLInputElement>) => void)(e);
+                            } else {
+                              (field.onChange as (val: string) => void)(e.target.value);
+                            }
+                          }
+                        }}
                         disabled={Boolean(field.disabled)}
                       />
                     )}
                   </div>
-                  {/* Validation errors */}
                   {field.label === "Username" && usernameError && (
-                    <div className="text-red-600 text-xs mt-1">{usernameError}</div>
+                    <div className="text-red-600 text-xs mt-1 font-neusans font-normal">{usernameError}</div>
                   )}
-                  {field.label === "Birthdate" && birthdateError && (
-                    <div className="text-red-600 text-xs mt-1">{birthdateError}</div>
+                  {(field.label === "Date of Birth" || field.label === "Birthdate") && birthdateError && (
+                    <div className="text-red-600 text-xs mt-1 font-neusans font-normal">{birthdateError}</div>
                   )}
                   {field.label === "Palate (Select up to 2 palates)" && palateError && (
-                    <div className="text-red-600 text-xs mt-1">{palateError}</div>
+                    <div className="text-red-600 text-xs mt-1 font-neusans font-normal">{palateError}</div>
                   )}
                   {field.label === "Gender" && genderError && (
-                    <div className="text-red-600 text-xs mt-1">{genderError}</div>
+                    <div className="text-red-600 text-xs mt-1 font-neusans font-normal">{genderError}</div>
                   )}
                 </div>
               );
             })}
             <button
               type="submit"
-              className={`auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto ${isLoading ? 'pointer-events-none' : ''}`}
+              className={`auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto font-neusans font-normal ${isLoading ? 'pointer-events-none' : ''}`}
               disabled={isLoading}
             >
-              {isLoading ? "Loading..." : "Save and Continue"}
+              {isLoading ? "Loading..." : "Next"}
             </button>
           </form>
         </div>
@@ -450,4 +476,5 @@ const OnboardingOnePage = () => {
   );
 };
 
-export default OnboardingOnePage;
+export default OnboardingStepOne;
+

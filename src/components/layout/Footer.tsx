@@ -35,7 +35,7 @@ export default function Footer({
   isShowCopyright = true
 }: Props) {
   return (
-    <footer className="footer font-neusans">
+    <footer className="footer font-neusans hidden md:block">
       <div className={`footer__container ${isShowLinks ? 'footer__container--with-links' : ''}`}>
         {/* Main footer content */}
         {isShowLinks && (

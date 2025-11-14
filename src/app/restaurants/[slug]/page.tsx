@@ -32,6 +32,8 @@ import RestaurantDescription from "@/components/Restaurant/Details/RestaurantDes
 import RestaurantLocationSection from "@/components/Restaurant/Details/RestaurantLocationSection";
 import RestaurantQuickActions from "@/components/Restaurant/Details/RestaurantQuickActions";
 import RestaurantDetailsSection from "@/components/Restaurant/Details/RestaurantDetailsSection";
+import Breadcrumb from "@/components/common/Breadcrumb";
+import { RESTAURANTS } from "@/constants/pages";
 
 
 // Helper function to get restaurant images
@@ -209,6 +211,17 @@ export default function RestaurantDetail() {
   return (
     <div className="restaurant-detail mt-4 md:mt-20 font-neusans">
       <div className="restaurant-detail__container !pt-0">
+        {/* Breadcrumb */}
+        <div className="px-2 mb-4 md:mb-6">
+          <Breadcrumb 
+            items={[
+              { label: "Restaurants", href: RESTAURANTS },
+              { label: restaurant.title }
+            ]}
+            showHomeIcon={true}
+          />
+        </div>
+        
         {/* Mobile: Gallery First */}
         <div className="md:hidden">
           {getRestaurantImages(restaurant).length > 0 ? (

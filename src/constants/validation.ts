@@ -1,6 +1,6 @@
 export const minimumPassword = 5
 export const ageLimit = 18
-export const userNameMinLimit = 1
+export const userNameMinLimit = 3 // Minimum 3 characters for username
 export const userNameMaxLimit = 20
 export const imageMBLimit = 5 // 5MB
 export const imageSizeLimit = imageMBLimit * 1024 * 1024 // 5MB

@@ -124,7 +124,7 @@
 
     h2 {
       font-size: 1.5rem;
-      font-weight: 600;
+      font-weight: 400;
       color: #1f2937;
       margin-bottom: 1rem;
     }
@@ -236,7 +236,7 @@
 
   h2 {
     font-size: 1.5rem;
-    font-weight: 500;
+    font-weight: 400;
     color: #1B1B1B;
     margin-top: 1rem;
 
@@ -408,7 +408,7 @@
 
   &__username {
     font-size: 0.875rem;
-    font-weight: 600;
+    font-weight: 400;
     color: #1f2937;
     margin-bottom: 2px;
     line-height: 1.3;
@@ -596,7 +596,7 @@
 
     h3 {
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 400;
       // margin-bottom: 0.5rem;
 
       @media (max-width: 767px) {
@@ -610,11 +610,11 @@
       justify-content: center;
       gap: 0.5rem;
       font-size: 1.5rem;
-      font-weight: bold;
+      font-weight: 400;
 
       span {
         font-size: 1.5rem;
-        font-weight: 700;
+        font-weight: 400;
         
         @media (max-width: 767px) {
           font-size: 1.25rem; // Increase mobile font size
@@ -630,7 +630,7 @@
       color: #494D5D;
       font-size: 0.75rem;
       color: var(--text-secondary);
-      font-weight: 500;
+      font-weight: 400;
       line-height: 1.4;
       // margin-top: 0.5rem;
 
@@ -644,23 +644,29 @@
 // Community Recognition Section Styles
 .community-recognition {
   .rating-column {
+    padding: 0 0.5rem;
+    
+    @media (max-width: 767px) {
+      padding: 0 0.25rem;
+    }
+    
     .rating-value {
       span {
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 2.5rem; // 40px - matches image size on desktop
+        font-weight: 400;
         
         @media (max-width: 767px) {
-          font-size: 1.25rem; // Increase mobile font size
+          font-size: 1.5rem; // 24px - matches image size on mobile
         }
       }
     }
     
     span:last-child {
       font-size: 0.75rem;
-      font-weight: 500;
+      font-weight: 400;
       
       @media (max-width: 767px) {
-        font-size: 0.7rem; // Increase mobile font size
+        font-size: 0.7rem;
         line-height: 1.3;
       }
     }

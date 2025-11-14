@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from 'next/navigation';
 import Spinner from "@/components/common/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
@@ -16,10 +16,13 @@ import { validEmail } from "@/lib/utils";
 interface LoginPageProps {
   onOpenSignup?: () => void;
   onOpenForgotPassword?: () => void;
+  onLoginSuccess?: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword, onLoginSuccess }) => {
   const router = useRouter();
+  const session = useSession();
+  const update = session?.update;
   // Removed unused variable
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,20 +85,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       const result = await signIn(provider.credentials, {
         email,
         password,
-        redirect: true,
-        callbackUrl: HOME
+        redirect: false,
+        callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
       });
 
       if (result?.error) {
         setMessage(loginFailed);
         setMessageType(responseStatus.error);
+        setIsLoading(false);
       } else if (result?.ok) {
-        router.push(HOME);
+        // Success - refresh session and close modal
+        if (update) {
+          await update(); // Force session refresh
+        }
+        onLoginSuccess?.(); // Close modal
+        router.refresh(); // Refresh router to get updated session
+        // Small delay to ensure session is updated before navigation
+        setTimeout(() => {
+          router.push(HOME);
+        }, 100);
       }
     } catch (error) {
       setMessage((error as { message?: string })?.message || unexpectedError);
       setMessageType(responseStatus.error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -105,14 +117,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       setMessage('');
       removeAllCookies();
       setIsLoading(true);
-      await signIn(provider.google, {
-        redirect: true,
-        callbackUrl: HOME
+      
+      const result = await signIn(provider.google, {
+        redirect: false,
+        callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
       });
-    } catch {
+
+      // If result.url exists, redirect to OAuth provider (Google)
+      if (result?.url) {
+        window.location.href = result.url;
+        return; // Don't set loading to false yet, we're redirecting
+      }
+
+      if (result?.error) {
+        setMessage(googleLoginFailed);
+        setMessageType(responseStatus.error);
+        setIsLoading(false);
+      } else if (result?.ok) {
+        // Success - session will be updated after OAuth callback
+        // The callback will handle the redirect, but we can close modal if it's still open
+        onLoginSuccess?.();
+        router.refresh();
+        // Small delay to ensure session is updated
+        setTimeout(() => {
+          router.push(HOME);
+        }, 100);
+      }
+    } catch (error) {
       setMessage(googleLoginFailed);
       setMessageType(responseStatus.error);
-    } finally {
       setIsLoading(false);
     }
   };

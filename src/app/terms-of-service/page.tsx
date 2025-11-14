@@ -1,5 +1,4 @@
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
 
 const termsOfServiceService = new TermsOfServiceService();

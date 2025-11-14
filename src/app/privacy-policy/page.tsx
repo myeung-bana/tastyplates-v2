@@ -1,5 +1,4 @@
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyService";
 
 const privacyPolicyService = new PrivacyPolicyService();

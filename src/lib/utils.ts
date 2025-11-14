@@ -117,6 +117,106 @@ export const validEmail = (email: string): boolean => {
   return re.test(email);
 };
 
+/**
+ * Validates a username according to standard username policy
+ * Rules:
+ * - 3-20 characters in length
+ * - Only letters (a-z, A-Z), numbers (0-9), underscores (_), and hyphens (-)
+ * - Cannot start or end with underscore or hyphen
+ * - Cannot contain spaces
+ * - Cannot be all numbers
+ * - Cannot contain consecutive special characters (__ or -- or _- or -_)
+ * 
+ * @param username - The username to validate
+ * @returns Object with isValid boolean and error message if invalid
+ */
+export interface UsernameValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+export const validateUsername = (username: string): UsernameValidationResult => {
+  // Trim whitespace
+  const trimmed = username.trim();
+
+  // Check if empty
+  if (!trimmed) {
+    return {
+      isValid: false,
+      error: "usernameRequired"
+    };
+  }
+
+  // Check length (3-20 characters)
+  if (trimmed.length < 3) {
+    return {
+      isValid: false,
+      error: "usernameTooShort"
+    };
+  }
+
+  if (trimmed.length > 20) {
+    return {
+      isValid: false,
+      error: "usernameTooLong"
+    };
+  }
+
+  // Check for spaces
+  if (/\s/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameNoSpaces"
+    };
+  }
+
+  // Check for allowed characters only (letters, numbers, underscore, hyphen)
+  const allowedPattern = /^[a-zA-Z0-9_-]+$/;
+  if (!allowedPattern.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameInvalidCharacters"
+    };
+  }
+
+  // Cannot start with underscore or hyphen
+  if (/^[_-]/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameCannotStartWithSpecial"
+    };
+  }
+
+  // Cannot end with underscore or hyphen
+  if (/[_-]$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameCannotEndWithSpecial"
+    };
+  }
+
+  // Cannot be all numbers
+  if (/^\d+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameCannotBeAllNumbers"
+    };
+  }
+
+  // Cannot contain consecutive special characters
+  if (/[_-]{2,}/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "usernameNoConsecutiveSpecial"
+    };
+  }
+
+  // All validations passed
+  return {
+    isValid: true
+  };
+};
+
 // Profile ID encoding/decoding utilities
 export const encodeUserId = (userId: string): string => {
   if (typeof window !== 'undefined' && window.btoa) {

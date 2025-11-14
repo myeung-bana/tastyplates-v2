@@ -82,7 +82,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     return (
       <>
         <button
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors font-neusans"
           onClick={() => setShowSignin(true)}
         >
           <FaMapMarkerAlt />
@@ -110,7 +110,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
   if (!initialized) {
     return (
-      <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors" disabled>
+      <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:underline transition-colors font-neusans" disabled>
         <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse" />
         <span className="text-gray-400">Loading…</span>
       </button>

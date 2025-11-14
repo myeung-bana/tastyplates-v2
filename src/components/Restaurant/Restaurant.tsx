@@ -19,6 +19,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { applyLocationFilter, sortByLocationRelevance } from '@/utils/locationUtils';
 import { LOCATION_HIERARCHY } from '@/constants/location';
 import '@/styles/components/suggested-restaurants.scss';
+import Breadcrumb from '@/components/common/Breadcrumb';
 
 export interface Restaurant {
   id: string;
@@ -492,6 +493,16 @@ const RestaurantPage = () => {
     <div className="restaurants">
       <div className="restaurants__container">        
         <div className="restaurants__content">
+          {/* Breadcrumb */}
+          <div className="px-2 mb-4 md:mb-6">
+            <Breadcrumb 
+              items={[
+                { label: "Restaurants" }
+              ]}
+              showHomeIcon={true}
+            />
+          </div>
+          
           <Filter2 
             onFilterChange={handleFilterChange}
             initialCuisines={filters.cuisine || []}

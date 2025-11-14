@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { 
   FiHome, 
-  FiSearch, 
+  FiCompass, 
   FiUser,
   FiPlusSquare
 } from "react-icons/fi";
@@ -87,7 +87,7 @@ const BottomNav: React.FC = () => {
     {
       name: "Explore",
       href: RESTAURANTS,
-      icon: FiSearch,
+      icon: FiCompass,
       activePaths: [RESTAURANTS, "/restaurants/"],
     },
     {

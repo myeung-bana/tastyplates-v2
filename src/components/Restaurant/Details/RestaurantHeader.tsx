@@ -20,13 +20,14 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
   return (
     <div className="restaurant-detail__header">
       <div className="restaurant-detail__info">
-        <div className="flex flex-col md:flex-col">
-          <div className="flex flex-col md:flex-row justify-between px-2">
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-6 md:mt-0">
-              {/* Circular Featured Image - Desktop Only */}
-              {restaurant.featuredImage?.node?.sourceUrl && (
-                <div className="hidden md:block flex-shrink-0">
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden ring-2 ring-gray-200">
+        <div className="flex flex-col">
+          <div className="flex flex-col md:flex-row justify-between px-2 gap-4 md:gap-0">
+            {/* Left Section: Image + Title/Categories */}
+            <div className="flex gap-3 md:gap-4 mt-6 md:mt-0">
+              {/* Circular Featured Image - Both Mobile and Desktop */}
+              {restaurant.featuredImage?.node?.sourceUrl ? (
+                <div className="flex-shrink-0">
+                  <div className="relative w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden ring-2 ring-gray-200">
                     <Image
                       src={restaurant.featuredImage.node.sourceUrl}
                       alt={restaurant.title}
@@ -35,12 +36,18 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                     />
                   </div>
                 </div>
+              ) : (
+                <div className="flex-shrink-0">
+                  <div className="relative w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-400 text-xs md:text-sm">No Image</span>
+                  </div>
+                </div>
               )}
-              <div className="flex-1">
-                <h1 className="restaurant-detail__name leading-7 font-neusans font-normal">
+              <div className="flex-1 min-w-0">
+                <h1 className="restaurant-detail__name leading-7 font-neusans font-normal mb-2">
                   {restaurant.title}
                 </h1>
-                <div className="restaurant-detail__meta">
+                <div className="restaurant-detail__meta mb-2">
                   <div className="restaurant-detail__cuisine">
                     {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
                       <div className="flex items-center gap-2" key={`palate-${index}`}>
@@ -58,7 +65,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 </div>
                 
                 {/* Categories Section */}
-                <div className="mt-3">
+                <div className="mt-2">
                   <div className="flex flex-wrap gap-2">
                     {restaurant.listingCategories?.nodes?.length > 0 ? (
                       restaurant.listingCategories.nodes.map(
@@ -80,7 +87,8 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 </div>
               </div>
             </div>
-            <div className="flex flex-row flex-wrap gap-3 items-center">
+            {/* Right Section: Action Buttons */}
+            <div className="flex flex-row flex-wrap gap-3 items-center md:items-start">
               <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
               <button
                 onClick={onAddReview}

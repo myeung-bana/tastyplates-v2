@@ -134,16 +134,16 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
     session?.user ? [
       { name: "Write a Review", href: LISTING, icon: FiEdit3 },
     ] : [],
-    // Section 2: Explore & Following
+    // Section 2: Explore & Following (Following only for authenticated users)
     [
       { name: "Explore", href: RESTAURANTS, icon: FiSearch },
-      { name: "Following", href: "/following", icon: FiHeart },
+      ...(session?.user ? [{ name: "Following", href: "/following", icon: FiHeart }] : []),
     ],
-    // Section 3: Profile & Settings
-    [
+    // Section 3: Profile & Settings (only for authenticated users)
+    session?.user ? [
       { name: "Profile", href: PROFILE, icon: FiUser },
       { name: "Settings", href: SETTINGS, icon: FiSettings },
-    ],
+    ] : [],
     // Section 4: Content Guidelines
     [
       { name: "Content Guidelines", href: CONTENT_GUIDELINES, icon: FiFileText },
