@@ -171,8 +171,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setWishlistLoading(true);
       try {
         const restaurantService = new RestaurantService();
-        // Public endpoint - token is optional
-        const response = await restaurantService.fetchFavoritingListing(validUserId, session?.accessToken);
+        // Public endpoint - don't pass token as it doesn't require authentication
+        // Passing a token causes the JWT plugin to validate it, which can fail and block the request
+        const response = await restaurantService.fetchFavoritingListing(validUserId);
         
         // The response should contain favorites array with restaurant IDs
         const favoritesData = response as { favorites?: number[] };
@@ -225,7 +226,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     fetchWishlist();
-  }, [validUserId, session?.accessToken]);
+  }, [validUserId]);
 
   // Fetch check-ins data - DELAYED LOADING (Priority 4)
   // Public endpoint - token is optional
@@ -239,8 +240,9 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setCheckinsLoading(true);
       try {
         const restaurantService = new RestaurantService();
-        // Public endpoint - token is optional
-        const response = await restaurantService.fetchCheckInRestaurant(validUserId, session?.accessToken);
+        // Public endpoint - don't pass token as it doesn't require authentication
+        // Passing a token causes the JWT plugin to validate it, which can fail and block the request
+        const response = await restaurantService.fetchCheckInRestaurant(validUserId);
         
         // The response should contain checkins array with restaurant IDs
         const checkinsData = response as { checkins?: number[] };
@@ -293,7 +295,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     fetchCheckins();
-  }, [validUserId, session?.accessToken]);
+  }, [validUserId]);
 
   // Tab configuration with review count callback
   const tabs = [
