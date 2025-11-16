@@ -33,29 +33,75 @@ export default class HttpMethods {
         };
 
         const isWpJson = endpoint && endpoint.startsWith('/wp-json');
-        const fetchUrl = USE_WP_PROXY && isWpJson ? `/api/wp-proxy${endpoint}` : `${API_BASE_URL}${endpoint}`;
+        // On server-side, always use direct API URL (proxy only works client-side)
+        const isServerSide = typeof window === 'undefined';
+        const fetchUrl = USE_WP_PROXY && isWpJson && !isServerSide 
+            ? `/api/wp-proxy${endpoint}` 
+            : `${API_BASE_URL}${endpoint}`;
 
-        const response = await fetch(fetchUrl, {
-            ...options,
-            headers,
-        });
+        // Add timeout to prevent hanging requests (only on client-side)
+        // Only add timeout if no signal is already provided
+        const hasExistingSignal = options.signal !== undefined;
+        const controller = !hasExistingSignal && typeof AbortController !== 'undefined' 
+            ? new AbortController() 
+            : null;
+        const timeoutId = controller ? setTimeout(() => {
+            controller.abort();
+        }, 10000) : null; // 10 second timeout
 
-        // only happens when status error in backend request
+        let response: Response;
+        try {
+            response = await fetch(fetchUrl, {
+                ...options,
+                headers,
+                signal: controller?.signal || options.signal,
+            });
+            
+            if (timeoutId) clearTimeout(timeoutId);
+        } catch (error) {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                // Check if it was our timeout or the existing signal
+                if (controller && controller.signal.aborted) {
+                    throw new Error('Request timeout');
+                }
+            }
+            throw error;
+        }
+
+        // Handle error responses (401, 403) - but don't throw, return the error response
         if (response.status == code.unauthorized || response.status == code.forbidden) {
             const session = await getSession();
             const clonedResponse = response.clone();
-            const jsonData: HttpResponse = await clonedResponse.json();
+            
+            try {
+                const jsonData: HttpResponse = await clonedResponse.json();
 
-            // redirect back when unauthenticated request
-            if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
-                await handleUnauthorized();
+                // redirect back when unauthenticated request (only for JWT auth errors)
+                if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
+                    await handleUnauthorized();
+                }
+                
+                // Return the error response instead of throwing
+                // This allows public endpoints that return 403 to be handled gracefully
+                return jsonData as Record<string, unknown>;
+            } catch (parseError) {
+                // If JSON parsing fails, return a generic error object
+                console.warn('Failed to parse error response as JSON, returning generic error:', parseError);
+                return {
+                    status: response.status,
+                    message: response.statusText || 'Request failed',
+                    code: response.status === code.forbidden ? 'rest_forbidden' : 'rest_unauthorized'
+                } as Record<string, unknown>;
             }
         }
 
+        // Handle successful responses
         try {
             return await response.json() as Record<string, unknown>;
         } catch (error) {
             console.error('Failed to parse JSON response:', error);
+            // For non-error status codes, still throw if JSON parsing fails
             throw new Error('Invalid JSON response');
         }
     }

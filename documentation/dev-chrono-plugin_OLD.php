@@ -10,6 +10,58 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Ensure JWT Authentication for WP-API plugin sets user session early
+ * This hook runs before REST API permission callbacks to ensure JWT tokens are processed
+ */
+add_filter('determine_current_user', function($user_id) {
+    // If user is already set, return it
+    if ($user_id) {
+        return $user_id;
+    }
+    
+    // Check for JWT token in Authorization header
+    $auth_header = '';
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        if (isset($headers['Authorization'])) {
+            $auth_header = $headers['Authorization'];
+        }
+    }
+    
+    // If no Authorization header, let JWT plugin handle it
+    if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+        return $user_id;
+    }
+    
+    // JWT plugin should handle the rest, but we ensure it runs
+    // The JWT Authentication for WP-API plugin will process this token
+    return $user_id;
+}, 20); // Priority 20 to run after JWT plugin (which typically uses priority 10)
+
+/**
+ * Helper permission callback that works with JWT Authentication for WP-API plugin
+ * Checks if user is logged in (which should work if JWT plugin is active and configured)
+ */
+function dev_chrono_check_auth() {
+    // JWT Authentication for WP-API plugin should have already set the user via determine_current_user
+    // So is_user_logged_in() should work if the plugin is properly configured
+    if (is_user_logged_in()) {
+        return true;
+    }
+    
+    // If not logged in, return proper error
+    return new WP_Error(
+        'rest_not_authenticated',
+        'Authentication required. Please provide a valid JWT token.',
+        array('status' => 401)
+    );
+}
+
 // Different functions for enhancing the plugin functionality
 /**
  * Creates a new 'listing' custom post type.
@@ -105,7 +157,13 @@ function create_review_with_images($listing_id, $review_params)
         $uploaded_image_ids = upload_review_images($review_params['review_images_idz']);
 
         if (!empty($uploaded_image_ids)) {
+            // Save to ACF field (if ACF is configured)
+            if (function_exists('update_field')) {
+                update_field('review_images', $uploaded_image_ids, 'comment_' . $comment_id);
+            }
+            // Also save to comment meta as backup during transition
             update_comment_meta($comment_id, 'review_images_idz', $uploaded_image_ids);
+            
             if (!has_post_thumbnail($listing_id)) {
                 set_post_thumbnail($listing_id, $uploaded_image_ids[0]);
             }
@@ -577,97 +635,6 @@ function delete_listing($request)
     return ['success' => true, 'deleted' => $id];
 }
 
-// function enhance_set_featured_images_from_reviews()
-// {
-//     // Start a timer for performance tracking
-//     $start_time = microtime(true);
-//     $total_listings_processed = 0;
-//     $featured_images_set = 0;
-
-//     // Retrieve all 'listing' posts that do NOT already have a featured image
-//     $args_listings = [
-//         'post_type'      => 'listing',
-//         'posts_per_page' => -1,          // Get all listings
-//         'post_status'    => 'any',       // Consider all statuses (publish, draft, etc.)
-//         'meta_query'     => [            // Only get listings that don't have a thumbnail
-//             'relation' => 'OR',
-//             [
-//                 'key'     => '_thumbnail_id',
-//                 'compare' => 'NOT EXISTS',
-//             ],
-//             [
-//                 'key'     => '_thumbnail_id',
-//                 'value'   => '',
-//                 'compare' => '=',
-//             ],
-//         ],
-//         'fields'         => 'ids',       // Only get post IDs for efficiency
-//     ];
-
-//     $listing_ids_without_thumbnail = get_posts($args_listings);
-
-//     if (empty($listing_ids_without_thumbnail)) {
-//         error_log('No listings found without a featured image to process.');
-//         return;
-//     }
-
-//     error_log('Starting featured image migration for ' . count($listing_ids_without_thumbnail) . ' listings.');
-
-//     foreach ($listing_ids_without_thumbnail as $listing_id) {
-//         $total_listings_processed++;
-
-//         // Get approved comments for the current listing, ensuring they have image IDs
-//         $args_comments = [
-//             'post_id'    => $listing_id,
-//             'status'     => 'approve',
-//             'orderby'    => 'comment_date_gmt', // Order by date to potentially pick the oldest/newest image first
-//             'order'      => 'ASC',              // ASC for oldest comment first, DESC for newest
-//             'meta_query' => [
-//                 [
-//                     'key'     => 'review_images_idz',
-//                     'compare' => 'EXISTS',
-//                 ],
-//                 [
-//                     'key'     => 'review_images_idz',
-//                     'value'   => '',
-//                     'compare' => '!=',
-//                 ],
-//             ],
-//             'number'     => 1, // Only need one comment that has an image
-//         ];
-
-//         $comments_with_images = get_comments($args_comments);
-
-//         if (!empty($comments_with_images)) {
-//             $comment = $comments_with_images[0]; // Get the first comment found with images
-//             $image_ids_raw = get_comment_meta($comment->comment_ID, 'review_images_idz', true);
-
-//             // Sanitize and validate the image ID
-//             $image_ids = explode(',', $image_ids_raw);
-//             $first_image_id = intval(trim($image_ids[0]));
-
-//             // Verify that the image ID actually corresponds to a valid attachment in the Media Library
-//             if ($first_image_id > 0 && get_post_type($first_image_id) === 'attachment') {
-//                 if (set_post_thumbnail($listing_id, $first_image_id)) {
-//                     $featured_images_set++;
-//                     error_log("SUCCESS: Set featured image for listing #{$listing_id} from comment #{$comment->comment_ID} (Image ID: {$first_image_id})");
-//                 } else {
-//                     error_log("WARNING: Failed to set featured image for listing #{$listing_id} with image ID #{$first_image_id} from comment #{$comment->comment_ID}.");
-//                 }
-//             } else {
-//                 error_log("NOTICE: First image ID #{$first_image_id} from comment #{$comment->comment_ID} for listing #{$listing_id} is not a valid attachment or is zero.");
-//             }
-//         } else {
-//             error_log("NOTICE: Listing #{$listing_id} has no approved comments with review images.");
-//         }
-//     }
-
-//     $end_time = microtime(true);
-//     $execution_time = round($end_time - $start_time, 2);
-
-//     error_log("Finished featured image migration. Processed {$total_listings_processed} listings. Set {$featured_images_set} featured images in {$execution_time} seconds.");
-// }
-
 function register_category_taxonomy()
 {
     register_taxonomy('listingCategories', ['listing'], [
@@ -1040,10 +1007,173 @@ function get_followers_list(WP_REST_Request $request)
                 'name' => $user->display_name,
                 'palates' => array_values($palatesArr),
                 'image' => $avatar_url,
+                'username' => $user->user_login,
+                'email' => $user->user_email,
             ];
         }
     }
     return $users;
+}
+
+function get_following_reviews(WP_REST_Request $request)
+{
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return new WP_REST_Response(['error' => 'User not authenticated'], 401);
+    }
+    
+    $page = intval($request->get_param('page')) ?: 1;
+    $per_page = intval($request->get_param('per_page')) ?: 10;
+    $offset = ($page - 1) * $per_page;
+    
+    global $wpdb;
+    $table = $wpdb->prefix . 'user_followers';
+    
+    // Get followed user IDs
+    $following_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT user_id FROM $table WHERE follower_id = %d",
+        $user_id
+    ));
+    
+    if (empty($following_ids)) {
+        return new WP_REST_Response(['reviews' => [], 'has_more' => false], 200);
+    }
+    
+    // Get reviews from followed users
+    $placeholders = implode(',', array_fill(0, count($following_ids), '%d'));
+    $query_params = array_merge($following_ids, [$per_page + 1, $offset]);
+    
+    $reviews = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.*, p.post_title as restaurant_name, p.ID as restaurant_id,
+                u.display_name, u.user_login, u.user_email
+         FROM {$wpdb->comments} c 
+         JOIN {$wpdb->posts} p ON c.comment_post_ID = p.ID 
+         JOIN {$wpdb->users} u ON c.user_id = u.ID
+         WHERE c.user_id IN ($placeholders) 
+         AND c.comment_approved = 1 
+         AND c.comment_type = 'listing'
+         ORDER BY c.comment_date DESC 
+         LIMIT %d OFFSET %d",
+        $query_params
+    ));
+    
+    $has_more = count($reviews) > $per_page;
+    if ($has_more) {
+        array_pop($reviews); // Remove the extra record
+    }
+    
+    // Format reviews with metadata
+    $formatted_reviews = [];
+    foreach ($reviews as $review) {
+        $review_stars = get_comment_meta($review->comment_ID, 'review_stars', true);
+        $review_title = get_comment_meta($review->comment_ID, 'review_main_title', true);
+        $review_images = get_comment_meta($review->comment_ID, 'review_images_idz', true);
+        $image_urls = [];
+        if ($review_images) {
+            $images_data = json_decode($review_images, true);
+            if (is_array($images_data)) {
+                foreach ($images_data as $img) {
+                    if (is_array($img) && isset($img['sourceUrl'])) {
+                        // Handle case where image is already an object with sourceUrl
+                        $image_urls[] = $img['sourceUrl'];
+                    } elseif (is_string($img)) {
+                        // Handle case where image is already a URL string
+                        $image_urls[] = $img;
+                    } elseif (is_numeric($img)) {
+                        // Handle case where image is an attachment ID - convert to URL
+                        $attachment_url = wp_get_attachment_url($img);
+                        if ($attachment_url) {
+                            $image_urls[] = $attachment_url;
+                        }
+                    }
+                }
+            } elseif (is_numeric($review_images)) {
+                // Handle case where review_images_idz is a single attachment ID
+                $attachment_url = wp_get_attachment_url($review_images);
+                if ($attachment_url) {
+                    $image_urls[] = $attachment_url;
+                }
+            }
+        }
+        
+        $formatted_reviews[] = [
+            'id' => $review->comment_ID,
+            'content' => $review->comment_content,
+            'date' => $review->comment_date,
+            'stars' => floatval($review_stars),
+            'title' => $review_title,
+            'images' => $image_urls,
+            'restaurant' => [
+                'id' => $review->restaurant_id,
+                'name' => $review->restaurant_name
+            ],
+            'author' => [
+                'id' => $review->user_id,
+                'username' => $review->user_login,
+                'display_name' => $review->display_name,
+                'avatar' => get_avatar_url($review->user_id)
+            ]
+        ];
+    }
+    
+    return new WP_REST_Response([
+        'reviews' => $formatted_reviews,
+        'has_more' => $has_more
+    ], 200);
+}
+
+function get_suggested_users(WP_REST_Request $request)
+{
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return new WP_REST_Response(['error' => 'User not authenticated'], 401);
+    }
+    
+    global $wpdb;
+    $table = $wpdb->prefix . 'user_followers';
+    
+    // Get users already being followed
+    $following_ids = $wpdb->get_col($wpdb->prepare(
+        "SELECT user_id FROM $table WHERE follower_id = %d",
+        $user_id
+    ));
+    
+    $exclude_ids = array_merge($following_ids, [$user_id]);
+    $exclude_placeholders = implode(',', array_fill(0, count($exclude_ids), '%d'));
+    $query_params = array_merge($exclude_ids, [5]); // Limit to 5 suggestions
+    
+    // Get users with most followers (excluding already followed and self)
+    $suggested = $wpdb->get_results($wpdb->prepare(
+        "SELECT u.ID, u.user_login, u.display_name, u.user_email,
+                COUNT(f.follower_id) as follower_count,
+                (SELECT COUNT(*) FROM {$wpdb->comments} c 
+                 WHERE c.user_id = u.ID AND c.comment_approved = 1 
+                 AND c.comment_type = 'listing_draft') as review_count
+         FROM {$wpdb->users} u
+         LEFT JOIN $table f ON u.ID = f.user_id
+         WHERE u.ID NOT IN ($exclude_placeholders)
+         AND u.ID != 1
+         GROUP BY u.ID
+         HAVING review_count > 0
+         ORDER BY follower_count DESC, review_count DESC
+         LIMIT %d",
+        $query_params
+    ));
+    
+    // Format suggested users
+    $formatted_suggestions = [];
+    foreach ($suggested as $user) {
+        $formatted_suggestions[] = [
+            'id' => $user->ID,
+            'username' => $user->user_login,
+            'display_name' => $user->display_name,
+            'avatar' => get_avatar_url($user->ID),
+            'follower_count' => intval($user->follower_count),
+            'review_count' => intval($user->review_count)
+        ];
+    }
+    
+    return new WP_REST_Response(['suggested_users' => $formatted_suggestions], 200);
 }
 
 $posts = get_posts(['post_type' => 'listing', 'numberposts' => -1]);
@@ -1262,19 +1392,36 @@ add_action(
 
         register_graphql_field('Comment', 'reviewImages', [
             'type'        => ['list_of' => 'MediaItem'],
-            'description' => __('Images attached to this comment', 'your-text-domain'),
+            'description' => __('Review images from ACF or fallback to meta', 'your-text-domain'),
             'resolve' => function ($comment, $args, $context) {
-                $image_ids_raw = get_comment_meta($comment->commentId, 'review_images_idz', true);
-
-                if (empty($image_ids_raw)) {
-                    return [];
+                $image_ids = [];
+                
+                // Try ACF field first (new reviews) - only if ACF is active
+                if (function_exists('get_field')) {
+                    $acf_images = get_field('review_images', 'comment_' . $comment->commentId);
+                    
+                    if (!empty($acf_images) && is_array($acf_images)) {
+                        // ACF returns attachment IDs (can be array of IDs or array of objects)
+                        $image_ids = is_array($acf_images[0]) 
+                            ? array_map(function($img) { return isset($img['ID']) ? $img['ID'] : $img; }, $acf_images)
+                            : $acf_images;
+                    }
                 }
-
-                // Handle array or string
-                $image_ids = is_array($image_ids_raw)
-                    ? array_map('intval', $image_ids_raw)
-                    : array_map('intval', explode(',', $image_ids_raw));
-
+                
+                // Fallback to comment meta (existing reviews or if ACF not configured)
+                if (empty($image_ids)) {
+                    $image_ids_raw = get_comment_meta($comment->commentId, 'review_images_idz', true);
+                    
+                    if (empty($image_ids_raw)) {
+                        return [];
+                    }
+                    
+                    $image_ids = is_array($image_ids_raw)
+                        ? array_map('intval', $image_ids_raw)
+                        : array_map('intval', explode(',', $image_ids_raw));
+                }
+                
+                // Convert IDs to MediaItem objects
                 $media_items = array_filter(array_map(function ($id) use ($context) {
                     $post = get_post($id);
                     if ($post instanceof WP_Post && $post->post_type === 'attachment') {
@@ -1282,7 +1429,7 @@ add_action(
                     }
                     return null;
                 }, $image_ids));
-
+                
                 return $media_items;
             }
         ]);
@@ -1332,6 +1479,46 @@ add_action(
                     }
                 }
                 return null;
+            },
+        ]);
+
+        // GraphQL field to expose hashtags as an array of strings
+        register_graphql_field('Comment', 'hashtags', [
+            'type'        => ['list_of' => 'String'],
+            'description' => __('Hashtags extracted from comment content or stored in meta', 'listing-post-type'),
+            'resolve'     => function ($comment) {
+                $cid = $comment->comment_ID ?? $comment->ID ?? $comment->databaseId ?? null;
+                if (! $cid) return [];
+
+                // Prefer stored meta (string of comma-separated hashtags)
+                $stored = get_comment_meta($cid, 'hashtags', true);
+                if (is_string($stored) && strlen($stored) > 0) {
+                    $parts = array_map('trim', explode(',', strtolower($stored)));
+                    $parts = array_filter($parts, fn($p) => $p !== '');
+                    return array_values(array_unique($parts));
+                }
+
+                // Fallback: extract from content
+                $content = '';
+                if (isset($comment->comment_content)) {
+                    $content = $comment->comment_content;
+                } elseif (isset($comment->content)) {
+                    $content = $comment->content;
+                }
+                if (!is_string($content) || $content === '') {
+                    return [];
+                }
+
+                // Match hashtags: letters, numbers, underscore and common CJK ranges
+                preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+                $tags = [];
+                foreach ($matches[0] as $tag) {
+                    $clean = strtolower(trim(ltrim($tag, '#')));
+                    if ($clean !== '' && strlen($clean) <= 100) {
+                        $tags[] = $clean;
+                    }
+                }
+                return array_values(array_unique($tags));
             },
         ]);
 
@@ -1529,7 +1716,9 @@ add_action(
             'resolve' => function ($listing) {
                 $user_id = get_current_user_id();
                 if (!$user_id) return false;
-                $meta_key = 'dwt_listing_fav_listing_id_' . $listing->databaseId;
+                $listing_id = $listing->databaseId ?? $listing->ID ?? null;
+                if (!$listing_id) return false;
+                $meta_key = "dwt_listing_fav_listing_id_" . $listing_id;
                 return get_user_meta($user_id, $meta_key, true) ? true : false;
             }
         ]);
@@ -1982,17 +2171,13 @@ add_action(
         register_rest_route('v1', '/follow', [
             'methods' => 'POST',
             'callback' => 'tastyplates_follow_user_rest',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
         // Unfollow (explicit unfollow)
         register_rest_route('v1', '/unfollow', [
             'methods' => 'POST',
             'callback' => 'tastyplates_unfollow_user_rest',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
         // Add is-following endpoint
         register_rest_route('v1', '/is-following', [
@@ -2026,26 +2211,34 @@ add_action(
                 ));
                 return ['is_following' => !!$exists];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
 
         ### FOLLOWING/FOLLOWERS LIST ENDPOINTS ###
         register_rest_route('v1', '/following-list', array(
             'methods' => 'GET',
             'callback' => 'get_following_list',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ));
 
         register_rest_route('v1', '/followers-list', array(
             'methods' => 'GET',
             'callback' => 'get_followers_list',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
+        ));
+
+        // Following reviews endpoint
+        register_rest_route('v1', '/following-reviews', array(
+            'methods' => 'GET',
+            'callback' => 'get_following_reviews',
+            'permission_callback' => 'dev_chrono_check_auth'
+        ));
+
+        // Suggested users endpoint
+        register_rest_route('v1', '/suggested-users', array(
+            'methods' => 'GET',
+            'callback' => 'get_suggested_users',
+            'permission_callback' => 'dev_chrono_check_auth'
         ));
 
         ### REVIEW META FIELDS FOR COMMENTS ###
@@ -2070,6 +2263,670 @@ add_action(
                 'type'        => 'number',
                 'context'     => ['view', 'edit'],
             ],
+        ]);
+
+        ### COMMENT SUBMISSION ENDPOINT ###
+        register_rest_route('v1', '/review', [
+            'methods' => 'POST',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                $params = $request->get_json_params();
+                $content = sanitize_textarea_field($params['content'] ?? '');
+                $restaurant_id = intval($params['restaurantId'] ?? 0);
+                $parent_id = intval($params['parent'] ?? 0);
+                $author_id = intval($params['authorId'] ?? $user_id);
+
+                if (empty($content)) {
+                    return new WP_Error('rest_invalid_param', 'Content is required', ['status' => 400]);
+                }
+
+                if (!$restaurant_id && !$parent_id) {
+                    return new WP_Error('rest_invalid_param', 'Either restaurantId or parent is required', ['status' => 400]);
+                }
+
+                // Determine the post ID - use restaurant_id for top-level comments, or get from parent
+                $post_id = $restaurant_id;
+                if ($parent_id && !$restaurant_id) {
+                    $parent_comment = get_comment($parent_id);
+                    if ($parent_comment) {
+                        $post_id = $parent_comment->comment_post_ID;
+                    } else {
+                        return new WP_Error('rest_invalid_param', 'Invalid parent comment', ['status' => 400]);
+                    }
+                }
+
+                // Check mode parameter to determine if this is a draft or published review
+                $mode = isset($params['mode']) ? sanitize_text_field($params['mode']) : 'publish';
+                $is_draft = $mode === 'draft';
+
+                // Create comment data
+                $comment_data = [
+                    'comment_post_ID' => $post_id,
+                    'comment_content' => $content,
+                    'comment_type' => $is_draft ? 'listing_draft' : 'listing',
+                    'comment_approved' => $is_draft ? 0 : 1, // Drafts are unapproved, published reviews are auto-approved
+                    'user_id' => $author_id,
+                    'comment_parent' => $parent_id, // 0 for top-level comments
+                ];
+
+                $comment_id = wp_insert_comment($comment_data);
+
+                if (is_wp_error($comment_id)) {
+                    return new WP_Error('rest_comment_failed', $comment_id->get_error_message(), ['status' => 500]);
+                }
+
+                // Auto-extract hashtags from content
+                preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+                $tags = [];
+                foreach ($matches[0] as $tag) {
+                    $clean = strtolower(trim(ltrim($tag, '#')));
+                    if ($clean !== '' && strlen($clean) <= 100) {
+                        $tags[] = $clean;
+                    }
+                }
+                if (!empty($tags)) {
+                    update_comment_meta($comment_id, 'hashtags', implode(',', array_values(array_unique($tags))));
+                }
+
+                // Add review meta data if provided
+                if (isset($params['review_stars'])) {
+                    update_comment_meta($comment_id, 'review_stars', floatval($params['review_stars']));
+                }
+                if (isset($params['review_main_title'])) {
+                    update_comment_meta($comment_id, 'review_main_title', sanitize_text_field($params['review_main_title']));
+                }
+                if (isset($params['recognitions']) && is_array($params['recognitions'])) {
+                    update_comment_meta($comment_id, 'recognitions', $params['recognitions']);
+                }
+                // Handle new ACF field parameter
+                if (isset($params['review_images']) && is_array($params['review_images'])) {
+                    $uploaded_image_ids = upload_review_images($params['review_images']);
+                    
+                    if (!empty($uploaded_image_ids)) {
+                        // Save to ACF field for new reviews (if ACF is configured)
+                        if (function_exists('update_field')) {
+                            update_field('review_images', $uploaded_image_ids, 'comment_' . $comment_id);
+                        }
+                        // Also save to comment meta as backup during transition
+                        update_comment_meta($comment_id, 'review_images_idz', $uploaded_image_ids);
+                    }
+                } 
+                // Fallback: support old parameter name
+                elseif (isset($params['review_images_idz']) && is_array($params['review_images_idz'])) {
+                    $uploaded_image_ids = upload_review_images($params['review_images_idz']);
+                    
+                    if (!empty($uploaded_image_ids)) {
+                        update_comment_meta($comment_id, 'review_images_idz', $uploaded_image_ids);
+                    }
+                }
+
+                return [
+                    'status' => $is_draft ? 201 : 200, // 201 for draft created, 200 for published
+                    'status_text' => $is_draft ? 'draft' : 'approved',
+                    'comment_id' => $comment_id,
+                    'message' => $is_draft ? 'Review saved as draft' : 'Comment submitted successfully'
+                ];
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ]);
+
+        ### REVIEW DRAFTS ENDPOINT ###
+        register_rest_route('wp/v2/api', '/review-drafts', [
+            'methods' => 'GET',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                global $wpdb;
+                
+                // Get all draft reviews for the current user
+                $draft_comments = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->comments} 
+                     WHERE user_id = %d 
+                     AND comment_type = 'listing_draft'
+                     AND comment_approved = 0
+                     ORDER BY comment_date DESC",
+                    $user_id
+                ));
+
+                $drafts = [];
+                foreach ($draft_comments as $comment) {
+                    // Get review metadata
+                    $review_stars = get_comment_meta($comment->comment_ID, 'review_stars', true);
+                    $review_main_title = get_comment_meta($comment->comment_ID, 'review_main_title', true);
+                    $recognitions = get_comment_meta($comment->comment_ID, 'recognitions', true);
+                    
+                    // Try ACF field first (if ACF is active)
+                    $review_images_idz = [];
+                    if (function_exists('get_field')) {
+                        $acf_images = get_field('review_images', 'comment_' . $comment->comment_ID);
+                        if (!empty($acf_images)) {
+                            $review_images_idz = $acf_images;
+                        }
+                    }
+                    // Fallback to comment meta
+                    if (empty($review_images_idz)) {
+                        $review_images_idz = get_comment_meta($comment->comment_ID, 'review_images_idz', true);
+                    }
+                    
+                    // Get restaurant/post information
+                    $post = get_post($comment->comment_post_ID);
+                    
+                    // Get author information
+                    $user = get_userdata($comment->user_id);
+                    $author_name = $user ? $user->display_name : $comment->comment_author;
+                    
+                    // Use same logic as GraphQL userAvatar field - get from user meta profile_image
+                    $profile_image_id = get_user_meta($comment->user_id, 'profile_image', true);
+                    $author_avatar = null;
+                    if ($profile_image_id) {
+                        $author_avatar = wp_get_attachment_url($profile_image_id);
+                    }
+                    
+                    // Format review images - handle multiple ACF Gallery return formats
+                    $review_images = [];
+                    if (!empty($review_images_idz)) {
+                        // Handle array format
+                        if (is_array($review_images_idz)) {
+                            foreach ($review_images_idz as $image_data) {
+                                // Case 1: Already formatted object with id and sourceUrl
+                                if (is_array($image_data) && isset($image_data['sourceUrl'])) {
+                                    $review_images[] = $image_data;
+                                }
+                                // Case 2: ACF returns image object/array with ID and url
+                                else if (is_array($image_data) && isset($image_data['ID'])) {
+                                    $image_url = isset($image_data['url']) ? $image_data['url'] : wp_get_attachment_image_url($image_data['ID'], 'full');
+                                    if ($image_url) {
+                                        $review_images[] = [
+                                            'id' => $image_data['ID'],
+                                            'sourceUrl' => $image_url,
+                                        ];
+                                    }
+                                }
+                                // Case 3: Simple ID (number or numeric string)
+                                else if (is_numeric($image_data)) {
+                                    $image_id = intval($image_data);
+                                    $image_url = wp_get_attachment_image_url($image_id, 'full');
+                                    if ($image_url) {
+                                        $review_images[] = [
+                                            'id' => $image_id,
+                                            'sourceUrl' => $image_url,
+                                        ];
+                                    }
+                                }
+                                // Case 4: Direct URL string (fallback)
+                                else if (is_string($image_data) && filter_var($image_data, FILTER_VALIDATE_URL)) {
+                                    $review_images[] = [
+                                        'id' => 0,
+                                        'sourceUrl' => $image_data,
+                                    ];
+                                }
+                            }
+                        }
+                        // Handle single value (edge case)
+                        else if (is_numeric($review_images_idz)) {
+                            $image_url = wp_get_attachment_image_url(intval($review_images_idz), 'full');
+                            if ($image_url) {
+                                $review_images[] = [
+                                    'id' => intval($review_images_idz),
+                                    'sourceUrl' => $image_url,
+                                ];
+                            }
+                        }
+                    }
+
+                    $drafts[] = [
+                        'id' => $comment->comment_ID,
+                        'post' => $comment->comment_post_ID,
+                        'author' => $comment->user_id,
+                        'author_name' => $author_name,
+                        'author_avatar' => $author_avatar,
+                        'content' => [
+                            'rendered' => wp_kses_post($comment->comment_content),
+                            'raw' => $comment->comment_content,
+                        ],
+                        'date' => $comment->comment_date,
+                        'link' => get_permalink($comment->comment_post_ID),
+                        'status' => $post ? $post->post_status : 'publish',
+                        'type' => $comment->comment_type,
+                        'review_main_title' => $review_main_title ?: '',
+                        'review_stars' => $review_stars ?: '0',
+                        'recognitions' => $recognitions ? (is_array($recognitions) ? $recognitions : []) : [],
+                        'review_images' => $review_images,
+                    ];
+                }
+
+                return $drafts;
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ]);
+
+        ### GET SINGLE REVIEW DRAFT ENDPOINT ###
+        register_rest_route('wp/v2/api', '/review-drafts/(?P<id>\d+)', [
+            'methods' => 'GET',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                $comment_id = intval($request['id']);
+                if (!$comment_id) {
+                    return new WP_Error('rest_invalid_param', 'Missing comment ID', ['status' => 400]);
+                }
+
+                // Get the comment
+                $comment = get_comment($comment_id);
+                if (!$comment) {
+                    return new WP_Error('rest_not_found', 'Comment not found', ['status' => 404]);
+                }
+
+                // Verify ownership
+                if ($comment->user_id != $user_id) {
+                    return new WP_Error('rest_forbidden', 'You can only access your own drafts', ['status' => 403]);
+                }
+
+                // Verify it's a draft
+                if ($comment->comment_type !== 'listing_draft') {
+                    return new WP_Error('rest_invalid_param', 'Can only access draft reviews', ['status' => 400]);
+                }
+
+                // Get review metadata
+                $review_stars = get_comment_meta($comment->comment_ID, 'review_stars', true);
+                $review_main_title = get_comment_meta($comment->comment_ID, 'review_main_title', true);
+                $recognitions = get_comment_meta($comment->comment_ID, 'recognitions', true);
+                
+                // Try ACF field first (if ACF is active)
+                $review_images_idz = [];
+                if (function_exists('get_field')) {
+                    $acf_images = get_field('review_images', 'comment_' . $comment->comment_ID);
+                    if (!empty($acf_images)) {
+                        $review_images_idz = $acf_images;
+                    }
+                }
+                // Fallback to comment meta
+                if (empty($review_images_idz)) {
+                    $review_images_idz = get_comment_meta($comment->comment_ID, 'review_images_idz', true);
+                }
+                
+                $hashtags = get_comment_meta($comment->comment_ID, 'hashtags', true);
+                
+                // Get restaurant/post information
+                $post = get_post($comment->comment_post_ID);
+                
+                // Get author information
+                $user = get_userdata($comment->user_id);
+                $author_name = $user ? $user->display_name : $comment->comment_author;
+                
+                // Use same logic as GraphQL userAvatar field - get from user meta profile_image
+                $profile_image_id = get_user_meta($comment->user_id, 'profile_image', true);
+                $author_avatar = null;
+                if ($profile_image_id) {
+                    $author_avatar = wp_get_attachment_url($profile_image_id);
+                }
+                
+                // Format review images with URLs - handle multiple ACF Gallery return formats
+                $review_images = [];
+                if (!empty($review_images_idz)) {
+                    // Handle array format
+                    if (is_array($review_images_idz)) {
+                        foreach ($review_images_idz as $image_data) {
+                            // Case 1: Already formatted object with id and sourceUrl
+                            if (is_array($image_data) && isset($image_data['sourceUrl'])) {
+                                $review_images[] = $image_data;
+                            }
+                            // Case 2: ACF returns image object/array with ID and url
+                            else if (is_array($image_data) && isset($image_data['ID'])) {
+                                $image_url = isset($image_data['url']) ? $image_data['url'] : wp_get_attachment_image_url($image_data['ID'], 'full');
+                                if ($image_url) {
+                                    $review_images[] = [
+                                        'id' => $image_data['ID'],
+                                        'sourceUrl' => $image_url,
+                                    ];
+                                }
+                            }
+                            // Case 3: Simple ID (number or numeric string)
+                            else if (is_numeric($image_data)) {
+                                $image_id = intval($image_data);
+                                $image_url = wp_get_attachment_image_url($image_id, 'full');
+                                if ($image_url) {
+                                    $review_images[] = [
+                                        'id' => $image_id,
+                                        'sourceUrl' => $image_url,
+                                    ];
+                                }
+                            }
+                            // Case 4: Direct URL string (fallback)
+                            else if (is_string($image_data) && filter_var($image_data, FILTER_VALIDATE_URL)) {
+                                $review_images[] = [
+                                    'id' => 0,
+                                    'sourceUrl' => $image_data,
+                                ];
+                            }
+                        }
+                    }
+                    // Handle single value (edge case)
+                    else if (is_numeric($review_images_idz)) {
+                        $image_url = wp_get_attachment_image_url(intval($review_images_idz), 'full');
+                        if ($image_url) {
+                            $review_images[] = [
+                                'id' => intval($review_images_idz),
+                                'sourceUrl' => $image_url,
+                            ];
+                        }
+                    }
+                }
+
+                return [
+                    'id' => $comment->comment_ID,
+                    'post' => $comment->comment_post_ID,
+                    'restaurantId' => $comment->comment_post_ID, // Alias for compatibility
+                    'author' => $comment->user_id,
+                    'author_name' => $author_name,
+                    'author_avatar' => $author_avatar,
+                    'content' => [
+                        'rendered' => wp_kses_post($comment->comment_content),
+                        'raw' => $comment->comment_content,
+                    ],
+                    'date' => $comment->comment_date,
+                    'link' => get_permalink($comment->comment_post_ID),
+                    'status' => $post ? $post->post_status : 'publish',
+                    'type' => $comment->comment_type,
+                    'review_main_title' => $review_main_title ?: '',
+                    'review_stars' => $review_stars ?: '0',
+                    'recognitions' => $recognitions ? (is_array($recognitions) ? $recognitions : []) : [],
+                    'review_images' => $review_images,
+                    'review_images_idz' => $review_images_idz ? (is_array($review_images_idz) ? $review_images_idz : []) : [],
+                    'hashtags' => $hashtags ?: '',
+                ];
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            },
+            'args' => [
+                'id' => [
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function ($param) {
+                        return is_numeric($param);
+                    }
+                ]
+            ]
+        ]);
+
+        ### UPDATE REVIEW DRAFT ENDPOINT ###
+        register_rest_route('wp/v2/api', '/review-drafts/(?P<id>\d+)', [
+            'methods' => 'PUT',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                $comment_id = intval($request['id']);
+                if (!$comment_id) {
+                    return new WP_Error('rest_invalid_param', 'Missing comment ID', ['status' => 400]);
+                }
+
+                // Get the comment
+                $comment = get_comment($comment_id);
+                if (!$comment) {
+                    return new WP_Error('rest_not_found', 'Comment not found', ['status' => 404]);
+                }
+
+                // Verify ownership
+                if ($comment->user_id != $user_id) {
+                    return new WP_Error('rest_forbidden', 'You can only update your own drafts', ['status' => 403]);
+                }
+
+                // Verify it's a draft
+                if ($comment->comment_type !== 'listing_draft') {
+                    return new WP_Error('rest_invalid_param', 'Can only update draft reviews', ['status' => 400]);
+                }
+
+                $params = $request->get_json_params();
+
+                // Update comment content if provided
+                $update_data = [];
+                if (isset($params['content'])) {
+                    $update_data['comment_content'] = sanitize_textarea_field($params['content']);
+                }
+                
+                if (!empty($update_data)) {
+                    $update_data['comment_ID'] = $comment_id;
+                    wp_update_comment($update_data);
+                }
+
+                // Update review metadata if provided
+                if (isset($params['review_stars'])) {
+                    update_comment_meta($comment_id, 'review_stars', floatval($params['review_stars']));
+                }
+                if (isset($params['review_main_title'])) {
+                    update_comment_meta($comment_id, 'review_main_title', sanitize_text_field($params['review_main_title']));
+                }
+                if (isset($params['recognitions']) && is_array($params['recognitions'])) {
+                    update_comment_meta($comment_id, 'recognitions', $params['recognitions']);
+                }
+
+                // Handle review images update
+                if (isset($params['review_images']) && is_array($params['review_images'])) {
+                    $uploaded_image_ids = upload_review_images($params['review_images']);
+                    
+                    if (!empty($uploaded_image_ids)) {
+                        // Save to ACF field (if ACF is configured)
+                        if (function_exists('update_field')) {
+                            update_field('review_images', $uploaded_image_ids, 'comment_' . $comment_id);
+                        }
+                        // Also save to comment meta as backup during transition
+                        update_comment_meta($comment_id, 'review_images_idz', $uploaded_image_ids);
+                    } else {
+                        // Clear both ACF field and meta
+                        if (function_exists('delete_field')) {
+                            delete_field('review_images', 'comment_' . $comment_id);
+                        }
+                        delete_comment_meta($comment_id, 'review_images_idz');
+                    }
+                } elseif (isset($params['review_images_idz']) && is_array($params['review_images_idz'])) {
+                    // Fallback for old parameter
+                    $uploaded_image_ids = upload_review_images($params['review_images_idz']);
+                    
+                    if (!empty($uploaded_image_ids)) {
+                        update_comment_meta($comment_id, 'review_images_idz', $uploaded_image_ids);
+                    } else {
+                        // If empty array, clear the meta
+                        delete_comment_meta($comment_id, 'review_images_idz');
+                    }
+                }
+
+                // Auto-extract hashtags from content
+                $content_for_tags = isset($params['content']) ? $params['content'] : $comment->comment_content;
+                preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content_for_tags, $matches);
+                $tags = [];
+                foreach ($matches[0] as $tag) {
+                    $clean = strtolower(trim(ltrim($tag, '#')));
+                    if ($clean !== '' && strlen($clean) <= 100) {
+                        $tags[] = $clean;
+                    }
+                }
+                if (!empty($tags)) {
+                    update_comment_meta($comment_id, 'hashtags', implode(',', array_values(array_unique($tags))));
+                }
+
+                // If mode is 'publish', convert draft to published review
+                if (isset($params['mode']) && $params['mode'] === 'publish') {
+                    wp_update_comment([
+                        'comment_ID' => $comment_id,
+                        'comment_type' => 'listing',
+                        'comment_approved' => 1,
+                    ]);
+                }
+
+                // Return updated review data (same format as GET)
+                $updated_comment = get_comment($comment_id);
+                $review_stars = get_comment_meta($comment_id, 'review_stars', true);
+                $review_main_title = get_comment_meta($comment_id, 'review_main_title', true);
+                $recognitions = get_comment_meta($comment_id, 'recognitions', true);
+                $review_images_idz = get_comment_meta($comment_id, 'review_images_idz', true);
+                $hashtags = get_comment_meta($comment_id, 'hashtags', true);
+                $post = get_post($updated_comment->comment_post_ID);
+                $user = get_userdata($updated_comment->user_id);
+                $author_name = $user ? $user->display_name : $updated_comment->comment_author;
+                
+                // Format review images - handle multiple ACF Gallery return formats
+                $review_images = [];
+                if (!empty($review_images_idz)) {
+                    // Handle array format
+                    if (is_array($review_images_idz)) {
+                        foreach ($review_images_idz as $image_data) {
+                            // Case 1: Already formatted object with id and sourceUrl
+                            if (is_array($image_data) && isset($image_data['sourceUrl'])) {
+                                $review_images[] = $image_data;
+                            }
+                            // Case 2: ACF returns image object/array with ID and url
+                            else if (is_array($image_data) && isset($image_data['ID'])) {
+                                $image_url = isset($image_data['url']) ? $image_data['url'] : wp_get_attachment_image_url($image_data['ID'], 'full');
+                                if ($image_url) {
+                                    $review_images[] = [
+                                        'id' => $image_data['ID'],
+                                        'sourceUrl' => $image_url,
+                                    ];
+                                }
+                            }
+                            // Case 3: Simple ID (number or numeric string)
+                            else if (is_numeric($image_data)) {
+                                $image_id = intval($image_data);
+                                $image_url = wp_get_attachment_image_url($image_id, 'full');
+                                if ($image_url) {
+                                    $review_images[] = [
+                                        'id' => $image_id,
+                                        'sourceUrl' => $image_url,
+                                    ];
+                                }
+                            }
+                            // Case 4: Direct URL string (fallback)
+                            else if (is_string($image_data) && filter_var($image_data, FILTER_VALIDATE_URL)) {
+                                $review_images[] = [
+                                    'id' => 0,
+                                    'sourceUrl' => $image_data,
+                                ];
+                            }
+                        }
+                    }
+                    // Handle single value (edge case)
+                    else if (is_numeric($review_images_idz)) {
+                        $image_url = wp_get_attachment_image_url(intval($review_images_idz), 'full');
+                        if ($image_url) {
+                            $review_images[] = [
+                                'id' => intval($review_images_idz),
+                                'sourceUrl' => $image_url,
+                            ];
+                        }
+                    }
+                }
+
+                return [
+                    'status' => 200,
+                    'message' => isset($params['mode']) && $params['mode'] === 'publish' ? 'Review published successfully' : 'Draft updated successfully',
+                    'data' => [
+                        'id' => $updated_comment->comment_ID,
+                        'post' => $updated_comment->comment_post_ID,
+                        'restaurantId' => $updated_comment->comment_post_ID,
+                        'author' => $updated_comment->user_id,
+                        'author_name' => $author_name,
+                        'content' => [
+                            'rendered' => wp_kses_post($updated_comment->comment_content),
+                            'raw' => $updated_comment->comment_content,
+                        ],
+                        'date' => $updated_comment->comment_date,
+                        'link' => get_permalink($updated_comment->comment_post_ID),
+                        'status' => $post ? $post->post_status : 'publish',
+                        'type' => $updated_comment->comment_type,
+                        'review_main_title' => $review_main_title ?: '',
+                        'review_stars' => $review_stars ?: '0',
+                        'recognitions' => $recognitions ? (is_array($recognitions) ? $recognitions : []) : [],
+                        'review_images' => $review_images,
+                        'review_images_idz' => $review_images_idz ? (is_array($review_images_idz) ? $review_images_idz : []) : [],
+                        'hashtags' => $hashtags ?: '',
+                    ]
+                ];
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            },
+            'args' => [
+                'id' => [
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function ($param) {
+                        return is_numeric($param);
+                    }
+                ]
+            ]
+        ]);
+
+        ### DELETE REVIEW DRAFT ENDPOINT ###
+        register_rest_route('wp/v2/api', '/review-drafts/(?P<id>\d+)', [
+            'methods' => 'DELETE',
+            'callback' => function ($request) {
+                $user_id = get_current_user_id();
+                if (!$user_id) {
+                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                }
+
+                $comment_id = intval($request['id']);
+                if (!$comment_id) {
+                    return new WP_Error('rest_invalid_param', 'Missing comment ID', ['status' => 400]);
+                }
+
+                // Verify the comment belongs to the current user
+                $comment = get_comment($comment_id);
+                if (!$comment) {
+                    return new WP_Error('rest_not_found', 'Comment not found', ['status' => 404]);
+                }
+
+                if ($comment->user_id != $user_id) {
+                    return new WP_Error('rest_forbidden', 'You can only delete your own drafts', ['status' => 403]);
+                }
+
+                // Verify it's a draft
+                if ($comment->comment_type !== 'listing_draft') {
+                    return new WP_Error('rest_invalid_param', 'Can only delete draft reviews', ['status' => 400]);
+                }
+
+                // Delete the comment
+                $result = wp_delete_comment($comment_id, true); // true = force delete (bypass trash)
+
+                if ($result) {
+                    return [
+                        'success' => true,
+                        'message' => 'Draft deleted successfully'
+                    ];
+                } else {
+                    return new WP_Error('rest_delete_failed', 'Failed to delete draft', ['status' => 500]);
+                }
+            },
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            },
+            'args' => [
+                'id' => [
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function ($param) {
+                        return is_numeric($param);
+                    }
+                ]
+            ]
         ]);
 
         ### COMMENT LIKE/UNLIKE ENDPOINT ###
@@ -2287,6 +3144,49 @@ add_action('pre_get_comments', function ($query) {
     unset($query->query_vars['include_unapproved']);
 });
 
+// Automatically extract and store hashtags when comments are created or updated
+add_action('comment_post', function ($comment_ID) {
+    $comment = get_comment($comment_ID);
+    if (!$comment) return;
+    if ($comment->comment_type !== 'listing' && $comment->comment_type !== 'listing_draft') return;
+
+    $content = is_string($comment->comment_content) ? $comment->comment_content : '';
+    if ($content === '') return;
+
+    preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+    $tags = [];
+    foreach ($matches[0] as $tag) {
+        $clean = strtolower(trim(ltrim($tag, '#')));
+        if ($clean !== '' && strlen($clean) <= 100) {
+            $tags[] = $clean;
+        }
+    }
+    if (!empty($tags)) {
+        update_comment_meta($comment_ID, 'hashtags', implode(',', array_values(array_unique($tags))));
+    }
+});
+
+add_action('edit_comment', function ($comment_ID) {
+    $comment = get_comment($comment_ID);
+    if (!$comment) return;
+    if ($comment->comment_type !== 'listing' && $comment->comment_type !== 'listing_draft') return;
+
+    $content = is_string($comment->comment_content) ? $comment->comment_content : '';
+    if ($content === '') return;
+
+    preg_match_all('/#[\w\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]+/u', $content, $matches);
+    $tags = [];
+    foreach ($matches[0] as $tag) {
+        $clean = strtolower(trim(ltrim($tag, '#')));
+        if ($clean !== '' && strlen($clean) <= 100) {
+            $tags[] = $clean;
+        }
+    }
+    if (!empty($tags)) {
+        update_comment_meta($comment_ID, 'hashtags', implode(',', array_values(array_unique($tags))));
+    }
+});
+
 add_action('init', function () {
     $labels = [
         'name'          => __('Listings'),
@@ -2401,6 +3301,19 @@ add_action('init', function () {
             return current_user_can('edit_posts');
         },
     ]);
+
+        // Register comment meta for hashtags (stored as comma-separated string for efficient LIKE queries)
+        register_meta('comment', 'hashtags', [
+            'type' => 'string',
+            'single' => true,
+            'show_in_rest' => true,
+            'show_in_graphql' => true,
+            'graphql_single_name' => 'CommentHashtags',
+            'description' => __('Hashtags for the comment (comma-separated)', 'listing-post-type'),
+            'auth_callback' => function () {
+                return current_user_can('edit_posts');
+            },
+        ]);
 
     // Register comment meta for comment likes
     register_meta('comment', '_comment_likes', [
@@ -2596,6 +3509,41 @@ add_filter('graphql_comment_query_args', function ($query_args, $source, $args, 
     // Force only approved comments
     $query_args['status'] = 'approve';
 
+    return $query_args;
+}, 10, 5);
+
+// Allow filtering comments by hashtag and parent via GraphQL where args
+add_filter('graphql_input_fields', function ($fields, $type_name) {
+    if ($type_name === 'RootQueryToCommentConnectionWhereArgs') {
+        $fields['hashtag'] = [
+            'type' => 'String',
+            'description' => __('Filter comments by hashtag (without #)', 'listing-post-type'),
+        ];
+        $fields['parent'] = [
+            'type' => 'Int',
+            'description' => __('Filter comments by parent comment ID (0 for top-level comments)', 'listing-post-type'),
+        ];
+    }
+    return $fields;
+}, 10, 2);
+
+add_filter('graphql_comment_query_args', function ($query_args, $source, $args, $context, $info) {
+    if (!empty($args['where']['hashtag'])) {
+        global $wpdb;
+        $tag = sanitize_text_field(strtolower($args['where']['hashtag']));
+        // Use a meta query to match the comma-separated string
+        $query_args['meta_query'][] = [
+            'key'     => 'hashtags',
+            'value'   => $tag,
+            'compare' => 'LIKE',
+        ];
+    }
+    
+    if (isset($args['where']['parent'])) {
+        $parent_id = intval($args['where']['parent']);
+        $query_args['parent'] = $parent_id;
+    }
+    
     return $query_args;
 }, 10, 5);
 

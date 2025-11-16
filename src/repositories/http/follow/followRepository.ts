@@ -66,48 +66,152 @@ export class FollowRepository {
     }
   }
 
-  async getFollowingList(userId: number, token: string): Promise<FollowListResponse> {
-    const headers: HeadersInit = {
-      Authorization: `Bearer ${token}`,
-    };
+  async getFollowingList(userId: number, token?: string): Promise<FollowListResponse> {
+    // Validate and ensure userId is a valid number
+    const numericUserId = Number(userId);
+    if (isNaN(numericUserId) || numericUserId <= 0) {
+      console.error('Repository getFollowingList: Invalid userId', { 
+        originalUserId: userId, 
+        type: typeof userId,
+        numericUserId 
+      });
+      return [];
+    }
+
+    // Public endpoint - only send Authorization header if token is provided
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     try {
-      const response = await request.GET(`/wp-json/v1/following-list?user_id=${userId}`, {
+      const url = `/wp-json/v1/following-list?user_id=${numericUserId}`;
+      console.log('Repository getFollowingList: Calling endpoint', { 
+        url, 
+        userId: numericUserId, 
+        userIdType: typeof numericUserId 
+      });
+      
+      const response = await request.GET(url, {
         headers: headers,
       });
       
-      // Ensure response is an array - handle cases where API returns null, undefined, or non-array
-      if (!Array.isArray(response)) {
-        console.warn('Repository getFollowingList: API returned non-array response', { response, userId });
+      // Check if response indicates an error (status code >= 400)
+      // WordPress REST API errors can have status in response.status or response.data.status
+      const errorStatus = (response as any)?.status || (response as any)?.data?.status;
+      if (response && typeof response === 'object' && errorStatus && errorStatus >= 400) {
+        console.warn('Repository getFollowingList: API returned error response', { 
+          status: errorStatus, 
+          message: (response as any).message || (response as any).data?.message,
+          code: (response as any).code,
+          userId 
+        });
         return [];
       }
       
-      return response as unknown as FollowListResponse;
+      // Handle empty array - this is valid (user has no following)
+      if (Array.isArray(response)) {
+        // Empty array is a valid response - user simply has no following
+        return response as unknown as FollowListResponse;
+      }
+      
+      // Handle null or undefined - treat as empty list (user has no following)
+      if (response === null || response === undefined) {
+        return [];
+      }
+      
+      // Handle non-array responses (unexpected format)
+      console.warn('Repository getFollowingList: API returned non-array response', { 
+        responseType: typeof response,
+        responseKeys: typeof response === 'object' ? Object.keys(response) : null,
+        userId 
+      });
+      return [];
     } catch (error) {
-      console.error('Repository getFollowingList error:', error);
+      // Safely log error without causing issues with circular references
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Repository getFollowingList error:', {
+        message: errorMessage,
+        stack: errorStack,
+        userId,
+      });
+      // Return empty array on error - user will see no following list
       return [];
     }
   }
 
-  async getFollowersList(userId: number, token: string): Promise<FollowListResponse> {
-    const headers: HeadersInit = {
-      Authorization: `Bearer ${token}`,
-    };
+  async getFollowersList(userId: number, token?: string): Promise<FollowListResponse> {
+    // Validate and ensure userId is a valid number
+    const numericUserId = Number(userId);
+    if (isNaN(numericUserId) || numericUserId <= 0) {
+      console.error('Repository getFollowersList: Invalid userId', { 
+        originalUserId: userId, 
+        type: typeof userId,
+        numericUserId 
+      });
+      return [];
+    }
+
+    // Public endpoint - only send Authorization header if token is provided
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
     try {
-      const response = await request.GET(`/wp-json/v1/followers-list?user_id=${userId}`, {
+      const url = `/wp-json/v1/followers-list?user_id=${numericUserId}`;
+      console.log('Repository getFollowersList: Calling endpoint', { 
+        url, 
+        userId: numericUserId, 
+        userIdType: typeof numericUserId 
+      });
+      
+      const response = await request.GET(url, {
         headers: headers,
       });
       
-      // Ensure response is an array - handle cases where API returns null, undefined, or non-array
-      if (!Array.isArray(response)) {
-        console.warn('Repository getFollowersList: API returned non-array response', { response, userId });
+      // Check if response indicates an error (status code >= 400)
+      // WordPress REST API errors can have status in response.status or response.data.status
+      const errorStatus = (response as any)?.status || (response as any)?.data?.status;
+      if (response && typeof response === 'object' && errorStatus && errorStatus >= 400) {
+        console.warn('Repository getFollowersList: API returned error response', { 
+          status: errorStatus, 
+          message: (response as any).message || (response as any).data?.message,
+          code: (response as any).code,
+          userId 
+        });
         return [];
       }
       
-      return response as unknown as FollowListResponse;
+      // Handle empty array - this is valid (user has no followers)
+      if (Array.isArray(response)) {
+        // Empty array is a valid response - user simply has no followers
+        return response as unknown as FollowListResponse;
+      }
+      
+      // Handle null or undefined - treat as empty list (user has no followers)
+      if (response === null || response === undefined) {
+        return [];
+      }
+      
+      // Handle non-array responses (unexpected format)
+      console.warn('Repository getFollowersList: API returned non-array response', { 
+        responseType: typeof response,
+        responseKeys: typeof response === 'object' ? Object.keys(response) : null,
+        userId 
+      });
+      return [];
     } catch (error) {
-      console.error('Repository getFollowersList error:', error);
+      // Safely log error without causing issues with circular references
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Repository getFollowersList error:', {
+        message: errorMessage,
+        stack: errorStack,
+        userId,
+      });
+      // Return empty array on error - user will see no followers list
       return [];
     }
   }

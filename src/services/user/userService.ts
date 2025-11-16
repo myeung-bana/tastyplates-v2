@@ -33,12 +33,23 @@ export class UserService {
             const res = await userRepo.login({
                 email: credentials.email,
                 password: credentials.password as string
-            });
+            }) as any; // Type assertion needed since error responses don't match IJWTResponse
+
+            // Check if response indicates an error (status code >= 400)
+            if (res.status && res.status >= 400) {
+                throw new Error(res.message || 'Invalid credentials');
+            }
+
+            // Check if token is missing (indicates error response)
+            if (!res.token) {
+                throw new Error(res.message || 'Invalid credentials');
+            }
 
             return res;
         } catch (error) {
             console.error('Login error:', error);
-            throw new Error('Invalid credentials');
+            // Preserve the original error message if it's an Error instance
+            throw error instanceof Error ? error : new Error('Invalid credentials');
         }
     }
 

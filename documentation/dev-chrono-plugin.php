@@ -10,6 +10,269 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load JWT library if available (from JWT Authentication for WP-API plugin)
+// The JWT Auth plugin should autoload the JWT library, but we check here as a fallback
+if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+    // Try to load autoloader from JWT Auth plugin if available
+    $autoloader_path = ABSPATH . 'wp-content/plugins/jwt-auth/vendor/autoload.php';
+    if (file_exists($autoloader_path)) {
+        require_once $autoloader_path;
+    } elseif (file_exists(ABSPATH . 'wp-content/plugins/jwt-auth/vendor/firebase/php-jwt/src/JWT.php')) {
+        // Fallback: try to load JWT.php directly (may not work if dependencies are missing)
+        require_once ABSPATH . 'wp-content/plugins/jwt-auth/vendor/firebase/php-jwt/src/JWT.php';
+    }
+}
+
+/**
+ * Ensure JWT Authentication for WP-API plugin sets user session early
+ * This hook runs before REST API permission callbacks to ensure JWT tokens are processed
+ */
+add_filter('determine_current_user', function($user_id) {
+    // If user is already set, return it
+    if ($user_id) {
+        return $user_id;
+    }
+    
+    // Check for JWT token in Authorization header
+    $auth_header = '';
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        if (isset($headers['Authorization'])) {
+            $auth_header = $headers['Authorization'];
+        }
+    }
+    
+    // If no Authorization header, let JWT plugin handle it
+    if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+        return $user_id;
+    }
+    
+    // JWT plugin should handle the rest, but we ensure it runs
+    // The JWT Authentication for WP-API plugin will process this token
+    return $user_id;
+}, 20); // Priority 20 to run after JWT plugin (which typically uses priority 10)
+
+/**
+ * Validates JWT token and returns user ID if valid.
+ * 
+ * @param string|null $token Optional JWT token string. If not provided, reads from Authorization header.
+ * @return int|false User ID if token is valid, false otherwise.
+ */
+function dev_chrono_validate_jwt_token($token = null) {
+    // If token not provided, try to get from Authorization header
+    if ($token === null) {
+        // Check various header formats
+        $auth_header = '';
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        } elseif (function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            if (isset($headers['Authorization'])) {
+                $auth_header = $headers['Authorization'];
+            } elseif (isset($headers['authorization'])) {
+                $auth_header = $headers['authorization'];
+            }
+        }
+        
+        if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('dev_chrono_validate_jwt_token: No Authorization header found');
+            }
+            return false;
+        }
+        
+        $token = trim($matches[1]);
+    }
+    
+    if (empty($token)) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('dev_chrono_validate_jwt_token: Empty token provided');
+        }
+        return false;
+    }
+    
+    try {
+        // Check if JWT class is available (from JWT Authentication for WP-API plugin or Composer)
+        if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+            // Try to load autoloader first (preferred method)
+            $autoloader_path = ABSPATH . 'wp-content/plugins/jwt-auth/vendor/autoload.php';
+            if (file_exists($autoloader_path)) {
+                require_once $autoloader_path;
+            }
+            
+            // If still not available, try loading JWT.php directly (fallback)
+            if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+                $jwt_path = ABSPATH . 'wp-content/plugins/jwt-auth/vendor/firebase/php-jwt/src/JWT.php';
+                if (file_exists($jwt_path)) {
+                    require_once $jwt_path;
+                }
+            }
+            
+            // Verify class is now available
+            if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('dev_chrono_validate_jwt_token: JWT library not found. Please ensure JWT Authentication for WP-API plugin is installed.');
+                }
+                return false;
+            }
+        }
+        
+        // Get secret key from wp-config.php
+        $secret_key = defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : '';
+        if (empty($secret_key)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('dev_chrono_validate_jwt_token: JWT_AUTH_SECRET_KEY not defined in wp-config.php');
+            }
+            return false;
+        }
+        
+        // Decode JWT token using fully qualified class name
+        // Note: JWT::decode may throw exceptions for invalid tokens, expired tokens, etc.
+        $decoded = \Tmeister\Firebase\JWT\JWT::decode($token, $secret_key, array('HS256'));
+        
+        // Extract user ID from token payload - JWT Auth plugin standard structure
+        // Token structure from tastyplates-user-rest-api-plugin.php: data.user.ID (uppercase)
+        if (isset($decoded->data->user->ID)) {
+            $user_id = intval($decoded->data->user->ID);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('dev_chrono_validate_jwt_token: Valid token for user ID ' . $user_id);
+            }
+            return $user_id;
+        }
+        if (isset($decoded->data->user->id)) {
+            $user_id = intval($decoded->data->user->id);
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('dev_chrono_validate_jwt_token: Valid token for user ID ' . $user_id);
+            }
+            return $user_id;
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('dev_chrono_validate_jwt_token: Token decoded but user ID not found in payload');
+        }
+        return false;
+    } catch (Exception $e) {
+        // Handle various JWT errors (expired, invalid signature, malformed token, etc.)
+        $error_message = $e->getMessage();
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            if (strpos($error_message, 'expired') !== false || strpos($error_message, 'ExpiredException') !== false) {
+                error_log('dev_chrono_validate_jwt_token: Token expired - ' . $error_message);
+            } elseif (strpos($error_message, 'signature') !== false || strpos($error_message, 'SignatureInvalidException') !== false) {
+                error_log('dev_chrono_validate_jwt_token: Invalid token signature - ' . $error_message);
+            } else {
+                error_log('dev_chrono_validate_jwt_token: JWT validation error - ' . $error_message);
+            }
+        }
+        return false;
+    }
+}
+
+/**
+ * Permission callback for public profile endpoints.
+ * Allows public access but validates user_id parameter if provided.
+ * These endpoints (following-list, followers-list, favorites, checkins) are public profile data.
+ * 
+ * @param WP_REST_Request $request Request object.
+ * @return bool Always returns true (public access).
+ */
+function dev_chrono_public_profile_auth($request = null) {
+    // Always allow public access - these are public profile endpoints
+    // The callback function will validate user_id parameter
+    return true;
+}
+
+/**
+ * Helper permission callback that validates JWT tokens or falls back to WordPress session.
+ * Used by follow, wishlist, and check-ins endpoints that require authentication.
+ * 
+ * @param WP_REST_Request $request Request object.
+ * @return bool True if authenticated, false otherwise.
+ */
+function dev_chrono_check_auth($request = null) {
+    // Get token from request or headers
+    $token = null;
+    
+    // First, try to get token from request object (WordPress REST API)
+    if ($request instanceof WP_REST_Request) {
+        // Try to get from request header (WordPress may normalize to lowercase)
+        $auth_header = $request->get_header('authorization');
+        if (empty($auth_header)) {
+            $auth_header = $request->get_header('Authorization');
+        }
+        
+        if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+            $token = trim($matches[1]);
+        }
+    }
+    
+    // If token not found in request, try $_SERVER as fallback
+    // This handles cases where headers aren't passed through the request object
+    if (empty($token)) {
+        $auth_header = '';
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        } elseif (function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            if (isset($headers['Authorization'])) {
+                $auth_header = $headers['Authorization'];
+            } elseif (isset($headers['authorization'])) {
+                $auth_header = $headers['authorization'];
+            }
+        }
+        
+        if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+            $token = trim($matches[1]);
+        }
+    }
+    
+    // Check JWT token first if we have one
+    if (!empty($token)) {
+        $user_id = dev_chrono_validate_jwt_token($token);
+        if ($user_id && $user_id > 0) {
+            // Verify user exists before setting session
+            $user = get_userdata($user_id);
+            if ($user) {
+                // Valid JWT token - set user session for WordPress compatibility
+                wp_set_current_user($user_id);
+                return true;
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('dev_chrono_check_auth: User ID ' . $user_id . ' from token does not exist');
+                }
+            }
+        }
+        // Token was provided but invalid - log for debugging (only if WP_DEBUG is enabled)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('dev_chrono_check_auth: JWT token validation failed');
+        }
+    } else {
+        // No token found - log for debugging (only if WP_DEBUG is enabled)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('dev_chrono_check_auth: No JWT token found in request headers');
+        }
+    }
+    
+    // Fallback to WordPress session (for non-JWT authentication)
+    if (is_user_logged_in()) {
+        return true;
+    }
+    
+    // Not authenticated - return false (WordPress will return 403)
+    // Note: Returning false instead of WP_Error to ensure consistent behavior
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('dev_chrono_check_auth: Authentication failed - no valid token or session');
+    }
+    return false;
+}
+
 // Different functions for enhancing the plugin functionality
 /**
  * Creates a new 'listing' custom post type.
@@ -877,13 +1140,24 @@ function tastyplates_unfollow_user_rest($request)
 
 function get_following_list(WP_REST_Request $request)
 {
-    // Allow ?user_id= param to fetch following for any user
+    // Require user_id parameter (public endpoint - no authentication needed)
     $user_id = intval($request->get_param('user_id'));
+    
     if (!$user_id) {
-        $user_id = get_current_user_id();
+        return new WP_Error(
+            'missing_user_id',
+            'user_id parameter is required',
+            ['status' => 400]
+        );
     }
-    if (!$user_id || !get_userdata($user_id)) {
-        return new WP_Error('invalid_user', 'User not found', ['status' => 400]);
+    
+    // Verify user exists
+    if (!get_userdata($user_id)) {
+        return new WP_Error(
+            'invalid_user',
+            'User not found',
+            ['status' => 404]
+        );
     }
     global $wpdb;
     $table = $wpdb->prefix . 'user_followers';
@@ -921,13 +1195,24 @@ function get_following_list(WP_REST_Request $request)
 
 function get_followers_list(WP_REST_Request $request)
 {
-    // Allow ?user_id= param to fetch followers for any user
+    // Require user_id parameter (public endpoint - no authentication needed)
     $user_id = intval($request->get_param('user_id'));
+    
     if (!$user_id) {
-        $user_id = get_current_user_id();
+        return new WP_Error(
+            'missing_user_id',
+            'user_id parameter is required',
+            ['status' => 400]
+        );
     }
-    if (!$user_id || !get_userdata($user_id)) {
-        return new WP_Error('invalid_user', 'User not found', ['status' => 400]);
+    
+    // Verify user exists
+    if (!get_userdata($user_id)) {
+        return new WP_Error(
+            'invalid_user',
+            'User not found',
+            ['status' => 404]
+        );
     }
     global $wpdb;
     $table = $wpdb->prefix . 'user_followers';
@@ -1833,14 +2118,28 @@ add_action(
             ],
         ]);
 
-        // List all favorite restaurant IDs for the current user
+        // List all favorite restaurant IDs for a user (public endpoint)
         register_rest_route('restaurant/v1', '/favorites/', [
             'methods' => 'GET',
             'callback' => function (WP_REST_Request $request) {
-                $requested_user_id = intval($request->get_param('user_id'));
-                $user_id = $requested_user_id ?: get_current_user_id();
+                // Require user_id parameter (public endpoint - no authentication needed)
+                $user_id = intval($request->get_param('user_id'));
+                
                 if (!$user_id) {
-                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                    return new WP_Error(
+                        'missing_user_id',
+                        'user_id parameter is required',
+                        ['status' => 400]
+                    );
+                }
+                
+                // Verify user exists
+                if (!get_userdata($user_id)) {
+                    return new WP_Error(
+                        'invalid_user',
+                        'User not found',
+                        ['status' => 404]
+                    );
                 }
                 global $wpdb;
                 $meta_key_like = $wpdb->esc_like('dwt_listing_fav_listing_id_') . '%';
@@ -1864,9 +2163,17 @@ add_action(
                     'user_id' => $user_id
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_public_profile_auth',
+            'args' => array(
+                'user_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function($param) {
+                        return is_numeric($param) && intval($param) > 0;
+                    },
+                    'sanitize_callback' => 'absint',
+                ),
+            ),
         ]);
 
         // List all users and their favorite restaurants (admin only)
@@ -2119,17 +2426,13 @@ add_action(
         register_rest_route('v1', '/follow', [
             'methods' => 'POST',
             'callback' => 'tastyplates_follow_user_rest',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
         // Unfollow (explicit unfollow)
         register_rest_route('v1', '/unfollow', [
             'methods' => 'POST',
             'callback' => 'tastyplates_unfollow_user_rest',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
         // Add is-following endpoint
         register_rest_route('v1', '/is-following', [
@@ -2163,44 +2466,54 @@ add_action(
                 ));
                 return ['is_following' => !!$exists];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ]);
 
         ### FOLLOWING/FOLLOWERS LIST ENDPOINTS ###
         register_rest_route('v1', '/following-list', array(
             'methods' => 'GET',
             'callback' => 'get_following_list',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_public_profile_auth',
+            'args' => array(
+                'user_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function($param) {
+                        return is_numeric($param) && intval($param) > 0;
+                    },
+                    'sanitize_callback' => 'absint',
+                ),
+            ),
         ));
 
         register_rest_route('v1', '/followers-list', array(
             'methods' => 'GET',
             'callback' => 'get_followers_list',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_public_profile_auth',
+            'args' => array(
+                'user_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function($param) {
+                        return is_numeric($param) && intval($param) > 0;
+                    },
+                    'sanitize_callback' => 'absint',
+                ),
+            ),
         ));
 
         // Following reviews endpoint
         register_rest_route('v1', '/following-reviews', array(
             'methods' => 'GET',
             'callback' => 'get_following_reviews',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ));
 
         // Suggested users endpoint
         register_rest_route('v1', '/suggested-users', array(
             'methods' => 'GET',
             'callback' => 'get_suggested_users',
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth'
         ));
 
         ### REVIEW META FIELDS FOR COMMENTS ###
@@ -2972,14 +3285,28 @@ add_action(
             ],
         ]);
 
-        // List all checked-in restaurant IDs for the current user
+        // List all checked-in restaurant IDs for a user (public endpoint)
         register_rest_route('restaurant/v1', '/checkins/', [
             'methods' => 'GET',
             'callback' => function (WP_REST_Request $request) {
-                $requested_user_id = intval($request->get_param('user_id'));
-                $user_id = $requested_user_id ?: get_current_user_id();
+                // Require user_id parameter (public endpoint - no authentication needed)
+                $user_id = intval($request->get_param('user_id'));
+                
                 if (!$user_id) {
-                    return new WP_Error('rest_forbidden', 'Not logged in', ['status' => 401]);
+                    return new WP_Error(
+                        'missing_user_id',
+                        'user_id parameter is required',
+                        ['status' => 400]
+                    );
+                }
+                
+                // Verify user exists
+                if (!get_userdata($user_id)) {
+                    return new WP_Error(
+                        'invalid_user',
+                        'User not found',
+                        ['status' => 404]
+                    );
                 }
                 global $wpdb;
                 $meta_key_like = $wpdb->esc_like('dwt_listing_checkin_listing_id_') . '%';
@@ -3003,9 +3330,17 @@ add_action(
                     'user_id' => $user_id
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_public_profile_auth',
+            'args' => array(
+                'user_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'validate_callback' => function($param) {
+                        return is_numeric($param) && intval($param) > 0;
+                    },
+                    'sanitize_callback' => 'absint',
+                ),
+            ),
         ]);
     }
 );

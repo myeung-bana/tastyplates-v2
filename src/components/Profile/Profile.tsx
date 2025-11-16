@@ -40,6 +40,21 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   const followService = useRef(new FollowService()).current;
 
+  // Validate targetUserId is a valid number
+  const validUserId = Number(targetUserId);
+  if (isNaN(validUserId) || validUserId <= 0) {
+    console.error('Profile: Invalid targetUserId', { 
+      targetUserId, 
+      type: typeof targetUserId,
+      validUserId 
+    });
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-lg text-gray-600">Invalid user profile ID.</p>
+      </div>
+    );
+  }
+
   // Use our custom hooks
   const {
     userData,
@@ -48,7 +63,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     palatesLoading,
     loading,
     isViewingOwnProfile
-  } = useProfileData(targetUserId);
+  } = useProfileData(validUserId);
 
   const {
     followers,
@@ -57,7 +72,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     followingLoading,
     handleFollow,
     handleUnfollow
-  } = useFollowData(targetUserId);
+  } = useFollowData(validUserId);
 
   // Wishlist handler
   const handleWishlistChange = useCallback((restaurantId: string, isSaved: boolean) => {
@@ -127,13 +142,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   // Check if current user is following the target user
   useEffect(() => {
     const checkFollowingStatus = async () => {
-      if (!session?.accessToken || !targetUserId || isViewingOwnProfile) {
+      if (!session?.accessToken || !validUserId || isViewingOwnProfile) {
         setIsFollowing(false);
         return;
       }
 
       try {
-        const response = await followService.isFollowingUser(targetUserId, session.accessToken);
+        const response = await followService.isFollowingUser(validUserId, session.accessToken);
         setIsFollowing(response.is_following || false);
       } catch (error) {
         console.error("Error checking following status:", error);
@@ -142,12 +157,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     checkFollowingStatus();
-  }, [session?.accessToken, targetUserId, isViewingOwnProfile, followService]);
+  }, [session?.accessToken, validUserId, isViewingOwnProfile, followService]);
 
   // Fetch wishlist data - DELAYED LOADING (Priority 4)
+  // Public endpoint - token is optional
   useEffect(() => {
     const fetchWishlist = async () => {
-      if (!targetUserId || !session?.accessToken) return;
+      if (!validUserId) return;
       
       // Add delay to prioritize other content
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -155,7 +171,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setWishlistLoading(true);
       try {
         const restaurantService = new RestaurantService();
-        const response = await restaurantService.fetchFavoritingListing(targetUserId, session.accessToken);
+        // Public endpoint - token is optional
+        const response = await restaurantService.fetchFavoritingListing(validUserId, session?.accessToken);
         
         // The response should contain favorites array with restaurant IDs
         const favoritesData = response as { favorites?: number[] };
@@ -166,7 +183,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               const restaurantData = await restaurantService.fetchRestaurantById(
                 restaurantId.toString(),
                 'DATABASE_ID',
-                session.accessToken
+                session?.accessToken
               );
               
               // Transform the data to match RestaurantCard interface
@@ -208,12 +225,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     fetchWishlist();
-  }, [targetUserId, session?.accessToken]);
+  }, [validUserId, session?.accessToken]);
 
   // Fetch check-ins data - DELAYED LOADING (Priority 4)
+  // Public endpoint - token is optional
   useEffect(() => {
     const fetchCheckins = async () => {
-      if (!targetUserId || !session?.accessToken) return;
+      if (!validUserId) return;
       
       // Add delay to prioritize other content
       await new Promise(resolve => setTimeout(resolve, 1200));
@@ -221,7 +239,8 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       setCheckinsLoading(true);
       try {
         const restaurantService = new RestaurantService();
-        const response = await restaurantService.fetchCheckInRestaurant(targetUserId, session.accessToken);
+        // Public endpoint - token is optional
+        const response = await restaurantService.fetchCheckInRestaurant(validUserId, session?.accessToken);
         
         // The response should contain checkins array with restaurant IDs
         const checkinsData = response as { checkins?: number[] };
@@ -232,7 +251,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
               const restaurantData = await restaurantService.fetchRestaurantById(
                 restaurantId.toString(),
                 'DATABASE_ID',
-                session.accessToken
+                session?.accessToken
               );
               
               // Transform the data to match RestaurantCard interface
@@ -274,7 +293,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     fetchCheckins();
-  }, [targetUserId, session?.accessToken]);
+  }, [validUserId, session?.accessToken]);
 
   // Tab configuration with review count callback
   const tabs = [
@@ -282,7 +301,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       id: "reviews",
       label: "Reviews",
       content: <ReviewsTab 
-        targetUserId={targetUserId} 
+        targetUserId={validUserId} 
         status={status} 
         onReviewCountChange={setUserReviewCount}
       />
@@ -290,7 +309,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     {
       id: "listings",
       label: "Listings",
-      content: <ListingsTab targetUserId={targetUserId} isViewingOwnProfile={isViewingOwnProfile} />
+      content: <ListingsTab targetUserId={validUserId} isViewingOwnProfile={isViewingOwnProfile} />
     },
     {
       id: "wishlists",
@@ -332,7 +351,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
           session={session}
-          targetUserId={targetUserId}
+          targetUserId={validUserId}
           isFollowing={isFollowing}
           followLoading={followLoading}
         />

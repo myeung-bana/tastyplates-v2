@@ -573,13 +573,13 @@ const Form = () => {
       // Fallback to session data if hook hasn't loaded yet or failed (only once)
       setAboutMe(session?.user?.about_me ?? "");
       setProfilePreview(session?.user?.image ?? DEFAULT_USER_ICON);
-      if (session?.user?.palates) {
-        const palates = session.user.palates
-          .split(/[|,]/)
-          .map((p) => p.trim())
-          .map((p) => capitalizeFirstLetter(p));
-        setSelectedPalates(new Set(palates));
-      }
+    if (session?.user?.palates) {
+      const palates = session.user.palates
+        .split(/[|,]/)
+        .map((p) => p.trim())
+        .map((p) => capitalizeFirstLetter(p));
+      setSelectedPalates(new Set(palates));
+    }
       hasInitialized.current = true; // Mark as initialized even with fallback
     }
   }, [userData, isViewingOwnProfile, isLoadingData, currentUserId]); // Removed session and update from deps

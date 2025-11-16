@@ -239,6 +239,16 @@ export const authOptions: AuthOptions = {
                     }
                     
                     const res = await userService.login({ email, password });
+                    
+                    // Check for error response (status code >= 400)
+                    if ((res as any).status && (res as any).status >= 400) {
+                        await setCookies({
+                            googleErrorType: sessionType.login,
+                            googleError: encodeURIComponent((res as any).message || loginFailed),
+                        });
+                        return null;
+                    }
+                    
                     if (res.token) {
                         await setCookies({ logInMessage: logInSuccessfull });
                         return {
@@ -252,14 +262,16 @@ export const authOptions: AuthOptions = {
 
                     await setCookies({
                         googleErrorType: sessionType.login,
-                        googleError: loginFailed,
+                        googleError: encodeURIComponent(loginFailed),
                     });
                     return null;
                 } catch (error) {
                     console.error("Auth error:", error);
+                    // Extract error message properly
+                    const errorMessage = error instanceof Error ? error.message : String(error);
                     await setCookies({
                         googleErrorType: sessionType.login,
-                        googleError: String(error),
+                        googleError: encodeURIComponent(errorMessage || loginFailed),
                     });
                     return null;
                 }

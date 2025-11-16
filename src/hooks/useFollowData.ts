@@ -25,29 +25,53 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
   const followService = useRef(new FollowService()).current;
 
   const loadFollowData = useCallback(async () => {
-    if (!session?.accessToken || !targetUserId) return;
+    if (!targetUserId) {
+      // Set loading to false immediately if no targetUserId
+      setFollowingLoading(false);
+      setFollowersLoading(false);
+      return;
+    }
     
     setFollowingLoading(true);
     setFollowersLoading(true);
     
     try {
-      // Load both followers and following in parallel for better performance
-      const [followingList, followersList] = await Promise.all([
-        followService.getFollowingList(targetUserId, session.accessToken),
-        followService.getFollowersList(targetUserId, [], session.accessToken) // Pass empty array for initial load
+      // Public endpoints - don't pass token as these endpoints don't require authentication
+      // Passing a token causes the JWT plugin to validate it, which can fail and block the request
+      // Use Promise.allSettled instead of Promise.all to prevent one failure from blocking
+      const [followingResult, followersResult] = await Promise.allSettled([
+        followService.getFollowingList(targetUserId), // No token for public endpoint
+        followService.getFollowersList(targetUserId, []) // No token for public endpoint
       ]);
       
-      setFollowing(followingList);
-      setFollowers(followersList);
+      // Handle following list result
+      if (followingResult.status === 'fulfilled') {
+        setFollowing(followingResult.value);
+      } else {
+        console.warn('Failed to load following list:', followingResult.reason);
+        setFollowing([]);
+      }
+      
+      // Handle followers list result
+      if (followersResult.status === 'fulfilled') {
+        setFollowers(followersResult.value);
+      } else {
+        console.warn('Failed to load followers list:', followersResult.reason);
+        setFollowers([]);
+      }
       
       hasLoadedFollowData.current = true;
     } catch (error) {
       console.error("Error loading follow data:", error);
+      // Ensure we set empty arrays on error
+      setFollowing([]);
+      setFollowers([]);
     } finally {
+      // Always set loading to false, even if there's an error
       setFollowingLoading(false);
       setFollowersLoading(false);
     }
-  }, [session?.accessToken, targetUserId]);
+  }, [targetUserId, followService]);
 
   const refreshFollowData = useCallback(async () => {
     hasLoadedFollowData.current = false;
@@ -85,10 +109,11 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
   }, [session?.accessToken, targetUserId, refreshFollowData]);
 
   // Load follow data when dependencies change
+  // Public endpoints - no need to require session token
   useEffect(() => {
-    if (!session?.accessToken || !targetUserId || hasLoadedFollowData.current) return;
+    if (!targetUserId || hasLoadedFollowData.current) return;
     loadFollowData();
-  }, [session?.accessToken, targetUserId, loadFollowData]);
+  }, [targetUserId, loadFollowData]);
 
   // Reset follow data when targetUserId changes
   useEffect(() => {

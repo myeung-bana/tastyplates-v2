@@ -576,8 +576,26 @@ export class RestaurantRepository implements RestaurantRepo {
     }
 
     async getFavoriteListing(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
+        // Validate and ensure userId is a valid number
+        const numericUserId = Number(userId);
+        if (isNaN(numericUserId) || numericUserId <= 0) {
+            console.error('Repository getFavoriteListing: Invalid userId', { 
+                originalUserId: userId, 
+                type: typeof userId,
+                numericUserId 
+            });
+            return { favorites: [], count: 0, user_id: 0 };
+        }
+
         try {
-            const response = await request.GET(`/wp-json/restaurant/v1/favorites/?user_id=${userId}`, {
+            const url = `/wp-json/restaurant/v1/favorites/?user_id=${numericUserId}`;
+            console.log('Repository getFavoriteListing: Calling endpoint', { 
+                url, 
+                userId: numericUserId, 
+                userIdType: typeof numericUserId 
+            });
+            
+            const response = await request.GET(url, {
                 headers: {
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
                 },
@@ -591,8 +609,26 @@ export class RestaurantRepository implements RestaurantRepo {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
+        // Validate and ensure userId is a valid number
+        const numericUserId = Number(userId);
+        if (isNaN(numericUserId) || numericUserId <= 0) {
+            console.error('Repository getCheckInRestaurant: Invalid userId', { 
+                originalUserId: userId, 
+                type: typeof userId,
+                numericUserId 
+            });
+            return { checkins: [], count: 0, user_id: 0 };
+        }
+
         try {
-            const response = await request.GET(`/wp-json/restaurant/v1/checkins/?user_id=${userId}`, {
+            const url = `/wp-json/restaurant/v1/checkins/?user_id=${numericUserId}`;
+            console.log('Repository getCheckInRestaurant: Calling endpoint', { 
+                url, 
+                userId: numericUserId, 
+                userIdType: typeof numericUserId 
+            });
+            
+            const response = await request.GET(url, {
                 headers: {
                     ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
                 },

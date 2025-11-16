@@ -66,11 +66,8 @@ export class FollowService {
     }
   }
 
-  async getFollowingList(userId: number, token: string): Promise<Array<Record<string, unknown>>> {
-    if (!token) {
-      return [];
-    }
-
+  async getFollowingList(userId: number, token?: string): Promise<Array<Record<string, unknown>>> {
+    // Public endpoint - token is optional
     try {
       const users = await this.repository.getFollowingList(userId, token);
       
@@ -93,11 +90,8 @@ export class FollowService {
     }
   }
 
-  async getFollowersList(userId: number, followingList: Array<Record<string, unknown>>, token: string): Promise<Array<Record<string, unknown>>> {
-    if (!token) {
-      return [];
-    }
-
+  async getFollowersList(userId: number, followingList: Array<Record<string, unknown>>, token?: string): Promise<Array<Record<string, unknown>>> {
+    // Public endpoint - token is optional
     try {
       const users = await this.repository.getFollowersList(userId, token);
       

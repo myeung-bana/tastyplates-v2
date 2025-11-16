@@ -382,34 +382,11 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                             if (password != value) { setConfirmPasswordError(passwordsNotMatch) }
                           }}
                         />
-                        } catch (error) {
+                        {showConfirmPassword ? (
                           <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon" />
                         ) : (
                           <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon" />
                         )}
-      
-                      // If the server callback didn't complete token exchange, attempt client-side exchange
-                      // (fallback) — call WP endpoint with the idToken so plugin can create user/token
-                      if (idToken && !accessToken) {
-                        try {
-                          const result = await userService.googleOAuth(idToken as string);
-                          // If server returned token and id, redirect to onboarding
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          const resAny = result as any;
-                          if (resAny?.token && resAny?.id) {
-                            // set cookies so NextAuth credentials provider can pick it up
-                            Cookies.set('google_oauth_token', resAny.token, { expires: 1 / 24, sameSite: 'lax' });
-                            Cookies.set('google_oauth_user_id', String(resAny.id), { expires: 1 / 24, sameSite: 'lax' });
-                            Cookies.set('google_oauth_email', resAny.user_email || email, { expires: 1 / 24, sameSite: 'lax' });
-                            Cookies.set('google_oauth_pending', 'true', { expires: 1 / 24, sameSite: 'lax' });
-                            // Redirect to onboarding
-                            router.push(ONBOARDING_ONE);
-                            return;
-                          }
-                        } catch (err) {
-                          console.warn('Client-side googleOAuth fallback failed:', err);
-                        }
-                      }
                       </div>
                       {confirmPasswordError && (
                         <div className="text-red-600 text-xs font-neusans">{confirmPasswordError}</div>
