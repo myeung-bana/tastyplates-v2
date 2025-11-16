@@ -8,6 +8,7 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import { getSession, signOut } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
+const USE_WP_PROXY = process.env.NEXT_PUBLIC_USE_WP_PROXY === 'true';
 
 const handleUnauthorized = async () => {
     removeAllCookies();
@@ -31,7 +32,10 @@ export default class HttpMethods {
             ...options.headers,
         };
 
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const isWpJson = endpoint && endpoint.startsWith('/wp-json');
+        const fetchUrl = USE_WP_PROXY && isWpJson ? `/api/wp-proxy${endpoint}` : `${API_BASE_URL}${endpoint}`;
+
+        const response = await fetch(fetchUrl, {
             ...options,
             headers,
         });
