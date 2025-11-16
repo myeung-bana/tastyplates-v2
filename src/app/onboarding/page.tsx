@@ -4,14 +4,17 @@ import Navbar from "@/components/layout/Navbar";
 import OnboardingStepOne from "@/components/onboarding/OnboardingStepOne";
 import OnboardingStepTwo from "@/components/onboarding/OnboardingStepTwo";
 import { useRouter, useSearchParams } from "next/navigation";
-import { HOME } from "@/constants/pages";
+import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import Cookies from "js-cookie";
+import { signIn, useSession } from "next-auth/react";
+import { sessionProvider as provider } from "@/constants/response";
 
 // Component that uses useSearchParams - must be wrapped in Suspense
 const OnboardingContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update } = useSession();
   const [currentStep, setCurrentStep] = useState(1);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -29,15 +32,63 @@ const OnboardingContent = () => {
     }
   }, [searchParams]);
 
-  // Check for registration data
+  // Check for registration data and handle OAuth completion
   useEffect(() => {
     if (!hasMounted) return;
+    
+    // Handle OAuth callback completion (for auto-registered users)
+    const pendingOAuth = Cookies.get('google_oauth_pending');
+    if (pendingOAuth === 'true') {
+      const oauthToken = Cookies.get('google_oauth_token');
+      const oauthUserId = Cookies.get('google_oauth_user_id');
+      const oauthEmail = Cookies.get('google_oauth_email');
+      
+      if (oauthToken && oauthUserId) {
+        // Create NextAuth session
+        signIn(provider.credentials, {
+          email: oauthEmail || '',
+          password: 'oauth_token',
+          redirect: false,
+          callbackUrl: ONBOARDING_ONE
+        }).then((signInResult) => {
+          // Clean up cookies
+          Cookies.remove('google_oauth_token');
+          Cookies.remove('google_oauth_user_id');
+          Cookies.remove('google_oauth_email');
+          Cookies.remove('google_oauth_pending');
+          
+          if (signInResult?.ok && update) {
+            update(); // Refresh session
+          }
+        }).catch((error) => {
+          console.error('OAuth sign-in error:', error);
+          Cookies.remove('google_oauth_token');
+          Cookies.remove('google_oauth_user_id');
+          Cookies.remove('google_oauth_email');
+          Cookies.remove('google_oauth_pending');
+        });
+      }
+    }
+    
+    // Check for onboarding data from auto-registration
+    const onboardingDataCookie = Cookies.get('onboarding_data');
+    if (onboardingDataCookie) {
+      try {
+        const onboardingData = JSON.parse(onboardingDataCookie);
+        localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+        // Clean up cookie
+        Cookies.remove('onboarding_data');
+      } catch (error) {
+        console.error('Error parsing onboarding data:', error);
+      }
+    }
     
     const storedData = localStorage.getItem(REGISTRATION_KEY);
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
     const username = Cookies.get('username');
     
+    // Handle legacy Google auth flow (from cookies)
     if (!storedData && googleAuth === 'true') {
       const registrationData = {
         username: username || "",
@@ -48,10 +99,17 @@ const OnboardingContent = () => {
       localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
     }
 
-    if (!storedData && googleAuth !== 'true') {
+    // Allow OAuth users who have been auto-registered (they have storedData with googleAuth: true)
+    // Only redirect to HOME if there's no registration data and it's not a Google auth flow
+    const parsedData = storedData ? JSON.parse(storedData) : {};
+    const isOAuthUser = parsedData.googleAuth || parsedData.is_google_user;
+    const isPartialRegistration = parsedData.isPartialRegistration;
+    
+    // Allow access if it's a partial registration (user needs to complete profile)
+    if (!storedData && googleAuth !== 'true' && !isOAuthUser && !isPartialRegistration) {
       router.replace(HOME);
     }
-  }, [router, hasMounted]);
+  }, [router, hasMounted, update]);
 
   const handleNext = () => {
     if (currentStep < 2) {

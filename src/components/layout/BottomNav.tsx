@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages";
 import { useAuthModal } from "../auth/AuthModalWrapper";
+import { useProfileData } from "@/hooks/useProfileData";
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -19,6 +20,10 @@ const BottomNav: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { showSignin } = useAuthModal();
+  
+  // Fetch current user profile data for authenticated users
+  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
+  const { userData } = useProfileData(currentUserId);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -145,9 +150,15 @@ const BottomNav: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-700'
               }`}
             >
-              {item.isAvatar && session?.user?.image ? (
+              {item.isAvatar && (userData?.userProfile?.profileImage?.node?.mediaItemUrl || 
+                                 userData?.profile_image || 
+                                 session?.user?.image) ? (
                 <img
-                  src={session.user.image}
+                  src={
+                    (userData?.userProfile?.profileImage?.node?.mediaItemUrl as string) ||
+                    (userData?.profile_image as string) ||
+                    (session?.user?.image as string)
+                  }
                   alt="Profile"
                   className="w-6 h-6 mb-1 rounded-full object-cover"
                 />

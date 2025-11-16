@@ -8,7 +8,7 @@ export default function SessionWrapper({ children }: { children: ReactNode }) {
         <SessionProvider
             basePath="/api/auth"
             refetchInterval={0}
-            refetchOnWindowFocus={false}
+            refetchOnWindowFocus={true} // Enable to refetch after OAuth redirect
         >
             {children}
         </SessionProvider>

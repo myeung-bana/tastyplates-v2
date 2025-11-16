@@ -16,10 +16,11 @@ export class UserRepository implements UserRepo {
     }
 
     async login(credentials: { email: string; password: string }): Promise<IJWTResponse> {
-        return request.POST('/wp-json/jwt-auth/v1/token',
+        // Use unified endpoint - works for both manual login and Google OAuth
+        return request.POST('/wp-json/wp/v2/api/users/unified-token',
             {
                 body: JSON.stringify({
-                    username: credentials.email,
+                    email: credentials.email,
                     password: credentials.password
                 })
             });
@@ -34,10 +35,114 @@ export class UserRepository implements UserRepo {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             message: (response as any)?.message,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            token: (response as any)?.token, // Will be null, token generated separately
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            id: (response as any)?.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_login: (response as any)?.user_login,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_email: (response as any)?.user_email,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            display_name: (response as any)?.display_name
+        };
+    }
+
+    async generateGoogleUserToken(userId: number | string, email?: string): Promise<IJWTResponse> {
+        // Use unified endpoint - no password needed for Google OAuth
+        const body: { user_id?: number | string; email?: string } = {};
+        if (userId) {
+            body.user_id = userId;
+        }
+        if (email) {
+            body.email = email;
+        }
+        // Unified endpoint handles Google OAuth when no password is provided
+        const response = await request.POST('/wp-json/wp/v2/api/users/unified-token',
+            { body: JSON.stringify(body) });
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             token: (response as any)?.token,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            id: (response as any)?.id
+            id: (response as any)?.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_email: (response as any)?.user_email,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_nicename: (response as any)?.user_nicename,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_display_name: (response as any)?.user_display_name
         };
+    }
+
+    async googleOAuth(idToken: string): Promise<IJWTResponse> {
+        // Call WordPress Google OAuth endpoint directly - unified with manual login
+        const response = await request.POST('/wp-json/wp/v2/api/users/google-oauth',
+            {
+                body: JSON.stringify({
+                    id_token: idToken
+                })
+            });
+        return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            token: (response as any)?.token,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            id: (response as any)?.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_email: (response as any)?.user_email,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_nicename: (response as any)?.user_nicename,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            user_display_name: (response as any)?.user_display_name
+        };
+    }
+
+    /**
+     * Check if user exists via Nextend Social Login
+     * Returns WordPress user ID if user exists, null if not found
+     * Reference: https://social-login.nextendweb.com/documentation/for-developers/rest-api/
+     */
+    async nextendSocialLogin(accessToken: string): Promise<{ userId: string | null; error?: string }> {
+        try {
+            // Nextend expects access_token as JSON encoded string in POST body parameter
+            // Format: {"access_token": "...", "expires_in": 3600, "token_type": "Bearer", "id_token": "..."}
+            const tokenData = typeof accessToken === 'string' && accessToken.startsWith('{') 
+                ? accessToken 
+                : JSON.stringify({ access_token: accessToken });
+            
+            // Use fetch directly to handle form-encoded data properly
+            const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
+            const formData = new URLSearchParams();
+            formData.append('access_token', tokenData);
+            
+            const response = await fetch(`${API_BASE_URL}/wp-json/nextend-social-login/v1/google/get_user`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString(),
+            });
+
+            // Nextend returns WordPress user ID as string on success (status 200)
+            // Error responses have status != 200 with error object
+            if (response.status === 200) {
+                const text = await response.text();
+                // Success: Returns user ID as string (e.g., "44" or 44)
+                const userId = text.trim().replace(/^"|"$/g, '');
+                return { userId };
+            }
+            
+            // Error response
+            const errorData = await response.json().catch(() => ({}));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const errorResponse = errorData as any;
+            return { 
+                userId: null, 
+                error: errorResponse?.message || 'User not found with this social account' 
+            };
+        } catch (error: any) {
+            console.error('Nextend Social Login error:', error);
+            // If status is not 200, user doesn't exist
+            return { userId: null, error: error?.message || 'User not found' };
+        }
     }
 
     async checkEmailExists<T>(email: string): Promise<T> {

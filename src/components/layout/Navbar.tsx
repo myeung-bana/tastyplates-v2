@@ -29,6 +29,7 @@ import { MdArrowBackIos } from "react-icons/md";
 import NavbarSearchBar from "../navigation/NavbarSearchBar";
 import LocationButton from "../navigation/LocationButton";
 import MobileMenu from "./MobileMenu";
+import { useProfileData } from "@/hooks/useProfileData";
 
 const navigationItems = [
   { name: "Explore", href: RESTAURANTS },
@@ -39,6 +40,10 @@ export default function Navbar(props: Record<string, unknown>) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Fetch current user profile data for authenticated users
+  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
+  const { userData } = useProfileData(currentUserId);
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
     hasSearchBar?: boolean;
@@ -96,11 +101,18 @@ export default function Navbar(props: Record<string, unknown>) {
       localStorage.removeItem(UPDATE_PASSWORD_KEY);
     }
 
+    // Clean up OAuth callback cookies after successful authentication
+    const oauthFromModal = Cookies.get('oauth_from_modal');
+    if (oauthFromModal === 'true' && session?.user) {
+      Cookies.remove('oauth_from_modal');
+      Cookies.remove('oauth_callback_url');
+    }
+
     window.addEventListener("scroll", changeNavBg);
     return () => {
       window.removeEventListener("scroll", changeNavBg);
     };
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
@@ -190,7 +202,9 @@ export default function Navbar(props: Record<string, unknown>) {
               <div className="navbar__menu justify-start">
                 {navigationItems.map((item) => {
                   // Show all items if authenticated, only Explore if not authenticated
-                  if (!session && item.name !== "Explore") return null;
+                  // Use both status and session.user for more robust check
+                  const isAuthenticated = status === sessionStatus.authenticated && !!session?.user;
+                  if (!isAuthenticated && item.name !== "Explore") return null;
                   
                   return (
                     <Link
@@ -206,15 +220,24 @@ export default function Navbar(props: Record<string, unknown>) {
               </div>
             </div>
             <div className="navbar__auth">
-              {(status !== sessionStatus.authenticated && validatePage) ? <div className="w-9 h-9 rounded-full overflow-hidden">
-                <Image
-                  src={DEFAULT_USER_ICON}
-                  alt={"Profile"}
-                  width={36} // Reduced from 44
-                  height={36} // Reduced from 44
-                  className="w-full h-full object-cover rounded-full"
-                />
-              </div> : (status !== sessionStatus.authenticated) ? (
+              {/* Use more robust authentication check */}
+              {(() => {
+                const isAuthenticated = status === sessionStatus.authenticated && !!session?.user;
+                if (!isAuthenticated && validatePage) {
+                  return (
+                    <div className="w-9 h-9 rounded-full overflow-hidden">
+                      <Image
+                        src={DEFAULT_USER_ICON}
+                        alt={"Profile"}
+                        width={36}
+                        height={36}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    </div>
+                  );
+                }
+                if (!isAuthenticated) {
+                  return (
                 <>
                   {/* Location Button - Left of Log In */}
                   <LocationButton isTransparent={isLandingPage && !navBg} />
@@ -237,8 +260,11 @@ export default function Navbar(props: Record<string, unknown>) {
                   >
                     Sign Up
                   </button>
-                </>
-              ) : (
+                  </>
+                  );
+                }
+                // User is authenticated - show profile menu
+                return (
                 <>
                   {/* Location Button - Left of Review */}
                   <LocationButton isTransparent={isLandingPage && !navBg} />
@@ -275,7 +301,13 @@ export default function Navbar(props: Record<string, unknown>) {
                     trigger={
                       <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
-                          src={session?.user?.image || DEFAULT_USER_ICON}
+                          src={
+                            // Priority: userProfile data > session data > default
+                            (((userData?.userProfile as any)?.profileImage?.node?.mediaItemUrl as string)) ||
+                            (userData?.profile_image as string) ||
+                            (session?.user?.image as string) ||
+                            DEFAULT_USER_ICON
+                          }
                           alt={session?.user?.name || "Profile"}
                           width={36} // Reduced from 44
                           height={36} // Reduced from 44
@@ -303,7 +335,8 @@ export default function Navbar(props: Record<string, unknown>) {
                     }
                   />
                 </>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>

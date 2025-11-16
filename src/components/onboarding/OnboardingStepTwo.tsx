@@ -8,11 +8,12 @@ import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, w
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME, PROFILE } from "@/constants/pages";
-import { IRegisterData } from "@/interfaces/user/user";
+import { IRegisterData, IUserUpdate } from "@/interfaces/user/user";
 import toast from "react-hot-toast";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
+import Cookies from "js-cookie";
 
 const userService = new UserService()
 
@@ -23,6 +24,7 @@ interface OnboardingStepTwoProps {
 
 const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, currentStep }) => {
   const router = useRouter();
+  const { data: session, update } = useSession();
   const [aboutMe, setAboutMe] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +80,63 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
 
     // Get registration data from localStorage
     const registrationData = JSON.parse(localStorage.getItem(REGISTRATION_KEY) || '{}');
+    const isPartialRegistration = registrationData.isPartialRegistration;
+    const userId = registrationData.id || registrationData.user_id;
+    
+    // Check if user is already registered (from quick Google signup)
+    if (isPartialRegistration && userId && session?.accessToken) {
+      // User is already registered - update their profile
+      try {
+        const updateData: Partial<IUserUpdate> = {};
+        
+        // Get data from OnboardingStepOne (stored in registrationData)
+        // Note: Only include fields that are supported by update_user_fields endpoint
+        if (registrationData.birthdate) updateData.birthdate = registrationData.birthdate;
+        // Gender is not supported in update endpoint, will need to be added separately if needed
+        if (registrationData.palates) {
+          const palatesArray = Array.isArray(registrationData.palates) 
+            ? registrationData.palates 
+            : registrationData.palates.split(',');
+          updateData.palates = palatesArray.join('|');
+        }
+        if (profileImage) updateData.profile_image = profileImage;
+        if (aboutMe) updateData.about_me = aboutMe;
+        // Username and email should already be set from registration, but include them for completeness
+        if (registrationData.username) updateData.username = registrationData.username;
+        if (registrationData.email) updateData.email = registrationData.email;
+        // Password is not needed for OAuth users
+        updateData.password = '';
+        // Language field - can be set if needed, but not required
+        updateData.language = registrationData.language || '';
+        
+        // Update user fields
+        const updateResult = await userService.updateUserFields(updateData, session.accessToken);
+        
+        // Clear registration data
+        localStorage.removeItem(REGISTRATION_KEY);
+        setMessage(registrationSuccess);
+        localStorage.setItem(WELCOME_KEY, welcomeProfile);
+        setMessageType(responseStatus.success);
+        
+        // Refresh session to get updated user data
+        if (update) {
+          await update();
+        }
+        
+        setTimeout(() => {
+          router.push(PROFILE);
+        }, 1500);
+        
+        return;
+      } catch (error) {
+        console.error('Error updating user profile:', error);
+        setIsLoading(false);
+        toast.error('Failed to update profile. Please try again.');
+        return;
+      }
+    }
+    
+    // New registration flow (existing code)
     const uniqueSignUpId = registrationData.id || Date.now().toString();
 
     // Combine with final profile data
@@ -90,8 +149,42 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
 
     const email = completeRegistration.email;
     const password = completeRegistration.password;
+    const isOAuthUser = completeRegistration.googleAuth || !!completeRegistration.googleOAuthToken;
+    const googleOAuthToken = completeRegistration.googleOAuthToken;
+    const googleIdToken = completeRegistration.googleIdToken;
+    const oauthRedirectUrl = completeRegistration.oauthRedirectUrl;
 
-    await userService.registerUser(completeRegistration);
+    // Register the user
+    const registrationResult = await userService.registerUser(completeRegistration);
+    
+    // If OAuth user, link the Google account after registration
+    if (isOAuthUser && googleOAuthToken) {
+      try {
+        // After user is created, we need to link the Google account
+        // Nextend Social Login will automatically link if we call get_user again
+        // But we need the user ID first - get it from registration result
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userId = (registrationResult as any)?.id || (registrationResult as any)?.user_id;
+        
+        if (userId) {
+          // Format token for Nextend
+          const nextendTokenData = typeof googleOAuthToken === 'string' && googleOAuthToken.startsWith('{') 
+            ? googleOAuthToken 
+            : JSON.stringify({ 
+                access_token: googleOAuthToken,
+                id_token: googleIdToken || undefined,
+              });
+          
+          // Call Nextend to link the account (this will create the link if user exists)
+          // Note: Nextend might need the user to be logged in, so we'll do this after login
+          // For now, we'll store the token and link it after successful login
+          Cookies.set('pending_oauth_link', nextendTokenData, { expires: 1 / 24 });
+        }
+      } catch (linkError) {
+        console.error('Error preparing OAuth link:', linkError);
+        // Don't fail registration if linking fails - can be done later
+      }
+    }
 
     localStorage.removeItem(REGISTRATION_KEY);
     setMessage(registrationSuccess);
@@ -99,19 +192,76 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
     setMessageType(responseStatus.success);
 
     setTimeout(async () => {
-      const result = await signIn(provider.credentials, {
-        email,
-        password,
-        redirect: true,
-        callbackUrl: PROFILE
-      });
+      // For OAuth users, use unified token endpoint (no password needed)
+      // For manual users, use password-based login
+      if (isOAuthUser) {
+        // Get user ID from registration result
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userId = (registrationResult as any)?.id || (registrationResult as any)?.user_id;
+        
+        if (userId) {
+          try {
+            // Generate JWT token for the newly created OAuth user
+            const tokenResult = await userService.generateGoogleUserToken(userId, email);
+            
+            if (tokenResult.token && tokenResult.id) {
+              // Store token temporarily in cookies to pass to NextAuth
+              Cookies.set('google_oauth_token', tokenResult.token, { expires: 1 / 24 });
+              Cookies.set('google_oauth_user_id', String(tokenResult.id), { expires: 1 / 24 });
+              Cookies.set('google_oauth_email', tokenResult.user_email || email, { expires: 1 / 24 });
 
-      if (result?.ok) {
-        router.push(PROFILE);
-      } else if (result?.error) {
-        setIsLoading(false);
-        toast.error(result?.error ?? errorOccurred);
-        return;
+              // Create NextAuth session
+              const signInResult = await signIn(provider.credentials, {
+                email: tokenResult.user_email || email,
+                password: 'oauth_token',
+                redirect: false,
+                callbackUrl: oauthRedirectUrl || PROFILE,
+              });
+
+              // Clean up cookies
+              Cookies.remove('google_oauth_token');
+              Cookies.remove('google_oauth_user_id');
+              Cookies.remove('google_oauth_email');
+              Cookies.remove('pending_oauth_link');
+              Cookies.remove('google_oauth_access_token');
+              Cookies.remove('google_oauth_id_token');
+              Cookies.remove('google_oauth_redirect');
+
+              if (signInResult?.ok) {
+                router.push(oauthRedirectUrl || PROFILE);
+              } else {
+                setIsLoading(false);
+                toast.error(signInResult?.error ?? errorOccurred);
+              }
+            } else {
+              setIsLoading(false);
+              toast.error('Failed to generate authentication token');
+            }
+          } catch (tokenError) {
+            console.error('Token generation error:', tokenError);
+            setIsLoading(false);
+            toast.error('Failed to complete login. Please try logging in manually.');
+          }
+        } else {
+          setIsLoading(false);
+          toast.error('User ID not found. Please try logging in manually.');
+        }
+      } else {
+        // Manual registration - use password-based login
+        const result = await signIn(provider.credentials, {
+          email,
+          password,
+          redirect: false,
+          callbackUrl: PROFILE
+        });
+
+        if (result?.ok) {
+          router.push(PROFILE);
+        } else if (result?.error) {
+          setIsLoading(false);
+          toast.error(result?.error ?? errorOccurred);
+          return;
+        }
       }
     }, 1500);
   }

@@ -75,6 +75,13 @@ export class FollowRepository {
       const response = await request.GET(`/wp-json/v1/following-list?user_id=${userId}`, {
         headers: headers,
       });
+      
+      // Ensure response is an array - handle cases where API returns null, undefined, or non-array
+      if (!Array.isArray(response)) {
+        console.warn('Repository getFollowingList: API returned non-array response', { response, userId });
+        return [];
+      }
+      
       return response as unknown as FollowListResponse;
     } catch (error) {
       console.error('Repository getFollowingList error:', error);
@@ -91,6 +98,13 @@ export class FollowRepository {
       const response = await request.GET(`/wp-json/v1/followers-list?user_id=${userId}`, {
         headers: headers,
       });
+      
+      // Ensure response is an array - handle cases where API returns null, undefined, or non-array
+      if (!Array.isArray(response)) {
+        console.warn('Repository getFollowersList: API returned non-array response', { response, userId });
+        return [];
+      }
+      
       return response as unknown as FollowListResponse;
     } catch (error) {
       console.error('Repository getFollowersList error:', error);

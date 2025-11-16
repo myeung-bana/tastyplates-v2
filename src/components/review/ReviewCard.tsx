@@ -117,14 +117,14 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
             />
           )}
 
-          <div className="review-card__user-info">
+          <div className="review-card__user-info font-neusans">
             {/* Make username clickable and handle auth logic */}
             {data.author?.node?.databaseId || data.id ? (
               session?.user?.id &&
               String(session.user.id) ===
                 String(data.author?.node?.databaseId || data.id) ? (
                 <Link href={PROFILE}>
-                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer font-neusans">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
@@ -133,27 +133,27 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                   prefetch={false}
                 >
-                  <h3 className="review-card__username line-clamp-1 cursor-pointer">
+                  <h3 className="review-card__username line-clamp-1 cursor-pointer font-neusans">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
               ) : (
                 <h3
-                  className="review-card__username line-clamp-1 cursor-pointer"
+                  className="review-card__username line-clamp-1 cursor-pointer font-neusans"
                   onClick={() => setShowAuthModal('signin')}
                 >
                   {data.author?.name || data.author?.node?.name || "Unknown User"}
                 </h3>
               )
             ) : (
-              <h3 className="review-card__username line-clamp-1">
+              <h3 className="review-card__username line-clamp-1 font-neusans">
                 {data.author?.name || data.author?.node?.name || "Unknown User"}
               </h3>
             )}
           </div>
-          <div className="rate-container ml-auto inline-flex shrink-0">
-            <div className="review-detail-meta">
-              <span className="ratings">
+          <div className="rate-container ml-auto inline-flex shrink-0 font-neusans">
+            <div className="review-detail-meta font-neusans">
+              <span className="ratings font-neusans">
                 <Image
                   src={STAR_FILLED}
                   width={16}
@@ -161,7 +161,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   className="star-icon size-3 md:size-4"
                   alt="star icon"
                 />
-                <span className="rating-counter">{data.reviewStars}</span>
+                <span className="rating-counter font-neusans">{data.reviewStars}</span>
               </span>
             </div>
           </div>

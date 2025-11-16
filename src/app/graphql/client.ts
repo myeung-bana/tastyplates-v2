@@ -17,25 +17,34 @@ const httpLink = createHttpLink({
   uri: graphqlUrl,
 });
 
-const authLink = setContext(async (_, { headers }) => { // Make this an async function
-  // This part needs to be dynamic. You cannot use useSession here.
-  // Instead, you need a way to get the token *at the time of the request*.
-  // One common pattern is to store the token (or a way to retrieve it)
-  // in a global accessible place after login, or get it from a utility function.
+// Cache for session token to avoid fetching on every GraphQL request
+let cachedToken: string | null = null;
+let tokenCacheTime: number = 0;
+const TOKEN_CACHE_TTL = 60000; // Cache for 60 seconds
 
-  let token = null;  
-  // If you are using next-auth and want to fetch the session token
-  // for client-side requests, you often need to get it like this:
-  try {
-    // This is the correct way to get the session token client-side outside of a component
-    // You might need to import getSession or directly access localStorage/sessionStorage
-    // where next-auth stores the token, or pass it from _app.tsx context.
-    const response = await fetch('/api/auth/session'); // Or directly read from where next-auth stores it
-    const sessionData = await response.json();
-    token = sessionData?.accessToken || null;
-  } catch (error) {
-    console.error("Error fetching session token:", error);
-    // Handle error, e.g., redirect to login
+const authLink = setContext(async (_, { headers }) => {
+  let token = null;
+  
+  // Check if we have a cached token that's still valid
+  const now = Date.now();
+  if (cachedToken && (now - tokenCacheTime) < TOKEN_CACHE_TTL) {
+    token = cachedToken;
+  } else {
+    // Fetch fresh token from session
+    try {
+      const response = await fetch('/api/auth/session');
+      const sessionData = await response.json();
+      token = sessionData?.accessToken || null;
+      
+      // Update cache
+      cachedToken = token;
+      tokenCacheTime = now;
+    } catch (error) {
+      console.error("Error fetching session token:", error);
+      // Clear cache on error
+      cachedToken = null;
+      tokenCacheTime = 0;
+    }
   }
 
   return {

@@ -59,6 +59,10 @@ export interface CheckGoogleUserResponse {
     message?: string;
     token?: string;
     id?: number;
+    user_login?: string;
+    user_email?: string;
+    display_name?: string;
+    user_display_name?: string;
 }
 
 export interface CurrentUserResponse {

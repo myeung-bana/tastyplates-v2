@@ -73,6 +73,13 @@ export class FollowService {
 
     try {
       const users = await this.repository.getFollowingList(userId, token);
+      
+      // Ensure users is an array - handle cases where API returns null, undefined, or non-array
+      if (!Array.isArray(users)) {
+        console.warn('Get following list: API returned non-array response', { users, userId });
+        return [];
+      }
+      
       return users.map(user => ({
         id: user.id,
         name: user.display_name || user.username,
@@ -93,6 +100,13 @@ export class FollowService {
 
     try {
       const users = await this.repository.getFollowersList(userId, token);
+      
+      // Ensure users is an array - handle cases where API returns null, undefined, or non-array
+      if (!Array.isArray(users)) {
+        console.warn('Get followers list: API returned non-array response', { users, userId });
+        return [];
+      }
+      
       return users.map(user => ({
         id: user.id,
         name: user.display_name || user.username,

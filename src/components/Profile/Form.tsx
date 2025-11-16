@@ -39,6 +39,7 @@ import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import PhotoCropModal from "../common/PhotoCropModal";
+import { useProfileData } from "@/hooks/useProfileData";
 
 const userService = new UserService()
 
@@ -333,17 +334,24 @@ const Form = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [aboutMe, setAboutMe] = useState(session?.user?.about_me ?? "");
+  const [aboutMe, setAboutMe] = useState("");
   const [profile, setProfile] = useState<string | null>(null);
-  const [profilePreview, setProfilePreview] = useState(
-    session?.user?.image ?? DEFAULT_USER_ICON
-  );
+  const [profilePreview, setProfilePreview] = useState(DEFAULT_USER_ICON);
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState("");
   const [profileError, setProfileError] = useState("");
   const [bioError, setBioError] = useState("");
   const [showCropModal, setShowCropModal] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState("");
+  const hasInitialized = useRef(false); // Track if we've initialized form state to prevent flickering
+
+  // Use the existing useProfileData hook - get current user ID from session
+  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
+  const {
+    userData,
+    loading: isLoadingData,
+    isViewingOwnProfile
+  } = useProfileData(currentUserId);
 
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -385,6 +393,11 @@ const Form = () => {
       setShowCropModal(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const capitalizeFirstLetter = (string: string) => {
+    if (!string) return "";
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
   const submitReview = async (e: FormEvent) => {
@@ -438,15 +451,19 @@ const Form = () => {
         session?.accessToken
       );
 
+      // Update session with response data (response uses profile_image)
       await update({
         ...session,
         user: {
           ...session?.user,
-          image: res.profile_image,
+          image: res.profile_image || res.image || session?.user?.image,
           about_me: aboutMe,
           palates: formattedPalates,
         },
       });
+
+      // Refresh router to update server components with new session data
+      router.refresh();
 
       setIsSubmitted(true);
       setTimeout(() => router.push(PROFILE), 2000);
@@ -456,11 +473,6 @@ const Form = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const capitalizeFirstLetter = (string: string) => {
-    if (!string) return "";
-    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
   const formContent = (
@@ -490,15 +502,104 @@ const Form = () => {
     />
   );
 
+  // Update form state when userData is loaded from useProfileData hook
+  // Only run once when data is first loaded to prevent flickering
   useEffect(() => {
-    if (session?.user?.palates) {
-      const palates = session.user.palates
-        .split(/[|,]/)
-        .map((p) => p.trim())
-        .map((p) => capitalizeFirstLetter(p));
-      setSelectedPalates(new Set(palates));
+    // Prevent re-initialization if we've already set up the form
+    if (hasInitialized.current) {
+      return;
     }
-  }, [session?.user?.palates]);
+
+    if (userData && isViewingOwnProfile && !isLoadingData) {
+      // Extract data from GraphQL structure (userProfile.aboutMe, userProfile.profileImage, etc.)
+      // or use direct properties if already transformed
+      const userProfile = (userData.userProfile as any);
+      const aboutMeValue = (userData.about_me as string) || 
+                          (userProfile?.aboutMe as string) || "";
+      const profileImageValue = (userData.profile_image as string) || 
+                               (userProfile?.profileImage?.node?.mediaItemUrl as string) || 
+                               DEFAULT_USER_ICON;
+      const palatesValue = (userData.palates as string) || 
+                          (userProfile?.palates as string) || "";
+
+      // Update form fields with data from hook
+      setAboutMe(aboutMeValue);
+      setProfilePreview(profileImageValue);
+      
+      // Set palates
+      if (palatesValue) {
+        const palates = palatesValue
+          .split(/[|,]/)
+          .map((p) => p.trim())
+          .map((p) => capitalizeFirstLetter(p));
+        setSelectedPalates(new Set(palates));
+      }
+      
+      // Update session with fresh data if needed (only once, don't retrigger)
+      // Capture current session values to avoid dependency issues
+      const currentSession = session;
+      if (currentSession?.user) {
+        const currentImage = currentSession.user.image || '';
+        const currentAboutMe = currentSession.user.about_me || '';
+        const currentPalates = currentSession.user.palates || '';
+        const currentName = (userData.display_name as string) || (userData.name as string) || currentSession.user.name || '';
+        
+        const needsUpdate = 
+          profileImageValue !== currentImage ||
+          aboutMeValue !== currentAboutMe ||
+          palatesValue !== currentPalates ||
+          currentName !== currentSession.user.name;
+        
+        if (needsUpdate) {
+          // Use setTimeout to avoid triggering useEffect again immediately
+          setTimeout(() => {
+            update({
+              user: {
+                ...currentSession.user,
+                image: profileImageValue,
+                about_me: aboutMeValue,
+                palates: palatesValue,
+                name: currentName,
+              },
+            }).catch(err => {
+              console.error('Error updating session:', err);
+            });
+          }, 0);
+        }
+      }
+      
+      hasInitialized.current = true; // Mark as initialized
+    } else if (!isLoadingData && !userData && session?.user && currentUserId > 0 && !hasInitialized.current) {
+      // Fallback to session data if hook hasn't loaded yet or failed (only once)
+      setAboutMe(session?.user?.about_me ?? "");
+      setProfilePreview(session?.user?.image ?? DEFAULT_USER_ICON);
+      if (session?.user?.palates) {
+        const palates = session.user.palates
+          .split(/[|,]/)
+          .map((p) => p.trim())
+          .map((p) => capitalizeFirstLetter(p));
+        setSelectedPalates(new Set(palates));
+      }
+      hasInitialized.current = true; // Mark as initialized even with fallback
+    }
+  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId]); // Removed session and update from deps
+
+  // Reset initialization flag when user changes
+  useEffect(() => {
+    hasInitialized.current = false;
+  }, [currentUserId]);
+
+  // Show loading state while fetching data
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E36B00] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-neusans">Loading profile data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

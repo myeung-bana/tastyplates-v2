@@ -72,6 +72,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
 
     setBirthdate(parsedData.birthdate || "");
     setGender(parsedData.gender || "");
+    // Pre-fill username from registration data (especially for OAuth users)
     setName(parsedData.username || Cookies.get('username') || "");
     setCustomGender(parsedData.customGender || "");
     setPronoun(parsedData.pronoun || "");

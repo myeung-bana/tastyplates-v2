@@ -44,11 +44,89 @@ export class UserService {
 
     async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
         try {
-            // First check if user exists
+            // First check if user exists and is a Google user
             const checkResponse = await userRepo.checkGoogleUser(email);
+            
+            // If user is verified, generate token using JWT Auth plugin standard
+            if (checkResponse.status === 200 && checkResponse.id) {
+                try {
+                    const tokenResponse = await userRepo.generateGoogleUserToken(checkResponse.id, email);
+                    if (!tokenResponse.token) {
+                        // Token generation failed
+                        return {
+                            status: 500,
+                            message: 'Failed to generate authentication token.',
+                            id: checkResponse.id
+                        };
+                    }
+                    // Ensure id is always set - use tokenResponse.id if available, otherwise checkResponse.id
+                    const userId = tokenResponse.id || checkResponse.id;
+                    if (!userId) {
+                        console.error('handleGoogleAuth: No user ID available', {
+                            tokenResponse,
+                            checkResponse
+                        });
+                        return {
+                            status: 500,
+                            message: 'Failed to retrieve user ID.',
+                            id: undefined
+                        };
+                    }
+                    return {
+                        ...checkResponse,
+                        token: tokenResponse.token,
+                        id: userId, // Ensure id is always set
+                        user_email: tokenResponse.user_email || checkResponse.user_email,
+                        user_display_name: tokenResponse.user_display_name || checkResponse.display_name
+                    };
+                } catch (tokenError) {
+                    console.error('Token generation error:', tokenError);
+                    return {
+                        status: 500,
+                        message: 'Failed to generate authentication token.',
+                        id: checkResponse.id
+                    };
+                }
+            }
+            
             return checkResponse;
         } catch (error) {
             console.error('Google auth error:', error);
+            throw error;
+        }
+    }
+
+    async googleOAuth(idToken: string): Promise<IJWTResponse> {
+        try {
+            // Call WordPress OAuth endpoint directly - unified with manual login
+            return await userRepo.googleOAuth(idToken);
+        } catch (error) {
+            console.error('Google OAuth error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check if user exists via Nextend Social Login
+     * Returns WordPress user ID if found, null if not found
+     */
+    async nextendSocialLogin(accessToken: string): Promise<{ userId: string | null; error?: string }> {
+        try {
+            return await userRepo.nextendSocialLogin(accessToken);
+        } catch (error) {
+            console.error('Nextend Social Login error:', error);
+            return { userId: null, error: 'Failed to check user with Nextend Social Login' };
+        }
+    }
+
+    /**
+     * Generate JWT token for Google OAuth user
+     */
+    async generateGoogleUserToken(userId: number | string, email?: string): Promise<IJWTResponse> {
+        try {
+            return await userRepo.generateGoogleUserToken(userId, email);
+        } catch (error) {
+            console.error('Generate Google user token error:', error);
             throw error;
         }
     }
