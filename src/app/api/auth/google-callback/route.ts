@@ -8,6 +8,9 @@ const userService = new UserService();
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    // Debug: log incoming callback URL and params so we can confirm Google redirected correctly
+    console.log('Google callback invoked:', request.url);
+    console.log('Google callback search params:', Object.fromEntries(searchParams.entries()));
     const code = searchParams.get('code');
     const error = searchParams.get('error');
     
@@ -79,9 +82,10 @@ export async function GET(request: NextRequest) {
         grant_type: 'authorization_code',
       }),
     });
-    
+    console.log('Token exchange status:', tokenResponse.status);
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => ({}));
+      console.log('Token exchange error data:', errorData);
       console.error('Token exchange error:', errorData);
       const response = NextResponse.redirect(new URL(redirectUrl, request.url));
       response.cookies.delete('google_oauth_redirect');
@@ -94,6 +98,7 @@ export async function GET(request: NextRequest) {
     }
     
     const tokenData = await tokenResponse.json();
+    console.log('Token exchange success, tokenData keys:', Object.keys(tokenData));
     const idToken = tokenData.id_token;
     
     if (!idToken) {
@@ -112,6 +117,8 @@ export async function GET(request: NextRequest) {
     let result;
     try {
       result = await userService.googleOAuth(idToken);
+      // Debug: surface result from WP endpoint
+      console.log('userService.googleOAuth result:', result);
     } catch (error) {
       console.error('Google OAuth endpoint error:', error);
       const response = NextResponse.redirect(new URL(redirectUrl, request.url));
@@ -246,6 +253,9 @@ export async function GET(request: NextRequest) {
                 
                 response.cookies.delete('google_oauth_redirect');
                 response.cookies.delete('auth_type');
+
+                // Debugging: set a short-lived cookie to indicate callback reached server and succeeded
+                response.cookies.set('debug_google_callback', JSON.stringify({ step: 'auto-register-success', id: tokenResult.id ? String(tokenResult.id) : null }), { maxAge: 30, sameSite: 'lax' });
                 
                 return response;
               }
@@ -297,6 +307,7 @@ export async function GET(request: NextRequest) {
         const response = NextResponse.redirect(new URL(REGISTER, request.url));
         response.cookies.delete('google_oauth_redirect');
         response.cookies.delete('auth_type');
+                response.cookies.set('debug_google_callback', JSON.stringify({ step: 'fallback-failed' }), { maxAge: 30, sameSite: 'lax' });
         response.cookies.set('googleError', encodeURIComponent('Failed to process Google account information.'), {
           maxAge: 60,
           sameSite: 'lax',
@@ -322,6 +333,7 @@ export async function GET(request: NextRequest) {
         });
         response.cookies.delete('google_oauth_redirect');
         response.cookies.delete('auth_type');
+        response.cookies.set('debug_google_callback', JSON.stringify({ step: 'login-success', id: result.id ? String(result.id) : null }), { maxAge: 30, sameSite: 'lax' });
         
         // The client-side will handle the NextAuth signIn call
         // We'll add a flag to trigger it
