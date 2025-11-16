@@ -113,6 +113,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
         });
       }
     }
+
+    // Fallback: if server set id_token cookie but callback didn't exchange, call WP endpoint from client
+    const idToken = Cookies.get('google_oauth_id_token');
+    if (idToken && pendingOAuth !== 'true') {
+      (async () => {
+        try {
+          const result = await userService.googleOAuth(idToken);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const resAny = result as any;
+          if (resAny?.token && resAny?.id) {
+            Cookies.set('google_oauth_token', resAny.token, { expires: 1 / 24, sameSite: 'lax' });
+            Cookies.set('google_oauth_user_id', String(resAny.id), { expires: 1 / 24, sameSite: 'lax' });
+            Cookies.set('google_oauth_email', resAny.user_email || oauthEmail || '', { expires: 1 / 24, sameSite: 'lax' });
+            Cookies.set('google_oauth_pending', 'true', { expires: 1 / 24, sameSite: 'lax' });
+            // Trigger signIn flow handled above on next render
+            window.location.reload();
+          }
+        } catch (err) {
+          console.warn('Client-side googleOAuth fallback failed (login):', err);
+        } finally {
+          Cookies.remove('google_oauth_id_token');
+        }
+      })();
+    }
   }, [router, handleLoginSuccess]);
 
   const validatePasswords = () => {

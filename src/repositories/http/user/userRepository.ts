@@ -79,7 +79,9 @@ export class UserRepository implements UserRepo {
             {
                 body: JSON.stringify({
                     id_token: idToken
-                })
+                }),
+                // ensure cookies from WP are accepted when using proxy or direct calls
+                credentials: 'include'
             });
         return {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
