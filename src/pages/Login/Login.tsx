@@ -181,32 +181,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     return "";
   };
 
-  // Unified login success handler for both manual and OAuth flows
-  // This ensures consistent behavior regardless of login method
-  const handleLoginSuccess = async () => {
-    try {
-      // Force session refresh to get latest user data
-      if (update) {
-        await update();
-      }
-      
-      // Close modal if callback provided
-      onLoginSuccess?.();
-      
-      // Refresh router to update server components with new session
-      router.refresh();
-      
-      // Small delay to ensure session is updated before navigation
-      setTimeout(() => {
-        router.push(HOME);
-      }, 100);
-    } catch (error) {
-      console.error('Error in login success handler:', error);
-      // Still try to close modal and navigate even if update fails
-      onLoginSuccess?.();
-      router.refresh();
-    }
-  };
+  // ...existing code...
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
