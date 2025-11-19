@@ -14,24 +14,10 @@ import { responseStatusCode as code, sessionType } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
+import { IRegisterData } from "@/interfaces/user/user";
+import { signIn } from "next-auth/react";
 
-// Type definitions for Google Identity Services
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: {
-            client_id: string;
-            callback: (response: { credential: string }) => void;
-          }) => void;
-          prompt: (callback?: (notification: any) => void) => void;
-          renderButton: (element: HTMLElement | null, config: any) => void;
-        };
-      };
-    };
-  }
-}
+// Note: Type definitions for Google Identity Services are in Login.tsx to avoid duplicate declarations
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -65,7 +51,11 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
     const googleError = Cookies.get('googleError');
     if (googleError) {
-      setError(decodeURIComponent(googleError));
+      try {
+        setError(decodeURIComponent(googleError));
+      } catch {
+        setError('An error occurred during authentication.');
+      }
       removeAllCookies();
     }
 
@@ -78,7 +68,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         try {
           // Decode ID token to get email (JWT payload is base64 encoded)
           const parts = idToken.split('.');
-          if (parts.length === 3) {
+          if (parts.length === 3 && parts[1]) {
             const payload = JSON.parse(atob(parts[1]));
             const googleEmail = payload.email;
             const googleName = payload.name;
@@ -205,12 +195,181 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const toggleShowPassword = () => setShowPassword(!showPassword);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
+  /**
+   * Generate a secure random password for OAuth users
+   * This password is auto-generated and never used by the user (they authenticate via Google)
+   */
+  const generateRandomPassword = (): string => {
+    // Generate a secure random password: 24 characters with letters, numbers, and special chars
+    const length = 24;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    const values = new Uint32Array(length);
+    crypto.getRandomValues(values);
+    return Array.from(values, x => charset[x % charset.length]).join('');
+  };
+
+  const handleGoogleRestRegistration = async () => {
+    try {
+      setIsLoading(true);
+
+      // Get ID token and user info from cookies
+      const idToken = Cookies.get('google_oauth_id_token');
+      const googleEmail = Cookies.get('google_oauth_email');
+      const googleName = Cookies.get('google_oauth_name');
+      const googlePicture = Cookies.get('google_oauth_picture');
+
+      if (!idToken || !googleEmail) {
+        setError('Google authentication information not found. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Registering user via REST API using Google OAuth data...');
+
+      // Derive a username from email (backend will enforce uniqueness)
+      let baseUsername = googleEmail.split('@')[0] || 'user';
+      baseUsername = baseUsername.replace(/[^a-zA-Z0-9_]/g, '');
+      if (!baseUsername) {
+        baseUsername = `user${Date.now()}`;
+      }
+
+      // Generate random password for OAuth user (required field, but user never uses it)
+      const oauthPassword = generateRandomPassword();
+
+      // Prepare registration payload for REST API - MINIMAL FORMAT
+      // Essential fields: email, username, password (random for OAuth), is_google_user
+      // Profile fields (profileImage, aboutMe, palates) can be added later via profile update
+      const registrationPayload: Partial<IRegisterData> = {
+        email: googleEmail,
+        username: baseUsername,
+        password: oauthPassword, // Random password for OAuth users (user authenticates via Google)
+        is_google_user: true, // Explicitly mark as Google OAuth user - backend uses this to differentiate
+        // Removed: profileImage, aboutMe, palates, googleToken, googleAuth
+        // These are optional and can be added later via profile update
+      };
+
+      // Create user via REST /wp-json/wp/v2/api/users
+      const registrationResult = await userService.registerUser(registrationPayload);
+      const createdUser: any = registrationResult;
+
+      const userId = createdUser?.id || createdUser?.ID;
+      const username = createdUser?.username || baseUsername;
+      console.log(userId, username);
+
+      if (!userId) {
+        console.error('Google REST registration: user created but ID not found in response', createdUser);
+        setError('User created but ID not found. Please try signing in manually.');
+        setIsLoading(false);
+        // Clean up cookies
+        Cookies.remove('google_oauth_id_token');
+        Cookies.remove('google_oauth_email');
+        Cookies.remove('google_oauth_name');
+        Cookies.remove('google_oauth_picture');
+        Cookies.remove('google_oauth_pending');
+        return;
+      }
+
+      // Generate JWT token for this Google user using existing endpoint
+      const tokenResponse = await userService.generateGoogleUserToken(userId, googleEmail);
+
+      if (!tokenResponse || !tokenResponse.token) {
+        console.error('Google REST registration: token generation failed', tokenResponse);
+        setError('User created but token generation failed. Please try signing in manually.');
+        setIsLoading(false);
+        // Clean up cookies
+        Cookies.remove('google_oauth_id_token');
+        Cookies.remove('google_oauth_email');
+        Cookies.remove('google_oauth_name');
+        Cookies.remove('google_oauth_picture');
+        Cookies.remove('google_oauth_pending');
+        return;
+      }
+
+      console.log('Google REST registration successful:', {
+        userId,
+        hasToken: !!tokenResponse.token,
+      });
+
+      // Store registration data for onboarding - MINIMAL FORMAT
+      // Only essential fields for onboarding continuation
+      // Profile fields (birthdate, gender, palates, profileImage, aboutMe) can be filled during onboarding
+      const onboardingData = {
+        email: googleEmail,
+        username,
+        password: '', // OAuth users don't have passwords
+        googleAuth: true,
+        is_google_user: true,
+        id: userId,
+        isPartialRegistration: true,
+        user_id: userId,
+        // Removed: birthdate, gender, palates, profileImage, aboutMe
+        // These can be filled during onboarding steps
+      };
+
+      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+
+      // Set NextAuth session cookies
+      Cookies.set('google_oauth_token', tokenResponse.token as string, { expires: 1 / 24, sameSite: 'lax' });
+      Cookies.set('google_oauth_user_id', String(userId), { expires: 1 / 24, sameSite: 'lax' });
+      Cookies.set('google_oauth_email', googleEmail, { expires: 1 / 24, sameSite: 'lax' });
+      Cookies.set('google_oauth_pending', 'true', { expires: 1 / 24, sameSite: 'lax' });
+
+      // Clean up OAuth cookies from popup
+      Cookies.remove('google_oauth_id_token');
+      Cookies.remove('google_oauth_name');
+      Cookies.remove('google_oauth_picture');
+
+      // Complete NextAuth session using credentials provider (oauth_token path)
+      await signIn('credentials', {
+        email: googleEmail,
+        password: 'oauth_token',
+        redirect: false,
+      });
+
+      console.log('Registration successful, redirecting to onboarding...');
+      router.push(ONBOARDING_ONE);
+    } catch (error: any) {
+      console.error('Google REST registration error:', error);
+
+      let errorMessage = 'An error occurred during registration.';
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      console.error('Registration error details (REST):', {
+        message: errorMessage,
+        error,
+      });
+
+      setError(errorMessage);
+      setIsLoading(false);
+
+      // Clean up cookies
+      Cookies.remove('google_oauth_id_token');
+      Cookies.remove('google_oauth_email');
+      Cookies.remove('google_oauth_name');
+      Cookies.remove('google_oauth_picture');
+      Cookies.remove('google_oauth_pending');
+    }
+  };
+
   const signUpWithGoogle = async () => {
     try {
       setError("");
       setIsLoading(true);
       localStorage.removeItem(REGISTRATION_KEY);
-      removeAllCookies();
+      
+      // Remove only old OAuth-related cookies (don't use removeAllCookies to preserve session)
+      Cookies.remove('google_oauth_token');
+      Cookies.remove('google_oauth_user_id');
+      Cookies.remove('google_oauth_email');
+      Cookies.remove('google_oauth_pending');
+      Cookies.remove('googleError');
+      Cookies.remove('onboarding_data');
+      Cookies.remove('google_oauth_redirect');
+      Cookies.remove('auth_type');
       
       const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       if (!googleClientId) {
@@ -219,10 +378,12 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         return;
       }
       
-      // Store redirect URL and auth type
+      // Store auth type for callback
       const redirectUri = `${window.location.origin}/api/auth/google-callback`;
-      Cookies.set('google_oauth_redirect', window.location.href, { expires: 1 / 24, sameSite: 'lax' });
+      Cookies.set('google_oauth_redirect', window.location.origin, { expires: 1 / 24, sameSite: 'lax' });
       Cookies.set('auth_type', sessionType.signup, { expires: 1 / 24, sameSite: 'lax' });
+      
+      console.log('🔍 Register: Set auth_type cookie to:', sessionType.signup);
       
       // Build Google OAuth2 authorization URL
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -233,8 +394,60 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         `access_type=offline&` +
         `prompt=consent`;
       
-      // Redirect to Google OAuth
-      window.location.href = authUrl;
+      // Open Google OAuth in popup window
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const popup = window.open(
+        authUrl,
+        'Google Sign Up',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+      
+      if (!popup) {
+        setError('Please allow popups for this site to use Google Sign-Up.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Monitor for authentication completion by polling cookies
+      // This avoids COOP errors from checking popup.closed across different origins
+      let popupCheckCount = 0;
+      const maxChecks = 600; // 5 minutes at 500ms intervals
+      
+      const checkPopup = setInterval(() => {
+        popupCheckCount++;
+        
+        // Check if authentication succeeded by looking for cookies
+        const hasPendingAuth = Cookies.get('google_oauth_pending');
+        const hasError = Cookies.get('googleError');
+        
+        if (hasError) {
+          clearInterval(checkPopup);
+          try {
+            setError(decodeURIComponent(hasError));
+          } catch {
+            setError('An error occurred during authentication.');
+          }
+          Cookies.remove('googleError');
+          setIsLoading(false);
+          // Popup will close itself via callback route HTML
+        } else if (hasPendingAuth === 'signup') {
+          clearInterval(checkPopup);
+          // OAuth completed - register user via REST API
+          console.log('Google OAuth completed, registering user via REST API...');
+          handleGoogleRestRegistration();
+        } else if (popupCheckCount >= maxChecks) {
+          // Timeout after 5 minutes
+          clearInterval(checkPopup);
+          setError('Google sign-up timed out. Please try again.');
+          setIsLoading(false);
+          // Popup will close itself via callback route HTML
+        }
+      }, 500);
+      
     } catch (error) {
       console.error('Google sign-up error:', error);
       setError(unexpectedError);

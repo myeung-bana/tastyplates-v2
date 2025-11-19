@@ -29,19 +29,21 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
 
   // Fetch following user IDs
   const fetchFollowingUserIds = useCallback(async () => {
-    if (!session?.accessToken) return [];
+    if (!session?.user?.userId) return [];
     
     try {
+      // Public endpoint - don't pass token as it doesn't require authentication
+      // Passing a token causes the JWT plugin to validate it, which can fail and block the request
       const followingList = await followService.current.getFollowingList(
-        session.user?.userId || 0, 
-        session.accessToken
+        session.user.userId
+        // No token for public endpoint
       );
       return followingList.map(user => user.id as number);
     } catch (error) {
       console.error('Error fetching following user IDs:', error);
       return [];
     }
-  }, [session?.accessToken, session?.user?.userId]);
+  }, [session?.user?.userId]);
 
   const loadFollowingReviews = useCallback(async (append: boolean = false) => {
     if (!session?.accessToken || followingUserIds.length === 0) {

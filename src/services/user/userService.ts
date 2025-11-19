@@ -10,10 +10,9 @@ const userRepo: UserRepo = new UserRepository()
 
 export class UserService {
     async registerUser(userData: Partial<IRegisterData>): Promise<Record<string, unknown>> {
-        const formattedData = {
+        const formattedData: any = {
             username: userData.username,
             email: userData.email,
-            password: userData.password,
             birthdate: userData.birthdate,
             gender: userData.gender,
             custom_gender: userData.customGender,
@@ -21,9 +20,14 @@ export class UserService {
             palates: userData.palates,
             profile_image: userData.profileImage,
             about_me: userData.aboutMe,
-            is_google_user: !!userData.googleAuth,
+            is_google_user: !!userData.googleAuth || !!userData.is_google_user,
             google_token: userData.googleToken || null
         };
+
+        // Include password if provided (OAuth users send random generated password)
+        if (userData.password !== undefined && userData.password !== null && userData.password !== '') {
+            formattedData.password = userData.password;
+        }
 
         return await userRepo.registerUser<Record<string, unknown>>(formattedData);
     }

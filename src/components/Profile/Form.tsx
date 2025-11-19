@@ -96,7 +96,7 @@ const FormContent = memo(({
   <>
     {isSubmitted && (
       <>
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-[60]" />
+        <div className="fixed inset-0 bg-white z-[60]" />
         <div className="fixed inset-0 flex items-center justify-center z-[70]">
           <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
             <button
@@ -132,7 +132,7 @@ const FormContent = memo(({
     )}
     
     {/* Modern Instagram-inspired Profile Edit Layout */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white md:min-h-screen">
+    <div className="min-h-screen bg-white md:min-h-screen">
       <div className="max-w-4xl mx-auto px-0 md:px-4 py-0 md:py-8">
         {/* Header Section - Desktop Only */}
         <div className="hidden md:block text-center mb-8">

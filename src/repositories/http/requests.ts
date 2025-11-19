@@ -39,6 +39,30 @@ export default class HttpMethods {
             ? `/api/wp-proxy${endpoint}` 
             : `${API_BASE_URL}${endpoint}`;
 
+        // Helper function to check if Authorization header is present
+        const checkAuthHeader = (headerObj: HeadersInit | undefined): boolean => {
+            if (!headerObj) return false;
+            if (headerObj instanceof Headers) {
+                return headerObj.has('Authorization');
+            }
+            if (Array.isArray(headerObj)) {
+                return headerObj.some(([key]) => key.toLowerCase() === 'authorization');
+            }
+            if (typeof headerObj === 'object') {
+                return 'Authorization' in headerObj || 'authorization' in headerObj;
+            }
+            return false;
+        };
+
+        // Check if this is an authenticated request (POST/PUT/DELETE with Authorization header)
+        const hasAuthHeader = checkAuthHeader(headers);
+        const isAuthenticatedRequest = (
+            (options.method === HTTP_METHODS.POST || 
+             options.method === HTTP_METHODS.PUT || 
+             options.method === HTTP_METHODS.DELETE) &&
+            hasAuthHeader
+        );
+
         // Add timeout to prevent hanging requests (only on client-side)
         // Only add timeout if no signal is already provided
         const hasExistingSignal = options.signal !== undefined;
@@ -69,7 +93,7 @@ export default class HttpMethods {
             throw error;
         }
 
-        // Handle error responses (401, 403) - but don't throw, return the error response
+        // Handle error responses (401, 403)
         if (response.status == code.unauthorized || response.status == code.forbidden) {
             const session = await getSession();
             const clonedResponse = response.clone();
@@ -77,16 +101,33 @@ export default class HttpMethods {
             try {
                 const jsonData: HttpResponse = await clonedResponse.json();
 
-                // redirect back when unauthenticated request (only for JWT auth errors)
+                // For authenticated requests, throw the error so it can be properly caught
+                if (isAuthenticatedRequest) {
+                    const errorMessage = jsonData?.message || response.statusText || 'Request failed';
+                    const error = new Error(errorMessage) as any;
+                    error.status = response.status;
+                    error.code = jsonData?.code;
+                    error.data = jsonData;
+                    throw error;
+                }
+
+                // For public GET requests, handle JWT auth errors
                 if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
                     await handleUnauthorized();
                 }
                 
-                // Return the error response instead of throwing
-                // This allows public endpoints that return 403 to be handled gracefully
+                // Return the error response for public endpoints (GET requests without auth)
                 return jsonData as Record<string, unknown>;
             } catch (parseError) {
-                // If JSON parsing fails, return a generic error object
+                // For authenticated requests, throw error even if JSON parsing fails
+                if (isAuthenticatedRequest) {
+                    const error = new Error(response.statusText || 'Request failed') as any;
+                    error.status = response.status;
+                    error.code = response.status === code.forbidden ? 'rest_forbidden' : 'rest_unauthorized';
+                    throw error;
+                }
+
+                // For public endpoints, return generic error object
                 console.warn('Failed to parse error response as JSON, returning generic error:', parseError);
                 return {
                     status: response.status,

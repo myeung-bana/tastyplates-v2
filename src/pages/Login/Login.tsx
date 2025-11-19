@@ -266,8 +266,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const loginWithGoogle = async () => {
     try {
       setMessage('');
-      removeAllCookies();
       setIsLoading(true);
+      
+      // Remove only old OAuth-related cookies (don't use removeAllCookies to preserve session)
+      Cookies.remove('google_oauth_token');
+      Cookies.remove('google_oauth_user_id');
+      Cookies.remove('google_oauth_email');
+      Cookies.remove('google_oauth_pending');
+      Cookies.remove('googleError');
+      Cookies.remove('onboarding_data');
+      Cookies.remove('google_oauth_redirect');
+      Cookies.remove('auth_type');
       
       const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       if (!googleClientId) {
@@ -279,8 +288,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       
       // Store redirect URL and auth type
       const redirectUri = `${window.location.origin}/api/auth/google-callback`;
-      Cookies.set('google_oauth_redirect', window.location.href, { expires: 1 / 24, sameSite: 'lax' });
+      Cookies.set('google_oauth_redirect', window.location.origin, { expires: 1 / 24, sameSite: 'lax' });
       Cookies.set('auth_type', 'login', { expires: 1 / 24, sameSite: 'lax' });
+      
+      console.log('🔍 Login: Set auth_type cookie to: login');
       
       // Build Google OAuth2 authorization URL
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -291,8 +302,76 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
         `access_type=offline&` +
         `prompt=consent`;
       
-      // Redirect to Google OAuth
-      window.location.href = authUrl;
+      // Open Google OAuth in popup window
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const popup = window.open(
+        authUrl,
+        'Google Sign In',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+      
+      if (!popup) {
+        setMessage('Please allow popups for this site to use Google Sign-In.');
+        setMessageType(responseStatus.error);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Monitor for authentication completion by polling cookies
+      // This avoids COOP errors from checking popup.closed across different origins
+      let popupCheckCount = 0;
+      const maxChecks = 600; // 5 minutes at 500ms intervals
+      
+      const checkPopup = setInterval(() => {
+        popupCheckCount++;
+        
+        // Check if authentication succeeded by looking for cookies
+        const hasPendingAuth = Cookies.get('google_oauth_pending');
+        const hasError = Cookies.get('googleError');
+        
+        if (hasError) {
+          clearInterval(checkPopup);
+          setMessage(decodeURIComponent(hasError));
+          setMessageType(responseStatus.error);
+          Cookies.remove('googleError');
+          setIsLoading(false);
+          // Popup will close itself via callback route HTML
+        } else if (hasPendingAuth) {
+          clearInterval(checkPopup);
+          // Authentication succeeded - trigger NextAuth sign in
+          console.log('Google login successful, completing session...');
+          signIn('credentials', {
+            email: '',
+            password: 'oauth_token',
+            redirect: false,
+          }).then((result) => {
+            if (result?.ok) {
+              handleLoginSuccess();
+            } else {
+              setMessage(loginFailed);
+              setMessageType(responseStatus.error);
+              setIsLoading(false);
+            }
+          }).catch((error) => {
+            console.error('NextAuth sign in error:', error);
+            setMessage(loginFailed);
+            setMessageType(responseStatus.error);
+            setIsLoading(false);
+          });
+        } else if (popupCheckCount >= maxChecks) {
+          // Timeout after 5 minutes
+          clearInterval(checkPopup);
+          setMessage('Google sign-in timed out. Please try again.');
+          setMessageType(responseStatus.error);
+          setIsLoading(false);
+          // Popup will close itself via callback route HTML
+        }
+      }, 500);
+      
     } catch (error) {
       console.error('Google login error:', error);
       setMessage(googleLoginFailed);

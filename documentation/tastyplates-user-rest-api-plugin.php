@@ -32,6 +32,795 @@ add_action('graphql_register_types', function () {
 			));
 		},
 	]);
+
+	// ============================================
+	// GRAPHQL MUTATIONS FOR USER OPERATIONS
+	// ============================================
+
+	/**
+	 * CREATE_USER Mutation
+	 * Creates a new user account (manual registration)
+	 */
+	register_graphql_mutation('createUser', [
+		'inputFields' => [
+			'email' => [
+				'type' => 'String',
+				'description' => 'User email address',
+			],
+			'username' => [
+				'type' => 'String',
+				'description' => 'Username',
+			],
+			'password' => [
+				'type' => 'String',
+				'description' => 'Password (optional for OAuth users)',
+			],
+			'birthdate' => [
+				'type' => 'String',
+				'description' => 'User birthdate',
+			],
+			'gender' => [
+				'type' => 'String',
+			],
+			'customGender' => [
+				'type' => 'String',
+			],
+			'pronoun' => [
+				'type' => 'String',
+			],
+			'palates' => [
+				'type' => ['list_of' => 'String'],
+			],
+			'profileImage' => [
+				'type' => 'String',
+				'description' => 'Profile image URL or base64',
+			],
+			'aboutMe' => [
+				'type' => 'String',
+			],
+			'isGoogleUser' => [
+				'type' => 'Boolean',
+			],
+			'googleToken' => [
+				'type' => 'String',
+			],
+		],
+		'outputFields' => [
+			'user' => [
+				'type' => 'User',
+				'description' => 'The created user',
+			],
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'The created user ID',
+			],
+			'token' => [
+				'type' => 'String',
+				'description' => 'JWT token for the user',
+			],
+			'success' => [
+				'type' => 'Boolean',
+				'description' => 'Whether the operation was successful',
+			],
+			'message' => [
+				'type' => 'String',
+				'description' => 'Response message',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			// Get plugin instance
+			$plugin = new TastyPlates_User_REST_API_Plugin();
+			
+			// Create a mock REST request with GraphQL input
+			$request = new WP_REST_Request('POST', '/wp/v2/api/users');
+			
+			// Map GraphQL input to REST API format
+			$request->set_param('email', $input['email'] ?? '');
+			$request->set_param('username', $input['username'] ?? '');
+			$request->set_param('password', $input['password'] ?? '');
+			$request->set_param('birthdate', $input['birthdate'] ?? '');
+			$request->set_param('gender', $input['gender'] ?? '');
+			$request->set_param('custom_gender', $input['customGender'] ?? '');
+			$request->set_param('pronoun', $input['pronoun'] ?? '');
+			$request->set_param('palates', isset($input['palates']) ? implode(',', $input['palates']) : '');
+			$request->set_param('profile_image', $input['profileImage'] ?? '');
+			$request->set_param('about_me', $input['aboutMe'] ?? '');
+			$request->set_param('is_google_user', $input['isGoogleUser'] ?? false);
+			$request->set_param('google_token', $input['googleToken'] ?? '');
+			
+			// Call existing REST API create_item method
+			$result = $plugin->create_item($request);
+			
+			if (is_wp_error($result)) {
+				return [
+					'user' => null,
+					'userId' => null,
+					'token' => null,
+					'success' => false,
+					'message' => $result->get_error_message(),
+				];
+			}
+			
+			// Extract user ID from response
+			$response_data = $result->get_data();
+			$user_id = $response_data['id'] ?? null;
+			if (!$user_id) {
+				return [
+					'user' => null,
+					'userId' => null,
+					'token' => null,
+					'success' => false,
+					'message' => 'User created but ID not found',
+				];
+			}
+			
+			// Generate JWT token using existing method
+			$token_request = new WP_REST_Request('POST', '/wp/v2/api/users/unified-token');
+			$token_request->set_param('user_id', $user_id);
+			$token_request->set_param('email', $input['email']);
+			$token_result = $plugin->generateUnifiedToken($token_request);
+			
+			$token_data = $token_result->get_data();
+			
+			// Get user object for GraphQL
+			$user = get_user_by('id', $user_id);
+			
+			return [
+				'user' => $user,
+				'userId' => $user_id,
+				'token' => $token_data['token'] ?? null,
+				'success' => true,
+				'message' => 'User created successfully',
+			];
+		},
+	]);
+
+	/**
+	 * REGISTER_USER_WITH_GOOGLE Mutation
+	 * Creates a new user account via Google OAuth
+	 */
+	register_graphql_mutation('registerUserWithGoogle', [
+		'inputFields' => [
+			'idToken' => [
+				'type' => 'String',
+				'description' => 'Google ID token (required for verification)',
+			],
+			'email' => [
+				'type' => 'String',
+				'description' => 'User email (optional, extracted from token if not provided)',
+			],
+			'username' => [
+				'type' => 'String',
+				'description' => 'Username (optional, auto-generated from email if not provided)',
+			],
+		],
+		'outputFields' => [
+			'user' => [
+				'type' => 'User',
+				'resolve' => function ($payload, $args, $context, $info) {
+					if (empty($payload['userId'])) {
+						return null;
+					}
+					// Resolve User type from ID using core WP_User object
+					// WPGraphQL can serialize WP_User instances into the User type
+					$user = get_user_by('id', $payload['userId']);
+					if (!$user || is_wp_error($user)) {
+						return null;
+					}
+					return $user;
+				},
+			],
+			'userId' => [
+				'type' => 'Int',
+			],
+			'token' => [
+				'type' => 'String',
+			],
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			try {
+				$plugin = new TastyPlates_User_REST_API_Plugin();
+				
+				// Validate input
+				if (empty($input['idToken'])) {
+					error_log('[GraphQL registerUserWithGoogle] Missing idToken');
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'Google ID token is required',
+					];
+				}
+				
+				// Get Google client ID
+				$google_client_id = get_option('google_oauth_client_id', '');
+				if (empty($google_client_id)) {
+					$google_client_id = defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '';
+				}
+				
+				if (empty($google_client_id)) {
+					error_log('[GraphQL registerUserWithGoogle] Google OAuth not configured');
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'Google OAuth not configured',
+					];
+				}
+				
+				// Verify Google token
+				$token_data = $plugin->verifyGoogleToken($input['idToken'], $google_client_id);
+				if (!$token_data || !isset($token_data['email'])) {
+					error_log('[GraphQL registerUserWithGoogle] Invalid Google token');
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'Invalid Google token',
+					];
+				}
+				
+				$email = $input['email'] ?? $token_data['email'];
+				
+				// Check if user already exists
+				$existing_user = get_user_by('email', $email);
+				if ($existing_user) {
+					error_log('[GraphQL registerUserWithGoogle] User already exists: ' . $email);
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'User already exists. Please use login instead.',
+					];
+				}
+				
+				// Auto-generate username if not provided
+				$username = $input['username'] ?? '';
+				if (empty($username)) {
+					$email_parts = explode('@', $email);
+					$base_username = sanitize_user($email_parts[0], true);
+					$username = $base_username;
+					$counter = 1;
+					while (username_exists($username)) {
+						$username = $base_username . $counter;
+						$counter++;
+					}
+				}
+				
+				// Create user via REST API endpoint (same as manual registration)
+				// This ensures both manual and Google OAuth use the same registration flow
+				error_log('[GraphQL registerUserWithGoogle] Creating user via REST API: ' . $email);
+				
+				$api_url = site_url('/wp-json/wp/v2/api/users');
+				$response = wp_remote_post($api_url, [
+					'headers' => [
+						'Content-Type' => 'application/json',
+					],
+					'body' => json_encode([
+						'email' => $email,
+						'username' => $username,
+						'is_google_user' => true,
+						// Password auto-generated by backend when is_google_user=true
+						// profile_image omitted - optional field
+					]),
+					'timeout' => 30,
+					'sslverify' => false, // Set to true in production
+				]);
+				
+				if (is_wp_error($response)) {
+					error_log('[GraphQL registerUserWithGoogle] HTTP request error: ' . $response->get_error_message());
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'Failed to create user: ' . $response->get_error_message(),
+					];
+				}
+				
+				$http_code = wp_remote_retrieve_response_code($response);
+				$body = wp_remote_retrieve_body($response);
+				$response_data = json_decode($body, true);
+				
+				if ($http_code !== 200 && $http_code !== 201) {
+					$error_message = $response_data['message'] ?? 'Failed to create user';
+					error_log('[GraphQL registerUserWithGoogle] REST API error: HTTP ' . $http_code . ' - ' . $error_message);
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => $error_message,
+					];
+				}
+				
+				$user_id = $response_data['id'] ?? null;
+				
+				if (!$user_id) {
+					error_log('[GraphQL registerUserWithGoogle] User created but ID not found. Response: ' . print_r($response_data, true));
+					return [
+						'userId' => null,
+						'token' => null,
+						'success' => false,
+						'message' => 'User created but ID not found in response',
+					];
+				}
+				
+				error_log('[GraphQL registerUserWithGoogle] User created successfully via REST API. ID: ' . $user_id);
+				
+				// Generate JWT token via REST API endpoint (same approach for consistency)
+				error_log('[GraphQL registerUserWithGoogle] Generating JWT token via REST API for user: ' . $user_id);
+				
+				$token_api_url = site_url('/wp-json/wp/v2/api/users/unified-token');
+				$token_response = wp_remote_post($token_api_url, [
+					'headers' => [
+						'Content-Type' => 'application/json',
+					],
+					'body' => json_encode([
+						'user_id' => $user_id,
+						'email' => $email,
+					]),
+					'timeout' => 30,
+					'sslverify' => false, // Set to true in production
+				]);
+				
+				if (is_wp_error($token_response)) {
+					error_log('[GraphQL registerUserWithGoogle] Token HTTP request error: ' . $token_response->get_error_message());
+					return [
+						'userId' => $user_id,
+						'token' => null,
+						'success' => false,
+						'message' => 'User created but token generation failed: ' . $token_response->get_error_message(),
+					];
+				}
+				
+				$token_http_code = wp_remote_retrieve_response_code($token_response);
+				$token_body = wp_remote_retrieve_body($token_response);
+				$token_data = json_decode($token_body, true);
+				
+				if ($token_http_code !== 200 && $token_http_code !== 201) {
+					$error_message = $token_data['message'] ?? 'Failed to generate token';
+					error_log('[GraphQL registerUserWithGoogle] Token REST API error: HTTP ' . $token_http_code . ' - ' . $error_message);
+					return [
+						'userId' => $user_id,
+						'token' => null,
+						'success' => false,
+						'message' => 'User created but token generation failed: ' . $error_message,
+					];
+				}
+				
+				$token = $token_data['token'] ?? null;
+				
+				if (!$token) {
+					error_log('[GraphQL registerUserWithGoogle] Token generation returned no token. Response: ' . print_r($token_data, true));
+					return [
+						'userId' => $user_id,
+						'token' => null,
+						'success' => false,
+						'message' => 'User created but token not found in response',
+					];
+				}
+				
+				error_log('[GraphQL registerUserWithGoogle] Registration successful. User ID: ' . $user_id . ', Token generated');
+				
+				// Return user ID (GraphQL will resolve the User type from ID)
+				return [
+					'userId' => $user_id,
+					'token' => $token,
+					'success' => true,
+					'message' => 'User registered successfully via Google OAuth',
+				];
+			} catch (Exception $e) {
+				error_log('[GraphQL registerUserWithGoogle] Exception: ' . $e->getMessage());
+				error_log('[GraphQL registerUserWithGoogle] Stack trace: ' . $e->getTraceAsString());
+				return [
+					'userId' => null,
+					'token' => null,
+					'success' => false,
+					'message' => 'An error occurred during registration: ' . $e->getMessage(),
+				];
+			}
+		},
+	]);
+
+	/**
+	 * UPDATE_USER Mutation
+	 * Updates user profile information
+	 */
+	register_graphql_mutation('updateUser', [
+		'inputFields' => [
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'User ID to update',
+			],
+			'email' => [
+				'type' => 'String',
+			],
+			'username' => [
+				'type' => 'String',
+			],
+			'birthdate' => [
+				'type' => 'String',
+			],
+			'gender' => [
+				'type' => 'String',
+			],
+			'customGender' => [
+				'type' => 'String',
+			],
+			'pronoun' => [
+				'type' => 'String',
+			],
+			'palates' => [
+				'type' => ['list_of' => 'String'],
+			],
+			'profileImage' => [
+				'type' => 'String',
+			],
+			'aboutMe' => [
+				'type' => 'String',
+			],
+			'language' => [
+				'type' => 'String',
+			],
+		],
+		'outputFields' => [
+			'user' => [
+				'type' => 'User',
+			],
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			$plugin = new TastyPlates_User_REST_API_Plugin();
+			
+			// Create REST request for update_user_fields
+			$request = new WP_REST_Request('PUT', '/wp/v2/api/users/update-fields');
+			
+			// Map GraphQL input to REST API format
+			if (isset($input['email'])) {
+				$request->set_param('email', $input['email']);
+			}
+			if (isset($input['username'])) {
+				$request->set_param('username', $input['username']);
+			}
+			if (isset($input['birthdate'])) {
+				$request->set_param('birthdate', $input['birthdate']);
+			}
+			if (isset($input['language'])) {
+				$request->set_param('language', $input['language']);
+			}
+			if (isset($input['palates'])) {
+				$request->set_param('palates', implode(',', $input['palates']));
+			}
+			if (isset($input['profileImage'])) {
+				$request->set_param('profile_image', $input['profileImage']);
+			}
+			if (isset($input['aboutMe'])) {
+				$request->set_param('about_me', $input['aboutMe']);
+			}
+			
+			// Set current user context (required for update_user_fields)
+			$user_id = $input['userId'] ?? get_current_user_id();
+			if ($user_id) {
+				wp_set_current_user($user_id);
+			}
+			
+			$result = $plugin->update_user_fields($request);
+			
+			if (is_wp_error($result)) {
+				return [
+					'user' => null,
+					'success' => false,
+					'message' => $result->get_error_message(),
+				];
+			}
+			
+			$user = get_user_by('id', $user_id);
+			
+			return [
+				'user' => $user,
+				'success' => true,
+				'message' => 'User updated successfully',
+			];
+		},
+	]);
+
+	/**
+	 * UPDATE_USER_PROFILE Mutation
+	 * Updates specific profile fields (image, about me, palates)
+	 */
+	register_graphql_mutation('updateUserProfile', [
+		'inputFields' => [
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'User ID to update',
+			],
+			'profileImage' => [
+				'type' => 'String',
+			],
+			'aboutMe' => [
+				'type' => 'String',
+			],
+			'palates' => [
+				'type' => ['list_of' => 'String'],
+			],
+		],
+		'outputFields' => [
+			'user' => [
+				'type' => 'User',
+			],
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			$plugin = new TastyPlates_User_REST_API_Plugin();
+			
+			$request = new WP_REST_Request('PUT', '/wp/v2/api/users/update-fields');
+			
+			if (isset($input['profileImage'])) {
+				$request->set_param('profile_image', $input['profileImage']);
+			}
+			if (isset($input['aboutMe'])) {
+				$request->set_param('about_me', $input['aboutMe']);
+			}
+			if (isset($input['palates'])) {
+				$request->set_param('palates', implode(',', $input['palates']));
+			}
+			
+			$user_id = $input['userId'] ?? get_current_user_id();
+			if ($user_id) {
+				wp_set_current_user($user_id);
+			}
+			
+			$result = $plugin->update_user_fields($request);
+			
+			if (is_wp_error($result)) {
+				return [
+					'user' => null,
+					'success' => false,
+					'message' => $result->get_error_message(),
+				];
+			}
+			
+			$user = get_user_by('id', $user_id);
+			
+			return [
+				'user' => $user,
+				'success' => true,
+				'message' => 'Profile updated successfully',
+			];
+		},
+	]);
+
+	/**
+	 * UPDATE_USER_PASSWORD Mutation
+	 * Updates user password
+	 */
+	register_graphql_mutation('updateUserPassword', [
+		'inputFields' => [
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'User ID',
+			],
+			'currentPassword' => [
+				'type' => 'String',
+				'description' => 'Current password for verification',
+			],
+			'newPassword' => [
+				'type' => 'String',
+				'description' => 'New password',
+			],
+		],
+		'outputFields' => [
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			$plugin = new TastyPlates_User_REST_API_Plugin();
+			
+			$user_id = $input['userId'] ?? get_current_user_id();
+			if (!$user_id) {
+				return [
+					'success' => false,
+					'message' => 'User ID is required',
+				];
+			}
+			
+			// Verify current password
+			$validate_request = new WP_REST_Request('POST', '/wp/v2/api/users/validate-password');
+			$validate_request->set_param('password', $input['currentPassword']);
+			wp_set_current_user($user_id);
+			
+			$validate_result = $plugin->validate_current_password($validate_request);
+			$validate_data = $validate_result->get_data();
+			
+			if (!$validate_data['valid']) {
+				return [
+					'success' => false,
+					'message' => 'Current password is incorrect',
+				];
+			}
+			
+			// Update password
+			$update_request = new WP_REST_Request('PUT', '/wp/v2/api/users/update-fields');
+			$update_request->set_param('password', $input['newPassword']);
+			
+			$result = $plugin->update_user_fields($update_request);
+			
+			if (is_wp_error($result)) {
+				return [
+					'success' => false,
+					'message' => $result->get_error_message(),
+				];
+			}
+			
+			return [
+				'success' => true,
+				'message' => 'Password updated successfully',
+			];
+		},
+	]);
+
+	/**
+	 * DELETE_USER Mutation
+	 * Deletes a user account (destructive operation)
+	 */
+	register_graphql_mutation('deleteUser', [
+		'inputFields' => [
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'User ID to delete',
+			],
+			'password' => [
+				'type' => 'String',
+				'description' => 'Confirmation password (optional)',
+			],
+			'reassignTo' => [
+				'type' => 'Int',
+				'description' => 'User ID to reassign content to',
+			],
+		],
+		'outputFields' => [
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+			'deletedUserId' => [
+				'type' => 'Int',
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			$plugin = new TastyPlates_User_REST_API_Plugin();
+			
+			$user_id = $input['userId'] ?? get_current_user_id();
+			if (!$user_id) {
+				return [
+					'success' => false,
+					'message' => 'User ID is required',
+					'deletedUserId' => null,
+				];
+			}
+			
+			// Verify password if provided
+			if (!empty($input['password'])) {
+				$validate_request = new WP_REST_Request('POST', '/wp/v2/api/users/validate-password');
+				$validate_request->set_param('password', $input['password']);
+				wp_set_current_user($user_id);
+				
+				$validate_result = $plugin->validate_current_password($validate_request);
+				$validate_data = $validate_result->get_data();
+				
+				if (!$validate_data['valid']) {
+					return [
+						'success' => false,
+						'message' => 'Password verification failed',
+						'deletedUserId' => null,
+					];
+				}
+			}
+			
+			// Delete user via REST API
+			$request = new WP_REST_Request('DELETE', '/wp/v2/api/users/' . $user_id);
+			$request->set_param('id', $user_id);
+			$request->set_param('force', true);
+			if (isset($input['reassignTo'])) {
+				$request->set_param('reassign', $input['reassignTo']);
+			}
+			
+			$result = $plugin->delete_item($request);
+			
+			if (is_wp_error($result)) {
+				return [
+					'success' => false,
+					'message' => $result->get_error_message(),
+					'deletedUserId' => null,
+				];
+			}
+			
+			return [
+				'success' => true,
+				'message' => 'User deleted successfully',
+				'deletedUserId' => $user_id,
+			];
+		},
+	]);
+
+	/**
+	 * UPDATE_USER_META Mutation
+	 * Updates WordPress user meta fields (custom fields)
+	 */
+	register_graphql_mutation('updateUserMeta', [
+		'inputFields' => [
+			'userId' => [
+				'type' => 'Int',
+				'description' => 'User ID',
+			],
+			'meta' => [
+				'type' => ['list_of' => 'MetaInput'],
+				'description' => 'Array of meta key-value pairs',
+			],
+		],
+		'outputFields' => [
+			'success' => [
+				'type' => 'Boolean',
+			],
+			'message' => [
+				'type' => 'String',
+			],
+			'meta' => [
+				'type' => ['list_of' => 'MetaOutput'],
+			],
+		],
+		'mutateAndGetPayload' => function ($input) {
+			$user_id = $input['userId'] ?? get_current_user_id();
+			if (!$user_id) {
+				return [
+					'success' => false,
+					'message' => 'User ID is required',
+					'meta' => [],
+				];
+			}
+			
+			$updated_meta = [];
+			foreach ($input['meta'] ?? [] as $meta_item) {
+				$key = $meta_item['key'] ?? '';
+				$value = $meta_item['value'] ?? '';
+				
+				if (!empty($key)) {
+					update_user_meta($user_id, $key, $value);
+					$updated_meta[] = [
+						'key' => $key,
+						'value' => $value,
+					];
+				}
+			}
+			
+			return [
+				'success' => true,
+				'message' => 'User meta updated successfully',
+				'meta' => $updated_meta,
+			];
+		},
+	]);
 });
 
 class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
@@ -39,6 +828,30 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 	protected $rest_base;
 	protected $meta;
 	protected $schema;
+
+	/**
+	 * Retrieve the JWT secret key used for encoding/decoding tokens.
+	 *
+	 * Preference order:
+	 * 1. GRAPHQL_JWT_AUTH_SECRET_KEY (GraphQL-specific secret)
+	 * 2. JWT_AUTH_SECRET_KEY (standard JWT Auth plugin secret)
+	 *
+	 * This allows you to define only GRAPHQL_JWT_AUTH_SECRET_KEY in wp-config.php
+	 * and still keep backward compatibility if JWT_AUTH_SECRET_KEY is present.
+	 *
+	 * @return string Secret key or empty string if none defined.
+	 */
+	protected function get_jwt_secret_key() {
+		if ( defined( 'GRAPHQL_JWT_AUTH_SECRET_KEY' ) && GRAPHQL_JWT_AUTH_SECRET_KEY ) {
+			return GRAPHQL_JWT_AUTH_SECRET_KEY;
+		}
+
+		if ( defined( 'JWT_AUTH_SECRET_KEY' ) && JWT_AUTH_SECRET_KEY ) {
+			return JWT_AUTH_SECRET_KEY;
+		}
+
+		return '';
+	}
 
 	public function __construct() {
 		$this->namespace = 'wp/v2/api';
@@ -674,7 +1487,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 
 		// Generate JWT token using JWT Auth plugin's standard structure
 		// This matches the token format used by manual login via JWT Auth plugin
-		$secret_key = defined( 'JWT_AUTH_SECRET_KEY' ) ? JWT_AUTH_SECRET_KEY : '';
+		$secret_key = $this->get_jwt_secret_key();
 		if ( empty( $secret_key ) ) {
 			return new WP_REST_Response( array(
 				'message' => 'JWT secret key not configured.',
@@ -845,7 +1658,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		wp_set_current_user( $user->ID );
 		
 		// Generate JWT token using JWT Auth plugin's standard structure
-		$secret_key = defined( 'JWT_AUTH_SECRET_KEY' ) ? JWT_AUTH_SECRET_KEY : '';
+		$secret_key = $this->get_jwt_secret_key();
 		if ( empty( $secret_key ) ) {
 			return new WP_REST_Response( array(
 				'message' => 'JWT secret key not configured.',
@@ -893,8 +1706,9 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 
 	/**
 	 * Verify Google ID token with Google's tokeninfo endpoint
+	 * Made public for use in GraphQL mutations
 	 */
-	private function verifyGoogleToken($id_token, $client_id) {
+	public function verifyGoogleToken($id_token, $client_id) {
 		// Use Google's tokeninfo endpoint to verify the ID token
 		$url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($id_token);
 		
@@ -990,7 +1804,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 
 		// Generate JWT token using JWT Auth plugin's standard structure
 		// This matches the token format used by manual login
-		$secret_key = defined( 'JWT_AUTH_SECRET_KEY' ) ? JWT_AUTH_SECRET_KEY : '';
+		$secret_key = $this->get_jwt_secret_key();
 		if ( empty( $secret_key ) ) {
 			return new WP_REST_Response( array(
 				'message' => 'JWT secret key not configured.',
@@ -1252,7 +2066,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		}
 
 		try {
-			$secret_key = defined( 'JWT_AUTH_SECRET_KEY' ) ? JWT_AUTH_SECRET_KEY : '';
+			$secret_key = $this->get_jwt_secret_key();
 			if ( empty( $secret_key ) ) {
 				return false;
 			}
@@ -1833,15 +2647,30 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 			$this->log_user_action( 'registration', 'validation_error', $request_data, $error );
 			return $error;
 		}
-
+		
+		// Ensure username is present; auto-generate if missing/empty
 		if ( empty( $request['username'] ) || ! is_string( $request['username'] ) || trim( $request['username'] ) === '' ) {
-			$error = new WP_Error(
-				'rest_invalid_username',
-				__( 'Username is required and cannot be empty.' ),
-				array( 'status' => 400 )
-			);
-			$this->log_user_action( 'registration', 'validation_error', $request_data, $error );
-			return $error;
+			// Derive a base username from email or fallback
+			$email      = isset( $request['email'] ) ? sanitize_email( $request['email'] ) : '';
+			$email_part = $email ? current( explode( '@', $email ) ) : '';
+			$base_username = sanitize_user( $email_part, true );
+
+			if ( empty( $base_username ) ) {
+				$base_username = 'user';
+			}
+
+			$username = $base_username;
+			$counter  = 1;
+
+			// Ensure uniqueness
+			while ( username_exists( $username ) ) {
+				$username = $base_username . $counter;
+				$counter++;
+			}
+
+			// Set the generated username back on the request and log data
+			$request['username']      = $username;
+			$request_data['username'] = $username;
 		}
 
 		// Validate password for non-OAuth users
@@ -3268,21 +4097,27 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 			}
 			$wpdb->update( $wpdb->users, $data, array( 'ID' => $user_id ) );
 		} else {
-			$wpdb->insert($wpdb->users, $data);
-			$user_id = (int) $wpdb->insert_id;
+		$wpdb->insert($wpdb->users, $data);
+		$user_id = (int) $wpdb->insert_id;
 
-			// Save custom fields as user meta (ACF fields).
-			foreach ($acf_fields as $acf_field) {
-				if (!empty($userdata[$acf_field])) {
-					update_user_meta($user_id, $acf_field, $userdata[$acf_field]);
-				}
+		// Save custom fields as user meta (ACF fields).
+		foreach ($acf_fields as $acf_field) {
+			// Special handling for is_google_user: ACF boolean fields require '1' or '0' as strings
+			if ($acf_field === 'is_google_user' && isset($userdata[$acf_field])) {
+				// Convert any truthy value to string '1', falsy to string '0'
+				$value = ($userdata[$acf_field] === true || $userdata[$acf_field] === 'true' || $userdata[$acf_field] === 1 || $userdata[$acf_field] === '1') ? '1' : '0';
+				update_user_meta($user_id, $acf_field, $value);
+				error_log("[TastyPlates] Saved is_google_user as: '{$value}' for user {$user_id}");
+			} elseif (!empty($userdata[$acf_field])) {
+				update_user_meta($user_id, $acf_field, $userdata[$acf_field]);
 			}
-
-			// Handle profile_image separately
-			if (!empty($userdata['profile_image'])) {
-				$this->update_profile_image($user_id, $userdata['profile_image']);
-			}			
 		}
+
+		// Handle profile_image separately
+		if (!empty($userdata['profile_image'])) {
+			$this->update_profile_image($user_id, $userdata['profile_image']);
+		}			
+	}
 	
 		$user = new WP_User( $user_id );
 	
