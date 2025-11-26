@@ -330,7 +330,7 @@ const FormContent = memo(({
 
 const Form = () => {
   const router = useRouter();
-  const { data: session, update } = useSession();
+  const { data: session, status: sessionStatus, update } = useSession();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -404,6 +404,35 @@ const Form = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    // ✅ VALIDATION: Check if session and accessToken exist
+    console.log('🔍 Profile Form - Session Validation:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.accessToken,
+      tokenLength: session?.accessToken?.length,
+      tokenPreview: session?.accessToken ? `${session.accessToken.substring(0, 20)}...` : 'undefined',
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      sessionStatus: session ? 'exists' : 'null'
+    });
+
+    if (!session) {
+      console.error('❌ Profile Form: No session found');
+      toast.error('Session not found. Please log in again.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!session.accessToken) {
+      console.error('❌ Profile Form: accessToken is undefined', {
+        sessionKeys: Object.keys(session),
+        userKeys: session.user ? Object.keys(session.user) : 'no user',
+        hasUser: !!session.user
+      });
+      toast.error('Authentication token missing. Please log in again.');
+      setIsLoading(false);
+      return;
+    }
+
     // Validate bio length
     if (aboutMe.length > aboutMeMaxLimit) {
       setBioError(maximumBioLength(aboutMeMaxLimit));
@@ -446,9 +475,22 @@ const Form = () => {
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (formattedPalates) updateData.palates = formattedPalates;
 
+      console.log('📤 Profile Form - Sending update request:', {
+        hasAccessToken: !!session.accessToken,
+        updateDataKeys: Object.keys(updateData),
+        updateDataValues: Object.keys(updateData).reduce((acc, key) => {
+          const value = updateData[key];
+          acc[key] = key === 'profile_image' ? 'base64_data...' : (value || '');
+          return acc;
+        }, {} as Record<string, string>)
+      });
+
+      // TypeScript: accessToken is guaranteed to exist after validation check above
+      const accessToken = session.accessToken!;
+
       const res = await userService.updateUserFields(
         updateData as Partial<IUserUpdate>,
-        session?.accessToken
+        accessToken
       );
 
       // Update session with response data (response uses profile_image)
@@ -456,7 +498,7 @@ const Form = () => {
         ...session,
         user: {
           ...session?.user,
-          image: res.profile_image || res.image || session?.user?.image,
+          image: res.profile_image || session?.user?.image,
           about_me: aboutMe,
           palates: formattedPalates,
         },
@@ -465,10 +507,23 @@ const Form = () => {
       // Refresh router to update server components with new session data
       router.refresh();
 
+      console.log('✅ Profile Form - Update successful:', {
+        responseStatus: res?.status,
+        hasProfileImage: !!res?.profile_image,
+        responseKeys: Object.keys(res || {})
+      });
+
       setIsSubmitted(true);
       setTimeout(() => router.push(PROFILE), 2000);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('❌ Profile Form - Update failed:', {
+        errorMessage: error?.message,
+        errorStatus: error?.status,
+        errorCode: error?.code,
+        errorData: error?.data,
+        hasAccessToken: !!session?.accessToken,
+        errorType: error?.constructor?.name || typeof error
+      });
       toast.error(profileUpdateFailed);
     } finally {
       setIsLoading(false);
@@ -501,6 +556,17 @@ const Form = () => {
       setProfile={setProfile}
     />
   );
+
+  // Debug: Log session status changes
+  useEffect(() => {
+    console.log('🔍 Profile Form - Session status changed:', {
+      sessionStatus,
+      hasSession: !!session,
+      hasAccessToken: !!session?.accessToken,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    });
+  }, [sessionStatus, session]);
 
   // Update form state when userData is loaded from useProfileData hook
   // Only run once when data is first loaded to prevent flickering

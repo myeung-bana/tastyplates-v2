@@ -57,69 +57,8 @@ export class UserService {
         }
     }
 
-    async handleGoogleAuth(email: string): Promise<CheckGoogleUserResponse> {
-        try {
-            // First check if user exists and is a Google user
-            const checkResponse = await userRepo.checkGoogleUser(email);
-            
-            // If user is verified, generate token using JWT Auth plugin standard
-            if (checkResponse.status === 200 && checkResponse.id) {
-                try {
-                    const tokenResponse = await userRepo.generateGoogleUserToken(checkResponse.id, email);
-                    if (!tokenResponse.token) {
-                        // Token generation failed
-                        return {
-                            status: 500,
-                            message: 'Failed to generate authentication token.',
-                            id: checkResponse.id
-                        };
-                    }
-                    // Ensure id is always set - use tokenResponse.id if available, otherwise checkResponse.id
-                    const userId = tokenResponse.id || checkResponse.id;
-                    if (!userId) {
-                        console.error('handleGoogleAuth: No user ID available', {
-                            tokenResponse,
-                            checkResponse
-                        });
-                        return {
-                            status: 500,
-                            message: 'Failed to retrieve user ID.',
-                            id: undefined
-                        };
-                    }
-                    return {
-                        ...checkResponse,
-                        token: tokenResponse.token,
-                        id: userId, // Ensure id is always set
-                        user_email: tokenResponse.user_email || checkResponse.user_email,
-                        user_display_name: tokenResponse.user_display_name || checkResponse.display_name
-                    };
-                } catch (tokenError) {
-                    console.error('Token generation error:', tokenError);
-                    return {
-                        status: 500,
-                        message: 'Failed to generate authentication token.',
-                        id: checkResponse.id
-                    };
-                }
-            }
-            
-            return checkResponse;
-        } catch (error) {
-            console.error('Google auth error:', error);
-            throw error;
-        }
-    }
-
-    async googleOAuth(idToken: string): Promise<IJWTResponse> {
-        try {
-            // Call WordPress OAuth endpoint directly - unified with manual login
-            return await userRepo.googleOAuth(idToken);
-        } catch (error) {
-            console.error('Google OAuth error:', error);
-            throw error;
-        }
-    }
+    // handleGoogleAuth removed - using Firebase authentication instead
+    // googleOAuth removed - using Firebase authentication instead
 
     /**
      * Check if user exists via Nextend Social Login
@@ -134,17 +73,7 @@ export class UserService {
         }
     }
 
-    /**
-     * Generate JWT token for Google OAuth user
-     */
-    async generateGoogleUserToken(userId: number | string, email?: string): Promise<IJWTResponse> {
-        try {
-            return await userRepo.generateGoogleUserToken(userId, email);
-        } catch (error) {
-            console.error('Generate Google user token error:', error);
-            throw error;
-        }
-    }
+    // generateGoogleUserToken removed - using Firebase authentication instead
 
     async checkEmailExists(email: string): Promise<Record<string, unknown>> {
         try {
@@ -192,9 +121,32 @@ export class UserService {
             }
             const res = await userRepo.updateUserFields(data, token);
             return res;
-        } catch (error) {
-            console.error('Update user fields error:', error);
-            throw new Error('Failed to update user fields');
+        } catch (error: any) {
+            // Safely extract error details to avoid serialization issues
+            const errorMessage = error?.message || error?.data?.message || 'Failed to update user fields';
+            const errorStatus = error?.status || error?.data?.status;
+            const errorCode = error?.code || error?.data?.code;
+            
+            // Log error details safely (avoid logging full error object which may have circular refs)
+            console.error('Update user fields error:', {
+                message: errorMessage,
+                status: errorStatus,
+                code: errorCode,
+                errorType: error?.constructor?.name || typeof error,
+                hasData: !!error?.data,
+                // Only log data if it's a simple object
+                data: error?.data && typeof error.data === 'object' && !(error.data instanceof Error) 
+                    ? JSON.stringify(error.data).substring(0, 200) 
+                    : undefined
+            });
+            
+            // Preserve original error details for better debugging
+            const enhancedError = new Error(errorMessage) as any;
+            if (errorStatus) enhancedError.status = errorStatus;
+            if (errorCode) enhancedError.code = errorCode;
+            if (error?.data) enhancedError.data = error.data;
+            
+            throw enhancedError;
         }
     }
 

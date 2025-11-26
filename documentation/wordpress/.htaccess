@@ -1,0 +1,61 @@
+
+# BEGIN WordPress
+# The directives (lines) between "BEGIN WordPress" and "END WordPress" are
+# dynamically generated, and should only be modified via WordPress filters.
+# Any changes to the directives between these markers will be overwritten.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# END WordPress
+
+# Deny access to PHP files in specific directories
+<FilesMatch "\.php$">
+# WP Defender - Prevent PHP Execution in wp-content/uploads/wp-defender
+<Files "wp-content/uploads/wp-defender/index.php">
+Require all granted
+</Files>
+
+# Deny PHP execution in wp-includes, excluding specific allowed files
+<FilesMatch "^wp-includes/.*(?<!js/tinymce/wp-tinymce)\.php$">
+Require all denied
+</FilesMatch>
+
+# Deny direct access to PHP files in uploads and files directories
+<FilesMatch "^wp-content/(uploads|files)/.*\.php$">
+Require all denied
+</FilesMatch>
+
+# Deny access to PHP files in wp-content
+<FilesMatch "^wp-content/.*\.php$">
+Require all denied
+</FilesMatch>
+
+## WP Defender - Prevent information disclosure ##
+
+<FilesMatch "\.(md|exe|sh|bak|inc|pot|po|mo|log|sql)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+<Files robots.txt>
+Allow from all
+</Files>
+
+<Files ads.txt>
+Allow from all
+</Files>
+
+## WP Defender - End ##
+# BEGIN enable-cors
+# The directives (lines) between "BEGIN enable-cors" and "END enable-cors" are
+# dynamically generated, and should only be modified via WordPress filters.
+# Any changes to the directives between these markers will be overwritten.
+
+# END enable-cors

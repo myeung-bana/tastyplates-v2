@@ -24,8 +24,31 @@ if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
 }
 
 /**
- * Ensure JWT Authentication for WP-API plugin sets user session early
- * This hook runs before REST API permission callbacks to ensure JWT tokens are processed
+ * ============================================================================
+ * SYNCHRONIZED JWT AUTHENTICATION FUNCTIONS
+ * ============================================================================
+ * 
+ * These functions are synchronized with tastyplates-user-rest-api-plugin.php
+ * to ensure consistent JWT validation across both plugins.
+ * 
+ * ⚠️ IMPORTANT: When modifying these functions, ensure changes are also
+ *    applied to tastyplates-user-rest-api-plugin.php to maintain synchronization.
+ * 
+ * Related files:
+ * - tastyplates-user-rest-api-plugin.php: Contains tastyplates_validate_jwt_token()
+ *   and determine_current_user filter that should match this logic
+ * 
+ * ============================================================================
+ */
+
+/**
+ * Ensure JWT Authentication for WP-API plugin sets user session early.
+ * This hook runs before REST API permission callbacks to ensure JWT tokens are processed.
+ * 
+ * SYNCHRONIZED WITH: tastyplates-user-rest-api-plugin.php (determine_current_user filter)
+ * 
+ * @param int $user_id Current user ID (may be 0 if not set).
+ * @return int User ID if JWT token is valid, otherwise returns $user_id unchanged.
  */
 add_filter('determine_current_user', function($user_id) {
     // If user is already set, return it
@@ -43,21 +66,41 @@ add_filter('determine_current_user', function($user_id) {
         $headers = apache_request_headers();
         if (isset($headers['Authorization'])) {
             $auth_header = $headers['Authorization'];
+        } elseif (isset($headers['authorization'])) {
+            $auth_header = $headers['authorization'];
         }
     }
     
-    // If no Authorization header, let JWT plugin handle it
-    if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
-        return $user_id;
+    // Extract and validate JWT token
+    if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+        $token = trim($matches[1]);
+        if (!empty($token)) {
+            // Validate JWT token and get user ID
+            $jwt_user_id = dev_chrono_validate_jwt_token($token);
+            if ($jwt_user_id && $jwt_user_id > 0) {
+                $user = get_userdata($jwt_user_id);
+                if ($user) {
+                    // Set WordPress current user early - this makes is_user_logged_in() work
+                    wp_set_current_user($jwt_user_id);
+                    return $jwt_user_id; // ✅ Return user ID
+                }
+            }
+        }
     }
     
-    // JWT plugin should handle the rest, but we ensure it runs
-    // The JWT Authentication for WP-API plugin will process this token
+    // No valid JWT token - return existing user_id (let other plugins handle it)
     return $user_id;
-}, 20); // Priority 20 to run after JWT plugin (which typically uses priority 10)
+}, 10); // Priority 10 to run early, before permission callbacks
 
 /**
  * Validates JWT token and returns user ID if valid.
+ * 
+ * SYNCHRONIZED WITH: tastyplates-user-rest-api-plugin.php::tastyplates_validate_jwt_token()
+ * 
+ * ⚠️ When updating this function, ensure tastyplates-user-rest-api-plugin.php is also updated
+ *    to maintain consistent validation logic. The only difference should be:
+ *    - Function name: dev_chrono_validate_jwt_token() vs tastyplates_validate_jwt_token()
+ *    - Both should check GRAPHQL_JWT_AUTH_SECRET_KEY first, then JWT_AUTH_SECRET_KEY
  * 
  * @param string|null $token Optional JWT token string. If not provided, reads from Authorization header.
  * @return int|false User ID if token is valid, false otherwise.
@@ -124,10 +167,18 @@ function dev_chrono_validate_jwt_token($token = null) {
         }
         
         // Get secret key from wp-config.php
-        $secret_key = defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : '';
+        // SYNCHRONIZED: Matches tastyplates-user-rest-api-plugin.php secret key priority
+        // Checks GRAPHQL_JWT_AUTH_SECRET_KEY first, then JWT_AUTH_SECRET_KEY
+        $secret_key = '';
+        if (defined('GRAPHQL_JWT_AUTH_SECRET_KEY') && GRAPHQL_JWT_AUTH_SECRET_KEY) {
+            $secret_key = GRAPHQL_JWT_AUTH_SECRET_KEY;
+        } elseif (defined('JWT_AUTH_SECRET_KEY') && JWT_AUTH_SECRET_KEY) {
+            $secret_key = JWT_AUTH_SECRET_KEY;
+        }
+        
         if (empty($secret_key)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('dev_chrono_validate_jwt_token: JWT_AUTH_SECRET_KEY not defined in wp-config.php');
+                error_log('dev_chrono_validate_jwt_token: JWT secret key not defined in wp-config.php (checked GRAPHQL_JWT_AUTH_SECRET_KEY and JWT_AUTH_SECRET_KEY)');
             }
             return false;
         }
@@ -191,6 +242,13 @@ function dev_chrono_public_profile_auth($request = null) {
  * Helper permission callback that validates JWT tokens or falls back to WordPress session.
  * Used by follow, wishlist, and check-ins endpoints that require authentication.
  * 
+ * SYNCHRONIZED WITH: tastyplates-user-rest-api-plugin.php::get_current_user_permissions_check() (lines 1986-2034)
+ * 
+ * ⚠️ When updating this function, ensure the logic matches get_current_user_permissions_check()
+ *    in tastyplates-user-rest-api-plugin.php, except for the return type:
+ *    - This function returns bool (for permission callbacks)
+ *    - get_current_user_permissions_check() returns bool|WP_Error (for REST API)
+ * 
  * @param WP_REST_Request $request Request object.
  * @return bool True if authenticated, false otherwise.
  */
@@ -233,7 +291,7 @@ function dev_chrono_check_auth($request = null) {
         }
     }
     
-    // Check JWT token first if we have one
+    // Validate JWT token if we have one
     if (!empty($token)) {
         $user_id = dev_chrono_validate_jwt_token($token);
         if ($user_id && $user_id > 0) {
@@ -242,33 +300,29 @@ function dev_chrono_check_auth($request = null) {
             if ($user) {
                 // Valid JWT token - set user session for WordPress compatibility
                 wp_set_current_user($user_id);
-                return true;
+                return true; // ✅ JWT validated - return immediately
             } else {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('dev_chrono_check_auth: User ID ' . $user_id . ' from token does not exist');
                 }
             }
         }
-        // Token was provided but invalid - log for debugging (only if WP_DEBUG is enabled)
+        // Invalid token - return false (don't fallback)
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('dev_chrono_check_auth: JWT token validation failed');
         }
-    } else {
-        // No token found - log for debugging (only if WP_DEBUG is enabled)
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('dev_chrono_check_auth: No JWT token found in request headers');
-        }
+        return false;
     }
     
-    // Fallback to WordPress session (for non-JWT authentication)
+    // No token provided - check if user was set by determine_current_user filter
+    // This handles cases where determine_current_user already validated the token
     if (is_user_logged_in()) {
         return true;
     }
     
     // Not authenticated - return false (WordPress will return 403)
-    // Note: Returning false instead of WP_Error to ensure consistent behavior
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('dev_chrono_check_auth: Authentication failed - no valid token or session');
+        error_log('dev_chrono_check_auth: Authentication failed - no valid token');
     }
     return false;
 }
@@ -2047,9 +2101,7 @@ add_action(
             [
                 'methods' => 'POST',
                 'callback' => 'create_listing',
-                'permission_callback' => function () {
-                    return is_user_logged_in();
-                },
+                'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             ]
         );
 
@@ -2059,9 +2111,7 @@ add_action(
             [
                 'methods' => ['PUT', 'OPTIONS'],
                 'callback' => 'update_listing',
-                'permission_callback' => function () {
-                    return  is_user_logged_in();
-                },
+                'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             ]
         );
 
@@ -2071,9 +2121,7 @@ add_action(
             [
                 'methods' => 'DELETE',
                 'callback' => 'delete_listing',
-                'permission_callback' => function () {
-                    return is_user_logged_in();
-                },
+                'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             ]
         );
 
@@ -2109,9 +2157,7 @@ add_action(
                     return new WP_Error('rest_invalid_param', 'Invalid action', ['status' => 400]);
                 }
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            },
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             'args' => [
                 'restaurant_slug' => ['required' => true, 'type' => 'string'],
                 'action' => ['required' => true, 'type' => 'string', 'enum' => ['save', 'unsave', 'check']],
@@ -2238,9 +2284,7 @@ add_action(
                     'roles' => $user->roles,
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
         ]);
 
         // Get user by username or email (for admin or public use)
@@ -2294,9 +2338,7 @@ add_action(
                     'roles' => $user->roles,
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
         ]);
 
         // Get user palates (cuisines/ethnicities) from usermeta
@@ -2324,32 +2366,6 @@ add_action(
             'args' => [
                 'user_id' => ['required' => true, 'type' => 'integer'],
             ],
-        ]);
-
-        // Get user bio endpoint
-        register_rest_route('restaurant/v1', '/user-bio/', [
-            'methods' => ['GET', 'POST'],
-            'callback' => function ($request) {
-                $user_id = intval($request->get_param('user_id') ?: 0);
-                if (!$user_id) {
-                    return new WP_Error('rest_invalid_param', 'Missing user_id', ['status' => 400]);
-                }
-                if ($request->get_method() === 'POST') {
-                    if (get_current_user_id() !== $user_id) {
-                        return new WP_Error('rest_forbidden', 'You can only update your own bio', ['status' => 403]);
-                    }
-                    $bio = sanitize_text_field($request->get_param('bio'));
-                    update_user_meta($user_id, 'about_me', $bio);
-                    return ['user_id' => $user_id, 'bio' => $bio];
-                }
-                $bio = get_user_meta($user_id, 'about_me', true);
-                return ['user_id' => $user_id, 'bio' => $bio ?: ''];
-            },
-            'permission_callback' => '__return_true',
-            'args' => [
-                'user_id' => ['required' => true, 'type' => 'integer'],
-                'bio' => ['type' => 'string']
-            ]
         ]);
 
         // Get reviews for a restaurant (for modal)
@@ -2646,9 +2662,7 @@ add_action(
                     'message' => $is_draft ? 'Review saved as draft' : 'Comment submitted successfully'
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
         ]);
 
         ### REVIEW DRAFTS ENDPOINT ###
@@ -2781,9 +2795,7 @@ add_action(
 
                 return $drafts;
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
         ]);
 
         ### GET SINGLE REVIEW DRAFT ENDPOINT ###
@@ -2925,9 +2937,7 @@ add_action(
                     'hashtags' => $hashtags ?: '',
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            },
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             'args' => [
                 'id' => [
                     'required' => true,
@@ -3135,9 +3145,7 @@ add_action(
                     ]
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            },
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             'args' => [
                 'id' => [
                     'required' => true,
@@ -3190,9 +3198,7 @@ add_action(
                     return new WP_Error('rest_delete_failed', 'Failed to delete draft', ['status' => 500]);
                 }
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            },
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             'args' => [
                 'id' => [
                     'required' => true,
@@ -3239,9 +3245,7 @@ add_action(
                     'userHasLiked' => $like
                 ];
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            }
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
         ]);
 
         ### CHECK-IN ENDPOINTS ###
@@ -3276,9 +3280,7 @@ add_action(
                     return new WP_Error('rest_invalid_param', 'Invalid action', ['status' => 400]);
                 }
             },
-            'permission_callback' => function () {
-                return is_user_logged_in();
-            },
+            'permission_callback' => 'dev_chrono_check_auth', // JWT-aware permission check
             'args' => [
                 'restaurant_slug' => ['required' => true, 'type' => 'string'],
                 'action' => ['required' => true, 'type' => 'string', 'enum' => ['checkin', 'uncheckin', 'check']],

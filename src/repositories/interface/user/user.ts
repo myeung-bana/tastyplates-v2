@@ -16,8 +16,8 @@ export interface UserRepo {
     registerUser<T>(data: Partial<IRegisterData>): Promise<T>;
     login(credentials: { email: string; password: string }): Promise<IJWTResponse>;
     checkGoogleUser(email: string): Promise<CheckGoogleUserResponse>;
-    generateGoogleUserToken(userId: number | string, email?: string): Promise<IJWTResponse>;
-    googleOAuth(idToken: string): Promise<IJWTResponse>;
+    // generateGoogleUserToken removed - using Firebase authentication instead
+    // googleOAuth removed - using Firebase authentication instead
     nextendSocialLogin(accessToken: string): Promise<{ userId: string | null; error?: string }>;
     checkEmailExists<T>(email: string): Promise<T>;
     checkUsernameExists(username: string): Promise<CheckEmailExistResponse>;

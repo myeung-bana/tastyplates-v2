@@ -5,6 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserService } from '@/services/user/userService';
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 import Spinner from "@/components/common/LoadingSpinner";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
@@ -28,7 +29,7 @@ const userService = new UserService()
 // Component that uses useSearchParams - must be wrapped in Suspense
 const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const searchParams = useSearchParams();
-  const isOAuthFlow = searchParams?.get('oauth') === 'google';
+  // isOAuthFlow removed - using Firebase authentication instead
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,46 +50,19 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       setShowContinueModal(true);
     }
 
-    const googleError = Cookies.get('googleError');
-    if (googleError) {
-      try {
-        setError(decodeURIComponent(googleError));
-      } catch {
-        setError('An error occurred during authentication.');
-      }
-      removeAllCookies();
-    }
-
-    // Handle OAuth flow - extract email from Google ID token
-    if (isOAuthFlow) {
-      const idToken = Cookies.get('google_oauth_id_token');
-      const accessToken = Cookies.get('google_oauth_access_token');
-      
-      if (idToken) {
-        try {
-          // Decode ID token to get email (JWT payload is base64 encoded)
-          const parts = idToken.split('.');
-          if (parts.length === 3 && parts[1]) {
-            const payload = JSON.parse(atob(parts[1]));
-            const googleEmail = payload.email;
-            const googleName = payload.name;
-            
-            if (googleEmail) {
-              setEmail(googleEmail);
-              // For OAuth users, we'll skip password requirement
-              // Password will be empty and handled during registration
-            }
-          }
-        } catch (error) {
-          console.error('Error decoding Google ID token:', error);
-          setError('Failed to process Google account information. Please try again.');
-        }
-      } else if (!accessToken) {
-        // No OAuth tokens found - might be a direct access
-        setError('OAuth session expired. Please try signing up with Google again.');
-      }
-    }
-  }, [router, isOAuthFlow]);
+    // Clean up any old Google OAuth cookies
+    Cookies.remove('google_oauth_token');
+    Cookies.remove('google_oauth_user_id');
+    Cookies.remove('google_oauth_email');
+    Cookies.remove('google_oauth_pending');
+    Cookies.remove('googleError');
+    Cookies.remove('google_oauth_redirect');
+    Cookies.remove('auth_type');
+    Cookies.remove('google_oauth_id_token');
+    Cookies.remove('google_oauth_access_token');
+    Cookies.remove('google_oauth_name');
+    Cookies.remove('google_oauth_picture');
+  }, [router]);
 
   const checkEmailExists = async (email: string) => {
     const checkEmail = await userService.checkEmailExists(email);
@@ -141,53 +115,63 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       return;
     }
 
-    // For OAuth flow, skip password validation (password will be empty)
-    // For manual registration, validate passwords
-    if (!isOAuthFlow) {
-      if (!validatePasswords()) {
-        setIsLoading(false);
-        return;
-      }
+    // Validate passwords for email/password registration
+    if (!validatePasswords()) {
+      setIsLoading(false);
+      return;
     }
 
     try {
-      // Check if email already exists
-      const emailExists = await checkEmailExists(email);
-      if (!emailExists) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Prepare registration data
-      const registrationData: any = {
-        email,
-        password: isOAuthFlow ? '' : password, // Empty password for OAuth users
-        googleAuth: isOAuthFlow,
-        is_google_user: isOAuthFlow ? true : undefined, // Mark as Google user for WordPress
-      };
+      // Use Firebase authentication for registration
+      const result = await firebaseAuthService.registerWithEmail(email, password);
       
-      // Store OAuth tokens for linking after registration
-      if (isOAuthFlow) {
-        const accessToken = Cookies.get('google_oauth_access_token');
-        const idToken = Cookies.get('google_oauth_id_token');
-        if (accessToken && idToken) {
-          registrationData.googleOAuthToken = accessToken;
-          registrationData.googleIdToken = idToken;
-          // Store redirect URL if available
-          const redirectUrl = Cookies.get('google_oauth_redirect');
-          if (redirectUrl) {
-            registrationData.oauthRedirectUrl = redirectUrl;
+      if (result.success && result.firebase_uuid && result.user) {
+        // User is created in Hasura by firebaseAuthService
+        // Now sign in with NextAuth
+        const nextAuthResult = await signIn('credentials', {
+          email: result.user.email || email,
+          firebase_uuid: result.firebase_uuid,
+          redirect: false,
+        });
+        
+        if (nextAuthResult?.ok) {
+          // Store onboarding data
+          const onboardingData = {
+            email: result.user.email || email,
+            username: result.user.displayName || email.split('@')[0],
+            firebase_uuid: result.firebase_uuid,
+            id: result.firebase_uuid,
+            isPartialRegistration: true,
+          };
+          
+          localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+          router.push(ONBOARDING_ONE);
+        } else {
+          // Better error message - check for detailed error info
+          const errorMsg = nextAuthResult?.error || 'Authentication failed. User may not exist in database.';
+          console.error('NextAuth sign-in failed:', {
+            ok: nextAuthResult?.ok,
+            error: nextAuthResult?.error,
+            status: nextAuthResult?.status,
+            url: nextAuthResult?.url,
+            fullResult: nextAuthResult
+          });
+          
+          // More specific error message based on the error
+          let displayError = errorMsg;
+          if (errorMsg === 'CredentialsSignin' || !errorMsg || errorMsg === '{}') {
+            displayError = 'Authentication failed. The user account may not exist in the database yet. Please try again in a moment or contact support.';
           }
+          
+          setError(displayError);
+          setIsLoading(false);
         }
+      } else {
+        setError(result.error || 'Registration failed');
+        setIsLoading(false);
       }
-      
-      // Save registration data to localStorage
-      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
-      router.push(ONBOARDING_ONE);
-    } catch {
-      setError(emailOccurredError);
-      setIsLoading(false);
-    } finally {
+    } catch (error: any) {
+      setError(error.message || emailOccurredError);
       setIsLoading(false);
     }
   };
@@ -195,165 +179,9 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const toggleShowPassword = () => setShowPassword(!showPassword);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
-  /**
-   * Generate a secure random password for OAuth users
-   * This password is auto-generated and never used by the user (they authenticate via Google)
-   */
-  const generateRandomPassword = (): string => {
-    // Generate a secure random password: 24 characters with letters, numbers, and special chars
-    const length = 24;
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    const values = new Uint32Array(length);
-    crypto.getRandomValues(values);
-    return Array.from(values, x => charset[x % charset.length]).join('');
-  };
+  // generateRandomPassword removed - Firebase handles authentication
 
-  const handleGoogleRestRegistration = async () => {
-    try {
-      setIsLoading(true);
-
-      // Get ID token and user info from cookies
-      const idToken = Cookies.get('google_oauth_id_token');
-      const googleEmail = Cookies.get('google_oauth_email');
-      const googleName = Cookies.get('google_oauth_name');
-      const googlePicture = Cookies.get('google_oauth_picture');
-
-      if (!idToken || !googleEmail) {
-        setError('Google authentication information not found. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Registering user via REST API using Google OAuth data...');
-
-      // Derive a username from email (backend will enforce uniqueness)
-      let baseUsername = googleEmail.split('@')[0] || 'user';
-      baseUsername = baseUsername.replace(/[^a-zA-Z0-9_]/g, '');
-      if (!baseUsername) {
-        baseUsername = `user${Date.now()}`;
-      }
-
-      // Generate random password for OAuth user (required field, but user never uses it)
-      const oauthPassword = generateRandomPassword();
-
-      // Prepare registration payload for REST API - MINIMAL FORMAT
-      // Essential fields: email, username, password (random for OAuth), is_google_user
-      // Profile fields (profileImage, aboutMe, palates) can be added later via profile update
-      const registrationPayload: Partial<IRegisterData> = {
-        email: googleEmail,
-        username: baseUsername,
-        password: oauthPassword, // Random password for OAuth users (user authenticates via Google)
-        is_google_user: true, // Explicitly mark as Google OAuth user - backend uses this to differentiate
-        // Removed: profileImage, aboutMe, palates, googleToken, googleAuth
-        // These are optional and can be added later via profile update
-      };
-
-      // Create user via REST /wp-json/wp/v2/api/users
-      const registrationResult = await userService.registerUser(registrationPayload);
-      const createdUser: any = registrationResult;
-
-      const userId = createdUser?.id || createdUser?.ID;
-      const username = createdUser?.username || baseUsername;
-      console.log(userId, username);
-
-      if (!userId) {
-        console.error('Google REST registration: user created but ID not found in response', createdUser);
-        setError('User created but ID not found. Please try signing in manually.');
-        setIsLoading(false);
-        // Clean up cookies
-        Cookies.remove('google_oauth_id_token');
-        Cookies.remove('google_oauth_email');
-        Cookies.remove('google_oauth_name');
-        Cookies.remove('google_oauth_picture');
-        Cookies.remove('google_oauth_pending');
-        return;
-      }
-
-      // Generate JWT token for this Google user using existing endpoint
-      const tokenResponse = await userService.generateGoogleUserToken(userId, googleEmail);
-
-      if (!tokenResponse || !tokenResponse.token) {
-        console.error('Google REST registration: token generation failed', tokenResponse);
-        setError('User created but token generation failed. Please try signing in manually.');
-        setIsLoading(false);
-        // Clean up cookies
-        Cookies.remove('google_oauth_id_token');
-        Cookies.remove('google_oauth_email');
-        Cookies.remove('google_oauth_name');
-        Cookies.remove('google_oauth_picture');
-        Cookies.remove('google_oauth_pending');
-        return;
-      }
-
-      console.log('Google REST registration successful:', {
-        userId,
-        hasToken: !!tokenResponse.token,
-      });
-
-      // Store registration data for onboarding - MINIMAL FORMAT
-      // Only essential fields for onboarding continuation
-      // Profile fields (birthdate, gender, palates, profileImage, aboutMe) can be filled during onboarding
-      const onboardingData = {
-        email: googleEmail,
-        username,
-        password: '', // OAuth users don't have passwords
-        googleAuth: true,
-        is_google_user: true,
-        id: userId,
-        isPartialRegistration: true,
-        user_id: userId,
-        // Removed: birthdate, gender, palates, profileImage, aboutMe
-        // These can be filled during onboarding steps
-      };
-
-      localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
-
-      // Set NextAuth session cookies
-      Cookies.set('google_oauth_token', tokenResponse.token as string, { expires: 1 / 24, sameSite: 'lax' });
-      Cookies.set('google_oauth_user_id', String(userId), { expires: 1 / 24, sameSite: 'lax' });
-      Cookies.set('google_oauth_email', googleEmail, { expires: 1 / 24, sameSite: 'lax' });
-      Cookies.set('google_oauth_pending', 'true', { expires: 1 / 24, sameSite: 'lax' });
-
-      // Clean up OAuth cookies from popup
-      Cookies.remove('google_oauth_id_token');
-      Cookies.remove('google_oauth_name');
-      Cookies.remove('google_oauth_picture');
-
-      // Complete NextAuth session using credentials provider (oauth_token path)
-      await signIn('credentials', {
-        email: googleEmail,
-        password: 'oauth_token',
-        redirect: false,
-      });
-
-      console.log('Registration successful, redirecting to onboarding...');
-      router.push(ONBOARDING_ONE);
-    } catch (error: any) {
-      console.error('Google REST registration error:', error);
-
-      let errorMessage = 'An error occurred during registration.';
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      console.error('Registration error details (REST):', {
-        message: errorMessage,
-        error,
-      });
-
-      setError(errorMessage);
-      setIsLoading(false);
-
-      // Clean up cookies
-      Cookies.remove('google_oauth_id_token');
-      Cookies.remove('google_oauth_email');
-      Cookies.remove('google_oauth_name');
-      Cookies.remove('google_oauth_picture');
-      Cookies.remove('google_oauth_pending');
-    }
-  };
+  // handleGoogleRestRegistration removed - Firebase handles user creation automatically
 
   const signUpWithGoogle = async () => {
     try {
@@ -361,110 +189,63 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       setIsLoading(true);
       localStorage.removeItem(REGISTRATION_KEY);
       
-      // Remove only old OAuth-related cookies (don't use removeAllCookies to preserve session)
-      Cookies.remove('google_oauth_token');
-      Cookies.remove('google_oauth_user_id');
-      Cookies.remove('google_oauth_email');
-      Cookies.remove('google_oauth_pending');
-      Cookies.remove('googleError');
-      Cookies.remove('onboarding_data');
-      Cookies.remove('google_oauth_redirect');
-      Cookies.remove('auth_type');
+      const result = await firebaseAuthService.signInWithGoogle();
       
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!googleClientId) {
-        setError('Google OAuth is not configured.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Store auth type for callback
-      const redirectUri = `${window.location.origin}/api/auth/google-callback`;
-      Cookies.set('google_oauth_redirect', window.location.origin, { expires: 1 / 24, sameSite: 'lax' });
-      Cookies.set('auth_type', sessionType.signup, { expires: 1 / 24, sameSite: 'lax' });
-      
-      console.log('🔍 Register: Set auth_type cookie to:', sessionType.signup);
-      
-      // Build Google OAuth2 authorization URL
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${encodeURIComponent(googleClientId)}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `response_type=code&` +
-        `scope=openid email profile&` +
-        `access_type=offline&` +
-        `prompt=consent`;
-      
-      // Open Google OAuth in popup window
-      const width = 500;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const popup = window.open(
-        authUrl,
-        'Google Sign Up',
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-      );
-      
-      if (!popup) {
-        setError('Please allow popups for this site to use Google Sign-Up.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Monitor for authentication completion by polling cookies
-      // This avoids COOP errors from checking popup.closed across different origins
-      let popupCheckCount = 0;
-      const maxChecks = 600; // 5 minutes at 500ms intervals
-      
-      const checkPopup = setInterval(() => {
-        popupCheckCount++;
+      if (result.success && result.firebase_uuid && result.user) {
+        // User is created in Hasura by firebaseAuthService
+        // Now sign in with NextAuth
+        const nextAuthResult = await signIn('credentials', {
+          email: result.user.email || '',
+          firebase_uuid: result.firebase_uuid,
+          redirect: false,
+        });
         
-        // Check if authentication succeeded by looking for cookies
-        const hasPendingAuth = Cookies.get('google_oauth_pending');
-        const hasError = Cookies.get('googleError');
-        
-        if (hasError) {
-          clearInterval(checkPopup);
-          try {
-            setError(decodeURIComponent(hasError));
-          } catch {
-            setError('An error occurred during authentication.');
+        if (nextAuthResult?.ok) {
+          // Store onboarding data
+          const onboardingData = {
+            email: result.user.email || '',
+            username: result.user.displayName || result.user.email?.split('@')[0] || '',
+            firebase_uuid: result.firebase_uuid,
+            id: result.firebase_uuid,
+            isPartialRegistration: true,
+          };
+          
+          localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+          router.push(ONBOARDING_ONE);
+        } else {
+          // Better error message - check for detailed error info
+          const errorMsg = nextAuthResult?.error || 'Authentication failed. User may not exist in database.';
+          console.error('NextAuth sign-in failed:', {
+            ok: nextAuthResult?.ok,
+            error: nextAuthResult?.error,
+            status: nextAuthResult?.status,
+            url: nextAuthResult?.url,
+            fullResult: nextAuthResult
+          });
+          
+          // More specific error message based on the error
+          let displayError = errorMsg;
+          if (errorMsg === 'CredentialsSignin' || !errorMsg || errorMsg === '{}') {
+            displayError = 'Authentication failed. The user account may not exist in the database yet. Please try again in a moment or contact support.';
           }
-          Cookies.remove('googleError');
+          
+          setError(displayError);
           setIsLoading(false);
-          // Popup will close itself via callback route HTML
-        } else if (hasPendingAuth === 'signup') {
-          clearInterval(checkPopup);
-          // OAuth completed - register user via REST API
-          console.log('Google OAuth completed, registering user via REST API...');
-          handleGoogleRestRegistration();
-        } else if (popupCheckCount >= maxChecks) {
-          // Timeout after 5 minutes
-          clearInterval(checkPopup);
-          setError('Google sign-up timed out. Please try again.');
-          setIsLoading(false);
-          // Popup will close itself via callback route HTML
         }
-      }, 500);
-      
-    } catch (error) {
+      } else {
+        setError(result.error || 'Google registration failed');
+        setIsLoading(false);
+      }
+    } catch (error: any) {
       console.error('Google sign-up error:', error);
-      setError(unexpectedError);
+      setError(error.message || unexpectedError);
       setIsLoading(false);
     }
   };
 
   return (
     <div className="auth flex flex-col justify-center items-start">
-      {isOAuthFlow && (
-        <div className="w-full mb-4 px-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 font-neusans">
-            <p className="font-medium mb-1">Completing Google Sign-Up</p>
-            <p>Please complete your profile information below to finish registration.</p>
-          </div>
-        </div>
-      )}
+      {/* OAuth flow message removed - using Firebase authentication */}
       {showContinueModal ? (
         <div className="auth__container !max-w-[488px] w-full">
           <div className="auth__card !py-8 !rounded-3xl">
@@ -536,14 +317,14 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                         setEmail(value)
                         setEmailError(!validEmail(value) ? validateEmail(value) : "")
                       }}
-                      readOnly={isOAuthFlow} // For OAuth flow, email is pre-filled and read-only
+                      readOnly={false}
                     />
                   </div>
                   {emailError && (
                     <div className="text-red-600 text-xs font-neusans">{emailError}</div>
                   )}
                 </div>
-                {!isOAuthFlow && (
+                {(
                   <>
                     <div className="auth__form-group">
                       <label htmlFor="password" className="auth__label font-neusans">

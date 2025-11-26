@@ -11,7 +11,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 const restaurantService = new RestaurantService();
 
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -22,12 +22,15 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
   useEffect(() => {
     let isMounted = true;
-    if (!session || !restaurantSlug || initialized) return;
+    // Wait for session to finish loading before checking accessToken
+    if (status === "loading") return;
+    // Check for accessToken only after session is loaded
+    if (!session || !session?.accessToken || !restaurantSlug || initialized) return;
     const fetchCheckIn = async () => {
       try {
         const data = await restaurantService.createCheckIn(
           { restaurant_slug: restaurantSlug, action: "check" },
-          session?.accessToken // can be undefined
+          session.accessToken // Guaranteed to exist due to check above
         );
 
         if (isMounted) {
@@ -35,6 +38,9 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
         }
       } catch (error) {
         console.error("Failed to fetch check-in status:", error);
+        if (isMounted) {
+          setError("Unable to fetch check-in status");
+        }
       } finally {
         if (isMounted) setInitialized(true);
       }
@@ -42,10 +48,13 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
     fetchCheckIn();
     return () => { isMounted = false; };
-  }, [restaurantSlug, session, initialized]);
+  }, [restaurantSlug, session, status, initialized]);
 
   const handleToggle = async () => {
-    if (!session) return;
+    if (!session || !session?.accessToken) {
+      setError("Authentication required");
+      return;
+    }
     setLoading(true);
     setError(null);
     const prevCheckedIn = checkedIn;
@@ -55,7 +64,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     try {
       const res: Record<string, unknown> = await restaurantService.createCheckIn(
         { restaurant_slug: restaurantSlug, action },
-        session?.accessToken
+        session.accessToken // Guaranteed to exist due to check above
       );
 
       if (res.status === "checkedin" || res.status === "uncheckedin") {

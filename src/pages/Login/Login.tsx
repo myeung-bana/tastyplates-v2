@@ -12,36 +12,9 @@ import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, pass
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
 import { HOME } from "@/constants/pages";
 import { validEmail } from "@/lib/utils";
-import { UserService } from "@/services/user/userService";
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 
-// Type definitions for Google Identity Services
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: {
-            client_id: string;
-            callback: (response: { credential: string }) => void;
-          }) => void;
-          prompt: (callback?: (notification: any) => void) => void;
-          renderButton: (element: HTMLElement | null, config: any) => void;
-        };
-        oauth2: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (response: any) => void;
-          }) => {
-            requestAccessToken: () => void;
-          };
-        };
-      };
-    };
-  }
-}
-
-const userService = new UserService();
+// Google Identity Services types removed - using Firebase Authentication
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -88,80 +61,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   };
 
   useEffect(() => {
-    const googleError = Cookies.get('googleError');
-    if (googleError) {
-      if (googleError.includes('exist')) {
-        setMessage(decodeURIComponent(loginFailed));
-      } else {
-        setMessage(decodeURIComponent(googleError));
-      }
-      setMessageType(responseStatus.error);
-      removeAllCookies();
-    }
-    
-    // Handle OAuth callback completion
-    const pendingOAuth = Cookies.get('google_oauth_pending');
-    if (pendingOAuth === 'true') {
-      const oauthToken = Cookies.get('google_oauth_token');
-      const oauthUserId = Cookies.get('google_oauth_user_id');
-      const oauthEmail = Cookies.get('google_oauth_email');
-      
-      if (oauthToken && oauthUserId) {
-        // Create NextAuth session
-        signIn(provider.credentials, {
-          email: oauthEmail || '',
-          password: 'oauth_token',
-          redirect: false,
-          callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
-        }).then((signInResult) => {
-          // Clean up cookies
-          Cookies.remove('google_oauth_token');
-          Cookies.remove('google_oauth_user_id');
-          Cookies.remove('google_oauth_email');
-          Cookies.remove('google_oauth_pending');
-          
-          if (signInResult?.ok) {
-            handleLoginSuccess();
-          } else {
-            setMessage(googleLoginFailed);
-            setMessageType(responseStatus.error);
-          }
-        }).catch((error) => {
-          console.error('OAuth sign-in error:', error);
-          Cookies.remove('google_oauth_token');
-          Cookies.remove('google_oauth_user_id');
-          Cookies.remove('google_oauth_email');
-          Cookies.remove('google_oauth_pending');
-          setMessage(googleLoginFailed);
-          setMessageType(responseStatus.error);
-        });
-      }
-    }
-
-    // Fallback: if server set id_token cookie but callback didn't exchange, call WP endpoint from client
-    const idToken = Cookies.get('google_oauth_id_token');
-    if (idToken && pendingOAuth !== 'true') {
-      (async () => {
-        try {
-          const result = await userService.googleOAuth(idToken);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const resAny = result as any;
-          if (resAny?.token && resAny?.id) {
-            Cookies.set('google_oauth_token', resAny.token, { expires: 1 / 24, sameSite: 'lax' });
-            Cookies.set('google_oauth_user_id', String(resAny.id), { expires: 1 / 24, sameSite: 'lax' });
-            Cookies.set('google_oauth_email', resAny.user_email || oauthEmail || '', { expires: 1 / 24, sameSite: 'lax' });
-            Cookies.set('google_oauth_pending', 'true', { expires: 1 / 24, sameSite: 'lax' });
-            // Trigger signIn flow handled above on next render
-            window.location.reload();
-          }
-        } catch (err) {
-          console.warn('Client-side googleOAuth fallback failed (login):', err);
-        } finally {
-          Cookies.remove('google_oauth_id_token');
-        }
-      })();
-    }
-  }, [router, handleLoginSuccess]);
+    // Clean up any old Google OAuth cookies
+    Cookies.remove('google_oauth_token');
+    Cookies.remove('google_oauth_user_id');
+    Cookies.remove('google_oauth_email');
+    Cookies.remove('google_oauth_pending');
+    Cookies.remove('googleError');
+    Cookies.remove('google_oauth_redirect');
+    Cookies.remove('auth_type');
+    Cookies.remove('google_oauth_id_token');
+  }, []);
 
   const validatePasswords = () => {
     let isValid = true;
@@ -201,20 +110,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
 
     try {
-      const result = await signIn(provider.credentials, {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
-      });
+      // Use Firebase authentication
+      const result = await firebaseAuthService.signInWithEmail(email, password);
+      
+      if (result.success && result.firebase_uuid && result.user) {
+        // Sign in with NextAuth using firebase_uuid
+        const nextAuthResult = await signIn(provider.credentials, {
+          email: result.user.email || email,
+          firebase_uuid: result.firebase_uuid,
+          redirect: false,
+          callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
+        });
 
-      if (result?.error) {
-        setMessage(loginFailed);
+        if (nextAuthResult?.error) {
+          setMessage(loginFailed);
+          setMessageType(responseStatus.error);
+          setIsLoading(false);
+        } else if (nextAuthResult?.ok) {
+          await handleLoginSuccess();
+        }
+      } else {
+        setMessage(result.error || loginFailed);
         setMessageType(responseStatus.error);
         setIsLoading(false);
-      } else if (result?.ok) {
-        // Use unified success handler
-        await handleLoginSuccess();
       }
     } catch (error) {
       setMessage((error as { message?: string })?.message || unexpectedError);
@@ -223,168 +141,41 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
   };
 
-  // Load Google Identity Services script
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    // Check if script is already loaded
-    if (window.google) {
-      initializeGoogleSignIn();
-      return;
-    }
-    
-    // Load Google Identity Services script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      initializeGoogleSignIn();
-    };
-    document.head.appendChild(script);
-    
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
-
-  const initializeGoogleSignIn = () => {
-    if (!window.google) return;
-    
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!googleClientId) return;
-    
-    // Initialize Google Identity Services
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCallback,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-  };
+  // Google Identity Services script loading removed - using Firebase instead
 
   const loginWithGoogle = async () => {
     try {
       setMessage('');
       setIsLoading(true);
       
-      // Remove only old OAuth-related cookies (don't use removeAllCookies to preserve session)
-      Cookies.remove('google_oauth_token');
-      Cookies.remove('google_oauth_user_id');
-      Cookies.remove('google_oauth_email');
-      Cookies.remove('google_oauth_pending');
-      Cookies.remove('googleError');
-      Cookies.remove('onboarding_data');
-      Cookies.remove('google_oauth_redirect');
-      Cookies.remove('auth_type');
+      const result = await firebaseAuthService.signInWithGoogle();
       
-      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!googleClientId) {
-        setMessage('Google OAuth is not configured.');
-        setMessageType(responseStatus.error);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Store redirect URL and auth type
-      const redirectUri = `${window.location.origin}/api/auth/google-callback`;
-      Cookies.set('google_oauth_redirect', window.location.origin, { expires: 1 / 24, sameSite: 'lax' });
-      Cookies.set('auth_type', 'login', { expires: 1 / 24, sameSite: 'lax' });
-      
-      console.log('🔍 Login: Set auth_type cookie to: login');
-      
-      // Build Google OAuth2 authorization URL
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${encodeURIComponent(googleClientId)}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `response_type=code&` +
-        `scope=openid email profile&` +
-        `access_type=offline&` +
-        `prompt=consent`;
-      
-      // Open Google OAuth in popup window
-      const width = 500;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const popup = window.open(
-        authUrl,
-        'Google Sign In',
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-      );
-      
-      if (!popup) {
-        setMessage('Please allow popups for this site to use Google Sign-In.');
-        setMessageType(responseStatus.error);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Monitor for authentication completion by polling cookies
-      // This avoids COOP errors from checking popup.closed across different origins
-      let popupCheckCount = 0;
-      const maxChecks = 600; // 5 minutes at 500ms intervals
-      
-      const checkPopup = setInterval(() => {
-        popupCheckCount++;
+      if (result.success && result.firebase_uuid && result.user) {
+        // Sign in with NextAuth using firebase_uuid
+        const nextAuthResult = await signIn('credentials', {
+          email: result.user.email || '',
+          firebase_uuid: result.firebase_uuid,
+          redirect: false,
+        });
         
-        // Check if authentication succeeded by looking for cookies
-        const hasPendingAuth = Cookies.get('google_oauth_pending');
-        const hasError = Cookies.get('googleError');
-        
-        if (hasError) {
-          clearInterval(checkPopup);
-          setMessage(decodeURIComponent(hasError));
-          setMessageType(responseStatus.error);
-          Cookies.remove('googleError');
-          setIsLoading(false);
-          // Popup will close itself via callback route HTML
-        } else if (hasPendingAuth) {
-          clearInterval(checkPopup);
-          // Authentication succeeded - trigger NextAuth sign in
-          console.log('Google login successful, completing session...');
-          signIn('credentials', {
-            email: '',
-            password: 'oauth_token',
-            redirect: false,
-          }).then((result) => {
-            if (result?.ok) {
-              handleLoginSuccess();
-            } else {
-              setMessage(loginFailed);
-              setMessageType(responseStatus.error);
-              setIsLoading(false);
-            }
-          }).catch((error) => {
-            console.error('NextAuth sign in error:', error);
-            setMessage(loginFailed);
-            setMessageType(responseStatus.error);
-            setIsLoading(false);
-          });
-        } else if (popupCheckCount >= maxChecks) {
-          // Timeout after 5 minutes
-          clearInterval(checkPopup);
-          setMessage('Google sign-in timed out. Please try again.');
+        if (nextAuthResult?.ok) {
+          await handleLoginSuccess();
+        } else {
+          setMessage('Authentication failed. Please try again.');
           setMessageType(responseStatus.error);
           setIsLoading(false);
-          // Popup will close itself via callback route HTML
         }
-      }, 500);
-      
-    } catch (error) {
+      } else {
+        setMessage(result.error || 'Google sign in failed');
+        setMessageType(responseStatus.error);
+        setIsLoading(false);
+      }
+    } catch (error: any) {
       console.error('Google login error:', error);
-      setMessage(googleLoginFailed);
+      setMessage(error.message || googleLoginFailed);
       setMessageType(responseStatus.error);
       setIsLoading(false);
     }
-  };
-
-  // This function is no longer used with OAuth2 redirect flow
-  // Kept for backward compatibility but will be handled by callback route
-  const handleGoogleCallback = async (response: { credential: string }) => {
-    // This is now handled by the OAuth2 callback route
-    console.warn('handleGoogleCallback called but OAuth2 redirect flow is active');
   };
 
   const toggleShowPassword = () => setShowPassword(!showPassword);

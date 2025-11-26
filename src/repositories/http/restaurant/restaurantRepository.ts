@@ -202,16 +202,14 @@ export class RestaurantRepository implements RestaurantRepo {
 
     async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
         try {
+            // Authentication handled by authLink in GraphQL client
+            // accessToken parameter kept for backward compatibility but not used
             const { data } = await client.mutate({
                 mutation: ADD_RECENTLY_VISITED_RESTAURANT,
                 variables: {
                     postId,
                 },
-                context: {
-                    headers: {
-                        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                    },
-                },
+                // Removed context.headers - authLink automatically adds Authorization header
             });
             return !!data; // Return boolean as expected by interface
         } catch (error) {

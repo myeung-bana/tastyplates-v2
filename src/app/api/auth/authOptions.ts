@@ -13,6 +13,8 @@ type ExtendedUser = User & {
     provider?: string;
 }
 import { UserService } from '@/services/user/userService';
+import { hasuraQuery } from '@/app/graphql/hasura-server-client';
+import { GET_RESTAURANT_USER_BY_FIREBASE_UUID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
 import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
@@ -184,86 +186,116 @@ export const authOptions: AuthOptions = {
             credentials: {
                 email: { label: "Email", type: "text" },
                 password: { label: "Password", type: "password" },
+                firebase_uuid: { label: "Firebase UID", type: "text" },
             },
             async authorize(credentials) {
                 if (!credentials) return null;
-                const cookieStore = await cookies();
                 const email = credentials?.email;
                 const password = credentials?.password;
-                const googleAuth = cookieStore.get("googleAuth")?.value == "true";
+                const firebase_uuid = credentials?.firebase_uuid;
                 
                 try {
-                    // Handle OAuth token from cookie (set by frontend after WordPress OAuth)
-                    if (password === 'oauth_token') {
-                        const oauthToken = cookieStore.get('google_oauth_token')?.value;
-                        const oauthUserId = cookieStore.get('google_oauth_user_id')?.value;
-                        const oauthEmail = cookieStore.get('google_oauth_email')?.value || email;
+                    // Firebase authentication path (new)
+                    if (firebase_uuid) {
+                        console.log('[NextAuth] Attempting to authorize with firebase_uuid:', firebase_uuid);
                         
-                        if (oauthToken && oauthUserId) {
-                            await setCookies({ logInMessage: logInSuccessfull });
-                            return {
-                                id: oauthUserId,
-                                userId: parseInt(oauthUserId, 10),
-                                name: oauthEmail,
-                                email: oauthEmail,
-                                token: oauthToken,
-                            };
-                        }
-                        return null;
-                    }
-                    
-                    // Handle google-register auto login (for registration flow)
-                    if (!password && googleAuth) {
-                        const res = await userService.handleGoogleAuth(email);
-                        if (res.status == code.success) {
-                            await setCookies({ logInMessage: logInSuccessfull });
-                            return {
-                                id: String(res.id) ?? "",
-                                userId: res.id ?? 0,
-                                name: email,
-                                email,
-                                token: res.token,
-                            };
-                        } else {
-                            await setCookies({
-                                googleErrorType: sessionType.login,
-                                googleError: encodeURIComponent(res.message || googleAuthenticationFailed),
+                        // Fetch user from Hasura using firebase_uuid (server-side GraphQL query)
+                        let hasuraUser = null;
+                        try {
+                            const result = await hasuraQuery(GET_RESTAURANT_USER_BY_FIREBASE_UUID, { firebase_uuid });
+                            
+                            if (result.errors) {
+                                console.error('[NextAuth] GraphQL errors fetching user:', result.errors);
+                            } else {
+                                const users = result.data?.restaurant_users || [];
+                                hasuraUser = users[0] || null;
+                                console.log('[NextAuth] First attempt result:', {
+                                    hasData: !!hasuraUser,
+                                    userId: hasuraUser?.id,
+                                    email: hasuraUser?.email
+                                });
+                            }
+                        } catch (error: any) {
+                            console.error('[NextAuth] Error fetching user from Hasura (first attempt):', {
+                                error: error.message,
+                                firebase_uuid
                             });
-                            return null;
                         }
-                    }
-                    
-                    // Manual login - use unified endpoint
-                    if (!password) {
-                        return null;
-                    }
-                    
-                    const res = await userService.login({ email, password });
-                    
-                    // Check for error response (status code >= 400)
-                    if ((res as any).status && (res as any).status >= 400) {
+                        
+                        // If user not found, retry once (in case of race condition)
+                        if (!hasuraUser) {
+                            console.log('[NextAuth] User not found in Hasura, retrying after 1 second...', firebase_uuid);
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                            
+                            try {
+                                const retryResult = await hasuraQuery(GET_RESTAURANT_USER_BY_FIREBASE_UUID, { firebase_uuid });
+                                
+                                if (retryResult.errors) {
+                                    console.error('[NextAuth] GraphQL errors on retry:', retryResult.errors);
+                                } else {
+                                    const users = retryResult.data?.restaurant_users || [];
+                                    hasuraUser = users[0] || null;
+                                    console.log('[NextAuth] Retry attempt result:', {
+                                        hasData: !!hasuraUser,
+                                        userId: hasuraUser?.id,
+                                        email: hasuraUser?.email
+                                    });
+                                }
+                            } catch (retryError: any) {
+                                console.error('[NextAuth] Error fetching user from Hasura (retry attempt):', {
+                                    error: retryError.message,
+                                    firebase_uuid
+                                });
+                            }
+                        }
+                        
+                        if (hasuraUser) {
+                            console.log('[NextAuth] User found, creating session:', {
+                                id: hasuraUser.id,
+                                email: hasuraUser.email,
+                                username: hasuraUser.username
+                            });
+                            await setCookies({ logInMessage: logInSuccessfull });
+                            
+                            // Return user data for NextAuth session
+                            // Note: We don't have a JWT token from Hasura yet, so we'll use firebase_uuid as identifier
+                            // In the future, you might want to generate a custom token or use Hasura JWT
+                            return {
+                                id: hasuraUser.id,
+                                userId: hasuraUser.id,
+                                name: hasuraUser.display_name || hasuraUser.username,
+                                email: hasuraUser.email,
+                                firebase_uuid: hasuraUser.firebase_uuid,
+                                onboarding_complete: hasuraUser.onboarding_complete || false,
+                                token: null, // TODO: Generate custom token if needed for Hasura permissions
+                            };
+                        }
+                        
+                        // User doesn't exist in Hasura - this shouldn't happen if Firebase auth worked
+                        // But we'll return null to let the frontend handle it
+                        console.error('[NextAuth] Firebase user authenticated but not found in Hasura after retry:', {
+                            firebase_uuid
+                        });
+                        
+                        // Set error cookie for frontend to read
                         await setCookies({
                             googleErrorType: sessionType.login,
-                            googleError: encodeURIComponent((res as any).message || loginFailed),
+                            googleError: encodeURIComponent('User account not found in database. Please try registering again.'),
                         });
                         return null;
                     }
                     
-                    if (res.token) {
-                        await setCookies({ logInMessage: logInSuccessfull });
-                        return {
-                            id: String(res.id) ?? "",
-                            userId: res.id ?? 0,
-                            name: res.user_display_name,
-                            email: res.user_email,
-                            token: res.token,
-                        };
+                    // All authentication now goes through Firebase
+                    // If no firebase_uuid is provided, authentication fails
+                    if (!firebase_uuid) {
+                        console.error('[NextAuth] No firebase_uuid provided. Authentication requires Firebase.');
+                        await setCookies({
+                            googleErrorType: sessionType.login,
+                            googleError: encodeURIComponent('Authentication failed. Please try again.'),
+                        });
+                        return null;
                     }
-
-                    await setCookies({
-                        googleErrorType: sessionType.login,
-                        googleError: encodeURIComponent(loginFailed),
-                    });
+                    
                     return null;
                 } catch (error) {
                     console.error("Auth error:", error);
@@ -402,6 +434,7 @@ export const authOptions: AuthOptions = {
                         email: sessionEmail,
                         name: sessionName,
                         image: sessionImage, // Explicitly include image for profile display
+                        onboarding_complete: tokenUser.onboarding_complete || false,
                     } as typeof session.user;
                 } else {
                     // Fix 2: Fallback - if tokenUser is missing, try to get email and id from token

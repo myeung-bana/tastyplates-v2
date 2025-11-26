@@ -4,6 +4,7 @@ import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { UserService } from "@/services/user/userService";
+import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, welcomeProfile } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
 import { responseStatus, sessionProvider as provider } from "@/constants/response";
@@ -83,34 +84,44 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
     const isPartialRegistration = registrationData.isPartialRegistration;
     const userId = registrationData.id || registrationData.user_id;
     
-    // Check if user is already registered (from quick Google signup)
-    if (isPartialRegistration && userId && session?.accessToken) {
-      // User is already registered - update their profile
+    // Check if user is already registered (from quick Google signup or Firebase auth)
+    if (isPartialRegistration && userId && (session?.user?.id || session?.accessToken)) {
+      // User is already registered - update their profile using new API
       try {
-        const updateData: Partial<IUserUpdate> = {};
+        // Use session user ID if available, otherwise fall back to userId from registration data
+        const userIdToUpdate = session?.user?.id || userId;
+        
+        // Prepare update data for new API
+        const updateData: any = {};
         
         // Get data from OnboardingStepOne (stored in registrationData)
-        // Note: Only include fields that are supported by update_user_fields endpoint
         if (registrationData.birthdate) updateData.birthdate = registrationData.birthdate;
-        // Gender is not supported in update endpoint, will need to be added separately if needed
+        if (registrationData.gender) updateData.gender = registrationData.gender;
+        if (registrationData.custom_gender) updateData.custom_gender = registrationData.custom_gender;
+        if (registrationData.pronoun) updateData.pronoun = registrationData.pronoun;
         if (registrationData.palates) {
-          const palatesArray = Array.isArray(registrationData.palates) 
-            ? registrationData.palates 
-            : registrationData.palates.split(',');
-          updateData.palates = palatesArray.join('|');
+          // Handle palates - can be array or string
+          if (Array.isArray(registrationData.palates)) {
+            updateData.palates = registrationData.palates;
+          } else if (typeof registrationData.palates === 'string') {
+            updateData.palates = registrationData.palates.split(',').map((p: string) => p.trim());
+          }
         }
         if (profileImage) updateData.profile_image = profileImage;
         if (aboutMe) updateData.about_me = aboutMe;
-        // Username and email should already be set from registration, but include them for completeness
         if (registrationData.username) updateData.username = registrationData.username;
         if (registrationData.email) updateData.email = registrationData.email;
-        // Password is not needed for OAuth users
-        updateData.password = '';
-        // Language field - can be set if needed, but not required
-        updateData.language = registrationData.language || '';
+        if (registrationData.language_preference) updateData.language_preference = registrationData.language_preference;
         
-        // Update user fields
-        const updateResult = await userService.updateUserFields(updateData, session.accessToken);
+        // Mark onboarding as complete
+        updateData.onboarding_complete = true;
+        
+        // Update user using new /api/v1/restaurant-users endpoint
+        const updateResult = await restaurantUserService.updateUser(userIdToUpdate, updateData);
+        
+        if (!updateResult.success) {
+          throw new Error('Failed to update user profile');
+        }
         
         // Clear registration data
         localStorage.removeItem(REGISTRATION_KEY);

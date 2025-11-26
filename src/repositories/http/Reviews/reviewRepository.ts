@@ -9,6 +9,8 @@ const request = new HttpMethods();
 
 export class ReviewRepository implements ReviewRepo {
   async getAllReviews(first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
+    // Authentication handled by authLink in GraphQL client
+    // accessToken parameter kept for backward compatibility but not used
     const { data } = await client.query<{
       comments: {
         nodes: GraphQLReview[];
@@ -17,11 +19,7 @@ export class ReviewRepository implements ReviewRepo {
     }>({
       query: GET_ALL_RECENT_REVIEWS,
       variables: { first, after },
-      context: {
-        headers: {
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-        },
-      },
+      // Removed context.headers - authLink automatically adds Authorization header
       fetchPolicy: "no-cache",
     });
 
@@ -69,6 +67,8 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getUserReviews(userId: number, first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo; userCommentCount: number }> {
+    // Authentication handled by authLink in GraphQL client
+    // accessToken parameter kept for backward compatibility but not used
     const { data } = await client.query<{
       comments: {
         nodes: GraphQLReview[];
@@ -78,11 +78,7 @@ export class ReviewRepository implements ReviewRepo {
     }>({
       query: GET_USER_REVIEWS,
       variables: { userId: userId.toString(), first, after },
-      context: {
-        headers: {
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-        },
-      },
+      // Removed context.headers - authLink automatically adds Authorization header
       fetchPolicy: "no-cache",
     });
 
@@ -137,6 +133,8 @@ export class ReviewRepository implements ReviewRepo {
   }
 
   async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
+    // Authentication handled by authLink in GraphQL client
+    // accessToken parameter kept for backward compatibility but not used
     const { data } = await client.query<{
       comments: {
         nodes: GraphQLReview[];
@@ -145,11 +143,7 @@ export class ReviewRepository implements ReviewRepo {
     }>({
       query: GET_RESTAURANT_REVIEWS,
       variables: { restaurantId: restaurantId.toString(), first, after },
-      context: {
-        headers: {
-          ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-        },
-      },
+      // Removed context.headers - authLink automatically adds Authorization header
       fetchPolicy: "no-cache",
     });
 

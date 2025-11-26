@@ -19,7 +19,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
   restaurantSlug,
   onShowSignin,
 }) => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -81,6 +81,8 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    // Wait for session to finish loading
+    if (status === "loading") return;
     if (!restaurantSlug || initialized) return;
 
     if (!session?.user) {
@@ -102,7 +104,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [restaurantSlug, session, initialized, checkFavoriteStatus]);
+  }, [restaurantSlug, session, status, initialized, checkFavoriteStatus]);
 
   if (error) {
     return (

@@ -14,6 +14,7 @@ declare module 'next-auth' {
             about_me?: string | null;
             language?: string | null;
             gender?: string | null;
+            onboarding_complete?: boolean | null;
         };
         accessToken?: string;
     }

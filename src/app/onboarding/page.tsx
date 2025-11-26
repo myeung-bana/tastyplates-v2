@@ -32,57 +32,24 @@ const OnboardingContent = () => {
     }
   }, [searchParams]);
 
-  // Check for registration data and handle OAuth completion
+  // Check for registration data and handle session-based onboarding check
+  const { data: session } = useSession();
+  
   useEffect(() => {
     if (!hasMounted) return;
     
-    // Handle OAuth callback completion (for auto-registered users)
-    const pendingOAuth = Cookies.get('google_oauth_pending');
-    if (pendingOAuth === 'true') {
-      const oauthToken = Cookies.get('google_oauth_token');
-      const oauthUserId = Cookies.get('google_oauth_user_id');
-      const oauthEmail = Cookies.get('google_oauth_email');
-      
-      if (oauthToken && oauthUserId) {
-        // Create NextAuth session
-        signIn(provider.credentials, {
-          email: oauthEmail || '',
-          password: 'oauth_token',
-          redirect: false,
-          callbackUrl: ONBOARDING_ONE
-        }).then((signInResult) => {
-          // Clean up cookies
-          Cookies.remove('google_oauth_token');
-          Cookies.remove('google_oauth_user_id');
-          Cookies.remove('google_oauth_email');
-          Cookies.remove('google_oauth_pending');
-          
-          if (signInResult?.ok && update) {
-            update(); // Refresh session
-          }
-        }).catch((error) => {
-          console.error('OAuth sign-in error:', error);
-          Cookies.remove('google_oauth_token');
-          Cookies.remove('google_oauth_user_id');
-          Cookies.remove('google_oauth_email');
-          Cookies.remove('google_oauth_pending');
-        });
+    // Check if user is logged in with new Firebase method
+    if (session?.user?.id) {
+      // If onboarding is already complete, redirect to home
+      if (session.user.onboarding_complete === true) {
+        router.replace(HOME);
+        return;
       }
+      // If user is logged in but onboarding not complete, allow access
+      return;
     }
     
-    // Check for onboarding data from auto-registration
-    const onboardingDataCookie = Cookies.get('onboarding_data');
-    if (onboardingDataCookie) {
-      try {
-        const onboardingData = JSON.parse(onboardingDataCookie);
-        localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
-        // Clean up cookie
-        Cookies.remove('onboarding_data');
-      } catch (error) {
-        console.error('Error parsing onboarding data:', error);
-      }
-    }
-    
+    // Legacy support: Check for registration data from old flows
     const storedData = localStorage.getItem(REGISTRATION_KEY);
     const googleAuth = Cookies.get('googleAuth');
     const email = Cookies.get('email');
@@ -97,6 +64,7 @@ const OnboardingContent = () => {
         googleAuth: true
       };
       localStorage.setItem(REGISTRATION_KEY, JSON.stringify(registrationData));
+      return;
     }
 
     // Allow OAuth users who have been auto-registered (they have storedData with googleAuth: true)
@@ -109,7 +77,7 @@ const OnboardingContent = () => {
     if (!storedData && googleAuth !== 'true' && !isOAuthUser && !isPartialRegistration) {
       router.replace(HOME);
     }
-  }, [router, hasMounted, update]);
+  }, [router, hasMounted, session]);
 
   const handleNext = () => {
     if (currentStep < 2) {

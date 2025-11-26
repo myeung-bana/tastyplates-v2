@@ -823,6 +823,208 @@ add_action('graphql_register_types', function () {
 	]);
 });
 
+/**
+ * ============================================================================
+ * SYNCHRONIZED JWT AUTHENTICATION FUNCTIONS
+ * ============================================================================
+ * 
+ * These functions are synchronized with dev-chrono-plugin.php to ensure
+ * consistent JWT validation across both plugins.
+ * 
+ * ⚠️ IMPORTANT: When modifying these functions, ensure changes are also
+ *    applied to dev-chrono-plugin.php to maintain synchronization.
+ * 
+ * Related files:
+ * - dev-chrono-plugin.php (lines 30-280): Contains dev_chrono_validate_jwt_token()
+ *   and dev_chrono_check_auth() functions that should match this logic
+ * 
+ * ============================================================================
+ */
+
+/**
+ * Ensure JWT Authentication sets user session early.
+ * This hook runs before REST API permission callbacks to ensure JWT tokens are processed.
+ * 
+ * SYNCHRONIZED WITH: dev-chrono-plugin.php (lines 30-70)
+ * 
+ * @param int $user_id Current user ID (may be 0 if not set).
+ * @return int User ID if JWT token is valid, otherwise returns $user_id unchanged.
+ */
+add_filter('determine_current_user', function($user_id) {
+	// If user is already set, return it
+	if ($user_id) {
+		return $user_id;
+	}
+	
+	// Check for JWT token in Authorization header
+	$auth_header = '';
+	if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+		$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+	} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+		$auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+	} elseif (function_exists('apache_request_headers')) {
+		$headers = apache_request_headers();
+		if (isset($headers['Authorization'])) {
+			$auth_header = $headers['Authorization'];
+		} elseif (isset($headers['authorization'])) {
+			$auth_header = $headers['authorization'];
+		}
+	}
+	
+	// Extract and validate JWT token
+	if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+		$token = trim($matches[1]);
+		if (!empty($token)) {
+			// Validate JWT token and get user ID
+			$jwt_user_id = tastyplates_validate_jwt_token($token);
+			if ($jwt_user_id && $jwt_user_id > 0) {
+				$user = get_userdata($jwt_user_id);
+				if ($user) {
+					// Set WordPress current user early - this makes is_user_logged_in() work
+					wp_set_current_user($jwt_user_id);
+					return $jwt_user_id; // ✅ Return user ID
+				}
+			}
+		}
+	}
+	
+	// No valid JWT token - return existing user_id (let other plugins handle it)
+	return $user_id;
+}, 10); // Priority 10 to run early, before permission callbacks
+
+/**
+ * Validates JWT token and returns user ID if valid.
+ * 
+ * SYNCHRONIZED WITH: dev-chrono-plugin.php::dev_chrono_validate_jwt_token() (lines 78-187)
+ * 
+ * Key differences from dev-chrono-plugin.php:
+ * - Uses get_jwt_secret_key() which checks GRAPHQL_JWT_AUTH_SECRET_KEY first
+ * - Function name: tastyplates_validate_jwt_token() (vs dev_chrono_validate_jwt_token())
+ * 
+ * ⚠️ When updating this function, ensure dev-chrono-plugin.php is also updated
+ *    to maintain consistent validation logic (except for secret key priority).
+ * 
+ * @param string|null $token Optional JWT token string. If not provided, reads from Authorization header.
+ * @return int|false User ID if token is valid, false otherwise.
+ */
+function tastyplates_validate_jwt_token($token = null) {
+	// If token not provided, try to get from Authorization header
+	if ($token === null) {
+		// Check various header formats
+		$auth_header = '';
+		if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+			$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+		} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+			$auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+		} elseif (function_exists('apache_request_headers')) {
+			$headers = apache_request_headers();
+			if (isset($headers['Authorization'])) {
+				$auth_header = $headers['Authorization'];
+			} elseif (isset($headers['authorization'])) {
+				$auth_header = $headers['authorization'];
+			}
+		}
+		
+		if (empty($auth_header) || !preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('tastyplates_validate_jwt_token: No Authorization header found');
+			}
+			return false;
+		}
+		
+		$token = trim($matches[1]);
+	}
+	
+	if (empty($token)) {
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('tastyplates_validate_jwt_token: Empty token provided');
+		}
+		return false;
+	}
+	
+	try {
+		// Check if JWT class is available (from JWT Authentication for WP-API plugin or Composer)
+		if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+			// Try to load autoloader first (preferred method)
+			$autoloader_path = ABSPATH . 'wp-content/plugins/jwt-auth/vendor/autoload.php';
+			if (file_exists($autoloader_path)) {
+				require_once $autoloader_path;
+			}
+			
+			// If still not available, try loading JWT.php directly (fallback)
+			if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+				$jwt_path = ABSPATH . 'wp-content/plugins/jwt-auth/vendor/firebase/php-jwt/src/JWT.php';
+				if (file_exists($jwt_path)) {
+					require_once $jwt_path;
+				}
+			}
+			
+			// Verify class is now available
+			if (!class_exists('Tmeister\Firebase\JWT\JWT')) {
+				if (defined('WP_DEBUG') && WP_DEBUG) {
+					error_log('tastyplates_validate_jwt_token: JWT library not found. Please ensure JWT Authentication for WP-API plugin is installed.');
+				}
+				return false;
+			}
+		}
+		
+		// Get secret key - checks GRAPHQL_JWT_AUTH_SECRET_KEY first, then JWT_AUTH_SECRET_KEY
+		// NOTE: This differs from dev-chrono-plugin.php which only checks JWT_AUTH_SECRET_KEY
+		$secret_key = '';
+		if (defined('GRAPHQL_JWT_AUTH_SECRET_KEY') && GRAPHQL_JWT_AUTH_SECRET_KEY) {
+			$secret_key = GRAPHQL_JWT_AUTH_SECRET_KEY;
+		} elseif (defined('JWT_AUTH_SECRET_KEY') && JWT_AUTH_SECRET_KEY) {
+			$secret_key = JWT_AUTH_SECRET_KEY;
+		}
+		
+		if (empty($secret_key)) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('tastyplates_validate_jwt_token: JWT secret key not defined in wp-config.php (checked GRAPHQL_JWT_AUTH_SECRET_KEY and JWT_AUTH_SECRET_KEY)');
+			}
+			return false;
+		}
+		
+		// Decode JWT token using fully qualified class name
+		// Note: JWT::decode may throw exceptions for invalid tokens, expired tokens, etc.
+		$decoded = \Tmeister\Firebase\JWT\JWT::decode($token, $secret_key, array('HS256'));
+		
+		// Extract user ID from token payload - JWT Auth plugin standard structure
+		// Token structure from tastyplates-user-rest-api-plugin.php: data.user.ID (uppercase)
+		if (isset($decoded->data->user->ID)) {
+			$user_id = intval($decoded->data->user->ID);
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('tastyplates_validate_jwt_token: Valid token for user ID ' . $user_id);
+			}
+			return $user_id;
+		}
+		if (isset($decoded->data->user->id)) {
+			$user_id = intval($decoded->data->user->id);
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('tastyplates_validate_jwt_token: Valid token for user ID ' . $user_id);
+			}
+			return $user_id;
+		}
+		
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('tastyplates_validate_jwt_token: Token decoded but user ID not found in payload');
+		}
+		return false;
+	} catch (Exception $e) {
+		// Handle various JWT errors (expired, invalid signature, malformed token, etc.)
+		$error_message = $e->getMessage();
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			if (strpos($error_message, 'expired') !== false || strpos($error_message, 'ExpiredException') !== false) {
+				error_log('tastyplates_validate_jwt_token: Token expired - ' . $error_message);
+			} elseif (strpos($error_message, 'signature') !== false || strpos($error_message, 'SignatureInvalidException') !== false) {
+				error_log('tastyplates_validate_jwt_token: Invalid token signature - ' . $error_message);
+			} else {
+				error_log('tastyplates_validate_jwt_token: JWT validation error - ' . $error_message);
+			}
+		}
+		return false;
+	}
+}
+
 class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 	protected $namespace;
 	protected $rest_base;
@@ -1051,9 +1253,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 				array(
 					'methods'             => WP_REST_Server::EDITABLE,
 					'callback'            => array($this, 'update_user_fields'),
-					'permission_callback' => function () {
-						return is_user_logged_in(); // Only allow authenticated users
-					},
+					'permission_callback' => array( $this, 'get_current_user_permissions_check' ), // JWT-aware permission check (validates JWT tokens and WordPress sessions)
 					'args'                => array(
 						'username' => array(
 							'type'     => 'string',
@@ -1084,6 +1284,11 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 							'required' => false,
 							'description' => __('URL of the profile image to update.'),
 						),
+						'about_me' => array(
+							'type'     => 'string',
+							'required' => false,
+							'description' => __('About me text for the user profile.'),
+						),
 					),
 				)
 			)
@@ -1096,9 +1301,7 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 				array(
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array($this, 'validate_current_password'),
-					'permission_callback' => function() {
-						return is_user_logged_in();
-					},
+					'permission_callback' => array( $this, 'get_current_user_permissions_check' ), // JWT-aware permission check (validates JWT tokens and WordPress sessions)
 					'args'               => array(
 						'password' => array(
 							'required'          => true,
@@ -1982,36 +2185,75 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 	 * @param WP_REST_Request $request Request object.
 	 * @return bool|WP_Error True if authenticated, WP_Error otherwise.
 	 */
+	/**
+	 * Permission check for getting current user.
+	 * Accepts both JWT tokens (manual login and Google OAuth) and WordPress sessions.
+	 * 
+	 * SYNCHRONIZED WITH: dev-chrono-plugin.php::dev_chrono_check_auth() (lines 210-280)
+	 * 
+	 * This method uses the synchronized tastyplates_validate_jwt_token() function
+	 * to ensure consistent JWT validation across both plugins.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return bool|WP_Error True if authenticated, WP_Error otherwise.
+	 */
 	public function get_current_user_permissions_check( $request ) {
-		// Check JWT token first (works for both manual and Google OAuth)
-		// Try both lowercase and capitalized header names (WordPress may normalize)
-		$auth_header = $request->get_header( 'authorization' );
-		if ( empty( $auth_header ) ) {
-			$auth_header = $request->get_header( 'Authorization' );
-		}
+		// Get token from request or headers
+		$token = null;
 		
-		// Also check $_SERVER directly as fallback
-		if ( empty( $auth_header ) && isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-			$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
-		}
-		
-		if ( $auth_header && preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-			$token = trim( $matches[1] );
-			if ( empty( $token ) ) {
-				return new WP_Error(
-					'rest_not_authenticated',
-					'Empty authentication token.',
-					array( 'status' => 401 )
-				);
+		// First, try to get token from request object (WordPress REST API)
+		if ($request instanceof WP_REST_Request) {
+			// Try to get from request header (WordPress may normalize to lowercase)
+			$auth_header = $request->get_header('authorization');
+			if (empty($auth_header)) {
+				$auth_header = $request->get_header('Authorization');
 			}
 			
-			$user_id = $this->validate_jwt_token( $token );
-			if ( $user_id ) {
-				// Valid JWT token - set user session for WordPress compatibility
-				wp_set_current_user( $user_id );
-				return true;
+			if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+				$token = trim($matches[1]);
 			}
-			// JWT token was provided but is invalid - return 401 Unauthorized
+		}
+		
+		// If token not found in request, try $_SERVER as fallback
+		// This handles cases where headers aren't passed through the request object
+		if (empty($token)) {
+			$auth_header = '';
+			if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+				$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+			} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+				$auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+			} elseif (function_exists('apache_request_headers')) {
+				$headers = apache_request_headers();
+				if (isset($headers['Authorization'])) {
+					$auth_header = $headers['Authorization'];
+				} elseif (isset($headers['authorization'])) {
+					$auth_header = $headers['authorization'];
+				}
+			}
+			
+			if (!empty($auth_header) && preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+				$token = trim($matches[1]);
+			}
+		}
+		
+		// Validate JWT token if we have one
+		if (!empty($token)) {
+			// Use synchronized JWT validation function
+			$user_id = tastyplates_validate_jwt_token($token);
+			if ($user_id && $user_id > 0) {
+				// Verify user exists before setting session
+				$user = get_userdata($user_id);
+				if ($user) {
+					// Valid JWT token - set user session for WordPress compatibility
+					wp_set_current_user($user_id);
+					return true; // ✅ JWT validated - return immediately
+				} else {
+					if (defined('WP_DEBUG') && WP_DEBUG) {
+						error_log('get_current_user_permissions_check: User ID ' . $user_id . ' from token does not exist');
+					}
+				}
+			}
+			// Invalid token - return 401 Unauthorized
 			return new WP_Error(
 				'rest_not_authenticated',
 				'Invalid or expired authentication token.',
@@ -2019,8 +2261,9 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 			);
 		}
 		
-		// No Authorization header provided - check WordPress session
-		if ( is_user_logged_in() ) {
+		// No token provided - check if user was set by determine_current_user filter
+		// This handles cases where determine_current_user already validated the token
+		if (is_user_logged_in()) {
 			return true;
 		}
 		
@@ -2034,60 +2277,19 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 
 	/**
 	 * Validates JWT token from Authorization header and returns user ID if valid.
+	 * 
+	 * DEPRECATED: This method is kept for backward compatibility but now delegates
+	 * to the synchronized tastyplates_validate_jwt_token() function.
+	 * 
+	 * SYNCHRONIZED WITH: tastyplates_validate_jwt_token() (above) and
+	 *                   dev-chrono-plugin.php::dev_chrono_validate_jwt_token() (lines 78-187)
 	 *
 	 * @param string|null $token Optional JWT token string. If not provided, reads from Authorization header.
 	 * @return int|false User ID if token is valid, false otherwise.
 	 */
 	private function validate_jwt_token( $token = null ) {
-		// If token not provided, try to get from Authorization header
-		if ( $token === null ) {
-			// Check various header formats
-			$auth_header = '';
-			if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-				$auth_header = $_SERVER['HTTP_AUTHORIZATION'];
-			} elseif ( isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
-				$auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-			} elseif ( function_exists( 'apache_request_headers' ) ) {
-				$headers = apache_request_headers();
-				if ( isset( $headers['Authorization'] ) ) {
-					$auth_header = $headers['Authorization'];
-				}
-			}
-
-			if ( empty( $auth_header ) || ! preg_match( '/Bearer\s+(.*)$/i', $auth_header, $matches ) ) {
-				return false;
-			}
-
-			$token = $matches[1];
-		}
-
-		if ( empty( $token ) ) {
-			return false;
-		}
-
-		try {
-			$secret_key = $this->get_jwt_secret_key();
-			if ( empty( $secret_key ) ) {
-				return false;
-			}
-
-			// Decode JWT token
-			$decoded = JWT::decode( $token, $secret_key, array( 'HS256' ) );
-
-			// Extract user ID from token payload - JWT Auth plugin standard structure
-			// JWT Auth plugin uses: data.user.ID (uppercase) or data.user.id (lowercase)
-			if ( isset( $decoded->data->user->ID ) ) {
-				return intval( $decoded->data->user->ID );
-			}
-			if ( isset( $decoded->data->user->id ) ) {
-				return intval( $decoded->data->user->id );
-			}
-
-			return false;
-		} catch ( Exception $e ) {
-			error_log( 'JWT validation error: ' . $e->getMessage() );
-			return false;
-		}
+		// Delegate to synchronized function for consistency
+		return tastyplates_validate_jwt_token($token);
 	}
 
 	/**
@@ -2341,11 +2543,39 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 	 * Updates specific user fields if provided in request
 	 */
 	public function update_user_fields($request) {
+		// ✅ DEBUG LOGGING: Verify request is received
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('update_user_fields: Request received');
+			error_log('update_user_fields: Request method: ' . $request->get_method());
+			error_log('update_user_fields: Request params: ' . print_r($request->get_params(), true));
+			error_log('update_user_fields: JSON params: ' . print_r($request->get_json_params(), true));
+			error_log('update_user_fields: Current user ID before wp_get_current_user: ' . get_current_user_id());
+		}
+		
 		$user = wp_get_current_user();
 		$user_id = $user->ID;
 
 		if (is_wp_error($user)) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('update_user_fields: wp_get_current_user returned WP_Error: ' . $user->get_error_message());
+			}
 			return $user;
+		}
+		
+		// ✅ VALIDATION: Check if user_id is valid
+		if (!$user_id || $user_id === 0) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('update_user_fields: Invalid user ID - user_id is 0 or empty');
+			}
+			return new WP_Error(
+				'rest_not_authenticated',
+				'User not authenticated. Please provide a valid JWT token.',
+				array('status' => 401)
+			);
+		}
+		
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('update_user_fields: Valid user ID: ' . $user_id);
 		}
 
 		global $wpdb;
@@ -2353,8 +2583,10 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		$update_usermeta = array();
 
 		// 1. Username updates (user_login, user_nicename, display_name, nickname)
-		if (!empty($request['username'])) {
-			$username = sanitize_user($request['username']);
+		// ✅ CHANGE: Use get_param() instead of array access for JSON body
+		$username = $request->get_param('username');
+		if (!empty($username)) {
+			$username = sanitize_user($username);
 			
 			// Check if username exists (excluding current user)
 			$existing_user = $wpdb->get_var(
@@ -2380,13 +2612,17 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		}
 
 		// 2. Birthdate update
-		if (isset($request['birthdate'])) {
-			$update_usermeta['birthdate'] = sanitize_text_field($request['birthdate']);
+		// ✅ CHANGE: Use get_param() instead of array access
+		$birthdate = $request->get_param('birthdate');
+		if (isset($birthdate)) {
+			$update_usermeta['birthdate'] = sanitize_text_field($birthdate);
 		}
 
 		// 3. Email update
-		if (!empty($request['email'])) {
-			$email = sanitize_email($request['email']);
+		// ✅ CHANGE: Use get_param() instead of array access
+		$email = $request->get_param('email');
+		if (!empty($email)) {
+			$email = sanitize_email($email);
 			
 			// Check if email exists (excluding current user)
 			$existing_email = $wpdb->get_var(
@@ -2409,28 +2645,66 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		}
 
 		// 4. Language update
-		if (isset($request['language'])) {
-			$update_usermeta['language'] = sanitize_text_field($request['language']);
+		// ✅ CHANGE: Use get_param() instead of array access
+		$language = $request->get_param('language');
+		if (isset($language)) {
+			$update_usermeta['language'] = sanitize_text_field($language);
 		}
 
 		// 5. Password update
-		if (!empty($request['password'])) {
-			$update_users['user_pass'] = wp_hash_password($request['password']);
+		// ✅ CHANGE: Use get_param() instead of array access
+		$password = $request->get_param('password');
+		if (!empty($password)) {
+			$update_users['user_pass'] = wp_hash_password($password);
 		}
 
 		// 6. Profile image update
-		if (isset($request['profile_image'])) {
-			$this->update_profile_image($user_id, $request['profile_image']);
+		// ✅ CHANGE: Use get_param() instead of array access
+		$profile_image = $request->get_param('profile_image');
+		if (isset($profile_image)) {
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('update_user_fields: Profile image received, length: ' . strlen($profile_image));
+			}
+			$this->update_profile_image($user_id, $profile_image);
 		}
 
-		// 7. Palates update
-		if (isset($request['palates'])) {
-			$update_usermeta['palates'] = sanitize_text_field($request['palates']);
+		// 7. Palates update (ACF field)
+		// ✅ CHANGE: Use get_param() instead of array access
+		$palates = $request->get_param('palates');
+		if (isset($palates)) {
+			$palates_value = sanitize_text_field($palates);
+			
+			// Use ACF function if available, otherwise fallback to user meta
+			if (function_exists('update_field')) {
+				update_field('palates', $palates_value, 'user_' . $user_id);
+			} else {
+				$update_usermeta['palates'] = $palates_value;
+			}
 		}
 
-		// 8. About me update
-		if (isset($request['about_me'])) {
-			$update_usermeta['about_me'] = sanitize_textarea_field($request['about_me']);
+		// 8. About me update (ACF textarea field)
+		// ✅ CHANGE: Use get_param() instead of array access
+		$about_me = $request->get_param('about_me');
+		if (isset($about_me)) {
+			$about_me_value = sanitize_textarea_field($about_me);
+			
+			// Use ACF function if available, otherwise fallback to user meta
+			if (function_exists('update_field')) {
+				update_field('about_me', $about_me_value, 'user_' . $user_id);
+			} else {
+				$update_usermeta['about_me'] = $about_me_value;
+			}
+		}
+
+		// ✅ DEBUG LOGGING: Log what will be updated
+		if (defined('WP_DEBUG') && WP_DEBUG) {
+			error_log('update_user_fields: Updates to perform - users: ' . count($update_users) . ', usermeta: ' . count($update_usermeta));
+			if (!empty($update_users)) {
+				error_log('update_user_fields: User table updates: ' . print_r($update_users, true));
+			}
+			if (!empty($update_usermeta)) {
+				error_log('update_user_fields: User meta updates: ' . print_r($update_usermeta, true));
+			}
 		}
 
 		// Perform updates if there are changes
@@ -2440,19 +2714,31 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 				$update_users,
 				array('ID' => $user_id)
 			);
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('update_user_fields: User table updated successfully');
+			}
 		}
 
 		if (!empty($update_usermeta)) {
 			foreach ($update_usermeta as $meta_key => $meta_value) {
 				update_user_meta($user_id, $meta_key, $meta_value);
 			}
+			if (defined('WP_DEBUG') && WP_DEBUG) {
+				error_log('update_user_fields: User meta updated successfully');
+			}
 		}
 
 		$profile_image = '';
-		$attachment_id = get_user_meta( $user->ID, 'profile_image', true );
-		if ( $attachment_id && is_numeric($attachment_id) ) {
-			$image_url = wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
-			if ( $image_url ) {
+		// Try ACF field first, then fallback to user meta
+		if (function_exists('get_field')) {
+			$attachment_id = get_field('profile_image', 'user_' . $user_id);
+		} else {
+			$attachment_id = get_user_meta($user_id, 'profile_image', true);
+		}
+		
+		if ($attachment_id && is_numeric($attachment_id)) {
+			$image_url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
+			if ($image_url) {
 				$profile_image = $image_url;
 			}
 		}
@@ -4182,10 +4468,22 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		// Delete existing profile image if it exists
+		// Try ACF field first, then fallback to user meta
+		$existing_image_id = null;
+		if (function_exists('get_field')) {
+			$existing_image_id = get_field('profile_image', 'user_' . $user_id);
+		}
+		if (!$existing_image_id) {
 		$existing_image_id = get_user_meta($user_id, 'profile_image', true);
+		}
+		
 		if ($existing_image_id) {
 			wp_delete_attachment($existing_image_id, true); // true = force delete, skip trash
 			delete_user_meta($user_id, 'profile_image');
+			// Also delete ACF field if it exists
+			if (function_exists('update_field')) {
+				update_field('profile_image', null, 'user_' . $user_id);
+			}
 		}
 
 		// Check if it's base64 encoded data (data:image/...;base64,...)
@@ -4213,6 +4511,11 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 			$attachment_id = media_handle_sideload($file_array, 0);
 
 			if (!is_wp_error($attachment_id)) {
+				// Use ACF function if available, otherwise fallback to user meta
+				if (function_exists('update_field')) {
+					update_field('profile_image', $attachment_id, 'user_' . $user_id);
+				}
+				// Always update user meta as fallback
 				update_user_meta($user_id, 'profile_image', $attachment_id);
 			}
 
@@ -4230,6 +4533,11 @@ class TastyPlates_User_REST_API_Plugin extends WP_REST_Controller {
 				$attachment_id = media_handle_sideload($file_array, 0);
 
 				if (!is_wp_error($attachment_id)) {
+					// Use ACF function if available, otherwise fallback to user meta
+					if (function_exists('update_field')) {
+						update_field('profile_image', $attachment_id, 'user_' . $user_id);
+					}
+					// Always update user meta as fallback
 					update_user_meta($user_id, 'profile_image', $attachment_id);
 				}
 

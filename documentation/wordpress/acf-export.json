@@ -1,0 +1,1541 @@
+[
+    {
+        "key": "group_669c51e286acd",
+        "title": "Custom Page",
+        "fields": [
+            {
+                "key": "field_669c51e43753d",
+                "label": "Display Type",
+                "name": "display_type",
+                "aria-label": "",
+                "type": "radio",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "choices": {
+                    "Default": "Default",
+                    "Footer Links": "Footer Links",
+                    "Editor's Choice": "Editor's Choice"
+                },
+                "default_value": "",
+                "return_format": "value",
+                "allow_null": 0,
+                "other_choice": 0,
+                "layout": "horizontal",
+                "save_other_choice": 0
+            },
+            {
+                "key": "field_669c52303753e",
+                "label": "Thumbnail",
+                "name": "thumbnail",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 1,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "url",
+                "library": "uploadedTo",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "preview_size": "medium"
+            },
+            {
+                "key": "field_669c52523753f",
+                "label": "Editor's Choice Title",
+                "name": "editors_choice_title",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "can have \"%count\" and \"%location\" in the title",
+                "required": 1,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_669c527637540",
+                "label": "Description",
+                "name": "description",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_669c528b37541",
+                "label": "Minimum Number of Items",
+                "name": "minimum_number_of_items",
+                "aria-label": "",
+                "type": "number",
+                "instructions": "can be \"-1\" if all query listing items should be shown",
+                "required": 1,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "min": -1,
+                "max": "",
+                "placeholder": "",
+                "step": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_669c52a537542",
+                "label": "Display order",
+                "name": "display_order",
+                "aria-label": "",
+                "type": "number",
+                "instructions": "",
+                "required": 1,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": 0,
+                "min": "",
+                "max": "",
+                "placeholder": "",
+                "step": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_669c52be37543",
+                "label": "search_with_rating",
+                "name": "search_with_rating",
+                "aria-label": "",
+                "type": "true_false",
+                "instructions": "If listing item should be filter with ratings",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "message": "",
+                "default_value": 1,
+                "ui": 0,
+                "ui_on_text": "",
+                "ui_off_text": ""
+            },
+            {
+                "key": "field_669c52e437544",
+                "label": "search_category",
+                "name": "search_category",
+                "aria-label": "",
+                "type": "taxonomy",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "taxonomy": "l_category",
+                "add_term": 0,
+                "save_terms": 1,
+                "load_terms": 1,
+                "return_format": "object",
+                "field_type": "select",
+                "allow_null": 1,
+                "bidirectional": 0,
+                "multiple": 0,
+                "bidirectional_target": []
+            },
+            {
+                "key": "field_669c530737545",
+                "label": "search_sub_category",
+                "name": "search_sub_category",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "Breakfast \/ Salad etc..",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Editor's Choice"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_669c531b37546",
+                "label": "Order",
+                "name": "order",
+                "aria-label": "",
+                "type": "number",
+                "instructions": "Footer links sorting",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_669c51e43753d",
+                            "operator": "==",
+                            "value": "Footer Links"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": 0,
+                "min": "",
+                "max": "",
+                "placeholder": "",
+                "step": "",
+                "prepend": "",
+                "append": ""
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "page"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": ""
+    },
+    {
+        "key": "group_66b16e2684090",
+        "title": "Custom Post",
+        "fields": [
+            {
+                "key": "field_66b16e2878c16",
+                "label": "Display Type",
+                "name": "display_type",
+                "aria-label": "",
+                "type": "radio",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "choices": {
+                    "Default": "Default",
+                    "Stories": "Stories"
+                },
+                "default_value": "",
+                "return_format": "value",
+                "allow_null": 0,
+                "other_choice": 0,
+                "layout": "vertical",
+                "save_other_choice": 0
+            },
+            {
+                "key": "field_66b2b3e675bc4",
+                "label": "Sub-Title",
+                "name": "sub-title",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_66b16e2878c16",
+                            "operator": "==",
+                            "value": "Stories"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66b16e8478c17",
+                "label": "Description",
+                "name": "description",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_66b16e2878c16",
+                            "operator": "==",
+                            "value": "Stories"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66b16ebf78c18",
+                "label": "Thumbnail",
+                "name": "thumbnail",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_66b16e2878c16",
+                            "operator": "==",
+                            "value": "Stories"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "url",
+                "library": "uploadedTo",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "preview_size": "medium"
+            },
+            {
+                "key": "field_66b16f1978c19",
+                "label": "Author Image",
+                "name": "author_image",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": [
+                    [
+                        {
+                            "field": "field_66b16e2878c16",
+                            "operator": "==",
+                            "value": "Stories"
+                        }
+                    ]
+                ],
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "url",
+                "library": "uploadedTo",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "preview_size": "medium"
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "post"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": ""
+    },
+    {
+        "key": "group_66dc0dfc01741",
+        "title": "Listing Category Meta",
+        "fields": [
+            {
+                "key": "field_66dc0e0237324",
+                "label": "Color",
+                "name": "color",
+                "aria-label": "",
+                "type": "color_picker",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "#39bbff",
+                "enable_opacity": 0,
+                "return_format": "string",
+                "custom_palette_source": "",
+                "palette_colors": "",
+                "show_color_wheel": true
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "taxonomy",
+                    "operator": "==",
+                    "value": "l_category"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": ""
+    },
+    {
+        "key": "group_66a6d520216aa",
+        "title": "Listing Comment Review",
+        "fields": [
+            {
+                "key": "field_66a6d5217e9a1",
+                "label": "Restaurant",
+                "name": "restaurant",
+                "aria-label": "",
+                "type": "post_object",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "post_type": [
+                    "listing"
+                ],
+                "post_status": [
+                    "publish"
+                ],
+                "taxonomy": "",
+                "return_format": "id",
+                "multiple": 0,
+                "allow_null": 0,
+                "bidirectional": 0,
+                "ui": 1,
+                "bidirectional_target": []
+            },
+            {
+                "key": "field_66a6d59a7e9a2",
+                "label": "Rate your dining experience",
+                "name": "rate",
+                "aria-label": "",
+                "type": "radio",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "choices": {
+                    "I am coming back": "I am coming back",
+                    "IG Worthy": "IG Worthy",
+                    "value for money": "value for money",
+                    "Great service": "Great service"
+                },
+                "default_value": "",
+                "return_format": "value",
+                "allow_null": 1,
+                "other_choice": 0,
+                "layout": "vertical",
+                "save_other_choice": 0
+            },
+            {
+                "key": "field_66a6d5c27e9a3",
+                "label": "Recommendations",
+                "name": "recommendations",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_6907238bea61f",
+                "label": "Review Images",
+                "name": "review_images",
+                "aria-label": "",
+                "type": "gallery",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "array",
+                "library": "all",
+                "min": "",
+                "max": "",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "insert": "append",
+                "preview_size": "medium",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "reviewImages"
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "comment",
+                    "operator": "==",
+                    "value": "listing"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": "",
+        "show_in_graphql": 1,
+        "graphql_field_name": "listingCommentReview",
+        "map_graphql_types_from_location_rules": 0,
+        "graphql_types": ""
+    },
+    {
+        "key": "group_68397c8151977",
+        "title": "Listing Details",
+        "fields": [
+            {
+                "key": "field_68397c8411487",
+                "label": "phone",
+                "name": "phone",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "phone",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68397d4111488",
+                "label": "opening_hours",
+                "name": "opening_hours",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "openingHours",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68397d5011489",
+                "label": "menu_url",
+                "name": "menu_url",
+                "aria-label": "",
+                "type": "url",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "placeholder": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "menuUrl",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68397d5f1148a",
+                "label": "google_map_url",
+                "name": "google_map_url",
+                "aria-label": "",
+                "type": "google_map",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "center_lat": "",
+                "center_lng": "",
+                "zoom": "",
+                "height": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "googleMapUrl",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68397d811148b",
+                "label": "latitude",
+                "name": "latitude",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "latitude",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68397d951148c",
+                "label": "longitude",
+                "name": "longitude",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "longitude",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68ae4bfd54800",
+                "label": "featured_image",
+                "name": "featured_image",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "url",
+                "library": "all",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "allow_in_bindings": 0,
+                "preview_size": "medium",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "featuredimage"
+            },
+            {
+                "key": "field_68ee4e50640c1",
+                "label": "image_gallery",
+                "name": "image_gallery",
+                "aria-label": "",
+                "type": "gallery",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "url",
+                "library": "all",
+                "min": "",
+                "max": "",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "insert": "append",
+                "preview_size": "medium",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "imageGallery"
+            },
+            {
+                "key": "field_690a19871a7e7",
+                "label": "business_hours",
+                "name": "businesshours",
+                "aria-label": "",
+                "type": "repeater",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "layout": "table",
+                "pagination": 0,
+                "min": 0,
+                "max": 0,
+                "collapsed": "",
+                "button_label": "Add Row",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "businesshours",
+                "graphql_non_null": 0,
+                "rows_per_page": 20,
+                "sub_fields": [
+                    {
+                        "key": "field_690a19a01a7e8",
+                        "label": "day",
+                        "name": "day",
+                        "aria-label": "",
+                        "type": "select",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "choices": {
+                            "Monday": "Monday",
+                            "Tuesday": "Tuesday",
+                            "Wednesday": "Wednesday",
+                            "Thursday": "Thursday",
+                            "Friday": "Friday",
+                            "Saturday": "Saturday",
+                            "Sunday": "Sunday",
+                            "Monday-Friday": "Monday-Friday"
+                        },
+                        "default_value": "Monday-Friday",
+                        "return_format": "value",
+                        "multiple": 0,
+                        "allow_null": 0,
+                        "allow_in_bindings": 0,
+                        "ui": 0,
+                        "show_in_graphql": 1,
+                        "graphql_description": "",
+                        "graphql_field_name": "day",
+                        "graphql_non_null": 0,
+                        "ajax": 0,
+                        "placeholder": "",
+                        "create_options": 0,
+                        "save_options": 0,
+                        "parent_repeater": "field_690a19871a7e7"
+                    },
+                    {
+                        "key": "field_690a1a051a7e9",
+                        "label": "openTime",
+                        "name": "opentime",
+                        "aria-label": "",
+                        "type": "time_picker",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "display_format": "g:i a",
+                        "return_format": "g:i a",
+                        "allow_in_bindings": 0,
+                        "show_in_graphql": 1,
+                        "graphql_description": "",
+                        "graphql_field_name": "opentime",
+                        "graphql_non_null": 0,
+                        "parent_repeater": "field_690a19871a7e7"
+                    },
+                    {
+                        "key": "field_690a1a2d1a7ea",
+                        "label": "closeTime",
+                        "name": "closetime",
+                        "aria-label": "",
+                        "type": "time_picker",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "display_format": "g:i a",
+                        "return_format": "g:i a",
+                        "allow_in_bindings": 0,
+                        "show_in_graphql": 1,
+                        "graphql_description": "",
+                        "graphql_field_name": "closetime",
+                        "graphql_non_null": 0,
+                        "parent_repeater": "field_690a19871a7e7"
+                    },
+                    {
+                        "key": "field_690a1a571a7eb",
+                        "label": "closed",
+                        "name": "closed",
+                        "aria-label": "",
+                        "type": "true_false",
+                        "instructions": "",
+                        "required": 0,
+                        "conditional_logic": 0,
+                        "wrapper": {
+                            "width": "",
+                            "class": "",
+                            "id": ""
+                        },
+                        "message": "",
+                        "default_value": 1,
+                        "allow_in_bindings": 0,
+                        "ui": 0,
+                        "show_in_graphql": 1,
+                        "graphql_description": "",
+                        "graphql_field_name": "closed",
+                        "graphql_non_null": 0,
+                        "ui_on_text": "",
+                        "ui_off_text": "",
+                        "parent_repeater": "field_690a19871a7e7"
+                    }
+                ]
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "post_type",
+                    "operator": "==",
+                    "value": "listing"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": "",
+        "show_in_graphql": 1,
+        "graphql_field_name": "listingDetails",
+        "map_graphql_types_from_location_rules": 0,
+        "graphql_types": ""
+    },
+    {
+        "key": "group_66a48a2621cce",
+        "title": "User Profile",
+        "fields": [
+            {
+                "key": "field_66dc0e5f9241c",
+                "label": "Profile",
+                "name": "profile",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "array",
+                "library": "uploadedTo",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "preview_size": "medium"
+            },
+            {
+                "key": "field_670a851e5fe5f",
+                "label": "Bio",
+                "name": "bio",
+                "aria-label": "",
+                "type": "textarea",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "rows": "",
+                "placeholder": "",
+                "new_lines": ""
+            },
+            {
+                "key": "field_66a48a5ffa06e",
+                "label": "Birth Year",
+                "name": "birth_year",
+                "aria-label": "",
+                "type": "date_picker",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "display_format": "Y",
+                "return_format": "Y",
+                "first_day": 0,
+                "default_to_current_date": 0
+            },
+            {
+                "key": "field_66dc0ec59241d",
+                "label": "Address",
+                "name": "address",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "What is your primary area",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66a48a7efa06f",
+                "label": "Area Code\/Zip Code\/Postal Code",
+                "name": "zip_code",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "Area Code\/Zip Code\/Postal Code",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66dc0f239241e",
+                "label": "Longitude",
+                "name": "longitude",
+                "aria-label": "",
+                "type": "number",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "min": "",
+                "max": "",
+                "placeholder": "Longitude",
+                "step": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66dc0f519241f",
+                "label": "Latitude",
+                "name": "latitude",
+                "aria-label": "",
+                "type": "number",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "min": "",
+                "max": "",
+                "placeholder": "Latitude",
+                "step": "",
+                "prepend": "",
+                "append": ""
+            },
+            {
+                "key": "field_66a48a92fa070",
+                "label": "Ethnic Taste (Maximum 2)",
+                "name": "ethnic_taste",
+                "aria-label": "",
+                "type": "taxonomy",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "taxonomy": "l_category",
+                "add_term": 0,
+                "save_terms": 1,
+                "load_terms": 1,
+                "return_format": "id",
+                "field_type": "checkbox",
+                "bidirectional": 0,
+                "multiple": 0,
+                "allow_null": 0,
+                "bidirectional_target": []
+            },
+            {
+                "key": "field_6838411b6ad1e",
+                "label": "birthdate",
+                "name": "birthdate",
+                "aria-label": "",
+                "type": "date_picker",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "display_format": "Y-m-d",
+                "return_format": "Y-m-d",
+                "first_day": 1,
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "birthdate",
+                "graphql_non_null": 0,
+                "default_to_current_date": 0
+            },
+            {
+                "key": "field_683842166ad1f",
+                "label": "about_me",
+                "name": "about_me",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "aboutMe",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_6838422e6ad20",
+                "label": "gender",
+                "name": "gender",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "gender",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_6838423d6ad21",
+                "label": "custom_gender",
+                "name": "custom_gender",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "customGender",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_683842526ad22",
+                "label": "palates",
+                "name": "palates",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "palates",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_683842626ad23",
+                "label": "profile_image",
+                "name": "profile_image",
+                "aria-label": "",
+                "type": "image",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "return_format": "array",
+                "library": "all",
+                "min_width": "",
+                "min_height": "",
+                "min_size": "",
+                "max_width": "",
+                "max_height": "",
+                "max_size": "",
+                "mime_types": "",
+                "allow_in_bindings": 0,
+                "preview_size": "medium",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "profileImage"
+            },
+            {
+                "key": "field_6838427d6ad24",
+                "label": "is_google_user",
+                "name": "is_google_user",
+                "aria-label": "",
+                "type": "true_false",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "message": "",
+                "default_value": 0,
+                "ui": 0,
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "isGoogleUser",
+                "graphql_non_null": 0,
+                "ui_on_text": "",
+                "ui_off_text": ""
+            },
+            {
+                "key": "field_6838429b6ad25",
+                "label": "pronoun",
+                "name": "pronoun",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "pronoun",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68e9214964f41",
+                "label": "language_preference",
+                "name": "language_preference",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "allow_in_bindings": 0,
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "languagePreference",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_68e92d037b07d",
+                "label": "display_name",
+                "name": "display_name",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "allow_in_bindings": 0,
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "displayName",
+                "graphql_non_null": 0
+            },
+            {
+                "key": "field_691c9328d09c8",
+                "label": "google_auth",
+                "name": "google_auth",
+                "aria-label": "",
+                "type": "true_false",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "message": "",
+                "default_value": 0,
+                "allow_in_bindings": 0,
+                "ui": 0,
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "googleAuth",
+                "graphql_non_null": 0,
+                "ui_on_text": "",
+                "ui_off_text": ""
+            },
+            {
+                "key": "field_691c9388d09c9",
+                "label": "google_token",
+                "name": "google_token",
+                "aria-label": "",
+                "type": "text",
+                "instructions": "",
+                "required": 0,
+                "conditional_logic": 0,
+                "wrapper": {
+                    "width": "",
+                    "class": "",
+                    "id": ""
+                },
+                "default_value": "",
+                "maxlength": "",
+                "allow_in_bindings": 0,
+                "placeholder": "",
+                "prepend": "",
+                "append": "",
+                "show_in_graphql": 1,
+                "graphql_description": "",
+                "graphql_field_name": "google",
+                "graphql_non_null": 0
+            }
+        ],
+        "location": [
+            [
+                {
+                    "param": "user_form",
+                    "operator": "==",
+                    "value": "all"
+                }
+            ]
+        ],
+        "menu_order": 0,
+        "position": "normal",
+        "style": "default",
+        "label_placement": "top",
+        "instruction_placement": "label",
+        "hide_on_screen": "",
+        "active": true,
+        "description": "",
+        "show_in_rest": 0,
+        "display_title": "",
+        "show_in_graphql": 1,
+        "graphql_field_name": "userProfile",
+        "map_graphql_types_from_location_rules": 0,
+        "graphql_types": ""
+    }
+]

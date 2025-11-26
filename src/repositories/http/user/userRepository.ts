@@ -47,55 +47,8 @@ export class UserRepository implements UserRepo {
         };
     }
 
-    async generateGoogleUserToken(userId: number | string, email?: string): Promise<IJWTResponse> {
-        // Use unified endpoint - no password needed for Google OAuth
-        const body: { user_id?: number | string; email?: string } = {};
-        if (userId) {
-            body.user_id = userId;
-        }
-        if (email) {
-            body.email = email;
-        }
-        // Unified endpoint handles Google OAuth when no password is provided
-        const response = await request.POST('/wp-json/wp/v2/api/users/unified-token',
-            { body: JSON.stringify(body) });
-        return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            token: (response as any)?.token,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            id: (response as any)?.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_email: (response as any)?.user_email,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_nicename: (response as any)?.user_nicename,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_display_name: (response as any)?.user_display_name
-        };
-    }
-
-    async googleOAuth(idToken: string): Promise<IJWTResponse> {
-        // Call WordPress Google OAuth endpoint directly - unified with manual login
-        const response = await request.POST('/wp-json/wp/v2/api/users/google-oauth',
-            {
-                body: JSON.stringify({
-                    id_token: idToken
-                }),
-                // ensure cookies from WP are accepted when using proxy or direct calls
-                credentials: 'include'
-            });
-        return {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            token: (response as any)?.token,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            id: (response as any)?.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_email: (response as any)?.user_email,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_nicename: (response as any)?.user_nicename,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            user_display_name: (response as any)?.user_display_name
-        };
-    }
+    // generateGoogleUserToken removed - using Firebase authentication instead
+    // googleOAuth removed - using Firebase authentication instead
 
     /**
      * Check if user exists via Nextend Social Login
@@ -181,6 +134,8 @@ export class UserRepository implements UserRepo {
         id: number | null,
         accessToken?: string
     ): Promise<Record<string, unknown>> {
+        // Authentication handled by authLink in GraphQL client
+        // accessToken parameter kept for backward compatibility but not used
         const { data } = await client.query<{
             user: {
                 id: string;
@@ -197,11 +152,7 @@ export class UserRepository implements UserRepo {
             query: GET_USER_BY_ID,
             variables: { id },
             fetchPolicy: "no-cache",
-            context: {
-                headers: {
-                    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-                },
-            },
+            // Removed context.headers - authLink automatically adds Authorization header
         });
 
         // Return empty object instead of null for production safety
