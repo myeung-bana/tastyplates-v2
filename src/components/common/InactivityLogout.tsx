@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { removeAllCookies } from "@/utils/removeAllCookies";
 import toast from "react-hot-toast";
 import { Inactive } from "@/constants/messages";
 import { HOME } from "@/constants/pages";
@@ -21,9 +23,23 @@ export default function InactivityLogout() {
     const lastActiveRaw = localStorage.getItem(LAST_ACTIVE_KEY);
     const lastActive = Number(lastActiveRaw);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+      try {
+        // Sign out from Firebase first
+        await firebaseAuthService.signOut();
+        console.log('[InactivityLogout] Firebase sign out successful');
+      } catch (error) {
+        console.error('[InactivityLogout] Firebase sign out error:', error);
+        // Continue with logout even if Firebase signout fails
+      }
+      
+      // Clear all cookies and localStorage
+      removeAllCookies();
+      localStorage.clear();
       localStorage.removeItem(LAST_ACTIVE_KEY);
-      signOut({ redirect: true, callbackUrl: HOME });
+      
+      // Sign out from NextAuth session
+      await signOut({ redirect: true, callbackUrl: HOME });
       toast.error(Inactive);
     };
 

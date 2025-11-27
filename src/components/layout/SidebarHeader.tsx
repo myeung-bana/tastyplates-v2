@@ -20,6 +20,8 @@ import { useState } from "react";
 import { logOutSuccessfull } from "@/constants/messages";
 import { LOGOUT_KEY } from "@/constants/session";
 import { LOCATION_HIERARCHY } from "@/constants/location";
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { removeAllCookies } from "@/utils/removeAllCookies";
 
 interface SidebarHeaderProps {
   onClose: () => void;
@@ -69,7 +71,21 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
   };
 
   const handleLogout = async () => {
+    try {
+      // Sign out from Firebase first
+      await firebaseAuthService.signOut();
+      console.log('[SidebarHeader] Firebase sign out successful');
+    } catch (error) {
+      console.error('[SidebarHeader] Firebase sign out error:', error);
+      // Continue with logout even if Firebase signout fails
+    }
+    
+    // Clear all cookies and localStorage
+    removeAllCookies();
+    localStorage.clear();
     localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
+
+    // Sign out from NextAuth session
     await signOut({ redirect: true, callbackUrl: HOME });
     onClose();
   };

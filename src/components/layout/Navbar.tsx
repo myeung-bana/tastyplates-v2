@@ -17,6 +17,7 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { logOutSuccessfull } from "@/constants/messages";
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 import { sessionStatus } from "@/constants/response";
 import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
@@ -56,10 +57,21 @@ export default function Navbar(props: Record<string, unknown>) {
   const [navBg, setNavBg] = useState(false);
 
   const handleLogout = async () => {
+    try {
+      // Sign out from Firebase first
+      await firebaseAuthService.signOut();
+      console.log('[Navbar] Firebase sign out successful');
+    } catch (error) {
+      console.error('[Navbar] Firebase sign out error:', error);
+      // Continue with logout even if Firebase signout fails
+    }
+    
+    // Clear all cookies and localStorage
     removeAllCookies();
     localStorage.clear();
     localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
 
+    // Sign out from NextAuth session
     await signOut({ redirect: true, callbackUrl: HOME });
   };
 

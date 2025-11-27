@@ -12,15 +12,12 @@ type ExtendedUser = User & {
     birthdate?: string;
     provider?: string;
 }
-import { UserService } from '@/services/user/userService';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_RESTAURANT_USER_BY_FIREBASE_UUID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { authenticationFailed, googleAuthenticationFailed, loginFailed, logInSuccessfull } from "@/constants/messages";
 import { responseStatusCode as code, sessionProvider, sessionType } from "@/constants/response";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { PAGE } from "@/lib/utils";
-
-const userService = new UserService();
 const cookieConfig = { path: '/', sameSite: 'lax' as const };
 
 const setCookies = async (entries: Record<string, string>) => {
@@ -81,106 +78,13 @@ const extractAuthData = (
     return { token: userToken, userId: userIdString };
 };
 
-// Helper function to fetch and map user data consistently
-const fetchAndMapUserData = async (
-    accessToken: string,
-    token: any,
-    account: Account | null
-): Promise<void> => {
-    const provider = account?.provider || 'unknown';
-    
-    // Preserve existing user ID before attempting to fetch (critical for session to work)
-    const existingUserId = (token.user as Record<string, unknown>)?.userId || 
-                          (token.user as Record<string, unknown>)?.id || 
-                          token.sub || 
-                          token.id;
-    
-    try {
-        // Fix 3: Improved logging to verify token usage
-        console.log('JWT: Fetching user data', {
-            provider,
-            hasToken: !!accessToken,
-            tokenLength: accessToken?.length,
-            tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...` : 'none',
-            existingUserId: existingUserId ? String(existingUserId) : undefined,
-            tokenSub: token.sub,
-            tokenId: token.id
-        });
-        
-        const userData = await userService.getCurrentUser(accessToken);
-        if (userData) {
-            const userId = String(userData.ID || userData.id || existingUserId);
-            
-            // Set user ID consistently - use fetched ID or preserve existing
-            const finalUserId = userData.ID || userData.id || existingUserId;
-            (token.user as Record<string, unknown>).userId = finalUserId;
-            (token.user as Record<string, unknown>).id = finalUserId;
-            token.sub = String(finalUserId);
-            token.id = String(finalUserId);
-            
-            console.log('JWT: User data fetched successfully', {
-                provider,
-                userId: finalUserId,
-                hasProfileImage: !!userData.profile_image,
-                hasDisplayName: !!userData.display_name
-            });
-            
-            // Map user profile data
-            if (userData.profile_image) {
-                (token.user as Record<string, unknown>).image = userData.profile_image;
-            }
-            if (userData.palates) {
-                (token.user as Record<string, unknown>).palates = userData.palates;
-            }
-            if (userData.about_me) {
-                (token.user as Record<string, unknown>).about_me = userData.about_me;
-            }
-            if (userData.display_name) {
-                (token.user as Record<string, unknown>).name = userData.display_name;
-            }
-        } else {
-            console.warn('JWT: User data fetch returned null/undefined, preserving existing user ID', {
-                provider,
-                hasToken: !!accessToken,
-                existingUserId: existingUserId ? String(existingUserId) : undefined
-            });
-            // Ensure user ID is preserved even if fetch fails
-            if (existingUserId) {
-                (token.user as Record<string, unknown>).userId = existingUserId;
-                (token.user as Record<string, unknown>).id = existingUserId;
-                token.sub = String(existingUserId);
-                token.id = String(existingUserId);
-            }
-        }
-    } catch (error) {
-        console.error('JWT: Error fetching user data, preserving existing user ID', {
-            error: error instanceof Error ? error.message : String(error),
-            provider,
-            hasToken: !!accessToken,
-            existingUserId: existingUserId ? String(existingUserId) : undefined,
-            errorStack: error instanceof Error ? error.stack : undefined
-        });
-        
-        // CRITICAL: Preserve user ID even if API call fails
-        // This ensures session still works even if getCurrentUser endpoint has issues
-        if (existingUserId) {
-            (token.user as Record<string, unknown>).userId = existingUserId;
-            (token.user as Record<string, unknown>).id = existingUserId;
-            token.sub = String(existingUserId);
-            token.id = String(existingUserId);
-            console.log('JWT: Preserved existing user ID after error', {
-                provider,
-                userId: existingUserId
-            });
-        }
-        // Don't throw - fallback to existing data
-    }
-};
+// Removed fetchAndMapUserData() - replaced with direct Hasura queries
+// All authentication now uses Firebase + Hasura, no WordPress dependency
 
 export const authOptions: AuthOptions = {
     providers: [
-        // Removed GoogleProvider - OAuth is now handled directly with WordPress
-        // Frontend uses Google Identity Services to get ID token, then calls WordPress OAuth endpoint
+        // All authentication now uses Firebase + Hasura
+        // Frontend authenticates with Firebase, then Hasura provides user data
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -311,10 +215,9 @@ export const authOptions: AuthOptions = {
         }),
     ],
     callbacks: {
-        // Removed signIn callback - no longer needed since OAuth is handled directly with WordPress
-        // OAuth flow: Frontend -> Google Identity Services -> WordPress OAuth endpoint -> NextAuth session
-        // Manual login flow: Frontend -> WordPress unified endpoint -> NextAuth session
-        // Both flows now go through authorize() callback with JWT tokens from WordPress
+        // All authentication flows through Firebase + Hasura via authorize() callback
+        // Authentication flow: Frontend -> Firebase Auth -> Hasura (via authorize()) -> NextAuth session
+        // All authentication now uses Firebase, with user data fetched from Hasura
         async jwt({ token, user, account, trigger, session }) {
             const provider = account?.provider || 'unknown';
             
@@ -349,6 +252,8 @@ export const authOptions: AuthOptions = {
                     email: userEmail,
                     // Also preserve name for consistency
                     name: userName,
+                    // Explicitly preserve onboarding_complete from user object (from Hasura)
+                    onboarding_complete: (user as any).onboarding_complete ?? false,
                 };
                 token.accessToken = userToken;
                 
@@ -369,18 +274,92 @@ export const authOptions: AuthOptions = {
                     }
                 }
 
-                // Fetch user data if we have a token
-                // Fix 1: getCurrentUser only needs JWT token, not email
-                // Email is nice-to-have for logging but not required for API call
-                if (token.accessToken) {
-                    // We can fetch user details with just the token
-                    // getCurrentUser endpoint validates the token and returns user data
-                    await fetchAndMapUserData(token.accessToken as string, token, account);
+                // Fetch user data from Hasura for Firebase users
+                // All authentication now uses Firebase, so we fetch from Hasura instead of WordPress
+                const firebaseUuid = (user as any).firebase_uuid || (token.user as any)?.firebase_uuid;
+                
+                if (firebaseUuid) {
+                    // For Firebase users, fetch fresh data from Hasura
+                    try {
+                        console.log('JWT: Fetching user data from Hasura', {
+                            provider,
+                            firebase_uuid: firebaseUuid,
+                            existingUserId: finalUserId
+                        });
+                        
+                        const result = await hasuraQuery(GET_RESTAURANT_USER_BY_FIREBASE_UUID, { 
+                            firebase_uuid: firebaseUuid 
+                        });
+                        
+                        if (result.errors) {
+                            console.error('JWT: GraphQL errors fetching user from Hasura:', result.errors);
+                        } else if (result.data?.restaurant_users?.[0]) {
+                            const hasuraUser = result.data.restaurant_users[0];
+                            
+                            // Update token with fresh Hasura data
+                            const tokenUser = token.user as Record<string, unknown>;
+                            
+                            // Preserve critical IDs
+                            const updatedUserId = hasuraUser.id || finalUserId;
+                            tokenUser.userId = updatedUserId;
+                            tokenUser.id = updatedUserId;
+                            token.sub = String(updatedUserId);
+                            token.id = String(updatedUserId);
+                            
+                            // Update user profile data from Hasura
+                            tokenUser.onboarding_complete = hasuraUser.onboarding_complete ?? false;
+                            tokenUser.email = hasuraUser.email || tokenUser.email;
+                            tokenUser.name = hasuraUser.display_name || hasuraUser.username || tokenUser.name;
+                            tokenUser.firebase_uuid = hasuraUser.firebase_uuid;
+                            
+                            // Optional profile fields
+                            if (hasuraUser.profile_image) {
+                                tokenUser.image = hasuraUser.profile_image;
+                            }
+                            if (hasuraUser.about_me) {
+                                tokenUser.about_me = hasuraUser.about_me;
+                            }
+                            if (hasuraUser.palates) {
+                                tokenUser.palates = hasuraUser.palates;
+                            }
+                            if (hasuraUser.birthdate) {
+                                tokenUser.birthdate = hasuraUser.birthdate;
+                            }
+                            if (hasuraUser.gender) {
+                                tokenUser.gender = hasuraUser.gender;
+                            }
+                            if (hasuraUser.language_preference) {
+                                tokenUser.language = hasuraUser.language_preference;
+                            }
+                            
+                            console.log('JWT: User data updated from Hasura', {
+                                provider,
+                                userId: updatedUserId,
+                                onboarding_complete: hasuraUser.onboarding_complete,
+                                hasProfileImage: !!hasuraUser.profile_image,
+                                hasDisplayName: !!hasuraUser.display_name
+                            });
+                        } else {
+                            console.warn('JWT: User not found in Hasura, preserving existing token data', {
+                                provider,
+                                firebase_uuid: firebaseUuid,
+                                existingUserId: finalUserId
+                            });
+                        }
+                    } catch (error) {
+                        console.error('JWT: Error fetching user from Hasura, preserving existing data', {
+                            error: error instanceof Error ? error.message : String(error),
+                            provider,
+                            firebase_uuid: firebaseUuid,
+                            existingUserId: finalUserId
+                        });
+                        // Preserve existing data on error
+                    }
                 } else {
-                    console.warn('JWT: No access token available for user data fetch', { 
+                    console.warn('JWT: No firebase_uuid available for Hasura fetch', { 
                         provider,
                         hasUserId: !!finalUserId,
-                        hasEmail: !!(token.user as any)?.email || !!userEmail
+                        hasEmail: !!userEmail
                     });
                 }
                 
@@ -391,7 +370,8 @@ export const authOptions: AuthOptions = {
                     hasId: !!(token.user as any)?.id,
                     userId: (token.user as any)?.userId,
                     id: (token.user as any)?.id,
-                    hasAccessToken: !!token.accessToken,
+                    hasFirebaseUuid: !!(token.user as any)?.firebase_uuid,
+                    onboarding_complete: (token.user as any)?.onboarding_complete,
                     hasEmail: !!(token.user as any)?.email
                 });
             } else if (trigger === 'update') {
@@ -408,6 +388,7 @@ export const authOptions: AuthOptions = {
                     birthdate: session.user.birthdate,
                     email: session.user.email,
                     language: session.user.language,
+                    onboarding_complete: session.user.onboarding_complete ?? false,
                 }
             }
 
@@ -434,8 +415,17 @@ export const authOptions: AuthOptions = {
                         email: sessionEmail,
                         name: sessionName,
                         image: sessionImage, // Explicitly include image for profile display
-                        onboarding_complete: tokenUser.onboarding_complete || false,
+                        onboarding_complete: tokenUser.onboarding_complete ?? false,
                     } as typeof session.user;
+                    
+                    // Log session data for debugging
+                    console.log('[NextAuth] Session callback - user data:', {
+                        hasUser: !!session.user,
+                        userId: session.user?.id,
+                        email: session.user?.email,
+                        onboarding_complete: session.user?.onboarding_complete,
+                        hasFirebaseUuid: !!(tokenUser.firebase_uuid as any)
+                    });
                 } else {
                     // Fix 2: Fallback - if tokenUser is missing, try to get email and id from token
                     // This ensures session has both email and user ID for authentication

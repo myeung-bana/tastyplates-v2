@@ -33,22 +33,37 @@ const OnboardingContent = () => {
   }, [searchParams]);
 
   // Check for registration data and handle session-based onboarding check
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   
   useEffect(() => {
     if (!hasMounted) return;
     
+    // Wait for session to finish loading before making decisions
+    if (status === 'loading') {
+      console.log('[Onboarding] Session is loading, waiting...');
+      return; // Don't redirect while loading
+    }
+    
     // Check if user is logged in with new Firebase method
     if (session?.user?.id) {
+      console.log('[Onboarding] User authenticated:', {
+        userId: session.user.id,
+        onboarding_complete: session.user.onboarding_complete
+      });
+      
       // If onboarding is already complete, redirect to home
       if (session.user.onboarding_complete === true) {
+        console.log('[Onboarding] Onboarding complete, redirecting to home');
         router.replace(HOME);
         return;
       }
+      
       // If user is logged in but onboarding not complete, allow access
+      console.log('[Onboarding] Onboarding not complete, allowing access');
       return;
     }
     
+    // Session loaded but user is not authenticated
     // Legacy support: Check for registration data from old flows
     const storedData = localStorage.getItem(REGISTRATION_KEY);
     const googleAuth = Cookies.get('googleAuth');
@@ -75,9 +90,10 @@ const OnboardingContent = () => {
     
     // Allow access if it's a partial registration (user needs to complete profile)
     if (!storedData && googleAuth !== 'true' && !isOAuthUser && !isPartialRegistration) {
+      console.log('[Onboarding] No session and no registration data, redirecting to home');
       router.replace(HOME);
     }
-  }, [router, hasMounted, session]);
+  }, [router, hasMounted, session, status]);
 
   const handleNext = () => {
     if (currentStep < 2) {
