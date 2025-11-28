@@ -3,20 +3,15 @@ import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { UserService } from "@/services/user/userService";
-import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
-import { errorOccurred, profileImageSizeLimit, registrationSuccess, textLimit, welcomeProfile } from "@/constants/messages";
+import { restaurantUserService, UpdateRestaurantUserRequest } from "@/app/api/v1/services/restaurantUserService";
+import { profileImageSizeLimit, registrationSuccess, textLimit, welcomeProfile } from "@/constants/messages";
 import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/validation";
-import { responseStatus, sessionProvider as provider } from "@/constants/response";
-import { HOME, PROFILE } from "@/constants/pages";
-import { IRegisterData, IUserUpdate } from "@/interfaces/user/user";
+import { responseStatus } from "@/constants/response";
+import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
-import Cookies from "js-cookie";
-
-const userService = new UserService()
 
 interface OnboardingStepTwoProps {
   onPrevious: () => void;
@@ -35,15 +30,73 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
   const [profileError, setProfileError] = useState<string | null>(null);
   const [aboutMeError, setAboutMeError] = useState<string | null>(null);
 
-  // Add effect to load saved data
-  useEffect(() => {
-    const storedData = localStorage.getItem(REGISTRATION_KEY);
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
-      if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+  // Helper function to extract profile image URL from JSONB format
+  const getProfileImageUrl = (profileImage: any): string | null => {
+    if (!profileImage) return null;
+    
+    // If it's a string, return it directly
+    if (typeof profileImage === 'string') {
+      return profileImage;
     }
-  }, []);
+    
+    // If it's an object, extract the URL
+    if (typeof profileImage === 'object') {
+      // Try different possible URL fields
+      return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+    }
+    
+    return null;
+  };
+
+  // Add effect to load saved data and fetch from API
+  useEffect(() => {
+    const loadUserData = async () => {
+      // First, check localStorage for any existing data
+      const storedData = localStorage.getItem(REGISTRATION_KEY);
+      const parsedData = storedData ? JSON.parse(storedData) : {};
+
+      // Try to fetch from API if we have a session user ID
+      if (session?.user?.id) {
+        try {
+          const userId = String(session.user.id);
+          const response = await restaurantUserService.getUserById(userId);
+          
+          if (response.success && response.data) {
+            const userData = response.data;
+            
+            // Pre-fill about_me from API, but only if not already set in localStorage
+            // This allows localStorage to take precedence (for partial saves)
+            if (!parsedData.aboutMe && userData.about_me) {
+              setAboutMe(userData.about_me);
+            } else if (parsedData.aboutMe) {
+              setAboutMe(parsedData.aboutMe);
+            }
+
+            // Pre-fill profile_image from API, but only if not already set in localStorage
+            if (!parsedData.profileImage && userData.profile_image) {
+              const imageUrl = getProfileImageUrl(userData.profile_image);
+              if (imageUrl) {
+                setProfileImage(imageUrl);
+              }
+            } else if (parsedData.profileImage) {
+              setProfileImage(parsedData.profileImage);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user data from API:', error);
+          // Fall back to localStorage if API fails
+          if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
+          if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+        }
+      } else {
+        // No session, use localStorage only
+        if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
+        if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+      }
+    };
+
+    loadUserData();
+  }, [session?.user?.id]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError(null);
@@ -79,202 +132,105 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       return;
     }
 
-    // Get registration data from localStorage
-    const registrationData = JSON.parse(localStorage.getItem(REGISTRATION_KEY) || '{}');
-    const isPartialRegistration = registrationData.isPartialRegistration;
-    const userId = registrationData.id || registrationData.user_id;
-    
-    // Check if user is already registered (from quick Google signup or Firebase auth)
-    if (isPartialRegistration && userId && (session?.user?.id || session?.accessToken)) {
-      // User is already registered - update their profile using new API
-      try {
-        // Use session user ID if available, otherwise fall back to userId from registration data
-        const userIdToUpdate = session?.user?.id || userId;
-        
-        // Prepare update data for new API
-        const updateData: any = {};
-        
-        // Get data from OnboardingStepOne (stored in registrationData)
-        if (registrationData.birthdate) updateData.birthdate = registrationData.birthdate;
-        if (registrationData.gender) updateData.gender = registrationData.gender;
-        if (registrationData.custom_gender) updateData.custom_gender = registrationData.custom_gender;
-        if (registrationData.pronoun) updateData.pronoun = registrationData.pronoun;
-        if (registrationData.palates) {
-          // Handle palates - can be array or string
-          if (Array.isArray(registrationData.palates)) {
-            updateData.palates = registrationData.palates;
-          } else if (typeof registrationData.palates === 'string') {
-            updateData.palates = registrationData.palates.split(',').map((p: string) => p.trim());
-          }
-        }
-        if (profileImage) updateData.profile_image = profileImage;
-        if (aboutMe) updateData.about_me = aboutMe;
-        if (registrationData.username) updateData.username = registrationData.username;
-        if (registrationData.email) updateData.email = registrationData.email;
-        if (registrationData.language_preference) updateData.language_preference = registrationData.language_preference;
-        
-        // Mark onboarding as complete
-        updateData.onboarding_complete = true;
-        
-        // Update user using new /api/v1/restaurant-users endpoint
-        const updateResult = await restaurantUserService.updateUser(userIdToUpdate, updateData);
-        
-        if (!updateResult.success) {
-          throw new Error('Failed to update user profile');
-        }
-        
-        // Clear registration data
-        localStorage.removeItem(REGISTRATION_KEY);
-        setMessage(registrationSuccess);
-        localStorage.setItem(WELCOME_KEY, welcomeProfile);
-        setMessageType(responseStatus.success);
-        
-        // Refresh session to get updated user data
-        if (update) {
-          await update();
-        }
-        
-        setTimeout(() => {
-          router.push(PROFILE);
-        }, 1500);
-        
-        return;
-      } catch (error) {
-        console.error('Error updating user profile:', error);
-        setIsLoading(false);
-        toast.error('Failed to update profile. Please try again.');
-        return;
-      }
-    }
-    
-    // New registration flow (existing code)
-    const uniqueSignUpId = registrationData.id || Date.now().toString();
-
-    // Combine with final profile data
-    const completeRegistration = {
-      id: uniqueSignUpId,
-      ...registrationData,
-      profileImage,
-      aboutMe,
-    } as Partial<IRegisterData>;
-
-    const email = completeRegistration.email;
-    const password = completeRegistration.password;
-    const isOAuthUser = completeRegistration.googleAuth || !!completeRegistration.googleOAuthToken;
-    const googleOAuthToken = completeRegistration.googleOAuthToken;
-    const googleIdToken = completeRegistration.googleIdToken;
-    const oauthRedirectUrl = completeRegistration.oauthRedirectUrl;
-
-    // Register the user
-    const registrationResult = await userService.registerUser(completeRegistration);
-    
-    // If OAuth user, link the Google account after registration
-    if (isOAuthUser && googleOAuthToken) {
-      try {
-        // After user is created, we need to link the Google account
-        // Nextend Social Login will automatically link if we call get_user again
-        // But we need the user ID first - get it from registration result
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const userId = (registrationResult as any)?.id || (registrationResult as any)?.user_id;
-        
-        if (userId) {
-          // Format token for Nextend
-          const nextendTokenData = typeof googleOAuthToken === 'string' && googleOAuthToken.startsWith('{') 
-            ? googleOAuthToken 
-            : JSON.stringify({ 
-                access_token: googleOAuthToken,
-                id_token: googleIdToken || undefined,
-              });
-          
-          // Call Nextend to link the account (this will create the link if user exists)
-          // Note: Nextend might need the user to be logged in, so we'll do this after login
-          // For now, we'll store the token and link it after successful login
-          Cookies.set('pending_oauth_link', nextendTokenData, { expires: 1 / 24 });
-        }
-      } catch (linkError) {
-        console.error('Error preparing OAuth link:', linkError);
-        // Don't fail registration if linking fails - can be done later
-      }
+    // Get user ID from session (UUID from Hasura) - required for Firebase auth users
+    if (!session?.user?.id) {
+      toast.error('Session expired. Please log in again.');
+      setIsLoading(false);
+      router.push('/login');
+      return;
     }
 
-    localStorage.removeItem(REGISTRATION_KEY);
-    setMessage(registrationSuccess);
-    localStorage.setItem(WELCOME_KEY, welcomeProfile);
-    setMessageType(responseStatus.success);
+    const userId = String(session.user.id); // UUID from Hasura
 
-    setTimeout(async () => {
-      // For OAuth users, use unified token endpoint (no password needed)
-      // For manual users, use password-based login
-      if (isOAuthUser) {
-        // Get user ID from registration result
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const userId = (registrationResult as any)?.id || (registrationResult as any)?.user_id;
-        
-        if (userId) {
-          try {
-            // Generate JWT token for the newly created OAuth user
-            const tokenResult = await userService.generateGoogleUserToken(userId, email);
-            
-            if (tokenResult.token && tokenResult.id) {
-              // Store token temporarily in cookies to pass to NextAuth
-              Cookies.set('google_oauth_token', tokenResult.token, { expires: 1 / 24 });
-              Cookies.set('google_oauth_user_id', String(tokenResult.id), { expires: 1 / 24 });
-              Cookies.set('google_oauth_email', tokenResult.user_email || email, { expires: 1 / 24 });
-
-              // Create NextAuth session
-              const signInResult = await signIn(provider.credentials, {
-                email: tokenResult.user_email || email,
-                password: 'oauth_token',
-                redirect: false,
-                callbackUrl: oauthRedirectUrl || PROFILE,
-              });
-
-              // Clean up cookies
-              Cookies.remove('google_oauth_token');
-              Cookies.remove('google_oauth_user_id');
-              Cookies.remove('google_oauth_email');
-              Cookies.remove('pending_oauth_link');
-              Cookies.remove('google_oauth_access_token');
-              Cookies.remove('google_oauth_id_token');
-              Cookies.remove('google_oauth_redirect');
-
-              if (signInResult?.ok) {
-                router.push(oauthRedirectUrl || PROFILE);
-              } else {
-                setIsLoading(false);
-                toast.error(signInResult?.error ?? errorOccurred);
-              }
-            } else {
-              setIsLoading(false);
-              toast.error('Failed to generate authentication token');
+    try {
+      // Get data from OnboardingStepOne (stored in localStorage)
+      const registrationData = JSON.parse(localStorage.getItem(REGISTRATION_KEY) || '{}');
+      
+      // Prepare update data for Hasura API
+      const updateData: Partial<UpdateRestaurantUserRequest> = {};
+      
+      // Step 1 data (from localStorage)
+      if (registrationData.birthdate) updateData.birthdate = registrationData.birthdate;
+      if (registrationData.gender) updateData.gender = registrationData.gender;
+      if (registrationData.customGender) updateData.custom_gender = registrationData.customGender;
+      if (registrationData.pronoun) updateData.pronoun = registrationData.pronoun;
+      
+      // Handle palates - convert string to array if needed
+      if (registrationData.palates) {
+        if (Array.isArray(registrationData.palates)) {
+          updateData.palates = registrationData.palates;
+        } else if (typeof registrationData.palates === 'string') {
+          // Convert comma-separated string to array
+          updateData.palates = registrationData.palates
+            .split(',')
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0);
+        }
+      }
+      
+      if (registrationData.username) updateData.username = registrationData.username;
+      if (registrationData.language_preference) updateData.language_preference = registrationData.language_preference;
+      
+      // Step 2 data (current form)
+      if (profileImage) {
+        // Handle profile image - convert base64 to JSONB format
+        // For now, store as JSONB with url and type
+        // In the future, you might want to upload to storage and use the URL
+        updateData.profile_image = typeof profileImage === 'string' 
+          ? { 
+              url: profileImage, 
+              type: profileImage.startsWith('data:') ? 'base64' : 'url',
+              alt_text: 'Profile picture'
             }
-          } catch (tokenError) {
-            console.error('Token generation error:', tokenError);
-            setIsLoading(false);
-            toast.error('Failed to complete login. Please try logging in manually.');
-          }
+          : profileImage;
+      }
+      
+      if (aboutMe) updateData.about_me = aboutMe;
+      
+      // Mark onboarding as complete
+      updateData.onboarding_complete = true;
+      
+      // Update user via Hasura API
+      const updateResult = await restaurantUserService.updateUser(userId, updateData);
+      
+      if (!updateResult.success) {
+        throw new Error(updateResult.error || 'Failed to update user profile');
+      }
+      
+      // Clear registration data from localStorage
+      localStorage.removeItem(REGISTRATION_KEY);
+      
+      // Refresh session to get updated user data
+      if (update) {
+        await update();
+      }
+      
+      setMessage(registrationSuccess);
+      localStorage.setItem(WELCOME_KEY, welcomeProfile);
+      setMessageType(responseStatus.success);
+      
+      // Redirect to profile after short delay
+      setTimeout(() => {
+        router.push(`/profile/${userId}`);
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      setIsLoading(false);
+      
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          toast.error('User account not found. Please try logging in again.');
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          toast.error('Network error. Please check your connection and try again.');
         } else {
-          setIsLoading(false);
-          toast.error('User ID not found. Please try logging in manually.');
+          toast.error(error.message || 'Failed to update profile. Please try again.');
         }
       } else {
-        // Manual registration - use password-based login
-        const result = await signIn(provider.credentials, {
-          email,
-          password,
-          redirect: false,
-          callbackUrl: PROFILE
-        });
-
-        if (result?.ok) {
-          router.push(PROFILE);
-        } else if (result?.error) {
-          setIsLoading(false);
-          toast.error(result?.error ?? errorOccurred);
-          return;
-        }
+        toast.error('Failed to update profile. Please try again.');
       }
-    }, 1500);
+    }
   }
 
   return (

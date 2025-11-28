@@ -44,7 +44,24 @@ export interface RestaurantUsersResponse {
 
 export interface RestaurantUserResponse {
   success: boolean;
-  data: RestaurantUser;
+  data: RestaurantUser & {
+    followers_count?: number;
+    following_count?: number;
+  };
+}
+
+export interface FollowerUser {
+  id: string;
+  name: string;
+  cuisines: string[];
+  image?: string | null;
+  isFollowing: boolean;
+}
+
+export interface FollowListResponse {
+  success: boolean;
+  data: FollowerUser[];
+  error?: string;
 }
 
 export interface CreateRestaurantUserRequest {
@@ -185,6 +202,65 @@ class RestaurantUserService {
     }
 
     return response.json();
+  }
+
+  async checkUsernameExists(username: string): Promise<{ success: boolean; exists: boolean; message: string; status: number }> {
+    const response = await fetch(`${this.baseUrl}/check-username?username=${encodeURIComponent(username)}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to check username: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async getFollowersList(userId: string): Promise<FollowListResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/get-followers-list?userId=${userId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          data: [],
+          error: errorData.error || `Failed to fetch followers: ${response.statusText}`
+        };
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get followers list error:', error);
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Failed to fetch followers'
+      };
+    }
+  }
+
+  async getFollowingList(userId: string): Promise<FollowListResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/get-following-list?userId=${userId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          data: [],
+          error: errorData.error || `Failed to fetch following: ${response.statusText}`
+        };
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get following list error:', error);
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Failed to fetch following'
+      };
+    }
   }
 }
 

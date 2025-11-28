@@ -17,16 +17,69 @@ interface ProfileHeaderProps {
   following: Record<string, unknown>[];
   followersLoading: boolean;
   followingLoading: boolean;
+  followersCount: number;
+  followingCount: number;
   isViewingOwnProfile: boolean;
   onShowFollowers: () => void;
   onShowFollowing: () => void;
   onFollow: (id: string) => Promise<void>;
   onUnfollow: (id: string) => Promise<void>;
   session: any;
-  targetUserId: number;
+  targetUserId: string | number;
   isFollowing: boolean;
   followLoading: boolean;
 }
+
+// Helper function to extract profile image URL from JSONB format
+const getProfileImageUrl = (profileImage: any): string | null => {
+  if (!profileImage) return null;
+  
+  // If it's a string, return it directly
+  if (typeof profileImage === 'string') {
+    return profileImage;
+  }
+  
+  // If it's an object, extract the URL
+  if (typeof profileImage === 'object') {
+    // Try different possible URL fields
+    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+  }
+  
+  return null;
+};
+
+// Helper function to extract palates array from JSONB format
+const getPalatesArray = (palates: any): string[] => {
+  if (!palates) return [];
+  
+  // If it's already an array
+  if (Array.isArray(palates)) {
+    return palates.map((palate: any) => {
+      // If it's a string, return it
+      if (typeof palate === 'string') {
+        return palate;
+      }
+      // If it's an object, extract the name
+      if (typeof palate === 'object' && palate !== null) {
+        return palate.name || palate.slug || String(palate);
+      }
+      return String(palate);
+    });
+  }
+  
+  // If it's a string, try to parse it (legacy format)
+  if (typeof palates === 'string') {
+    return palates.split(/[|,]\s*/).filter((p: string) => p.trim().length > 0);
+  }
+  
+  return [];
+};
+
+// Helper function to get display name
+const getDisplayName = (userData: Record<string, unknown> | null): string => {
+  if (!userData) return '';
+  return (userData.display_name as string) || (userData.username as string) || '';
+};
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   userData,
@@ -38,6 +91,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   following,
   followersLoading,
   followingLoading,
+  followersCount,
+  followingCount,
   isViewingOwnProfile,
   onShowFollowers,
   onShowFollowing,
@@ -48,6 +103,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   isFollowing,
   followLoading
 }) => {
+  // Extract profile image URL from JSONB format
+  const profileImageUrl = getProfileImageUrl(userData?.profile_image);
+  const displayName = getDisplayName(userData);
+  const palatesArray = getPalatesArray(userData?.palates);
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6 font-inter text-[#31343F]">
       {/* Compact Mobile Instagram-style Layout */}
@@ -56,13 +116,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-shrink-0">
           <FallbackImage
             src={
-              // Priority order: userProfile.profileImage > user.image > session.user.image > default
-              (((userData?.userProfile as Record<string, unknown>)?.profileImage as Record<string, unknown>)?.node as Record<string, unknown>)?.mediaItemUrl as string ||
-              (userData?.image as string) ||
+              // Priority order: profile_image from API > session.user.image > default
+              profileImageUrl ||
               (session?.user?.image as string) ||
               DEFAULT_USER_ICON
             }
-            alt={(userData?.name as string) || "User"}
+            alt={displayName || "User"}
             width={80}
             height={80}
             className="rounded-full object-cover w-16 h-16 md:w-20 md:h-20"
@@ -78,7 +137,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               {nameLoading ? (
                 <span className="inline-block w-32 h-6 bg-gray-200 rounded animate-pulse" />
               ) : (
-                (userData?.name as string) || ""
+                displayName
               )}
             </h1>
             
@@ -117,11 +176,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {/* Reviews Count */}
             <span className="cursor-default">
               <span className="font-semibold">
-                {followersLoading || followingLoading ? (
-                  <span className="inline-block w-6 h-4 bg-gray-200 font-semibold rounded animate-pulse" />
-                ) : (
-                  userReviewCount
-                )}
+                {userReviewCount ?? 0}
               </span> Reviews
             </span>
             
@@ -130,17 +185,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               type="button"
               className="focus:outline-none hover:underline"
               onClick={() => {
-                if (followers.length > 0) {
+                if (followersCount > 0) {
                   onShowFollowers();
                 }
               }}
-              disabled={followersLoading || followers.length === 0}
+              disabled={followersLoading || followersCount === 0}
             >
               <span className="font-neusans font-normal">
                 {followersLoading ? (
                   <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  followers.length
+                  followersCount ?? 0
                 )}
               </span> Followers
             </button>
@@ -150,17 +205,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               type="button"
               className="focus:outline-none hover:underline"
               onClick={() => {
-                if (following.length > 0) {
+                if (followingCount > 0) {
                   onShowFollowing();
                 }
               }}
-              disabled={followingLoading || following.length === 0}
+              disabled={followingLoading || followingCount === 0}
             >
               <span className="font-semibold">
                 {followingLoading ? (
                   <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
-                  following.length
+                  followingCount ?? 0
                 )}
               </span> Following
             </button>
@@ -172,9 +227,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <div className="w-full h-12 bg-gray-200 rounded animate-pulse" />
             ) : (
               <p className="text-sm leading-relaxed">
-                {((userData?.userProfile as Record<string, unknown>)?.aboutMe as string) || 
-                 (userData?.about_me as string) || 
-                 <span className="text-gray-400">No bio set</span>}
+                {(userData?.about_me as string) || (
+                  <span className="text-gray-400">No bio set</span>
+                )}
               </p>
             )}
           </div>
@@ -185,39 +240,36 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <span className="inline-block w-24 h-5 bg-gray-200 rounded animate-pulse" />
             ) : (
               <div className="flex gap-1 flex-wrap">
-                {((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string) ? (
-                  (((userData?.userProfile as Record<string, unknown>)?.palates as string) || (userData?.palates as string))
-                    .split(/[|,]\s*/)
-                    .filter((palate: string) => palate.trim().length > 0)
-                    .map((palate: string, index: number) => {
-                      const capitalizedPalate = palate
-                        .trim()
-                        .split(" ")
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() +
-                            word.slice(1).toLowerCase()
-                        )
-                        .join(" ");
-                      const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
-                      return (
-                        <span
-                          key={index}
-                          className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
-                        >
-                          {flagSrc && (
-                            <Image
-                              src={flagSrc}
-                              alt={`${capitalizedPalate} flag`}
-                              width={12}
-                              height={7}
-                              className="rounded object-cover"
-                            />
-                          )}
-                          {capitalizedPalate}
-                        </span>
-                      );
-                    })
+                {palatesArray.length > 0 ? (
+                  palatesArray.map((palate: string, index: number) => {
+                    const capitalizedPalate = palate
+                      .trim()
+                      .split(" ")
+                      .map(
+                        (word) =>
+                          word.charAt(0).toUpperCase() +
+                          word.slice(1).toLowerCase()
+                      )
+                      .join(" ");
+                    const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                    return (
+                      <span
+                        key={index}
+                        className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
+                      >
+                        {flagSrc && (
+                          <Image
+                            src={flagSrc}
+                            alt={`${capitalizedPalate} flag`}
+                            width={12}
+                            height={7}
+                            className="rounded object-cover"
+                          />
+                        )}
+                        {capitalizedPalate}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="text-gray-400 text-xs">No palates set</span>
                 )}

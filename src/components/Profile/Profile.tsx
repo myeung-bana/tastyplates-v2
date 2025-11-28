@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -23,7 +23,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { FollowService } from "@/services/follow/followService";
 
 interface ProfileProps {
-  targetUserId: number;
+  targetUserId: string | number; // Support both UUID (string) and legacy numeric IDs
 }
 
 const Profile = ({ targetUserId }: ProfileProps) => {
@@ -40,13 +40,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   const followService = useRef(new FollowService()).current;
 
-  // Validate targetUserId is a valid number
-  const validUserId = Number(targetUserId);
-  if (isNaN(validUserId) || validUserId <= 0) {
+  // Validate targetUserId - can be UUID (string) or numeric ID
+  if (!targetUserId || (typeof targetUserId === 'string' && targetUserId.trim() === '')) {
     console.error('Profile: Invalid targetUserId', { 
       targetUserId, 
-      type: typeof targetUserId,
-      validUserId 
+      type: typeof targetUserId
     });
     return (
       <div className="flex justify-center items-center h-screen">
@@ -55,16 +53,20 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     );
   }
 
-  // Use our custom hooks
+  // Use our custom hooks - now supports both UUID and numeric IDs
   const {
     userData,
     nameLoading,
     aboutMeLoading,
     palatesLoading,
     loading,
-    isViewingOwnProfile
-  } = useProfileData(validUserId);
+    isViewingOwnProfile,
+    error: profileError,
+    followersCount: profileFollowersCount,
+    followingCount: profileFollowingCount
+  } = useProfileData(targetUserId);
 
+  // Pass targetUserId directly to useFollowData - it now supports UUIDs
   const {
     followers,
     following,
@@ -72,7 +74,17 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     followingLoading,
     handleFollow,
     handleUnfollow
-  } = useFollowData(validUserId);
+  } = useFollowData(targetUserId);
+
+  // Convert targetUserId to number for legacy endpoints that still need numeric IDs
+  // (followService.isFollowingUser, restaurantService, etc.)
+  const validUserId = useMemo(() => {
+    if (typeof targetUserId === 'number') return targetUserId;
+    const numId = Number(targetUserId);
+    // Only use numeric ID if it's a valid number and not a UUID
+    const isUUID = typeof targetUserId === 'string' && targetUserId.length > 10 && targetUserId.includes('-');
+    return !isNaN(numId) && !isUUID ? numId : 0;
+  }, [targetUserId]);
 
   // Wishlist handler
   const handleWishlistChange = useCallback((restaurantId: string, isSaved: boolean) => {
@@ -332,6 +344,20 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     }
   ];
 
+  // Show error message if profile data failed to load
+  if (profileError && !loading) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen px-4">
+        <p className="text-lg text-gray-600 mb-2">Unable to load profile</p>
+        <p className="text-sm text-gray-500 text-center">
+          {profileError.includes('Invalid user ID format') 
+            ? 'The user ID format is invalid. Please check the URL and try again.'
+            : profileError}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-white">
       {loading ? (
@@ -347,13 +373,15 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           following={following}
           followersLoading={followersLoading}
           followingLoading={followingLoading}
+          followersCount={profileFollowersCount}
+          followingCount={profileFollowingCount}
           isViewingOwnProfile={isViewingOwnProfile}
           onShowFollowers={() => setShowFollowers(true)}
           onShowFollowing={() => setShowFollowing(true)}
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
           session={session}
-          targetUserId={validUserId}
+          targetUserId={targetUserId}
           isFollowing={isFollowing}
           followLoading={followLoading}
         />

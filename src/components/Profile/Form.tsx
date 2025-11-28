@@ -10,8 +10,8 @@ import React, {
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { palateOptions } from "@/constants/formOptions";
 import { UserService } from "@/services/user/userService";
+import { useCuisines } from "@/hooks/useCuisines";
 import { checkImageType } from "@/constants/utils";
 import {
   imageMBLimit,
@@ -246,11 +246,11 @@ const FormContent = memo(({
                 </p>
               </div>
               
-              <div className={`${isLoading ? "opacity-50 pointer-events-none" : ""}`}>
+              <div className={`${isLoading || cuisinesLoading ? "opacity-50 pointer-events-none" : ""}`}>
                 <CustomMultipleSelect
                   label="Palate (Select up to 2)"
-                  placeholder="Choose your preferred ethnic cuisines..."
-                  items={palateOptions}
+                  placeholder={cuisinesLoading ? "Loading cuisines..." : cuisinesError ? "Error loading cuisines" : "Choose your preferred ethnic cuisines..."}
+                  items={cuisineOptions}
                   className="!rounded-xl w-full"
                   value={selectedPalates}
                   onChange={handlePalateChange}
@@ -346,12 +346,16 @@ const Form = () => {
   const hasInitialized = useRef(false); // Track if we've initialized form state to prevent flickering
 
   // Use the existing useProfileData hook - get current user ID from session
-  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
+  // Use session.user.id directly (can be UUID string or numeric ID)
+  const currentUserId = session?.user?.id || null;
   const {
     userData,
     loading: isLoadingData,
     isViewingOwnProfile
-  } = useProfileData(currentUserId);
+  } = useProfileData(currentUserId || '');
+
+  // Fetch cuisines from API for palate selection
+  const { cuisineOptions, loading: cuisinesLoading, error: cuisinesError } = useCuisines();
 
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -635,7 +639,7 @@ const Form = () => {
       }
       
       hasInitialized.current = true; // Mark as initialized
-    } else if (!isLoadingData && !userData && session?.user && currentUserId > 0 && !hasInitialized.current) {
+    } else if (!isLoadingData && !userData && session?.user && currentUserId && !hasInitialized.current) {
       // Fallback to session data if hook hasn't loaded yet or failed (only once)
       setAboutMe(session?.user?.about_me ?? "");
       setProfilePreview(session?.user?.image ?? DEFAULT_USER_ICON);

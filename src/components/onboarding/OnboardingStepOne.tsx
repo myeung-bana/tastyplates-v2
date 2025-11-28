@@ -10,9 +10,11 @@ import {
   ModalFooter,
 } from "@heroui/modal";
 import { Key } from "@react-types/shared";
-import { genderOptions, pronounOptions, palateOptions } from "@/constants/formOptions";
+import { genderOptions, pronounOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
-import { UserService } from '@/services/user/userService';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
+import { useSession } from "next-auth/react";
+import { useCuisines } from "@/hooks/useCuisines";
 import {
   birthdateRequired,
   birthdateLimit,
@@ -36,8 +38,9 @@ import CustomDatePicker from "@/components/common/CustomDatepicker";
 import { formatDateForInput, validateUsername } from "@/lib/utils";
 import { REGISTRATION_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
+import { findCuisineOptionByKey, getCuisineKey } from "@/utils/cuisineUtils";
 
-const userService = new UserService()
+// Using restaurantUserService for Hasura API calls
 
 interface OnboardingStepOneProps {
   onNext: () => void;
@@ -45,6 +48,7 @@ interface OnboardingStepOneProps {
 }
 
 const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentStep }) => {
+  const { data: session } = useSession();
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -58,32 +62,200 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
   const [palateError, setPalateError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [hasLoadedUserData, setHasLoadedUserData] = useState(false);
+
+  // Fetch cuisines from API for palate selection
+  const { cuisineOptions, loading: cuisinesLoading, error: cuisinesError } = useCuisines();
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // Move initialization logic to a separate useEffect
+  // Fetch user data from API and pre-fill fields
   useEffect(() => {
-    if (!hasMounted) return;
+    const loadUserData = async () => {
+      if (!hasMounted || hasLoadedUserData) return;
+      
+      // First, check localStorage for any existing data
+      const storedData = localStorage.getItem(REGISTRATION_KEY);
+      const parsedData = storedData ? JSON.parse(storedData) : {};
 
-    const storedData = localStorage.getItem(REGISTRATION_KEY);
-    const parsedData = storedData ? JSON.parse(storedData) : {};
+      // Try to fetch from API if we have a session user ID
+      if (session?.user?.id) {
+        try {
+          const userId = String(session.user.id);
+          const response = await restaurantUserService.getUserById(userId);
+          
+          if (response.success && response.data) {
+            const userData = response.data;
+            
+            // Pre-fill fields from API, but only if not already set in localStorage
+            // This allows localStorage to take precedence (for partial saves)
+            if (!parsedData.username && userData.username) {
+              setName(userData.username);
+            } else if (parsedData.username) {
+              setName(parsedData.username);
+            } else {
+              setName(Cookies.get('username') || "");
+            }
 
-    setBirthdate(parsedData.birthdate || "");
-    setGender(parsedData.gender || "");
-    // Pre-fill username from registration data (especially for OAuth users)
-    setName(parsedData.username || Cookies.get('username') || "");
-    setCustomGender(parsedData.customGender || "");
-    setPronoun(parsedData.pronoun || "");
+            if (!parsedData.birthdate && userData.birthdate) {
+              setBirthdate(userData.birthdate);
+            } else if (parsedData.birthdate) {
+              setBirthdate(parsedData.birthdate);
+            }
 
-    if (parsedData.palates) {
-      const palatesArray = Array.isArray(parsedData.palates) 
-        ? parsedData.palates 
-        : parsedData.palates.split(",");
-      setSelectedPalates(new Set(palatesArray));
+            if (!parsedData.gender && userData.gender) {
+              setGender(userData.gender);
+            } else if (parsedData.gender) {
+              setGender(parsedData.gender);
+            }
+
+            if (!parsedData.customGender && userData.custom_gender) {
+              setCustomGender(userData.custom_gender);
+            } else if (parsedData.customGender) {
+              setCustomGender(parsedData.customGender);
+            }
+
+            if (!parsedData.pronoun && userData.pronoun) {
+              setPronoun(userData.pronoun);
+            } else if (parsedData.pronoun) {
+              setPronoun(parsedData.pronoun);
+            }
+
+            // Handle palates - can be array or string
+            // Need to match cuisine names/slugs from API to cuisine option keys
+            if (!parsedData.palates && userData.palates) {
+              let palatesArray: string[] = [];
+              if (Array.isArray(userData.palates)) {
+                palatesArray = userData.palates.map((p: any) => {
+                  const palateName = typeof p === 'string' ? p : (p?.name || p?.slug || String(p));
+                  // Convert to key format using utility function
+                  return getCuisineKey(palateName);
+                });
+              } else if (typeof userData.palates === 'string') {
+                palatesArray = userData.palates
+                  .split(/[|,]\s*/)
+                  .filter((p: string) => p.trim().length > 0)
+                  .map((p: string) => getCuisineKey(p.trim()));
+              }
+              if (palatesArray.length > 0) {
+                // Match palates to cuisine option keys when cuisineOptions are available
+                if (cuisineOptions.length > 0 && !cuisinesLoading) {
+                  const matchedKeys = new Set<Key>();
+                  palatesArray.forEach(palateKey => {
+                    // Try to find matching key in cuisineOptions
+                    const found = findCuisineOptionByKey(cuisineOptions, palateKey);
+                    if (found) {
+                      matchedKeys.add(found.key);
+                    }
+                  });
+                  if (matchedKeys.size > 0) {
+                    setSelectedPalates(matchedKeys);
+                  } else {
+                    // Fallback: use the keys as-is if no matches found
+                    setSelectedPalates(new Set(palatesArray));
+                  }
+                } else {
+                  // If cuisineOptions not loaded yet, set them anyway
+                  // They'll be matched when cuisineOptions load
+                  setSelectedPalates(new Set(palatesArray));
+                }
+              }
+            } else if (parsedData.palates) {
+              const palatesArray = Array.isArray(parsedData.palates) 
+                ? parsedData.palates 
+                : parsedData.palates.split(",");
+              setSelectedPalates(new Set(palatesArray));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          // Fall back to localStorage/cookies if API fails
+          if (parsedData.username) setName(parsedData.username);
+          else setName(Cookies.get('username') || "");
+          if (parsedData.birthdate) setBirthdate(parsedData.birthdate);
+          if (parsedData.gender) setGender(parsedData.gender);
+          if (parsedData.customGender) setCustomGender(parsedData.customGender);
+          if (parsedData.pronoun) setPronoun(parsedData.pronoun);
+          if (parsedData.palates) {
+            const palatesArray = Array.isArray(parsedData.palates) 
+              ? parsedData.palates 
+              : parsedData.palates.split(",");
+            setSelectedPalates(new Set(palatesArray));
+          }
+        }
+      } else {
+        // No session, use localStorage/cookies only
+        if (parsedData.username) setName(parsedData.username);
+        else setName(Cookies.get('username') || "");
+        if (parsedData.birthdate) setBirthdate(parsedData.birthdate);
+        if (parsedData.gender) setGender(parsedData.gender);
+        if (parsedData.customGender) setCustomGender(parsedData.customGender);
+        if (parsedData.pronoun) setPronoun(parsedData.pronoun);
+        if (parsedData.palates) {
+          const palatesArray = Array.isArray(parsedData.palates) 
+            ? parsedData.palates 
+            : parsedData.palates.split(",");
+          setSelectedPalates(new Set(palatesArray));
+        }
+      }
+      
+      setHasLoadedUserData(true);
+    };
+
+    loadUserData();
+  }, [hasMounted, session?.user?.id, hasLoadedUserData]);
+
+  // Re-match palates when cuisineOptions become available
+  useEffect(() => {
+    if (!hasLoadedUserData || cuisinesLoading || cuisineOptions.length === 0) return;
+    
+    // If we have selected palates but they might not be matched yet
+    if (selectedPalates.size > 0 && session?.user?.id) {
+      // Try to fetch user data again to get palates and match them
+      const matchPalatesFromAPI = async () => {
+        try {
+          const userId = String(session.user.id);
+          const response = await restaurantUserService.getUserById(userId);
+          
+          if (response.success && response.data && response.data.palates) {
+            const userData = response.data;
+            let palatesArray: string[] = [];
+            
+            if (Array.isArray(userData.palates)) {
+              palatesArray = userData.palates.map((p: any) => {
+                const palateName = typeof p === 'string' ? p : (p?.name || p?.slug || String(p));
+                return getCuisineKey(palateName);
+              });
+            } else if (typeof userData.palates === 'string') {
+              palatesArray = userData.palates
+                .split(/[|,]\s*/)
+                .filter((p: string) => p.trim().length > 0)
+                .map((p: string) => getCuisineKey(p.trim()));
+            }
+            
+            if (palatesArray.length > 0) {
+              const matchedKeys = new Set<Key>();
+              palatesArray.forEach(palateKey => {
+                const found = findCuisineOptionByKey(cuisineOptions, palateKey);
+                if (found) {
+                  matchedKeys.add(found.key);
+                }
+              });
+              if (matchedKeys.size > 0) {
+                setSelectedPalates(matchedKeys);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error matching palates:', error);
+        }
+      };
+      
+      matchPalatesFromAPI();
     }
-  }, [hasMounted]);
+  }, [cuisineOptions, cuisinesLoading, hasLoadedUserData, session?.user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,13 +346,14 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
       }
 
       try {
-        const response = await userService.checkUsernameExists(name);
+        const response = await restaurantUserService.checkUsernameExists(name);
         if (response.exists) {
-          setUsernameError(response.message as string);
+          setUsernameError(response.message);
           setIsLoading(false);
           return;
         }
-      } catch {
+      } catch (error) {
+        console.error('Username check error:', error);
         setUsernameError(usernameCheckError);
         setIsLoading(false);
         return;
@@ -316,11 +489,11 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
     {
       label: "Palate (Select up to 2 palates)",
       type: "multiple-select",
-      placeholder: "Select your palate",
+      placeholder: cuisinesLoading ? "Loading cuisines..." : cuisinesError ? "Error loading cuisines" : "Select your palate",
       value: selectedPalates,
       onChange: handlePalateChange,
-      items: palateOptions,
-      disabled: isLoading,
+      items: cuisineOptions,
+      disabled: isLoading || cuisinesLoading,
       limitValueLength: 2,
       className: "!h-10 md:!h-[48px] !rounded-[10px] auth__input",
     },

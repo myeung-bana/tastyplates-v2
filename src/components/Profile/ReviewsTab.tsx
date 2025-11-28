@@ -63,11 +63,12 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
         });
       }
 
-      setUserReviewCount(userCommentCount || 0);
+      const reviewCount = userCommentCount ?? 0;
+      setUserReviewCount(reviewCount);
       
       // Notify parent component of review count change
-      if (onReviewCountChange && userCommentCount !== undefined) {
-        onReviewCountChange(userCommentCount);
+      if (onReviewCountChange) {
+        onReviewCountChange(reviewCount);
       }
       
       setEndCursor(pageInfo.endCursor as string | null);

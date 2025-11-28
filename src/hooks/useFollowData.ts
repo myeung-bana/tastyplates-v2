@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { FollowService } from '@/services/follow/followService';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { responseStatusCode as code } from '@/constants/response';
 import { FOLLOW_SYNC_KEY, FOLLOWERS_KEY, FOLLOWING_KEY } from '@/constants/session';
 
@@ -14,7 +15,15 @@ interface UseFollowDataReturn {
   refreshFollowData: () => Promise<void>;
 }
 
-export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
+// Helper to check if a value is a UUID
+const isUUID = (value: string | number | null): boolean => {
+  if (!value) return false;
+  if (typeof value === 'number') return false;
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return UUID_REGEX.test(value);
+};
+
+export const useFollowData = (targetUserId: string | number | null): UseFollowDataReturn => {
   const { data: session } = useSession();
   const [followers, setFollowers] = useState<Record<string, unknown>[]>([]);
   const [following, setFollowing] = useState<Record<string, unknown>[]>([]);
@@ -29,35 +38,78 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
       // Set loading to false immediately if no targetUserId
       setFollowingLoading(false);
       setFollowersLoading(false);
+      setFollowing([]);
+      setFollowers([]);
       return;
     }
     
     setFollowingLoading(true);
     setFollowersLoading(true);
     
+    // Add timeout to ensure loading states are cleared
+    const timeoutId = setTimeout(() => {
+      setFollowingLoading(false);
+      setFollowersLoading(false);
+      setFollowing([]);
+      setFollowers([]);
+    }, 10000); // 10 second timeout
+    
     try {
-      // Public endpoints - don't pass token as these endpoints don't require authentication
-      // Passing a token causes the JWT plugin to validate it, which can fail and block the request
-      // Use Promise.allSettled instead of Promise.all to prevent one failure from blocking
-      const [followingResult, followersResult] = await Promise.allSettled([
-        followService.getFollowingList(targetUserId), // No token for public endpoint
-        followService.getFollowersList(targetUserId, []) // No token for public endpoint
-      ]);
+      const userIdStr = String(targetUserId);
+      const isUUIDFormat = isUUID(userIdStr);
       
-      // Handle following list result
-      if (followingResult.status === 'fulfilled') {
-        setFollowing(followingResult.value);
+      if (isUUIDFormat) {
+        // Use new Hasura API endpoints for UUIDs
+        const [followingResult, followersResult] = await Promise.allSettled([
+          restaurantUserService.getFollowingList(userIdStr),
+          restaurantUserService.getFollowersList(userIdStr)
+        ]);
+        
+        // Handle following list result
+        if (followingResult.status === 'fulfilled' && followingResult.value.success) {
+          setFollowing(followingResult.value.data as unknown as Record<string, unknown>[]);
+        } else {
+          console.warn('Failed to load following list:', followingResult.status === 'rejected' ? followingResult.reason : followingResult.value.error);
+          setFollowing([]);
+        }
+        
+        // Handle followers list result
+        if (followersResult.status === 'fulfilled' && followersResult.value.success) {
+          setFollowers(followersResult.value.data as unknown as Record<string, unknown>[]);
+        } else {
+          console.warn('Failed to load followers list:', followersResult.status === 'rejected' ? followersResult.reason : followersResult.value.error);
+          setFollowers([]);
+        }
       } else {
-        console.warn('Failed to load following list:', followingResult.reason);
-        setFollowing([]);
-      }
-      
-      // Handle followers list result
-      if (followersResult.status === 'fulfilled') {
-        setFollowers(followersResult.value);
-      } else {
-        console.warn('Failed to load followers list:', followersResult.reason);
-        setFollowers([]);
+        // Use legacy WordPress API endpoints for numeric IDs
+        const numericUserId = typeof targetUserId === 'number' ? targetUserId : Number(targetUserId);
+        
+        if (isNaN(numericUserId) || numericUserId <= 0) {
+          setFollowing([]);
+          setFollowers([]);
+          return;
+        }
+        
+        const [followingResult, followersResult] = await Promise.allSettled([
+          followService.getFollowingList(numericUserId),
+          followService.getFollowersList(numericUserId, [])
+        ]);
+        
+        // Handle following list result
+        if (followingResult.status === 'fulfilled') {
+          setFollowing(followingResult.value);
+        } else {
+          console.warn('Failed to load following list:', followingResult.reason);
+          setFollowing([]);
+        }
+        
+        // Handle followers list result
+        if (followersResult.status === 'fulfilled') {
+          setFollowers(followersResult.value);
+        } else {
+          console.warn('Failed to load followers list:', followersResult.reason);
+          setFollowers([]);
+        }
       }
       
       hasLoadedFollowData.current = true;
@@ -67,6 +119,7 @@ export const useFollowData = (targetUserId: number): UseFollowDataReturn => {
       setFollowing([]);
       setFollowers([]);
     } finally {
+      clearTimeout(timeoutId);
       // Always set loading to false, even if there's an error
       setFollowingLoading(false);
       setFollowersLoading(false);

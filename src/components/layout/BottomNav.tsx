@@ -22,8 +22,9 @@ const BottomNav: React.FC = () => {
   const { showSignin } = useAuthModal();
   
   // Fetch current user profile data for authenticated users
-  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
-  const { userData } = useProfileData(currentUserId);
+  // Use session.user.id directly (can be UUID string or numeric ID)
+  const currentUserId = session?.user?.id || null;
+  const { userData } = useProfileData(currentUserId || '');
 
   // Check if mobile on mount and resize
   useEffect(() => {

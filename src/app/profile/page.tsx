@@ -2,7 +2,6 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { generateProfileUrl } from "@/lib/utils";
 import ProfileHeaderSkeleton from "@/components/Profile/ProfileHeaderSkeleton";
 
 const ProfilePage = () => {
@@ -18,8 +17,9 @@ const ProfilePage = () => {
       return;
     }
 
-    // Redirect to the user's profile with direct user ID
-    const profileUrl = generateProfileUrl(session.user.id);
+    // Redirect to the user's profile with restaurant_users.id (UUID)
+    // Use the UUID directly from Hasura
+    const profileUrl = `/profile/${session.user.id}`;
     router.replace(profileUrl);
   }, [session, status, router]);
 

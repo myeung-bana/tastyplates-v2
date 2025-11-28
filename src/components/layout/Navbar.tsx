@@ -43,8 +43,9 @@ export default function Navbar(props: Record<string, unknown>) {
   const pathname = usePathname();
   
   // Fetch current user profile data for authenticated users
-  const currentUserId = session?.user?.id ? Number(session.user.id) : 0;
-  const { userData } = useProfileData(currentUserId);
+  // Use session.user.id directly (can be UUID string or numeric ID)
+  const currentUserId = session?.user?.id || null;
+  const { userData } = useProfileData(currentUserId || '');
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
     hasSearchBar?: boolean;
@@ -330,7 +331,10 @@ export default function Navbar(props: Record<string, unknown>) {
                     }
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href={PROFILE} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
+                        <Link 
+                          href={session?.user?.id ? `/profile/${session.user.id}` : PROFILE} 
+                          className='font-neusans text-left pl-3.5 pr-12 py-3.5'
+                        >
                           My Profile
                         </Link>
                         <Link href={SETTINGS} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
