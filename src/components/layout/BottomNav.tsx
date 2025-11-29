@@ -12,6 +12,25 @@ import {
 import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages";
 import { useAuthModal } from "../auth/AuthModalWrapper";
 import { useProfileData } from "@/hooks/useProfileData";
+import { DEFAULT_USER_ICON } from "@/constants/images";
+
+// Helper function to extract profile image URL from JSONB format
+const getProfileImageUrl = (profileImage: any): string | null => {
+  if (!profileImage) return null;
+  
+  // If it's a string, return it directly
+  if (typeof profileImage === 'string') {
+    return profileImage;
+  }
+  
+  // If it's an object, extract the URL
+  if (typeof profileImage === 'object') {
+    // Try different possible URL fields
+    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+  }
+  
+  return null;
+};
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -151,14 +170,13 @@ const BottomNav: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-700'
               }`}
             >
-              {item.isAvatar && (userData?.userProfile?.profileImage?.node?.mediaItemUrl || 
-                                 userData?.profile_image || 
+              {item.isAvatar && (getProfileImageUrl(userData?.profile_image) || 
                                  session?.user?.image) ? (
                 <img
                   src={
-                    (userData?.userProfile?.profileImage?.node?.mediaItemUrl as string) ||
-                    (userData?.profile_image as string) ||
-                    (session?.user?.image as string)
+                    getProfileImageUrl(userData?.profile_image) ||
+                    (session?.user?.image as string) ||
+                    DEFAULT_USER_ICON
                   }
                   alt="Profile"
                   className="w-6 h-6 mb-1 rounded-full object-cover"

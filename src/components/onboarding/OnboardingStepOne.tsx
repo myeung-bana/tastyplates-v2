@@ -75,10 +75,10 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
   useEffect(() => {
     const loadUserData = async () => {
       if (!hasMounted || hasLoadedUserData) return;
-      
+
       // First, check localStorage for any existing data
-      const storedData = localStorage.getItem(REGISTRATION_KEY);
-      const parsedData = storedData ? JSON.parse(storedData) : {};
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
+    const parsedData = storedData ? JSON.parse(storedData) : {};
 
       // Try to fetch from API if we have a session user ID
       if (session?.user?.id) {
@@ -193,12 +193,12 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
         if (parsedData.gender) setGender(parsedData.gender);
         if (parsedData.customGender) setCustomGender(parsedData.customGender);
         if (parsedData.pronoun) setPronoun(parsedData.pronoun);
-        if (parsedData.palates) {
-          const palatesArray = Array.isArray(parsedData.palates) 
-            ? parsedData.palates 
-            : parsedData.palates.split(",");
-          setSelectedPalates(new Set(palatesArray));
-        }
+    if (parsedData.palates) {
+      const palatesArray = Array.isArray(parsedData.palates) 
+        ? parsedData.palates 
+        : parsedData.palates.split(",");
+      setSelectedPalates(new Set(palatesArray));
+    }
       }
       
       setHasLoadedUserData(true);

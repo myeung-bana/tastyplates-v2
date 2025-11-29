@@ -17,7 +17,7 @@ const RestaurantDetailSkeleton = () => {
                                 <div className="flex gap-3 md:gap-4 mt-6 md:mt-0">
                                     {/* Circular Image Skeleton */}
                                     <div className="flex-shrink-0">
-                                        <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gray-300"></div>
+                                        <div className="w-[150px] h-[150px] rounded-full bg-gray-300"></div>
                                     </div>
                                     <div className="flex-1 min-w-0 space-y-3">
                                         <div className="h-7 md:h-8 w-48 md:w-64 bg-gray-300 rounded"></div>
@@ -50,16 +50,6 @@ const RestaurantDetailSkeleton = () => {
                         <div className="space-y-8">
                             {/* Desktop: Featured Image */}
                             <div className="hidden md:block h-64 md:h-80 bg-gray-300 rounded-2xl"></div>
-                            
-                            {/* Description Skeleton */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                                <div className="h-6 w-48 bg-gray-300 rounded mb-4"></div>
-                                <div className="space-y-2">
-                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                                    <div className="h-4 w-3/4 bg-gray-300 rounded"></div>
-                                </div>
-                            </div>
 
                             {/* Rating Section Skeleton */}
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
@@ -92,18 +82,29 @@ const RestaurantDetailSkeleton = () => {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Location Skeleton - Wide Map */}
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                                <div className="h-6 w-20 bg-gray-300 rounded mb-4"></div>
+                                <div className="space-y-4">
+                                    <div className="h-96 bg-gray-300 rounded-xl"></div>
+                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Right Column - Sticky Sidebar */}
                     <div className="lg:w-[375px] lg:flex-shrink-0">
                         <div className="lg:sticky lg:top-24 space-y-6">
-                            {/* Location Skeleton */}
+                            {/* Restaurant Details Skeleton - At Top */}
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                                <div className="h-6 w-20 bg-gray-300 rounded mb-4"></div>
-                                <div className="space-y-4">
-                                    <div className="h-64 bg-gray-300 rounded-xl"></div>
+                                <div className="h-6 w-32 bg-gray-300 rounded mb-4"></div>
+                                <div className="space-y-3">
+                                    <div className="h-4 w-full bg-gray-300 rounded mb-4 pb-4 border-b border-gray-200"></div>
                                     <div className="h-4 w-full bg-gray-300 rounded"></div>
+                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
+                                    <div className="h-4 w-3/4 bg-gray-300 rounded"></div>
                                 </div>
                             </div>
 
@@ -112,16 +113,6 @@ const RestaurantDetailSkeleton = () => {
                                 <div className="h-6 w-24 bg-gray-300 rounded mb-4"></div>
                                 <div className="space-y-3">
                                     <div className="h-12 w-full bg-gray-300 rounded-xl"></div>
-                                </div>
-                            </div>
-
-                            {/* Restaurant Details Skeleton */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                                <div className="h-6 w-32 bg-gray-300 rounded mb-4"></div>
-                                <div className="space-y-3">
-                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
-                                    <div className="h-4 w-3/4 bg-gray-300 rounded"></div>
                                 </div>
                             </div>
                         </div>

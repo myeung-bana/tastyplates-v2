@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import { generateMetadata as generateSEOMetadata, siteConfig } from "@/lib/seo";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
+import { isFeatureEnabled } from "@/constants/featureFlags";
 import { calculateOverallRating } from "@/utils/reviewUtils";
 
 const restaurantService = new RestaurantService();
@@ -16,12 +18,42 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   try {
     const { slug } = await params;
-    const restaurant = await restaurantService.fetchRestaurantDetails(
-      slug,
-      ""
-    );
+    const useV2API = isFeatureEnabled('USE_RESTAURANT_V2_API');
+    
+    let restaurantData: any = null;
 
-    if (!restaurant) {
+    if (useV2API) {
+      try {
+        const response = await restaurantV2Service.getRestaurantBySlug(slug);
+        if (response.data) {
+          restaurantData = {
+            title: response.data.title,
+            listingDetails: {
+              description: response.data.content,
+              googleMapUrl: response.data.address
+            },
+            featuredImage: response.data.featured_image_url ? {
+              node: { sourceUrl: response.data.featured_image_url }
+            } : null,
+            imageGallery: response.data.uploaded_images || [],
+            palates: {
+              nodes: response.data.palates?.map((p: any) => ({ name: p.name || p.slug })) || []
+            },
+            reviews: { nodes: [] } // Reviews not included in V2 API response yet
+          };
+        }
+      } catch (v2Error) {
+        console.error('V2 API failed in metadata, falling back to V1:', v2Error);
+        // Fallback to V1
+        const restaurant = await restaurantService.fetchRestaurantDetails(slug, "");
+        restaurantData = restaurant;
+      }
+    } else {
+      const restaurant = await restaurantService.fetchRestaurantDetails(slug, "");
+      restaurantData = restaurant;
+    }
+
+    if (!restaurantData) {
       return generateSEOMetadata({
         title: "Restaurant Not Found",
         description: "The restaurant you're looking for doesn't exist.",
@@ -29,10 +61,10 @@ export async function generateMetadata({
       });
     }
 
-    const restaurantData = restaurant as any;
     const title = restaurantData.title || "Restaurant";
     const description =
       restaurantData.listingDetails?.description ||
+      restaurantData.content ||
       `Discover ${title} on TastyPlates. Read reviews, see photos, and find the perfect dining experience.`;
     
     const featuredImage =
@@ -40,9 +72,9 @@ export async function generateMetadata({
       restaurantData.imageGallery?.[0] ||
       null;
 
-    const address = restaurantData.listingDetails?.googleMapUrl;
+    const address = restaurantData.listingDetails?.googleMapUrl || restaurantData.address;
     const formattedAddress = address
-      ? `${address.streetNumber || ""} ${address.streetName || ""}, ${address.city || ""}, ${address.province || ""}`.trim()
+      ? `${address.streetNumber || ""} ${address.streetName || ""}, ${address.city || ""}, ${address.state || ""}`.trim()
       : undefined;
 
     const reviews = restaurantData.reviews?.nodes || [];

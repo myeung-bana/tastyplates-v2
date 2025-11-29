@@ -35,7 +35,8 @@ const WishlistsTab: React.FC<WishlistsTabProps> = ({
       loading={wishlistLoading}
       ItemComponent={RestaurantCard}
       SkeletonComponent={RestaurantCardSkeleton}
-      emptyMessage="No Wishlisted Restaurants Yet."
+      emptyHeading="No Wishlists Found"
+      emptyMessage="No wishlisted restaurants yet."
       itemProps={{ 
         profileTablist: "wishlists",
         initialSavedStatus: true,

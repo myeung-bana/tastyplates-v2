@@ -6,6 +6,9 @@ import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService"
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
+import { transformRestaurantV2ToRestaurant } from "@/utils/restaurantTransformers";
+import { isFeatureEnabled } from "@/constants/featureFlags";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
 import { useSession } from "next-auth/react";
@@ -296,6 +299,7 @@ const RestaurantPage = () => {
     setLoading(true);
     try {
       const firstValue = firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE);
+      const useV2API = isFeatureEnabled('USE_RESTAURANT_V2_API');
       
       console.log('📊 Fetch restaurants params:', {
         reset,
@@ -304,26 +308,89 @@ const RestaurantPage = () => {
         isFirstLoad: isFirstLoad.current,
         INITIAL_LOAD_RESULTS: RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS,
         DEFAULT_RESULTS_PER_PAGE: RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE,
-        finalFirstValue: firstValue
+        finalFirstValue: firstValue,
+        useV2API
       });
 
-      const data = await restaurantService.fetchAllRestaurants(
-        debouncedSearchTerm,
-        firstValue,
-        after,
-        filters.cuisine,
-        filters.palates,
-        filters.price,
-        null,
-        null,
-        filters.badges,
-        filters.sortOption,
-        filters.rating,
-        null,
-        null, // Remove address from GraphQL query - use client-side filtering
-        searchEthnic
-      );
-      const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
+      let transformed: Restaurant[] = [];
+      let endCursor: string | null = null;
+      let hasNextPage = false;
+
+      if (useV2API) {
+        // Use new Hasura-based API
+        try {
+          // Calculate offset from cursor (if using cursor-based pagination)
+          // For now, using offset-based pagination
+          const offset = after ? parseInt(after) || 0 : 0;
+
+          const response = await restaurantV2Service.getAllRestaurants({
+            limit: firstValue,
+            offset: offset,
+            status: 'publish', // Only published restaurants
+            search: debouncedSearchTerm || undefined
+          });
+
+          if (response.error) {
+            console.error('❌ V2 API error:', response.error);
+            console.error('Response details:', response);
+            // Don't throw - let it fall through to V1 API fallback
+            throw new Error(response.error);
+          }
+
+          // Transform Hasura format to component format
+          transformed = response.data.map(transformRestaurantV2ToRestaurant);
+
+          // Update pagination (offset-based)
+          const nextOffset = offset + firstValue;
+          endCursor = response.meta.hasMore ? nextOffset.toString() : null;
+          hasNextPage = response.meta.hasMore;
+
+          console.log('✅ V2 API: Fetched', transformed.length, 'restaurants');
+        } catch (v2Error) {
+          console.error('V2 API failed, falling back to V1:', v2Error);
+          // Fallback to V1 API if V2 fails
+          const data = await restaurantService.fetchAllRestaurants(
+            debouncedSearchTerm,
+            firstValue,
+            after,
+            filters.cuisine,
+            filters.palates,
+            filters.price,
+            null,
+            null,
+            filters.badges,
+            filters.sortOption,
+            filters.rating,
+            null,
+            null,
+            searchEthnic
+          );
+          transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
+          endCursor = data.pageInfo.endCursor as string | null;
+          hasNextPage = data.pageInfo.hasNextPage as boolean;
+        }
+      } else {
+        // Use existing WordPress GraphQL API
+        const data = await restaurantService.fetchAllRestaurants(
+          debouncedSearchTerm,
+          firstValue,
+          after,
+          filters.cuisine,
+          filters.palates,
+          filters.price,
+          null,
+          null,
+          filters.badges,
+          filters.sortOption,
+          filters.rating,
+          null,
+          null, // Remove address from GraphQL query - use client-side filtering
+          searchEthnic
+        );
+        transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
+        endCursor = data.pageInfo.endCursor as string | null;
+        hasNextPage = data.pageInfo.hasNextPage as boolean;
+      }
       
       // Apply location filtering using the enhanced location system
       let filteredRestaurants = transformed;
@@ -377,8 +444,8 @@ const RestaurantPage = () => {
       const totalResults = sortedRestaurants.length;
       setShowSuggestions(shouldShowSuggestions(totalResults) && filters.palates && filters.palates.length > 0);
       
-      setEndCursor(data.pageInfo.endCursor as string | null);
-      setHasNextPage(data.pageInfo.hasNextPage as boolean);
+      setEndCursor(endCursor);
+      setHasNextPage(hasNextPage);
     } catch (error) {
       console.error("Failed to fetch restaurants:", error);
     } finally {

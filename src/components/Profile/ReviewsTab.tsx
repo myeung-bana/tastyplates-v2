@@ -16,7 +16,7 @@ interface ReviewsTabProps {
 const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange }) => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
   const [userReviewCount, setUserReviewCount] = useState(0);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const isFirstLoad = useRef(true);
@@ -96,9 +96,13 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
       setEndCursor(null);
       setHasNextPage(true);
       isFirstLoad.current = true;
+      setReviewsLoading(true); // Ensure loading state is true before fetching
       
       // Trigger initial load
       loadMore();
+    } else if (!targetUserId) {
+      // If no targetUserId, set loading to false
+      setReviewsLoading(false);
     }
   }, [status, targetUserId]); // Remove loadMore from dependencies
 
@@ -128,28 +132,31 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
 
   return (
     <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
       {reviewsLoading && reviews.length === 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
-          {Array.from({ length: 4 }, (_, i) => (
+          Array.from({ length: 4 }, (_, i) => (
             <ReviewCardSkeleton2 key={`skeleton-${i}`} />
-          ))}
-        </div>
+          ))
       ) : reviews.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-10">
-          {reviews.map((review, index) => (
+          reviews.map((review, index) => (
             <ReviewCard2 
               key={review.id}
               data={review}
             />
-          ))}
-        </div>
+          ))
       ) : (
         !reviewsLoading && (
-          <div className="text-center text-gray-400 py-12">
-            No Reviews Yet.
+            <div className="restaurants__no-results" style={{ gridColumn: '1 / -1', width: '100%' }}>
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Found</h3>
+                <p className="text-gray-500">
+                  No reviews have been made yet.
+                </p>
+              </div>
           </div>
         )
       )}
+      </div>
       <div ref={observerRef} />
     </>
   );

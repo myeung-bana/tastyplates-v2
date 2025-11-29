@@ -8,7 +8,7 @@ const ProfileHeaderSkeleton: React.FC = () => {
       <div className="flex items-start gap-4 w-full">
         {/* Profile Image - Left column, left-aligned */}
         <div className="flex-shrink-0">
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-300 rounded-full animate-pulse" />
+          <div className="w-[150px] h-[150px] bg-gray-300 rounded-full animate-pulse" />
         </div>
         
         {/* Profile Details - Right column, compact layout */}
@@ -51,3 +51,4 @@ const ProfileHeaderSkeleton: React.FC = () => {
 };
 
 export default ProfileHeaderSkeleton;
+

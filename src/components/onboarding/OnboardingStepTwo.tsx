@@ -52,7 +52,7 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
   useEffect(() => {
     const loadUserData = async () => {
       // First, check localStorage for any existing data
-      const storedData = localStorage.getItem(REGISTRATION_KEY);
+    const storedData = localStorage.getItem(REGISTRATION_KEY);
       const parsedData = storedData ? JSON.parse(storedData) : {};
 
       // Try to fetch from API if we have a session user ID
@@ -90,9 +90,9 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
         }
       } else {
         // No session, use localStorage only
-        if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
-        if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
-      }
+      if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
+      if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
+    }
     };
 
     loadUserData();

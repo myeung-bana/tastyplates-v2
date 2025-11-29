@@ -1,5 +1,7 @@
 // restaurantUserService.ts - Frontend service for restaurant_users API
 
+import { Restaurant } from '@/utils/restaurantTransformers';
+
 export interface RestaurantUser {
   id: string;
   firebase_uuid: string;
@@ -92,6 +94,44 @@ export interface CreateRestaurantUserRequest {
 
 export interface UpdateRestaurantUserRequest extends Partial<CreateRestaurantUserRequest> {
   id: string;
+}
+
+// Wishlist interfaces
+export interface WishlistItem {
+  favorite_id: string;
+  created_at: string;
+  restaurant: Restaurant;
+}
+
+export interface WishlistResponse {
+  success: boolean;
+  data: WishlistItem[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  error?: string;
+}
+
+// Check-ins interfaces
+export interface CheckinItem {
+  checkin_id: string;
+  checked_in_at: string;
+  restaurant: Restaurant;
+}
+
+export interface CheckinsResponse {
+  success: boolean;
+  data: CheckinItem[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  error?: string;
 }
 
 class RestaurantUserService {
@@ -259,6 +299,196 @@ class RestaurantUserService {
         success: false,
         data: [],
         error: error instanceof Error ? error.message : 'Failed to fetch following'
+      };
+    }
+  }
+
+  // ============================================
+  // FAVORITES (WISHLIST) METHODS
+  // ============================================
+
+  async toggleFavorite(params: {
+    user_id: string;
+    restaurant_slug?: string;
+    restaurant_uuid?: string;
+  }): Promise<{ success: boolean; data: { status: 'saved' | 'unsaved'; restaurant_uuid: string }; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/toggle-favorite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to toggle favorite: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Toggle favorite error:', error);
+      return {
+        success: false,
+        data: { status: 'unsaved', restaurant_uuid: '' },
+        error: error instanceof Error ? error.message : 'Failed to toggle favorite'
+      };
+    }
+  }
+
+  async checkFavoriteStatus(params: {
+    user_id: string;
+    restaurant_slug?: string;
+    restaurant_uuid?: string;
+  }): Promise<{ success: boolean; data: { status: 'saved' | 'unsaved'; restaurant_uuid: string }; error?: string }> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('user_id', params.user_id);
+      if (params.restaurant_slug) queryParams.append('restaurant_slug', params.restaurant_slug);
+      if (params.restaurant_uuid) queryParams.append('restaurant_uuid', params.restaurant_uuid);
+
+      const response = await fetch(`${this.baseUrl}/toggle-favorite?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to check favorite status: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Check favorite status error:', error);
+      return {
+        success: false,
+        data: { status: 'unsaved', restaurant_uuid: '' },
+        error: error instanceof Error ? error.message : 'Failed to check favorite status'
+      };
+    }
+  }
+
+  // ============================================
+  // CHECK-INS METHODS
+  // ============================================
+
+  async toggleCheckin(params: {
+    user_id: string;
+    restaurant_slug?: string;
+    restaurant_uuid?: string;
+  }): Promise<{ success: boolean; data: { status: 'checkedin' | 'uncheckedin'; restaurant_uuid: string }; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/toggle-checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to toggle check-in: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Toggle check-in error:', error);
+      return {
+        success: false,
+        data: { status: 'uncheckedin', restaurant_uuid: '' },
+        error: error instanceof Error ? error.message : 'Failed to toggle check-in'
+      };
+    }
+  }
+
+  async checkCheckinStatus(params: {
+    user_id: string;
+    restaurant_slug?: string;
+    restaurant_uuid?: string;
+  }): Promise<{ success: boolean; data: { status: 'checkedin' | 'uncheckedin'; restaurant_uuid: string }; error?: string }> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('user_id', params.user_id);
+      if (params.restaurant_slug) queryParams.append('restaurant_slug', params.restaurant_slug);
+      if (params.restaurant_uuid) queryParams.append('restaurant_uuid', params.restaurant_uuid);
+
+      const response = await fetch(`${this.baseUrl}/toggle-checkin?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to check check-in status: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Check check-in status error:', error);
+      return {
+        success: false,
+        data: { status: 'uncheckedin', restaurant_uuid: '' },
+        error: error instanceof Error ? error.message : 'Failed to check check-in status'
+      };
+    }
+  }
+
+  // ============================================
+  // WISHLIST METHODS
+  // ============================================
+
+  async getWishlist(params: {
+    user_id: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<WishlistResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('user_id', params.user_id);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.offset) queryParams.append('offset', params.offset.toString());
+
+      const response = await fetch(`${this.baseUrl}/get-wishlist?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch wishlist: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get wishlist error:', error);
+      return {
+        success: false,
+        data: [],
+        meta: { total: 0, limit: params.limit || 20, offset: params.offset || 0, hasMore: false },
+        error: error instanceof Error ? error.message : 'Failed to fetch wishlist'
+      };
+    }
+  }
+
+  // ============================================
+  // CHECK-INS METHODS
+  // ============================================
+
+  async getCheckins(params: {
+    user_id: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<CheckinsResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('user_id', params.user_id);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.offset) queryParams.append('offset', params.offset.toString());
+
+      const response = await fetch(`${this.baseUrl}/get-checkins?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch check-ins: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get check-ins error:', error);
+      return {
+        success: false,
+        data: [],
+        meta: { total: 0, limit: params.limit || 20, offset: params.offset || 0, hasMore: false },
+        error: error instanceof Error ? error.message : 'Failed to fetch check-ins'
       };
     }
   }

@@ -6,6 +6,7 @@ interface TabContentGridProps<T> {
   ItemComponent: React.ComponentType<{ restaurant: T; [key: string]: any }>;
   SkeletonComponent: React.ComponentType<{ key: string; skeletonKeyPrefix?: string }>;
   emptyMessage: string;
+  emptyHeading?: string;
   itemProps?: Record<string, any>;
   skeletonKeyPrefix?: string;
   gridClassName?: string;
@@ -17,6 +18,7 @@ const TabContentGrid = <T extends { id: string | number }>({
   ItemComponent,
   SkeletonComponent,
   emptyMessage,
+  emptyHeading,
   itemProps = {},
   skeletonKeyPrefix = "skeleton",
   gridClassName = "restaurants__grid"
@@ -40,7 +42,9 @@ const TabContentGrid = <T extends { id: string | number }>({
           !loading && (
             <div className="restaurants__no-results" style={{ gridColumn: '1 / -1', width: '100%' }}>
               <div className="text-center py-12">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {emptyHeading || 'No results found'}
+                </h3>
                 <p className="text-gray-500">
                   {emptyMessage}
                 </p>

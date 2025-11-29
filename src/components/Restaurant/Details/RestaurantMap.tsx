@@ -72,6 +72,30 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
         return parts.join(', ');
     };
 
+    // Function to get coordinates from place_id (most accurate)
+    const getCoordinatesFromPlaceId = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
+        if (!window.google || !window.google.maps || !window.google.maps.places) return null;
+        
+        const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
+        
+        return new Promise((resolve) => {
+            placesService.getDetails(
+                { placeId, fields: ['geometry'] },
+                (place: any, status: any) => {
+                    if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+                        resolve({
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        });
+                    } else {
+                        console.error('Place details failed:', status);
+                        resolve(null);
+                    }
+                }
+            );
+        });
+    };
+
     // Effect to handle geocoding
     useEffect(() => {
         const getCoordinates = async () => {
@@ -81,7 +105,22 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
                 return;
             }
 
-            // Priority 2: Use address string if provided
+            // Priority 2: Use place_id if available (most accurate)
+            if (googleMapUrl?.placeId) {
+                setIsGeocoding(true);
+                setGeocodingError(null);
+                
+                const coords = await getCoordinatesFromPlaceId(googleMapUrl.placeId);
+                if (coords) {
+                    setCoordinates(coords);
+                    setIsGeocoding(false);
+                    return;
+                }
+                setIsGeocoding(false);
+                // Fall through to other methods if place_id fails
+            }
+
+            // Priority 3: Use address string if provided
             if (address && address.trim() && address !== 'No address available') {
                 setIsGeocoding(true);
                 setGeocodingError(null);
@@ -96,7 +135,7 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
                 return;
             }
 
-            // Priority 3: Build address from googleMapUrl components
+            // Priority 4: Build address from googleMapUrl components
             if (googleMapUrl) {
                 const addressString = buildAddressString(googleMapUrl);
                 if (addressString.trim()) {

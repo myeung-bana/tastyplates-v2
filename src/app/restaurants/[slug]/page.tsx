@@ -3,6 +3,9 @@ import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
+import { transformRestaurantV2ToListing } from "@/utils/restaurantTransformers";
+import { isFeatureEnabled } from "@/constants/featureFlags";
 import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/Restaurant/RestaurantReviews";
 import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMobile";
@@ -28,7 +31,6 @@ import ImageGallery from "@/components/Restaurant/ImageGallery";
 import RatingSection from "@/components/Restaurant/RatingSection";
 import CommunityRecognitionSection from "@/components/Restaurant/CommunityRecognitionSection";
 import RestaurantHeader from "@/components/Restaurant/Details/RestaurantHeader";
-import RestaurantDescription from "@/components/Restaurant/Details/RestaurantDescription";
 import RestaurantLocationSection from "@/components/Restaurant/Details/RestaurantLocationSection";
 import RestaurantQuickActions from "@/components/Restaurant/Details/RestaurantQuickActions";
 import RestaurantDetailsSection from "@/components/Restaurant/Details/RestaurantDetailsSection";
@@ -90,90 +92,200 @@ export default function RestaurantDetail() {
 
   useEffect(() => {
     if (!slug) return;
-    restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''))
-      .then((data) => {
-        if (!data) return notFound();
-        const restaurantData = data as Record<string, unknown> & {
-          palates?: { nodes?: Array<{ name: string }> };
-          listingDetails?: {
-            googleMapUrl?: {
-              streetAddress?: string;
-              streetNumber?: string;
-              streetName?: string;
-              city?: string;
-              state?: string;
-              stateShort?: string;
-              country?: string;
-              countryShort?: string;
-              postCode?: string;
-              latitude?: string;
-              longitude?: string;
-              placeId?: string;
-              zoom?: number;
+    
+    const useV2API = isFeatureEnabled('USE_RESTAURANT_V2_API');
+    
+    const fetchRestaurant = async () => {
+      try {
+        let transformed: Listing | null = null;
+
+        if (useV2API) {
+          // Use new Hasura-based API
+          try {
+            const response = await restaurantV2Service.getRestaurantBySlug(slug);
+            
+            if (!response.data) {
+              return notFound();
+            }
+
+            // Transform Hasura format to component format
+            transformed = transformRestaurantV2ToListing(response.data);
+            console.log('✅ V2 API: Fetched restaurant by slug:', slug);
+          } catch (v2Error) {
+            console.error('V2 API failed, falling back to V1:', v2Error);
+            // Fallback to V1 API if V2 fails
+            const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
+            if (!data) return notFound();
+            
+            const restaurantData = data as Record<string, unknown> & {
+              palates?: { nodes?: Array<{ name: string }> };
+              listingDetails?: {
+                googleMapUrl?: {
+                  streetAddress?: string;
+                  streetNumber?: string;
+                  streetName?: string;
+                  city?: string;
+                  state?: string;
+                  stateShort?: string;
+                  country?: string;
+                  countryShort?: string;
+                  postCode?: string;
+                  latitude?: string;
+                  longitude?: string;
+                  placeId?: string;
+                  zoom?: number;
+                };
+                phone?: string;
+                openingHours?: string;
+                menuUrl?: string;
+              };
+              listingCategories?: { nodes?: Array<{ name: string }> };
+              countries?: { nodes?: Array<{ name: string }> };
+              featuredImage?: { node?: { sourceUrl?: string } };
+              imageGallery?: string[];
             };
-            phone?: string;
-            openingHours?: string;
-            menuUrl?: string;
+            
+            transformed = {
+              id: restaurantData.id,
+              slug: restaurantData.slug,
+              title: restaurantData.title,
+              content: restaurantData.content || "",
+              averageRating: restaurantData.averageRating || 0,
+              status: "published",
+              listingStreet: restaurantData.listingStreet || "",
+              priceRange: restaurantData.priceRange || "$$",
+              palates: {
+                nodes: restaurantData.palates?.nodes || []
+              },
+              databaseId: restaurantData.databaseId,
+              listingDetails: {
+                googleMapUrl: {
+                  streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
+                  streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
+                  streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
+                  city: restaurantData.listingDetails?.googleMapUrl?.city || "",
+                  state: restaurantData.listingDetails?.googleMapUrl?.state || "",
+                  stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
+                  country: restaurantData.listingDetails?.googleMapUrl?.country || "",
+                  countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
+                  postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
+                  latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+                  longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+                  placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
+                  zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
+                },
+                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+                menuUrl: restaurantData.listingDetails?.menuUrl || "",
+                openingHours: restaurantData.listingDetails?.openingHours || "",
+                phone: restaurantData.listingDetails?.phone || "",
+              },
+              featuredImage: restaurantData.featuredImage,
+              imageGallery: restaurantData.imageGallery || [],
+              listingCategories: {
+                nodes: restaurantData.listingCategories?.nodes || []
+              },
+              countries: {
+                nodes: restaurantData.countries?.nodes || []
+              },
+              cuisines: restaurantData.cuisines || [],
+              isFavorite: restaurantData.isFavorite || false,
+              ratingsCount: restaurantData.ratingsCount || 0,
+            } as Listing;
+          }
+        } else {
+          // Use existing WordPress GraphQL API
+          const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
+          if (!data) return notFound();
+          
+          const restaurantData = data as Record<string, unknown> & {
+            palates?: { nodes?: Array<{ name: string }> };
+            listingDetails?: {
+              googleMapUrl?: {
+                streetAddress?: string;
+                streetNumber?: string;
+                streetName?: string;
+                city?: string;
+                state?: string;
+                stateShort?: string;
+                country?: string;
+                countryShort?: string;
+                postCode?: string;
+                latitude?: string;
+                longitude?: string;
+                placeId?: string;
+                zoom?: number;
+              };
+              phone?: string;
+              openingHours?: string;
+              menuUrl?: string;
+            };
+            listingCategories?: { nodes?: Array<{ name: string }> };
+            countries?: { nodes?: Array<{ name: string }> };
+            featuredImage?: { node?: { sourceUrl?: string } };
+            imageGallery?: string[];
           };
-          listingCategories?: { nodes?: Array<{ name: string }> };
-          countries?: { nodes?: Array<{ name: string }> };
-          featuredImage?: { node?: { sourceUrl?: string } };
-          imageGallery?: string[];
-        };
-        const transformed = {
-          id: restaurantData.id,
-          slug: restaurantData.slug,
-          title: restaurantData.title,
-          content: restaurantData.content || "",
-          averageRating: restaurantData.averageRating || 0,
-          status: "published",
-          listingStreet: restaurantData.listingStreet || "",
-          priceRange: restaurantData.priceRange || "$$",
-          palates: {
-            nodes: restaurantData.palates?.nodes || []
-          },
-          databaseId: restaurantData.databaseId,
-          listingDetails: {
-            googleMapUrl: {
-              streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
-              streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
-              streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
-              city: restaurantData.listingDetails?.googleMapUrl?.city || "",
-              state: restaurantData.listingDetails?.googleMapUrl?.state || "",
-              stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
-              country: restaurantData.listingDetails?.googleMapUrl?.country || "",
-              countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
-              postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
+          
+          transformed = {
+            id: restaurantData.id,
+            slug: restaurantData.slug,
+            title: restaurantData.title,
+            content: restaurantData.content || "",
+            averageRating: restaurantData.averageRating || 0,
+            status: "published",
+            listingStreet: restaurantData.listingStreet || "",
+            priceRange: restaurantData.priceRange || "$$",
+            palates: {
+              nodes: restaurantData.palates?.nodes || []
+            },
+            databaseId: restaurantData.databaseId,
+            listingDetails: {
+              googleMapUrl: {
+                streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
+                streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
+                streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
+                city: restaurantData.listingDetails?.googleMapUrl?.city || "",
+                state: restaurantData.listingDetails?.googleMapUrl?.state || "",
+                stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
+                country: restaurantData.listingDetails?.googleMapUrl?.country || "",
+                countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
+                postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
+                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+                placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
+                zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
+              },
               latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
               longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-              placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
-              zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
+              menuUrl: restaurantData.listingDetails?.menuUrl || "",
+              openingHours: restaurantData.listingDetails?.openingHours || "",
+              phone: restaurantData.listingDetails?.phone || "",
             },
-            latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-            longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-            menuUrl: restaurantData.listingDetails?.menuUrl || "",
-            openingHours: restaurantData.listingDetails?.openingHours || "",
-            phone: restaurantData.listingDetails?.phone || "",
-          },
-          featuredImage: restaurantData.featuredImage,
-          imageGallery: restaurantData.imageGallery || [],
-          listingCategories: {
-            nodes: restaurantData.listingCategories?.nodes || []
-          },
-          countries: {
-            nodes: restaurantData.countries?.nodes || []
-          },
-          cuisines: restaurantData.cuisines || [],
-          isFavorite: restaurantData.isFavorite || false,
-          ratingsCount: restaurantData.ratingsCount || 0,
-        };
-        setRestaurant(transformed as Listing);
+            featuredImage: restaurantData.featuredImage,
+            imageGallery: restaurantData.imageGallery || [],
+            listingCategories: {
+              nodes: restaurantData.listingCategories?.nodes || []
+            },
+            countries: {
+              nodes: restaurantData.countries?.nodes || []
+            },
+            cuisines: restaurantData.cuisines || [],
+            isFavorite: restaurantData.isFavorite || false,
+            ratingsCount: restaurantData.ratingsCount || 0,
+          } as Listing;
+        }
+
+        if (transformed) {
+          setRestaurant(transformed);
+        }
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error fetching restaurant:", err);
         setLoading(false);
-      });
+      }
+    };
+
+    fetchRestaurant();
   }, [slug, palatesParam]);
 
   // Calculate rating metrics when data changes
@@ -277,9 +389,6 @@ export default function RestaurantDetail() {
                 </div>
               )}
 
-              {/* Restaurant Description Section */}
-              <RestaurantDescription restaurant={restaurant} />
-
               {/* Rating Section */}
               <div>
                 <RatingSection ratingMetrics={ratingMetrics} palatesParam={palatesParam} />
@@ -289,15 +398,19 @@ export default function RestaurantDetail() {
               <div>
                 <CommunityRecognitionSection metrics={communityRecognitionMetrics} />
               </div>
+
+              {/* Restaurant Location Section - Wide Map */}
+              <div>
+                <RestaurantLocationSection restaurant={restaurant} isWide={true} />
+              </div>
             </div>
           </div>
 
           {/* Right Column - Sticky Sidebar (max 375px) */}
           <div className="lg:w-[375px] lg:flex-shrink-0">
             <div className="lg:sticky lg:top-24 space-y-6">
-              <RestaurantLocationSection restaurant={restaurant} />
-              <RestaurantQuickActions onAddReview={addReview} />
               <RestaurantDetailsSection restaurant={restaurant} />
+              <RestaurantQuickActions onAddReview={addReview} />
             </div>
           </div>
         </div>

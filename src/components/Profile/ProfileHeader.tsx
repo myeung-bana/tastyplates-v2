@@ -122,9 +122,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               DEFAULT_USER_ICON
             }
             alt={displayName || "User"}
-            width={80}
-            height={80}
-            className="rounded-full object-cover w-16 h-16 md:w-20 md:h-20"
+            width={150}
+            height={150}
+            className="rounded-full object-cover w-[150px] h-[150px]"
             type={FallbackImageType.Icon}
           />
         </div>
@@ -242,34 +242,34 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <div className="flex gap-1 flex-wrap">
                 {palatesArray.length > 0 ? (
                   palatesArray.map((palate: string, index: number) => {
-                    const capitalizedPalate = palate
-                      .trim()
-                      .split(" ")
-                      .map(
-                        (word) =>
-                          word.charAt(0).toUpperCase() +
-                          word.slice(1).toLowerCase()
-                      )
-                      .join(" ");
-                    const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
-                    return (
-                      <span
-                        key={index}
-                        className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
-                      >
-                        {flagSrc && (
-                          <Image
-                            src={flagSrc}
-                            alt={`${capitalizedPalate} flag`}
-                            width={12}
-                            height={7}
-                            className="rounded object-cover"
-                          />
-                        )}
-                        {capitalizedPalate}
-                      </span>
-                    );
-                  })
+                      const capitalizedPalate = palate
+                        .trim()
+                        .split(" ")
+                        .map(
+                          (word) =>
+                            word.charAt(0).toUpperCase() +
+                            word.slice(1).toLowerCase()
+                        )
+                        .join(" ");
+                      const flagSrc = palateFlagMap[capitalizedPalate.toLowerCase()];
+                      return (
+                        <span
+                          key={index}
+                          className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
+                        >
+                          {flagSrc && (
+                            <Image
+                              src={flagSrc}
+                              alt={`${capitalizedPalate} flag`}
+                              width={12}
+                              height={7}
+                              className="rounded object-cover"
+                            />
+                          )}
+                          {capitalizedPalate}
+                        </span>
+                      );
+                    })
                 ) : (
                   <span className="text-gray-400 text-xs">No palates set</span>
                 )}

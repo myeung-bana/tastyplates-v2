@@ -27,7 +27,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
               {/* Circular Featured Image - Both Mobile and Desktop */}
               {restaurant.featuredImage?.node?.sourceUrl ? (
                 <div className="flex-shrink-0">
-                  <div className="relative w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden ring-2 ring-gray-200">
+                  <div className="relative w-[150px] h-[150px] rounded-full overflow-hidden ring-2 ring-gray-200">
                     <Image
                       src={restaurant.featuredImage.node.sourceUrl}
                       alt={restaurant.title}
@@ -38,7 +38,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 </div>
               ) : (
                 <div className="flex-shrink-0">
-                  <div className="relative w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-200 flex items-center justify-center">
+                  <div className="relative w-[150px] h-[150px] rounded-full overflow-hidden ring-2 ring-gray-200 bg-gray-200 flex items-center justify-center">
                     <span className="text-gray-400 text-xs md:text-sm">No Image</span>
                   </div>
                 </div>
@@ -92,9 +92,9 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
               <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
               <button
                 onClick={onAddReview}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-normal text-gray-700 hover:text-gray-900 hover:underline transition-colors font-neusans"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
               >
-                <FaPen className="w-4 h-4" />
+                <FaPen className="w-4 h-4 text-gray-500" />
                 <span>Write a Review</span>
               </button>
               <SaveRestaurantButton

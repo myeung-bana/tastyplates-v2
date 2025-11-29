@@ -1,14 +1,41 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { FaRegHeart, FaHeart } from "react-icons/fa";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 import toast from "react-hot-toast";
 import {
   favoriteStatusError,
   removedFromWishlistSuccess,
   savedToWishlistSuccess,
 } from "@/constants/messages";
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Helper to get user UUID from session
+const getUserUuid = async (sessionUserId: string | number | undefined): Promise<string | null> => {
+  if (!sessionUserId) return null;
+  
+  const userIdStr = String(sessionUserId);
+  
+  // Check if it's already a UUID
+  if (UUID_REGEX.test(userIdStr)) {
+    return userIdStr;
+  }
+  
+  // If not a UUID, assume it's firebase_uuid and fetch the user
+  try {
+    const response = await restaurantUserService.getUserByFirebaseUuid(userIdStr);
+    if (response.success && response.data) {
+      return response.data.id;
+    }
+  } catch (error) {
+    console.error("Error fetching user UUID:", error);
+  }
+  
+  return null;
+};
 
 interface SaveRestaurantButtonProps {
   restaurantSlug: string;
@@ -25,20 +52,24 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const restaurantService = useMemo(() => new RestaurantService(), []);
-
   const checkFavoriteStatus = useCallback(async () => {
-    if (!session?.accessToken || !restaurantSlug) return;
+    if (!session?.user || !restaurantSlug) return;
     try {
-      const response = await restaurantService.checkFavoriteListing(
-        restaurantSlug,
-        session.accessToken
-      );
-      setSaved((response as { status: string }).status === "saved");
+      const userUuid = await getUserUuid(session.user?.id);
+      if (!userUuid) return;
+
+      const response = await restaurantUserService.checkFavoriteStatus({
+        user_id: userUuid,
+        restaurant_slug: restaurantSlug
+      });
+
+      if (response.success) {
+        setSaved(response.data.status === "saved");
+      }
     } catch (error) {
       console.error("Error checking favorite status:", error);
     }
-  }, [session?.accessToken, restaurantSlug, restaurantService]);
+  }, [session?.user, restaurantSlug]);
 
   const toggleFavorite = useCallback(async () => {
     if (!session?.user) {
@@ -46,38 +77,35 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
       return;
     }
 
-    if (!session?.accessToken) {
-      setError("Authentication required");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      if (saved) {
-        await restaurantService.unsaveFavoriteListing(
-          restaurantSlug,
-          session.accessToken
-        );
-        setSaved(false);
-        toast.success(removedFromWishlistSuccess);
+      const userUuid = await getUserUuid(session.user?.id);
+      if (!userUuid) {
+        throw new Error("Unable to get user ID");
+      }
+
+      const response = await restaurantUserService.toggleFavorite({
+        user_id: userUuid,
+        restaurant_slug: restaurantSlug
+      });
+
+      if (response.success) {
+        const isSaved = response.data.status === "saved";
+        setSaved(isSaved);
+        toast.success(isSaved ? savedToWishlistSuccess : removedFromWishlistSuccess);
       } else {
-        await restaurantService.saveFavoriteListing(
-          restaurantSlug,
-          session.accessToken
-        );
-        setSaved(true);
-        toast.success(savedToWishlistSuccess);
+        throw new Error(response.error || favoriteStatusError);
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
       toast.error(favoriteStatusError);
-      setError(favoriteStatusError);
+      setError(error instanceof Error ? error.message : favoriteStatusError);
     } finally {
       setLoading(false);
     }
-  }, [saved, session?.user, session?.accessToken, restaurantSlug, restaurantService, onShowSignin]);
+  }, [session?.user, restaurantSlug, onShowSignin]);
 
   useEffect(() => {
     let isMounted = true;

@@ -45,6 +45,92 @@ export function formatAddress(
 }
 
 /**
+ * Format address in a multi-line format for better readability
+ * @param googleMapUrl - GoogleMapUrl object with address components
+ * @returns Formatted multi-line address or single line fallback
+ */
+export function formatAddressMultiLine(
+  googleMapUrl: GoogleMapUrl | null
+): string {
+  if (!googleMapUrl) return '';
+  
+  const lines: string[] = [];
+  
+  // Line 1: Street address
+  if (googleMapUrl.streetAddress?.trim()) {
+    lines.push(googleMapUrl.streetAddress.trim());
+  } else if (googleMapUrl.streetNumber || googleMapUrl.streetName) {
+    const street = [googleMapUrl.streetNumber, googleMapUrl.streetName]
+      .filter(Boolean)
+      .join(' ');
+    if (street) lines.push(street);
+  }
+  
+  // Line 2: City, State, Postal Code
+  const cityStateParts = [
+    googleMapUrl.city,
+    googleMapUrl.stateShort || googleMapUrl.state,
+    googleMapUrl.postCode
+  ].filter(Boolean);
+  
+  if (cityStateParts.length > 0) {
+    lines.push(cityStateParts.join(', '));
+  }
+  
+  // Line 3: Country
+  if (googleMapUrl.country?.trim()) {
+    lines.push(googleMapUrl.country.trim());
+  } else if (googleMapUrl.countryShort?.trim()) {
+    lines.push(googleMapUrl.countryShort.trim());
+  }
+  
+  return lines.join('\n');
+}
+
+/**
+ * Format address in a single line format
+ * @param googleMapUrl - GoogleMapUrl object with address components
+ * @returns Formatted single-line address
+ */
+export function formatAddressSingleLine(
+  googleMapUrl: GoogleMapUrl | null
+): string {
+  if (!googleMapUrl) return '';
+  
+  const parts: string[] = [];
+  
+  // Street address
+  if (googleMapUrl.streetAddress?.trim()) {
+    parts.push(googleMapUrl.streetAddress.trim());
+  } else if (googleMapUrl.streetNumber || googleMapUrl.streetName) {
+    const street = [googleMapUrl.streetNumber, googleMapUrl.streetName]
+      .filter(Boolean)
+      .join(' ');
+    if (street) parts.push(street);
+  }
+  
+  // City, State, Postal Code
+  const cityStateParts = [
+    googleMapUrl.city,
+    googleMapUrl.stateShort || googleMapUrl.state,
+    googleMapUrl.postCode
+  ].filter(Boolean);
+  
+  if (cityStateParts.length > 0) {
+    parts.push(cityStateParts.join(', '));
+  }
+  
+  // Country
+  if (googleMapUrl.country?.trim()) {
+    parts.push(googleMapUrl.country.trim());
+  } else if (googleMapUrl.countryShort?.trim()) {
+    parts.push(googleMapUrl.countryShort.trim());
+  }
+  
+  return parts.join(', ');
+}
+
+/**
  * Get the best available address using priority logic from admin portal
  * Priority: streetAddress → composed address → listingStreet → fallback
  * @param googleMapUrl - GoogleMapUrl object

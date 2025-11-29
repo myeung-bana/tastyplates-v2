@@ -90,25 +90,25 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
           return;
         }
         
-        const [followingResult, followersResult] = await Promise.allSettled([
+      const [followingResult, followersResult] = await Promise.allSettled([
           followService.getFollowingList(numericUserId),
           followService.getFollowersList(numericUserId, [])
-        ]);
-        
-        // Handle following list result
-        if (followingResult.status === 'fulfilled') {
-          setFollowing(followingResult.value);
-        } else {
-          console.warn('Failed to load following list:', followingResult.reason);
-          setFollowing([]);
-        }
-        
-        // Handle followers list result
-        if (followersResult.status === 'fulfilled') {
-          setFollowers(followersResult.value);
-        } else {
-          console.warn('Failed to load followers list:', followersResult.reason);
-          setFollowers([]);
+      ]);
+      
+      // Handle following list result
+      if (followingResult.status === 'fulfilled') {
+        setFollowing(followingResult.value);
+      } else {
+        console.warn('Failed to load following list:', followingResult.reason);
+        setFollowing([]);
+      }
+      
+      // Handle followers list result
+      if (followersResult.status === 'fulfilled') {
+        setFollowers(followersResult.value);
+      } else {
+        console.warn('Failed to load followers list:', followersResult.reason);
+        setFollowers([]);
         }
       }
       

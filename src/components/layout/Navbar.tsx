@@ -32,6 +32,24 @@ import LocationButton from "../navigation/LocationButton";
 import MobileMenu from "./MobileMenu";
 import { useProfileData } from "@/hooks/useProfileData";
 
+// Helper function to extract profile image URL from JSONB format
+const getProfileImageUrl = (profileImage: any): string | null => {
+  if (!profileImage) return null;
+  
+  // If it's a string, return it directly
+  if (typeof profileImage === 'string') {
+    return profileImage;
+  }
+  
+  // If it's an object, extract the URL
+  if (typeof profileImage === 'object') {
+    // Try different possible URL fields
+    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+  }
+  
+  return null;
+};
+
 const navigationItems = [
   { name: "Explore", href: RESTAURANTS },
   { name: "Following", href: "/following" },
@@ -315,15 +333,14 @@ export default function Navbar(props: Record<string, unknown>) {
                       <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
                           src={
-                            // Priority: userProfile data > session data > default
-                            (((userData?.userProfile as any)?.profileImage?.node?.mediaItemUrl as string)) ||
-                            (userData?.profile_image as string) ||
+                            // Priority order: profile_image from API > session.user.image > default
+                            getProfileImageUrl(userData?.profile_image) ||
                             (session?.user?.image as string) ||
                             DEFAULT_USER_ICON
                           }
                           alt={session?.user?.name || "Profile"}
-                          width={36} // Reduced from 44
-                          height={36} // Reduced from 44
+                          width={36}
+                          height={36}
                           className="w-full h-full object-cover rounded-full"
                           type={FallbackImageType.Icon}
                         />

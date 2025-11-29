@@ -1,8 +1,9 @@
 import "@/styles/components/filter2.scss";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
-import { CategoryService } from "@/services/category/categoryService";
+import { useCuisines } from "@/hooks/useCuisines";
+import { flattenCuisineOptions } from "@/utils/cuisineUtils";
 import CuisineFilter from "./CuisineFilter";
 
 interface Filter2Props {
@@ -19,8 +20,6 @@ interface Filter2Props {
 }
 
 
-const categoryService = new CategoryService();
-
 const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialCuisines);
@@ -33,8 +32,22 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
   const [badge, setBadge] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("None");
 
-  const [dbCuisines, setDbCuisines] = useState<{ name: string; slug: string }[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
+  // Use centralized useCuisines hook to fetch cuisine data
+  const { cuisineOptions, loading: isLoadingCategories, error: cuisineError } = useCuisines();
+
+  // Transform cuisineOptions to the format Filter2 expects: { name: string; slug: string }[]
+  const dbCuisines = useMemo(() => {
+    if (!cuisineOptions || cuisineOptions.length === 0) return [];
+    
+    // Flatten hierarchical structure to get all cuisines (parents + children)
+    const flattened = flattenCuisineOptions(cuisineOptions);
+    
+    // Transform to { name, slug } format that Filter2 expects
+    return flattened.map(option => ({
+      name: option.label,
+      slug: option.key
+    }));
+  }, [cuisineOptions]);
 
   // Sync with initial values from parent
   useEffect(() => {
@@ -42,14 +55,12 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
     setSelectedPalates(initialPalates);
   }, [initialCuisines, initialPalates]);
 
+  // Log errors if cuisine fetch fails
   useEffect(() => {
-    categoryService.fetchCategories()
-      .then((data) => {
-        setDbCuisines((data as unknown as { name: string; slug: string; }[]) || []);
-      })
-      .catch((error) => console.error("Error fetching categories:", error))
-      .finally(() => setIsLoadingCategories(false));
-  }, []);
+    if (cuisineError) {
+      console.error("Error fetching cuisines:", cuisineError);
+    }
+  }, [cuisineError]);
 
   const prices = [
     { name: "$", value: "$" },
