@@ -134,6 +134,46 @@ export interface CheckinsResponse {
   error?: string;
 }
 
+// Reviews interfaces
+export interface ReviewItem {
+  id: string;
+  title?: string | null;
+  content: string;
+  rating: number;
+  images: any;
+  palates?: any;
+  hashtags?: string[] | null;
+  likes_count: number;
+  status: string;
+  created_at: string;
+  published_at?: string | null;
+  author?: {
+    id: string;
+    username: string;
+    display_name?: string;
+    profile_image?: any;
+  };
+  restaurant?: {
+    uuid: string;
+    id?: number;
+    title: string;
+    slug: string;
+    featured_image_url?: string;
+  };
+}
+
+export interface ReviewsResponse {
+  success: boolean;
+  data: ReviewItem[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  error?: string;
+}
+
 class RestaurantUserService {
   private baseUrl: string = '/api/v1/restaurant-users';
 
@@ -489,6 +529,42 @@ class RestaurantUserService {
         data: [],
         meta: { total: 0, limit: params.limit || 20, offset: params.offset || 0, hasMore: false },
         error: error instanceof Error ? error.message : 'Failed to fetch check-ins'
+      };
+    }
+  }
+
+  // ============================================
+  // REVIEWS METHODS
+  // ============================================
+
+  async getReviews(params: {
+    user_id: string;
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }): Promise<ReviewsResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('user_id', params.user_id);
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.offset) queryParams.append('offset', params.offset.toString());
+      if (params.status) queryParams.append('status', params.status);
+
+      const response = await fetch(`${this.baseUrl}/get-reviews?${queryParams}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch reviews: ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get reviews error:', error);
+      return {
+        success: false,
+        data: [],
+        meta: { total: 0, limit: params.limit || 20, offset: params.offset || 0, hasMore: false },
+        error: error instanceof Error ? error.message : 'Failed to fetch reviews'
       };
     }
   }

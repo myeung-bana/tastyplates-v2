@@ -312,7 +312,7 @@ export default function RestaurantDetail() {
       return;
     }
     router.push(
-      PAGE(ADD_REVIEW, [restaurant?.slug || "", restaurant?.databaseId?.toString() || "0"])
+      PAGE(ADD_REVIEW, [restaurant?.slug || ""])
     );
   };
 

@@ -27,9 +27,9 @@ const RestaurantReviewHeader: React.FC<RestaurantReviewHeaderProps> = ({
         <Image 
           src={restaurantImage || "/placeholder-restaurant.jpg"}
           alt={restaurantName}
-          width={60}
-          height={60}
-          className="rounded-lg object-cover"
+          width={75}
+          height={75}
+          className="rounded-full object-cover"
         />
       </div>
       <div className="restaurant-review-header__info">

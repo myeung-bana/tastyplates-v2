@@ -17,6 +17,14 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
   onAddReview,
   onShowSignin,
 }) => {
+  // Get price range display name (from relationship or fallback to priceRange)
+  const priceRangeDisplay = (restaurant as any).restaurant_price_range?.display_name 
+    || restaurant.priceRange 
+    || '';
+
+  // Check if palates exist
+  const hasPalates = restaurant.palates?.nodes && restaurant.palates.nodes.length > 0;
+
   return (
     <div className="restaurant-detail__header">
       <div className="restaurant-detail__info">
@@ -44,28 +52,8 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h1 className="restaurant-detail__name leading-7 font-neusans font-normal mb-2">
-                  {restaurant.title}
-                </h1>
-                <div className="restaurant-detail__meta mb-2">
-                  <div className="restaurant-detail__cuisine">
-                    {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
-                      <div className="flex items-center gap-2" key={`palate-${index}`}>
-                        {index > 0 && <span>&#8226;</span>}
-                        <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal">
-                          {palate.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  &#8226;
-                  <div className="restaurant-detail__price">
-                    <span className="font-neusans font-normal">{restaurant.priceRange}</span>
-                  </div>
-                </div>
-                
-                {/* Categories Section */}
-                <div className="mt-2">
+                {/* Cuisine Tags - Moved Above Title */}
+                <div className="mb-2">
                   <div className="flex flex-wrap gap-2">
                     {restaurant.listingCategories?.nodes?.length > 0 ? (
                       restaurant.listingCategories.nodes.map(
@@ -84,6 +72,39 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                       </span>
                     )}
                   </div>
+                </div>
+
+                {/* Restaurant Title */}
+                <h1 className="restaurant-detail__name leading-7 font-neusans font-normal mb-2">
+                  {restaurant.title}
+                </h1>
+
+                {/* Palates and Price Range */}
+                <div className="restaurant-detail__meta mb-2">
+                  <div className="restaurant-detail__cuisine">
+                    {hasPalates ? (
+                      restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
+                        <div className="flex items-center gap-2" key={`palate-${index}`}>
+                          {index > 0 && <span>&#8226;</span>}
+                          <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal">
+                            {palate.name}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal text-gray-500">
+                        No Palate Defined
+                      </span>
+                    )}
+                  </div>
+                  {priceRangeDisplay && (
+                    <>
+                      &#8226;
+                      <div className="restaurant-detail__price">
+                        <span className="font-neusans font-normal">{priceRangeDisplay}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

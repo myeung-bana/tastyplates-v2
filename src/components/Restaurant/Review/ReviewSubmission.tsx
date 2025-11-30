@@ -8,12 +8,15 @@ import Link from "next/link";
 import Image from "next/image";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
+import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
@@ -42,12 +45,12 @@ const restaurantService = new RestaurantService();
 const reviewService = new ReviewService();
 
 const ReviewSubmissionPage = () => {
-  const params = useParams() as { slug: string; id: string };
-  const restaurantId = params.id;
+  const params = useParams() as { slug: string };
+  const restaurantSlug = params.slug;
   const { data: session } = useSession();
-  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantName, setRestaurantName] = useState('Loading...');
   const [restaurantImage, setRestaurantImage] = useState('');
-  const [restaurantLocation, setRestaurantLocation] = useState('');
+  const [restaurantLocation, setRestaurantLocation] = useState('Loading...');
   const [googleMapUrl, setGoogleMapUrl] = useState<GoogleMapUrl | null>(null);
   const [review_main_title, setReviewMainTitle] = useState('');
   const [content, setContent] = useState('');
@@ -75,26 +78,94 @@ const ReviewSubmissionPage = () => {
     description: "",
     recognition: []
   });
+  const [restaurantUuid, setRestaurantUuid] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRestaurantData = async () => {
-      if (!restaurantId || !session?.accessToken) return;
+      if (!restaurantSlug) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        const data = await restaurantService.fetchRestaurantById(restaurantId, "DATABASE_ID", session?.accessToken);
-        setRestaurantName(data.title as string);
-        setRestaurantImage((data.featuredImage as any)?.node?.sourceUrl || '');
-        setRestaurantLocation((data.address as string) || '');
-        setGoogleMapUrl((data.googleMapUrl as GoogleMapUrl) || null);
+        // Try V2 API first (Hasura)
+        try {
+          const v2Response = await restaurantV2Service.getRestaurantBySlug(restaurantSlug);
+          
+          if (v2Response && v2Response.data) {
+            const v2Data = v2Response.data;
+            setRestaurantName(v2Data.title || 'Restaurant');
+            setRestaurantImage(v2Data.featured_image_url || '');
+            setRestaurantLocation(v2Data.listing_street || v2Data.address?.street_address || 'Location not available');
+            setGoogleMapUrl(v2Data.address as GoogleMapUrl || null);
+            setRestaurantUuid(v2Data.uuid);
+            
+            // Set restaurant state
+            setRestaurant(prev => ({
+              ...prev,
+              name: v2Data.title || 'Restaurant',
+              image: v2Data.featured_image_url || '',
+              location: v2Data.listing_street || v2Data.address?.street_address || 'Location not available',
+              slug: v2Data.slug || restaurantSlug,
+              address: v2Data.listing_street || v2Data.address?.street_address || '',
+              phone: v2Data.phone || '',
+              priceRange: v2Data.price_range || '',
+              rating: v2Data.average_rating || 0,
+            }));
+          } else {
+            // If v2Response or v2Response.data is null/undefined, set defaults
+            setRestaurantName('Restaurant');
+            setRestaurantLocation('Location not available');
+          }
+        } catch (v2Error) {
+          console.log('V2 API failed, trying WordPress fallback:', v2Error);
+          // Fallback to WordPress API
+          if (session?.accessToken) {
+            try {
+              const data = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", session.accessToken);
+              if (data) {
+                setRestaurantName(data.title as string || 'Restaurant');
+                setRestaurantImage((data.featuredImage as any)?.node?.sourceUrl || '');
+                setRestaurantLocation((data.address as string) || 'Location not available');
+                setGoogleMapUrl((data.googleMapUrl as GoogleMapUrl) || null);
+                
+                // Get UUID from slug for V2 API
+                try {
+                  const uuid = await getRestaurantUuidFromSlug(restaurantSlug);
+                  if (uuid) {
+                    setRestaurantUuid(uuid);
+                  }
+                } catch (uuidError) {
+                  console.log('Failed to get UUID from slug:', uuidError);
+                }
+              } else {
+                // If data is null/undefined, set defaults
+                setRestaurantName('Restaurant');
+                setRestaurantLocation('Location not available');
+              }
+            } catch (wpError) {
+              console.error('WordPress API also failed:', wpError);
+              // Set defaults even on error
+              setRestaurantName('Restaurant');
+              setRestaurantLocation('Location not available');
+            }
+          } else {
+            console.warn('No access token available for WordPress fallback');
+            // Set defaults if no session
+            setRestaurantName('Restaurant');
+            setRestaurantLocation('Location not available');
+          }
+        }
       } catch (error) {
-        console.error(error);
+        console.error('Failed to fetch restaurant:', error);
+        toast.error('Failed to load restaurant information');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRestaurantData();
-  }, [restaurantId, session]);
+  }, [restaurantSlug, session]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -210,59 +281,90 @@ const ReviewSubmissionPage = () => {
 
 
     try {
-      const reviewData = {
-        restaurantId,
-        authorId: session?.user?.userId,
-        review_stars,
-        review_main_title,
-        content,
-        review_images: selectedFiles,
-        recognitions: restaurant.recognition || [],
-        mode,
-      };
+      // Get user UUID (must be a string UUID for V2 API)
+      const userId = session?.user?.id || session?.user?.userId;
+      if (!userId) {
+        toast.error('User not authenticated');
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
+      
+      // Ensure userId is a string (UUID format)
+      const userIdString = String(userId);
+      
+      // Validate UUID format (basic check)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userIdString)) {
+        toast.error('Invalid user ID format. Please log in again.');
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
 
-      const res = await reviewService.postReview(reviewData, session?.accessToken ?? "");
-      if (mode === 'publish') {
-        if (res.status === code.created || res.status === code.success) {
-          setIsSubmitted(true);
-        } else if (res.status === code.conflict) {
-          toast.error(commentDuplicateError);
+      // Get restaurant UUID if not already set
+      let uuid = restaurantUuid;
+      if (!uuid && restaurantSlug) {
+        uuid = await getRestaurantUuidFromSlug(restaurantSlug);
+        if (!uuid) {
+          toast.error('Failed to get restaurant information');
           setIsLoading(false);
-          return
-        } else if (res.status === code.duplicate_week) {
-          toast.error(commentDuplicateWeekError);
-          setIsLoading(false);
-          return;
-        } else if (res.data?.code === 'comment_flood') {
-          toast.error(commentFloodError);
-          setIsLoading(false);
-          return;
-        } else {
-          toast.error(errorOccurred);
-          setIsLoading(false);
+          setIsSavingAsDraft(false);
           return;
         }
-      } else if (mode === 'draft') {
-        if (res.status === code.created || res.status === code.success) {
+      }
+
+      if (!uuid) {
+        toast.error('Restaurant information is missing');
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
+
+      // Transform images to ReviewImage format
+      const reviewImages = transformWordPressImagesToReviewImages(selectedFiles);
+
+      // Transform recognitions to array format
+      const recognitions = restaurant.recognition || [];
+
+      // Create review using V2 API
+      try {
+        const reviewData = {
+          restaurant_uuid: uuid,
+          author_id: userIdString,
+          title: review_main_title || undefined,
+          content,
+          rating: review_stars,
+          images: reviewImages.length > 0 ? reviewImages : undefined,
+          recognitions: recognitions.length > 0 ? recognitions : undefined,
+          status: (mode === 'publish' ? 'pending' : 'draft') as 'draft' | 'pending', // 'pending' for publish, 'draft' for save
+        };
+
+        const createdReview = await reviewV2Service.createReview(reviewData);
+
+        if (mode === 'publish') {
+          setIsSubmitted(true);
+          toast.success('Review submitted successfully!');
+        } else if (mode === 'draft') {
           toast.success(savedAsDraft);
           router.push(LISTING);
-        } else if (res.status === code.duplicate_week) {
-          toast.error(commentDuplicateWeekError);
-          setIsSavingAsDraft(false);
-          return;
-        } else if (res.status === code.conflict) {
-          toast.error(commentDuplicateError);
-          setIsSavingAsDraft(false);
-          return;
-        } else if (res.data?.code === 'comment_flood') {
-          toast.error(commentFloodError);
-          setIsLoading(false);
-          return;
-        } else {
-          toast.error(errorOccurred);
-          setIsSavingAsDraft(false);
-          return;
         }
+      } catch (apiError: any) {
+        // Handle specific error messages
+        const errorMessage = apiError.message || errorOccurred;
+        
+        // Check for duplicate errors
+        if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+          toast.error(commentDuplicateError);
+        } else if (errorMessage.includes('flood') || errorMessage.includes('rate limit')) {
+          toast.error(commentFloodError);
+        } else {
+          toast.error(errorMessage);
+        }
+        
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
       }
 
       // Reset form fields here:
@@ -391,10 +493,9 @@ const ReviewSubmissionPage = () => {
                       name="image"
                       className="submitRestaurants__input hidden"
                       placeholder="Image URL"
-                      value={restaurant.image}
                       onChange={handleFileChange}
                       multiple
-                      max={6}
+                      accept="image/*"
                     />
                     <span className="text-sm md:text-base text-[#494D5D] font-semibold">
                       Upload

@@ -58,6 +58,13 @@ export interface Listing {
         avg: number;
         count: number;
     };
+    restaurant_price_range?: {
+        id: number;
+        display_name: string;
+        name: string;
+        symbol?: string;
+        slug: string;
+    };
 }
 
 

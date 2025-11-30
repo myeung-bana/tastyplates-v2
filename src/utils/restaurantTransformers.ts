@@ -65,6 +65,12 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
   const palates = parseJsonb(restaurant.palates);
   const uploadedImages = parseJsonb(restaurant.uploaded_images);
 
+  // Ensure palates is always an array
+  const palatesArray = Array.isArray(palates) ? palates : [];
+  
+  // Ensure cuisines is always an array
+  const cuisinesArray = Array.isArray(cuisines) ? cuisines : [];
+
   // Normalize address object: convert snake_case to camelCase
   const normalizeAddress = (addr: any): any => {
     if (!addr || typeof addr !== 'object') return {};
@@ -96,10 +102,10 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
     averageRating: restaurant.average_rating || 0,
     status: restaurant.status,
     listingStreet: restaurant.listing_street || '',
-    priceRange: restaurant.price_range || '',
+    priceRange: restaurant.restaurant_price_range?.display_name || restaurant.price_range || '',
     databaseId: restaurant.id,
     palates: {
-      nodes: (palates || []).map((p: any) => ({
+      nodes: palatesArray.map((p: any) => ({
         name: typeof p === 'string' ? p : (p.name || p.slug || String(p)),
         slug: typeof p === 'string' ? p.toLowerCase().replace(/\s+/g, '-') : (p.slug || p.name?.toLowerCase().replace(/\s+/g, '-') || '')
       }))
@@ -117,7 +123,7 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
     } : undefined,
     imageGallery: uploadedImages || [],
     listingCategories: {
-      nodes: (cuisines || []).map((c: any) => ({
+      nodes: cuisinesArray.map((c: any) => ({
         name: typeof c === 'string' ? c : (c.name || c.slug || String(c)),
         slug: typeof c === 'string' ? c.toLowerCase().replace(/\s+/g, '-') : (c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '')
       }))
@@ -125,8 +131,9 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
     countries: {
       nodes: address?.country ? [{ name: address.country }] : []
     },
-    ratingsCount: restaurant.ratings_count || 0
-  };
+    ratingsCount: restaurant.ratings_count || 0,
+    restaurant_price_range: restaurant.restaurant_price_range
+  } as Listing & { restaurant_price_range?: { display_name: string } };
 };
 
 /**
@@ -149,6 +156,12 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
   const cuisines = parseJsonb(restaurant.cuisines);
   const address = parseJsonb(restaurant.address);
 
+  // Ensure palates is always an array
+  const palatesArray = Array.isArray(palates) ? palates : [];
+  
+  // Ensure cuisines is always an array
+  const cuisinesArray = Array.isArray(cuisines) ? cuisines : [];
+
   return {
     id: restaurant.uuid, // Use UUID as ID
     slug: restaurant.slug,
@@ -156,10 +169,10 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
     image: restaurant.featured_image_url || DEFAULT_RESTAURANT_IMAGE,
     rating: restaurant.average_rating || 0,
     databaseId: restaurant.id,
-    palatesNames: (palates || []).map((p: any) => 
+    palatesNames: palatesArray.map((p: any) => 
       typeof p === 'string' ? p : (p.name || p.slug || String(p))
     ),
-    listingCategories: (cuisines || []).map((c: any) => ({
+    listingCategories: cuisinesArray.map((c: any) => ({
       id: typeof c === 'object' ? (c.id || 0) : 0,
       name: typeof c === 'string' ? c : (c.name || c.slug || String(c)),
       slug: typeof c === 'string' ? c.toLowerCase().replace(/\s+/g, '-') : (c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '')

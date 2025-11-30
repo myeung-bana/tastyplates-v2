@@ -67,6 +67,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     followingCount: profileFollowingCount
   } = useProfileData(targetUserId);
 
+  // Debug: Log userData for ReviewsTab
+  useEffect(() => {
+    console.log('Profile - userData for ReviewsTab:', {
+      userDataId: userData?.id,
+      targetUserId: userData?.id as string || '',
+      userDataType: typeof userData?.id,
+      status,
+      hasUserData: !!userData,
+      userDataKeys: userData ? Object.keys(userData) : []
+    });
+  }, [userData, status]);
+
   // Pass targetUserId directly to useFollowData - it now supports UUIDs
   const {
     followers,
@@ -172,13 +184,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     checkFollowingStatus();
   }, [session?.accessToken, validUserId, isViewingOwnProfile, followService]);
 
-  // Fetch wishlist data - DELAYED LOADING (Priority 3)
+  // Fetch wishlist data - DELAYED LOADING (Priority 3 - after reviews)
   useEffect(() => {
     const fetchWishlist = async () => {
       if (!userData?.id) return;
       
-      // Add delay to prioritize other content
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Increase delay to prioritize reviews (first/default tab)
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       setWishlistLoading(true);
       try {
@@ -207,13 +219,13 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     fetchWishlist();
   }, [userData?.id]);
 
-  // Fetch check-ins data - DELAYED LOADING (Priority 4)
+  // Fetch check-ins data - DELAYED LOADING (Priority 4 - after reviews and wishlist)
   useEffect(() => {
     const fetchCheckins = async () => {
       if (!userData?.id) return;
       
-      // Add delay to prioritize other content
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Increase delay to prioritize reviews (first/default tab)
+      await new Promise(resolve => setTimeout(resolve, 2500));
       
       setCheckinsLoading(true);
       try {
@@ -248,7 +260,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       id: "reviews",
       label: "Reviews",
       content: <ReviewsTab 
-        targetUserId={validUserId} 
+        targetUserId={userData?.id as string || ''} 
         status={status} 
         onReviewCountChange={setUserReviewCount}
       />

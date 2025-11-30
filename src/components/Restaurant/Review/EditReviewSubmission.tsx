@@ -7,12 +7,15 @@ import Link from "next/link";
 import Image from "next/image";
 import CustomModal from "@/components/ui/Modal/Modal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
+import { transformWordPressImagesToReviewImages, transformReviewImagesToUrls } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
@@ -42,8 +45,8 @@ const reviewService = new ReviewService();
 
 const EditReviewSubmissionPage = () => {
   const params = useParams() as { slug: string; id: string };
-  const restaurantId = params.id;
-  const reviewId = parseInt(params.id); // For edit mode, the id is the review ID
+  const restaurantSlug = params.slug;
+  const reviewId = params.id; // UUID of the review
   const { data: session } = useSession();
   const [restaurantName, setRestaurantName] = useState('');
   const [restaurantImage, setRestaurantImage] = useState('');
@@ -75,168 +78,133 @@ const EditReviewSubmissionPage = () => {
     description: "",
     recognition: []
   });
-  const [restaurantDatabaseId, setRestaurantDatabaseId] = useState<number | null>(null);
+  const [restaurantUuid, setRestaurantUuid] = useState<string | null>(null);
+  const [reviewUuid, setReviewUuid] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!reviewId || !session?.accessToken) return;
+      if (!reviewId || !restaurantSlug) return;
 
       try {
-        // Fetch the review data first
-        const reviewData = await reviewService.getReviewById(reviewId, session?.accessToken);
-        
-        // Extract restaurant ID from review data
-        const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
-        
-        if (restaurantIdFromReview && !isNaN(Number(restaurantIdFromReview))) {
-          // Set the restaurant database ID for the submit function
-          setRestaurantDatabaseId(Number(restaurantIdFromReview));
-          
-          try {
-            
-            let restaurantData = await restaurantService.fetchRestaurantById(
-              restaurantIdFromReview.toString(), 
-              "DATABASE_ID", 
-              session?.accessToken
-            );
+        // Get user ID for fetching review with like status
+        const userId = session?.user?.id || session?.user?.userId;
 
-            // If DATABASE_ID fails, try with SLUG as fallback
-            if (!restaurantData || restaurantData === null) {
-              console.log('Trying with SLUG as fallback...');
-              try {
-                restaurantData = await restaurantService.fetchRestaurantById(
-                  restaurantIdFromReview.toString(), 
-                  "SLUG", 
-                  session?.accessToken
-                );
-                console.log('Restaurant data received (SLUG):', restaurantData);
-              } catch (slugError) {
-                console.error('SLUG fallback also failed:', slugError);
-              }
-            }
-            
-            if (restaurantData && typeof restaurantData === 'object') {
-              setRestaurantName((restaurantData.title as string) || 'Restaurant Name Not Available');
-              setRestaurantImage((restaurantData.featuredImage as any)?.node?.sourceUrl || '');
-              setRestaurantLocation((restaurantData.address as string) || 'Location Not Available');
-              setGoogleMapUrl((restaurantData.googleMapUrl as GoogleMapUrl) || null);
-              
-              // Populate full restaurant object state to match ReviewSubmission structure
-              setRestaurant(prev => ({
-                ...prev,
-                name: (restaurantData.title as string) || '',
-                image: (restaurantData.featuredImage as any)?.node?.sourceUrl || '',
-                location: (restaurantData.address as string) || '',
-                slug: (restaurantData.slug as string) || '',
-                address: (restaurantData.address as string) || '',
-                phone: (restaurantData.phone as string) || '',
-                priceRange: (restaurantData.priceRange as string) || '',
-                rating: parseFloat((restaurantData.averageRating as string) || '0') || 0,
-                cuisineIds: ((restaurantData.palates as any)?.nodes || []).map((p: any) => p.id || '').filter(Boolean),
-              }));
-            } else {
-              console.error('Restaurant data is null or invalid after all attempts:', restaurantData);
-              setRestaurantName('Restaurant Name Not Available');
-              setRestaurantLocation('Location Not Available');
-              toast.error('Unable to load restaurant information. The restaurant may have been deleted or moved.');
-            }
-          } catch (restaurantError) {
-            console.error('Failed to fetch restaurant data:', restaurantError);
-            setRestaurantName('Restaurant Name Not Available');
-            setRestaurantLocation('Location Not Available');
-            toast.error('Unable to load restaurant information. Please try refreshing the page.');
+        // Fetch review using V2 API (UUID)
+        try {
+          const reviewData = await reviewV2Service.getReviewById(reviewId, userId);
+          setReviewUuid(reviewData.id);
+
+          // Pre-populate form with existing review data
+          setReviewMainTitle(reviewData.title || '');
+          setContent(reviewData.content || '');
+          setReviewStars(reviewData.rating || 0);
+
+          // Handle images - transform from ReviewImage[] to URL array
+          if (reviewData.images && Array.isArray(reviewData.images) && reviewData.images.length > 0) {
+            const imageUrls = transformReviewImagesToUrls(reviewData.images);
+            setSelectedFiles(imageUrls);
+            setIsDoneSelecting(true);
           }
-        } else {
-          console.error('No restaurant ID found in review data');
-          setRestaurantName('Restaurant Name Not Available');
-          setRestaurantLocation('Location Not Available');
-        }
 
-        // Pre-populate form with existing review data
-        setReviewMainTitle((reviewData.review_main_title as string) || (reviewData.reviewMainTitle as string) || '');
-        
-        // Handle content - check for both raw and rendered content
-        const contentValue = (reviewData.content as any)?.raw || 
-                           (reviewData.content as any)?.rendered || 
-                           (reviewData.content as string) || '';
-        setContent(contentValue);
-        
-        // Parse review_stars from string to number (backend returns as string)
-        const starsValue = typeof reviewData.review_stars === 'string' 
-          ? parseFloat(reviewData.review_stars) 
-          : (typeof reviewData.review_stars === 'number' 
-              ? reviewData.review_stars 
-              : (typeof reviewData.reviewStars === 'string' 
-                  ? parseFloat(reviewData.reviewStars) 
-                  : (typeof reviewData.reviewStars === 'number' ? reviewData.reviewStars : 0)));
-        setReviewStars(isNaN(starsValue) ? 0 : starsValue);
-        
-        // Handle existing photos - backend returns review_images with sourceUrl and id
-        let existingImages: string[] = [];
-        
-        console.log('Loading draft images from reviewData:', {
-          review_images: reviewData.review_images,
-          review_images_idz: reviewData.review_images_idz,
-          reviewImages: reviewData.reviewImages
-        });
-        
-        // Priority: review_images (from GET endpoint with URLs), then review_images_idz (IDs), then reviewImages (fallback)
-        if (reviewData.review_images && Array.isArray(reviewData.review_images) && reviewData.review_images.length > 0) {
-          // Backend returns review_images as array of { id, sourceUrl }
-          existingImages = reviewData.review_images
-            .map((img: any) => {
-              // Handle object with sourceUrl property
-              if (img && typeof img === 'object') {
-                return img.sourceUrl || img.url || null;
+          // Handle recognitions
+          if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
+            setRestaurant(prev => ({
+              ...prev,
+              recognition: reviewData.recognitions || [],
+            }));
+          }
+
+          // Get restaurant UUID from review
+          const restaurantUuidFromReview = reviewData.restaurant_uuid;
+          if (restaurantUuidFromReview) {
+            setRestaurantUuid(restaurantUuidFromReview);
+          }
+
+          // Fetch restaurant data using slug
+          try {
+            const restaurantData = await restaurantV2Service.getRestaurantBySlug(restaurantSlug);
+            setRestaurantName(restaurantData.title || '');
+            setRestaurantImage(restaurantData.featured_image_url || '');
+            setRestaurantLocation(restaurantData.listing_street || restaurantData.address?.street_address || '');
+            setGoogleMapUrl(restaurantData.address as GoogleMapUrl || null);
+            
+            setRestaurant(prev => ({
+              ...prev,
+              name: restaurantData.title || '',
+              image: restaurantData.featured_image_url || '',
+              location: restaurantData.listing_street || restaurantData.address?.street_address || '',
+              slug: restaurantData.slug || restaurantSlug,
+              address: restaurantData.listing_street || restaurantData.address?.street_address || '',
+              phone: restaurantData.phone || '',
+              priceRange: restaurantData.price_range || '',
+              rating: restaurantData.average_rating || 0,
+            }));
+          } catch (restaurantError) {
+            console.error('Failed to fetch restaurant from V2 API, trying WordPress fallback:', restaurantError);
+            // Fallback to WordPress API
+            if (session?.accessToken) {
+              try {
+                const wpData = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", session.accessToken);
+                setRestaurantName((wpData.title as string) || '');
+                setRestaurantImage((wpData.featuredImage as any)?.node?.sourceUrl || '');
+                setRestaurantLocation((wpData.address as string) || '');
+                setGoogleMapUrl((wpData.googleMapUrl as GoogleMapUrl) || null);
+              } catch (wpError) {
+                console.error('WordPress fallback also failed:', wpError);
+                toast.error('Unable to load restaurant information');
               }
-              // Handle string URL
-              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
-                return img;
+            }
+          }
+        } catch (reviewError) {
+          console.error('Failed to fetch review from V2 API, trying WordPress fallback:', reviewError);
+          // Fallback to WordPress API
+          if (session?.accessToken) {
+            try {
+              // Try to parse reviewId as number for WordPress
+              const numericReviewId = parseInt(reviewId);
+              if (!isNaN(numericReviewId)) {
+                const reviewData = await reviewService.getReviewById(numericReviewId, session.accessToken);
+                
+                // Extract restaurant ID and fetch restaurant
+                const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
+                if (restaurantIdFromReview && !isNaN(Number(restaurantIdFromReview))) {
+                  const restaurantData = await restaurantService.fetchRestaurantById(
+                    restaurantIdFromReview.toString(),
+                    "DATABASE_ID",
+                    session.accessToken
+                  );
+                  
+                  setRestaurantName((restaurantData.title as string) || '');
+                  setRestaurantImage((restaurantData.featuredImage as any)?.node?.sourceUrl || '');
+                  setRestaurantLocation((restaurantData.address as string) || '');
+                  
+                  // Pre-populate form
+                  setReviewMainTitle((reviewData.review_main_title as string) || '');
+                  const contentValue = (reviewData.content as any)?.raw || (reviewData.content as string) || '';
+                  setContent(contentValue);
+                  const starsValue = typeof reviewData.review_stars === 'string' 
+                    ? parseFloat(reviewData.review_stars) 
+                    : (reviewData.review_stars as number) || 0;
+                  setReviewStars(isNaN(starsValue) ? 0 : starsValue);
+                  
+                  // Handle images
+                  if (reviewData.review_images && Array.isArray(reviewData.review_images)) {
+                    const imageUrls = reviewData.review_images
+                      .map((img: any) => img?.sourceUrl || img?.url || (typeof img === 'string' ? img : null))
+                      .filter(Boolean);
+                    if (imageUrls.length > 0) {
+                      setSelectedFiles(imageUrls);
+                      setIsDoneSelecting(true);
+                    }
+                  }
+                }
               }
-              return null;
-            })
-            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
-        } else if (reviewData.review_images_idz && Array.isArray(reviewData.review_images_idz) && reviewData.review_images_idz.length > 0) {
-          // If we have IDs, try to extract URLs from objects
-          existingImages = reviewData.review_images_idz
-            .map((img: any) => {
-              // If it's already a URL string, use it
-              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
-                return img;
-              }
-              // If it's an object with sourceUrl, use that
-              if (img && typeof img === 'object' && img.sourceUrl) {
-                return img.sourceUrl;
-              }
-              // If it's an object with url, use that
-              if (img && typeof img === 'object' && img.url) {
-                return img.url;
-              }
-              // IDs without URLs can't be displayed - return null
-              return null;
-            })
-            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
-        } else if (reviewData.reviewImages && Array.isArray(reviewData.reviewImages) && reviewData.reviewImages.length > 0) {
-          // Fallback: try reviewImages field
-          existingImages = reviewData.reviewImages
-            .map((img: any) => {
-              if (img && typeof img === 'object') {
-                return img.sourceUrl || img.url || null;
-              }
-              if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('/') || img.startsWith('data:'))) {
-                return img;
-              }
-              return null;
-            })
-            .filter((url: string | null): url is string => Boolean(url) && url.length > 0);
+            } catch (wpError) {
+              console.error('WordPress fallback also failed:', wpError);
+              toast.error('Failed to load review');
+            }
+          }
         }
-        
-        console.log('Extracted existing images:', existingImages);
-        
-        if (existingImages.length > 0) {
-          setSelectedFiles(existingImages);
-          setIsDoneSelecting(true);
-          console.log('Successfully loaded', existingImages.length, 'images for display');
         } else {
           console.log('No valid image URLs found in review data');
           setSelectedFiles([]);
@@ -330,9 +298,9 @@ const EditReviewSubmissionPage = () => {
 
     if (hasError) return;
 
-    // Check if we have the restaurant database ID
-    if (!restaurantDatabaseId) {
-      toast.error('Restaurant information not loaded. Please refresh the page.');
+    // Check if we have the review UUID
+    if (!reviewUuid && !reviewId) {
+      toast.error('Review information not loaded. Please refresh the page.');
       return;
     }
 
@@ -342,43 +310,71 @@ const EditReviewSubmissionPage = () => {
     }
 
     try {
-      // Prepare image data - convert URLs back to IDs if needed, or keep existing format
-      let imageData = selectedFiles;
-      
-      // If selectedFiles contains URLs, we need to extract IDs or let backend handle
-      // Backend PUT endpoint can handle URLs and convert them back to IDs
-      // For now, send as-is and let backend handle the conversion
-      
-      const reviewData = {
-        restaurantId: restaurantDatabaseId, // Use the actual restaurant database ID
-        authorId: session?.user?.userId,
-        review_stars,
-        review_main_title,
-        content,
-        review_images: imageData, // Backend will handle URL to ID conversion
-        recognitions: restaurant.recognition || [],
-        mode,
-      };
+      // Get user UUID
+      const userId = session?.user?.id || session?.user?.userId;
+      if (!userId) {
+        toast.error('User not authenticated');
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
 
-      console.log('Submitting review data:', reviewData);
-      console.log('Review ID:', reviewId);
-      console.log('Is editing draft:', !!reviewId);
-      console.log('Access token exists:', !!session?.accessToken);
+      // Use review UUID (from V2 API) or reviewId (fallback)
+      const currentReviewId = reviewUuid || reviewId;
+      if (!currentReviewId) {
+        toast.error('Review ID is missing');
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
 
-      // If editing an existing draft (reviewId exists), use updateReviewDraft
-      if (reviewId && !isNaN(reviewId)) {
-        const res = await reviewService.updateReviewDraft(reviewId, reviewData, session?.accessToken ?? "");
-      
-        console.log('Update response:', res);
-        
-        // Handle response - updateReviewDraft returns { status, message, data }
-        const responseStatus = res.status || (res as any)?.data?.status || 200;
-        
+      // Transform images to ReviewImage format
+      const reviewImages = transformWordPressImagesToReviewImages(selectedFiles);
+
+      // Transform recognitions to array format
+      const recognitions = restaurant.recognition || [];
+
+      // Update review using V2 API
+      try {
+        const updateData = {
+          title: review_main_title || null,
+          content,
+          rating: review_stars,
+          images: reviewImages.length > 0 ? reviewImages : null,
+          recognitions: recognitions.length > 0 ? recognitions : null,
+          status: mode === 'publish' ? 'pending' : 'draft', // 'pending' for publish, 'draft' for save
+        };
+
+        const updatedReview = await reviewV2Service.updateReview(currentReviewId, updateData);
+
         if (mode === 'publish') {
-          if (responseStatus === code.created || responseStatus === 200) {
-            setIsSubmitted(true);
-            toast.success('Review published successfully');
-            router.push(LISTING);
+          setIsSubmitted(true);
+          toast.success('Review updated and submitted successfully!');
+        } else if (mode === 'draft') {
+          toast.success(savedAsDraft);
+          router.push(LISTING);
+        }
+      } catch (apiError: any) {
+        // Handle specific error messages
+        const errorMessage = apiError.message || errorOccurred;
+        
+        // Check for duplicate errors
+        if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+          toast.error(commentDuplicateError);
+        } else if (errorMessage.includes('flood') || errorMessage.includes('rate limit')) {
+          toast.error(commentFloodError);
+        } else {
+          toast.error(errorMessage);
+        }
+        
+        setIsLoading(false);
+        setIsSavingAsDraft(false);
+        return;
+      }
+
+      // Reset form fields
+      setDescriptionError('');
+      setUploadedImageError('');
           } else if (responseStatus === code.conflict) {
             toast.error(commentDuplicateError);
             setIsLoading(false);

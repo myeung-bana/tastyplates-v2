@@ -279,7 +279,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /review-listing page
               if (pathname === "/review-listing" && clickedElement.dataset.role === "image") {
-                router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
+                router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
@@ -342,7 +342,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           onClick={async (e) => {
             e.preventDefault();
             if (pathname === "/review-listing") {
-              router.push(PAGE(ADD_REVIEW, [restaurant.slug, String(restaurant.databaseId)], palateParam ? { ethnic: palateParam } : {}));
+              router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
               return;
             }
             if (onClick) await onClick(); // Wait for mutation to complete

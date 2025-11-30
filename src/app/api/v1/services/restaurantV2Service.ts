@@ -8,6 +8,7 @@ export interface RestaurantV2 {
   status: string;
   content?: string;
   price_range?: string;
+  price_range_id?: number;
   price?: number;
   average_rating?: number;
   ratings_count?: number;
@@ -37,6 +38,13 @@ export interface RestaurantV2 {
   published_at?: string;
   cuisines?: Array<{ id: number; name: string; slug: string }>;
   palates?: Array<{ id: number; name: string; slug: string }>;
+  restaurant_price_range?: {
+    id: number;
+    display_name: string;
+    name: string;
+    symbol?: string;
+    slug: string;
+  };
 }
 
 export interface RestaurantsV2Response {

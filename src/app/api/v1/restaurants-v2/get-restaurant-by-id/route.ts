@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_RESTAURANT_BY_UUID, GET_RESTAURANT_BY_SLUG_HASURA } from '@/app/graphql/Restaurants/restaurantQueries';
+import { 
+  GET_RESTAURANT_BY_UUID, 
+  GET_RESTAURANT_BY_SLUG_HASURA,
+  GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE,
+  GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE
+} from '@/app/graphql/Restaurants/restaurantQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     let result;
     
+    // Try with price range relationship first, fallback to basic query if it fails
     if (uuid) {
       // Validate UUID format
       if (!UUID_REGEX.test(uuid)) {
@@ -28,17 +34,58 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
-      result = await hasuraQuery(GET_RESTAURANT_BY_UUID, { uuid });
+      // Try with price range relationship
+      result = await hasuraQuery(GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE, { uuid });
+      
+      // If error is related to price_range relationship, fallback to basic query
+      if (result.errors) {
+        const hasRelationshipError = result.errors.some((err: any) => 
+          err.message?.includes('restaurant_price_range') || 
+          err.message?.includes('price_range_id') ||
+          err.message?.includes('field') && err.message?.includes('not found')
+        );
+        
+        if (hasRelationshipError) {
+          console.warn('Price range relationship not available, using basic query');
+          result = await hasuraQuery(GET_RESTAURANT_BY_UUID, { uuid });
+        }
+      }
     } else if (slug) {
-      result = await hasuraQuery(GET_RESTAURANT_BY_SLUG_HASURA, { slug });
+      // Try with price range relationship
+      result = await hasuraQuery(GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE, { slug });
+      
+      // If error is related to price_range relationship, fallback to basic query
+      if (result.errors) {
+        const hasRelationshipError = result.errors.some((err: any) => 
+          err.message?.includes('restaurant_price_range') || 
+          err.message?.includes('price_range_id') ||
+          err.message?.includes('field') && err.message?.includes('not found')
+        );
+        
+        if (hasRelationshipError) {
+          console.warn('Price range relationship not available, using basic query');
+          result = await hasuraQuery(GET_RESTAURANT_BY_SLUG_HASURA, { slug });
+        }
+      }
     }
 
     if (result.errors) {
-      console.error('GraphQL errors:', result.errors);
+      console.error('GraphQL errors:', JSON.stringify(result.errors, null, 2));
+      // Check if error is related to restaurant_price_range relationship
+      const hasRelationshipError = result.errors.some((err: any) => 
+        err.message?.includes('restaurant_price_range') || 
+        err.message?.includes('price_range_id')
+      );
+      
+      if (hasRelationshipError) {
+        console.warn('Warning: restaurant_price_range relationship may not be configured in Hasura');
+      }
+      
       return NextResponse.json(
         {
           error: 'Failed to fetch restaurant',
-          details: result.errors
+          details: result.errors,
+          message: result.errors[0]?.message || 'Unknown GraphQL error'
         },
         { status: 500 }
       );
