@@ -25,6 +25,9 @@ import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import ReviewBottomSheet from "../ui/BottomSheet/ReviewBottomSheet";
 import PalateTags from "../ui/PalateTags/PalateTags";
 import toast from 'react-hot-toast';
+import { useUserData } from '@/hooks/useUserData';
+import { useReviewReplies } from '@/hooks/useReviewReplies';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
 // Icons
 import { 
@@ -51,7 +54,6 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   likesCount: likesCountProp,
   onLikeChange,
 }) => {
-  const { data: session } = useSession();
   const { setFollowState } = useFollowContext();
   
   // State management
@@ -70,7 +72,6 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [pendingShowSignin, setPendingShowSignin] = useState(false);
-  const [isLoadingReplies, setIsLoadingReplies] = useState(false);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -137,16 +138,62 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     ? data.palates.map((s) => capitalizeWords(s.trim())).filter((s) => s.length > 0)
     : data?.palates?.split("|").map((s) => capitalizeWords(s.trim())).filter((s) => s.length > 0) || [];
 
-  // Load replies on modal open
+  // Extract UUID for user lookup
+  const authorUuid = data.author?.node?.id ?? data.userId ?? undefined;
+
+  // Fetch user data if incomplete (similar to ReviewBlock)
+  const { userData: fetchedUserData } = useUserData(
+    authorUuid && (data.author?.node?.name === "Unknown User" || !data.author?.node?.name || data.userAvatar === DEFAULT_USER_ICON)
+      ? authorUuid
+      : undefined
+  );
+
+  // Use fetched data as fallback
+  const displayName = data.author?.name || data.author?.node?.name || fetchedUserData?.display_name || "Unknown User";
+  const displayImage = data.userAvatar && data.userAvatar !== DEFAULT_USER_ICON
+    ? data.userAvatar
+    : (fetchedUserData?.profile_image || DEFAULT_USER_ICON);
+
+  // Fetch replies using centralized hook
+  const { data: session } = useSession();
+  const { 
+    replies: fetchedReplies, 
+    loading: isLoadingReplies, 
+    error: repliesError, 
+    refetch: refetchReplies 
+  } = useReviewReplies(
+    isOpen && data?.id ? data.id : undefined,
+    session?.user?.id ? String(session.user.id) : undefined,
+    isOpen // Only fetch when modal is open
+  );
+
+  // Sync fetched replies to local state (for optimistic updates)
   useEffect(() => {
-    if (isOpen && data?.id) {
-      setIsLoadingReplies(true);
-      reviewService.fetchCommentReplies(data.id)
-        .then(setReplies)
-        .catch(error => console.error('Error fetching replies:', error))
-        .finally(() => setIsLoadingReplies(false));
+    if (fetchedReplies.length > 0 || !isLoadingReplies) {
+      // Only update if we don't have optimistic replies
+      setReplies(prev => {
+        const hasOptimistic = prev.some(r => ('isOptimistic' in r) && r.isOptimistic);
+        if (!hasOptimistic) {
+          return fetchedReplies;
+        }
+        // If we have optimistic replies, merge fetched with optimistic
+        const withoutOptimistic = prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic);
+        return fetchedReplies.concat(
+          withoutOptimistic.filter(
+            (local) => !fetchedReplies.some((server) => server.id === local.id)
+          )
+        );
+      });
     }
-  }, [isOpen, data?.id]);
+  }, [fetchedReplies, isLoadingReplies]);
+
+  // Handle errors
+  useEffect(() => {
+    if (repliesError) {
+      console.error('Error fetching replies:', repliesError);
+      toast.error('Failed to load replies. Please try again.');
+    }
+  }, [repliesError]);
 
   // Initialize follow state when modal opens
   useEffect(() => {
@@ -275,6 +322,31 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     }
   };
 
+  // Helper to get user UUID from session
+  const getUserUuid = async (sessionUserId: string | number | undefined): Promise<string | null> => {
+    if (!sessionUserId) return null;
+    
+    const userIdStr = String(sessionUserId);
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    // Check if it's already a UUID
+    if (UUID_REGEX.test(userIdStr)) {
+      return userIdStr;
+    }
+    
+    // If not a UUID, assume it's firebase_uuid and fetch the user
+    try {
+      const response = await restaurantUserService.getUserByFirebaseUuid(userIdStr);
+      if (response.success && response.data) {
+        return response.data.id;
+      }
+    } catch (error) {
+      console.error("Error fetching user UUID:", error);
+    }
+    
+    return null;
+  };
+
   // Handle comment submission - FIXED VERSION
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
@@ -336,59 +408,62 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     setCommentText("");
 
     try {
-      const payload = {
+      // Get author UUID - convert session.user.id to UUID if needed
+      const authorId = await getUserUuid(session?.user?.id);
+      if (!authorId) {
+        toast.error('User not authenticated or invalid user ID');
+        setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
+        setIsLoading(false);
+        return;
+      }
+
+      // Get parent review ID - data.id should be the UUID
+      const parentReviewId = data.id;
+      if (!parentReviewId) {
+        toast.error('Invalid review ID');
+        setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate parent review ID is a UUID
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(parentReviewId)) {
+        console.error('Parent review ID is not a valid UUID:', parentReviewId);
+        toast.error('Invalid review ID format');
+        setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
+        setIsLoading(false);
+        return;
+      }
+
+      // Get restaurant UUID - try to get from data, or it will be fetched from parent review
+      // The restaurant_uuid might be in data.commentedOn, but we'll let the API fetch it if needed
+      const restaurantUuid = undefined; // Let API fetch from parent review
+
+      // Use new createComment endpoint
+      const res = await reviewService.createComment({
+        parent_review_id: parentReviewId,
+        author_id: authorId,
         content: optimisticReply.content,
-        restaurantId: data.commentedOn?.node?.databaseId,
-        parent: data.databaseId,
-        authorId: session?.user?.userId,
-      };
-      const res = await reviewService.postReview(payload, session?.accessToken ?? "");
-      
-      // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
-      const isSuccess = (status: number | string) => {
-        // Handle numeric status codes (200-299)
-        if (typeof status === 'number') {
-          return status >= 200 && status < 300;
-        }
-        // Handle string statuses (approved, success, etc.)
-        if (typeof status === 'string') {
-          const successStatuses = ['approved', 'success', 'created', 'ok'];
-          return successStatuses.includes(status.toLowerCase());
-        }
-        return false;
-      };
+        restaurant_uuid: restaurantUuid,
+      }, session?.accessToken ?? "");
 
-      // Check if response has status field or if it's a direct success response
-      const responseStatus = res.status || res.data?.status;
-      const isResponseSuccess = isSuccess(responseStatus) || (res.data && res.data.status === 'approved');
-
-      if (isResponseSuccess) {
-        console.log('✅ Comment approved successfully with status:', responseStatus);
+      if (res.success) {
+        console.log('✅ Comment created successfully');
         toast.success(commentedSuccess);
-        // Remove only the optimistic reply, then merge server replies (avoid duplicates)
-        const updatedReplies = await reviewService.fetchCommentReplies(data.id);
-        setReplies(prev => {
-          // Remove optimistic reply
-          const withoutOptimistic = prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic);
-          // Merge: add any new replies from server not already in the list
-          const merged = updatedReplies.concat(
-            withoutOptimistic.filter(
-              (local) => !updatedReplies.some((server) => server.id === local.id)
-            )
-          );
-          return merged;
-        });
+        // Refetch replies using the hook
+        await refetchReplies();
         setCooldown(5);
       } else {
         // Remove optimistic reply on error
         setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
-        toast.error(errorOccurred);
+        toast.error(res.error || errorOccurred);
       }
     } catch (error) {
       console.error('Comment submission error:', error);
       // Remove optimistic reply on error
       setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
-      toast.error(errorOccurred);
+      toast.error(error instanceof Error ? error.message : errorOccurred);
     } finally {
       setIsLoading(false);
     }
@@ -507,8 +582,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                     passHref
                   >
                     <FallbackImage
-                      src={data.userAvatar || DEFAULT_USER_ICON}
-                      alt={data.author?.node?.name || "User"}
+                      src={displayImage}
+                      alt={displayName}
                       width={32}
                       height={32}
                       className="w-8 h-8 rounded-full cursor-pointer"
@@ -517,8 +592,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                   </Link>
                 ) : (
                   <FallbackImage
-                    src={data.userAvatar || DEFAULT_USER_ICON}
-                    alt={data.author?.node?.name || "User"}
+                    src={displayImage}
+                    alt={displayName}
                     width={32}
                     height={32}
                     className="w-8 h-8 rounded-full cursor-pointer"
@@ -528,8 +603,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                 )
               ) : (
                 <FallbackImage
-                  src={data.userAvatar || DEFAULT_USER_ICON}
-                  alt={data.author?.node?.name || "User"}
+                  src={displayImage}
+                  alt={displayName}
                   width={32}
                   height={32}
                   className="w-8 h-8 rounded-full"
@@ -544,16 +619,16 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                       href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                       passHref
                     >
-                      <span className="font-semibold text-xs cursor-pointer hover:underline">
-                        {data.author?.name || data.author?.node?.name || "Unknown User"}
+                      <span className="font-normal text-xs cursor-pointer hover:underline">
+                        {displayName}
                       </span>
                     </Link>
                   ) : (
                     <span
-                      className="font-semibold text-xs cursor-pointer hover:underline"
+                      className="font-normal text-xs cursor-pointer hover:underline"
                       onClick={handleProfileClick}
                     >
-                      {data.author?.name || data.author?.node?.name || "Unknown User"}
+                      {displayName}
                     </span>
                   )}
                 </div>
@@ -590,8 +665,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
             <div className="space-y-2">
               <div className="flex items-start space-x-3">
                 <FallbackImage
-                  src={data.userAvatar || DEFAULT_USER_ICON}
-                  alt={data.author?.node?.name || "User"}
+                  src={displayImage}
+                  alt={displayName}
                   width={32}
                   height={32}
                   className="w-8 h-8 rounded-full flex-shrink-0"
@@ -600,8 +675,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-xs">
-                      {data.author?.name || data.author?.node?.name || "Unknown User"}
+                    <span className="font-normal text-xs">
+                      {displayName}
                     </span>
                     <span className="text-gray-500 text-xs">
                       {formatRelativeTime(data.date)}
@@ -612,7 +687,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                   <PalateTags palateNames={UserPalateNames || []} maxTags={2} />
                   
                   {/* Review Title */}
-                  <p className="text-xs font-medium mb-2">
+                  <p className="text-xs font-normal mb-2">
                     {stripTags(data.reviewMainTitle || "").length > reviewTitleDisplayLimit ? (
                       <>
                         {showFullTitle
@@ -682,7 +757,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                       </svg>
                       <Link 
                         href={`/restaurants/${data.commentedOn.node.slug}`}
-                        className="text-xs font-medium text-[#E36B00] hover:text-[#c55a00] hover:underline transition-colors"
+                        className="text-xs font-normal text-[#E36B00] hover:text-[#c55a00] hover:underline transition-colors"
                       >
                         {data.commentedOn.node.title}
                       </Link>
@@ -738,7 +813,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
             </div>
 
             {/* Likes Count */}
-            <div className="text-xs font-semibold">
+            <div className="text-xs font-normal">
               {likesCount} {likesCount === 1 ? 'like' : 'likes'}
             </div>
 

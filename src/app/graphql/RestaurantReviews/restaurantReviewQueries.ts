@@ -262,3 +262,39 @@ export const GET_REVIEW_WITH_LIKE_STATUS = `
   }
 `;
 
+// GET REVIEW REPLIES (comments/replies to a review)
+export const GET_REVIEW_REPLIES = `
+  query GetReviewReplies($parentReviewId: uuid!) {
+    restaurant_reviews(
+      where: {
+        parent_review_id: { _eq: $parentReviewId }
+        deleted_at: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+      order_by: { created_at: asc }
+    ) {
+      id
+      content
+      likes_count
+      created_at
+      updated_at
+      author_id
+    }
+  }
+`;
+
+// CHECK IF USER LIKED MULTIPLE REVIEWS (batch check)
+export const CHECK_REVIEW_LIKES_BATCH = `
+  query CheckReviewLikesBatch($reviewIds: [uuid!]!, $userId: uuid!) {
+    restaurant_review_likes(
+      where: {
+        review_id: { _in: $reviewIds }
+        user_id: { _eq: $userId }
+      }
+    ) {
+      review_id
+      id
+    }
+  }
+`;
+

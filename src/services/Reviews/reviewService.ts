@@ -27,39 +27,45 @@ export class ReviewService {
 
     async fetchCommentReplies(id: string) {
         try {
-            // Normalize to Relay global ID expected by WPGraphQL
-            const isNumeric = (val: string) => /^\d+$/.test(val.trim());
-            const btoaSafe = (input: string) =>
-                typeof window !== 'undefined' && typeof window.btoa === 'function'
-                    ? window.btoa(input)
-                    : Buffer.from(input, 'utf-8').toString('base64');
-            const atobSafe = (input: string) => {
-                try {
-                    return (typeof window !== 'undefined' && typeof window.atob === 'function')
-                        ? window.atob(input)
-                        : Buffer.from(input, 'base64').toString('utf-8');
-                } catch {
-                    return '';
-                }
-            };
-
-            let graphqlId = id;
-            if (!graphqlId) {
+            if (!id) {
                 throw new Error('Invalid comment id');
             }
 
-            // Check if it's a numeric ID (e.g., "123") or a raw "comment:123" string
-            if (!isNaN(Number(id)) && !id.includes(':')) {
-                graphqlId = btoaSafe(`comment:${id}`);
-            } else if (id.startsWith('comment:') && !id.includes('=')) { // Raw "comment:123"
-                graphqlId = btoaSafe(id);
+            // Check if ID is a UUID (Hasura format)
+            const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            
+            if (UUID_REGEX.test(id)) {
+                // This is a Hasura UUID, use the new API endpoint
+                const response = await fetch(`/api/v1/restaurant-reviews/get-replies?parent_review_id=${id}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Failed to fetch replies: ${response.statusText}`);
+                }
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to fetch replies');
+                }
+                return result.data || [];
             } else {
-                // Assume it's already a valid global ID (base64 encoded)
-                // Optionally, decode and re-encode to ensure consistency, but for now, pass as is.
-            }
+                // Legacy WordPress GraphQL format - normalize to Relay global ID expected by WPGraphQL
+                const isNumeric = (val: string) => /^\d+$/.test(val.trim());
+                const btoaSafe = (input: string) =>
+                    typeof window !== 'undefined' && typeof window.btoa === 'function'
+                        ? window.btoa(input)
+                        : Buffer.from(input, 'utf-8').toString('base64');
 
-            const replies = await reviewRepo.getCommentReplies(graphqlId);
-            return replies;
+                let graphqlId = id;
+                // Check if it's a numeric ID (e.g., "123") or a raw "comment:123" string
+                if (!isNaN(Number(id)) && !id.includes(':')) {
+                    graphqlId = btoaSafe(`comment:${id}`);
+                } else if (id.startsWith('comment:') && !id.includes('=')) { // Raw "comment:123"
+                    graphqlId = btoaSafe(id);
+                }
+                // Otherwise assume it's already a valid global ID (base64 encoded)
+
+                const replies = await reviewRepo.getCommentReplies(graphqlId);
+                return replies;
+            }
         } catch (error) {
             console.error('Error fetching comment replies:', error);
             throw new Error('Failed to fetch comment replies');
@@ -123,6 +129,34 @@ export class ReviewService {
         } catch (error) {
             console.error('Error posting review:', error);
             throw new Error('Failed to post review');
+        }
+    }
+
+    async createComment(input: {
+        parent_review_id: string;
+        author_id: string;
+        content: string;
+        restaurant_uuid?: string;
+    }, accessToken: string) {
+        try {
+            const response = await fetch('/api/v1/restaurant-reviews/create-comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify(input),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Failed to create comment: ${response.statusText}`);
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Error creating comment:', error);
+            throw new Error('Failed to create comment');
         }
     }
 
