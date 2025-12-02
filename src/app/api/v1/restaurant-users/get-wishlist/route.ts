@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
           status: restaurant.status,
           average_rating: restaurant.average_rating || 0,
           ratings_count: restaurant.ratings_count || 0,
-          price_range: restaurant.price_range || '',
+          price_range: restaurant.restaurant_price_range?.display_name || '',
           featured_image_url: restaurant.featured_image_url,
           address: restaurant.address,
           listing_street: restaurant.listing_street || restaurant.address?.street_address || '',

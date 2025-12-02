@@ -136,7 +136,7 @@ const EditReviewSubmissionPage = () => {
               slug: restaurantData.slug || restaurantSlug,
               address: restaurantData.listing_street || restaurantData.address?.street_address || '',
               phone: restaurantData.phone || '',
-              priceRange: restaurantData.price_range || '',
+              priceRange: restaurantData.restaurant_price_range?.display_name || '',
               rating: restaurantData.average_rating || 0,
             }));
           } catch (restaurantError) {
@@ -181,12 +181,12 @@ const EditReviewSubmissionPage = () => {
                   // Pre-populate form
                   setReviewMainTitle((reviewData.review_main_title as string) || '');
                   const contentValue = (reviewData.content as any)?.raw || (reviewData.content as string) || '';
-                  setContent(contentValue);
-                  const starsValue = typeof reviewData.review_stars === 'string' 
-                    ? parseFloat(reviewData.review_stars) 
+        setContent(contentValue);
+        const starsValue = typeof reviewData.review_stars === 'string' 
+          ? parseFloat(reviewData.review_stars) 
                     : (reviewData.review_stars as number) || 0;
-                  setReviewStars(isNaN(starsValue) ? 0 : starsValue);
-                  
+        setReviewStars(isNaN(starsValue) ? 0 : starsValue);
+        
                   // Handle images
                   if (reviewData.review_images && Array.isArray(reviewData.review_images)) {
                     const imageUrls = reviewData.review_images
@@ -204,11 +204,6 @@ const EditReviewSubmissionPage = () => {
               toast.error('Failed to load review');
             }
           }
-        }
-        } else {
-          console.log('No valid image URLs found in review data');
-          setSelectedFiles([]);
-          setIsDoneSelecting(false);
         }
         
         // Set recognition tags if available - keep original names for saving, normalize only for comparison
@@ -338,7 +333,7 @@ const EditReviewSubmissionPage = () => {
       try {
         const updateData = {
           title: review_main_title || null,
-          content,
+        content,
           rating: review_stars,
           images: reviewImages.length > 0 ? reviewImages : null,
           recognitions: recognitions.length > 0 ? recognitions : null,
@@ -346,13 +341,13 @@ const EditReviewSubmissionPage = () => {
         };
 
         const updatedReview = await reviewV2Service.updateReview(currentReviewId, updateData);
-
+        
         if (mode === 'publish') {
-          setIsSubmitted(true);
+            setIsSubmitted(true);
           toast.success('Review updated and submitted successfully!');
         } else if (mode === 'draft') {
           toast.success(savedAsDraft);
-          router.push(LISTING);
+            router.push(LISTING);
         }
       } catch (apiError: any) {
         // Handle specific error messages
@@ -375,51 +370,6 @@ const EditReviewSubmissionPage = () => {
       // Reset form fields
       setDescriptionError('');
       setUploadedImageError('');
-          } else if (responseStatus === code.conflict) {
-            toast.error(commentDuplicateError);
-            setIsLoading(false);
-            return;
-          } else if (responseStatus === code.duplicate_week) {
-            toast.error(commentDuplicateWeekError);
-            setIsLoading(false);
-            return;
-          } else if ((res.data as any)?.code === 'comment_flood') {
-            toast.error(commentFloodError);
-            setIsLoading(false);
-            return;
-          } else {
-            toast.error(errorOccurred);
-            setIsLoading(false);
-            return;
-          }
-        } else if (mode === 'draft') {
-          if (responseStatus === code.created || responseStatus === 200) {
-            toast.success(savedAsDraft);
-            router.push(LISTING);
-          } else if (responseStatus === code.duplicate_week) {
-            toast.error(commentDuplicateWeekError);
-            setIsSavingAsDraft(false);
-            return;
-          } else if (responseStatus === code.conflict) {
-            toast.error(commentDuplicateError);
-            setIsSavingAsDraft(false);
-            return;
-          } else if ((res.data as any)?.code === 'comment_flood') {
-            toast.error(commentFloodError);
-            setIsLoading(false);
-            return;
-          } else {
-            toast.error(errorOccurred);
-            setIsSavingAsDraft(false);
-            return;
-          }
-        }
-      } else {
-        // This shouldn't happen in EditReviewSubmission, but handle gracefully
-        toast.error('Review ID not found. Cannot update review.');
-        setIsLoading(false);
-        return;
-      }
 
       // Reset form fields here:
       setReviewStars(0);

@@ -46,13 +46,11 @@ export const GET_REVIEWS_BY_RESTAURANT = `
     $restaurantUuid: uuid!
     $limit: Int
     $offset: Int
-    $status: String
   ) {
     restaurant_reviews(
       where: {
         restaurant_uuid: { _eq: $restaurantUuid }
         deleted_at: { _is_null: true }
-        status: { _eq: $status }
         parent_review_id: { _is_null: true }
       }
       order_by: [{ is_pinned: desc }, { created_at: desc }]
@@ -73,18 +71,13 @@ export const GET_REVIEWS_BY_RESTAURANT = `
       status
       created_at
       published_at
-      author {
-        id
-        username
-        display_name
-        profile_image
-      }
+      author_id
+      restaurant_uuid
     }
     restaurant_reviews_aggregate(
       where: {
         restaurant_uuid: { _eq: $restaurantUuid }
         deleted_at: { _is_null: true }
-        status: { _eq: $status }
         parent_review_id: { _is_null: true }
       }
     ) {

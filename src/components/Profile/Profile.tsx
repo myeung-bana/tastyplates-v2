@@ -265,11 +265,12 @@ const Profile = ({ targetUserId }: ProfileProps) => {
         onReviewCountChange={setUserReviewCount}
       />
     },
-    {
-      id: "listings",
-      label: "Listings",
-      content: <ListingsTab targetUserId={validUserId} isViewingOwnProfile={isViewingOwnProfile} />
-    },
+    // Temporarily commented out
+    // {
+    //   id: "listings",
+    //   label: "Listings",
+    //   content: <ListingsTab targetUserId={validUserId} isViewingOwnProfile={isViewingOwnProfile} />
+    // },
     {
       id: "wishlists",
       label: "Wishlists",

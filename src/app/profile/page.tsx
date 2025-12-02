@@ -2,7 +2,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import ProfileHeaderSkeleton from "@/components/Profile/ProfileHeaderSkeleton";
+import ProfileHeaderSkeleton from "@/components/ui/Skeleton/ProfileHeaderSkeleton";
 
 const ProfilePage = () => {
   const { data: session, status } = useSession();

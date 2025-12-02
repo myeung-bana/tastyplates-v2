@@ -17,10 +17,9 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
   onAddReview,
   onShowSignin,
 }) => {
-  // Get price range display name (from relationship or fallback to priceRange)
-  const priceRangeDisplay = (restaurant as any).restaurant_price_range?.display_name 
-    || restaurant.priceRange 
-    || '';
+  // Get price range display name from restaurant_price_range relationship
+  // Uses price_range_id to fetch display_name from restaurant_price_ranges table
+  const priceRangeDisplay = restaurant.restaurant_price_range?.display_name || '';
 
   // Check if palates exist
   const hasPalates = restaurant.palates?.nodes && restaurant.palates.nodes.length > 0;
@@ -31,7 +30,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
         <div className="flex flex-col">
           <div className="flex flex-col md:flex-row justify-between px-2 gap-4 md:gap-0">
             {/* Left Section: Image + Title/Categories */}
-            <div className="flex gap-3 md:gap-4 mt-6 md:mt-0">
+            <div className="flex gap-3 md:gap-4 mt-6 md:mt-0 items-center">
               {/* Circular Featured Image - Both Mobile and Desktop */}
               {restaurant.featuredImage?.node?.sourceUrl ? (
                 <div className="flex-shrink-0">
@@ -79,7 +78,16 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                   {restaurant.title}
                 </h1>
 
-                {/* Palates and Price Range */}
+                {/* Price Range Tag - Separate from Palates */}
+                {priceRangeDisplay && (
+                  <div className="mb-2">
+                    <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans inline-block">
+                      {priceRangeDisplay}
+                    </span>
+                  </div>
+                )}
+
+                {/* Palates */}
                 <div className="restaurant-detail__meta mb-2">
                   <div className="restaurant-detail__cuisine">
                     {hasPalates ? (
@@ -97,14 +105,6 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                       </span>
                     )}
                   </div>
-                  {priceRangeDisplay && (
-                    <>
-                      &#8226;
-                      <div className="restaurant-detail__price">
-                        <span className="font-neusans font-normal">{priceRangeDisplay}</span>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </div>

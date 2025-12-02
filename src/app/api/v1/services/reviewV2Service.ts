@@ -93,6 +93,7 @@ export interface ReviewsResponse {
   total: number;
   limit: number;
   offset: number;
+  hasMore?: boolean;
 }
 
 export interface ToggleLikeResponse {
@@ -122,12 +123,12 @@ class ReviewV2Service {
 
   async getReviewsByRestaurant(
     restaurantUuid: string,
-    options?: { limit?: number; offset?: number; status?: string }
+    options?: { limit?: number; offset?: number }
   ): Promise<ReviewsResponse> {
     const params = new URLSearchParams({ restaurant_uuid: restaurantUuid });
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.offset) params.append('offset', options.offset.toString());
-    if (options?.status) params.append('status', options.status);
+    // Removed status parameter
 
     const response = await fetch(`${this.baseUrl}/get-reviews-by-restaurant?${params}`);
     if (!response.ok) {
@@ -138,7 +139,15 @@ class ReviewV2Service {
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch reviews');
     }
-    return result.data;
+    
+    // Transform response to match ReviewsResponse interface
+    return {
+      reviews: result.data || [],
+      total: result.meta?.total || 0,
+      limit: result.meta?.limit || 0,
+      offset: result.meta?.offset || 0,
+      hasMore: result.meta?.hasMore || false
+    };
   }
 
   async getUserReviews(

@@ -1,7 +1,7 @@
 import "@/styles/pages/_restaurant-details.scss";
 import { Tab, Tabs } from "@heroui/tabs";
 import { Masonry } from "masonic";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Photos from "./Details/Photos";
 import Pagination from "../common/Pagination";
@@ -9,10 +9,11 @@ import ReviewBlock from "../review/ReviewBlock";
 import ReviewBlockSkeleton from "../ui/Skeleton/ReviewBlockSkeleton";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { UserService } from '@/services/user/userService';
 import { DEFAULT_USER_ICON } from "@/constants/images";
-import CustomPopover from "../ui/Popover/Popover";
 import { GraphQLReview } from "@/types/graphql";
+import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
+import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
+import EmptyState from '../ui/EmptyState/EmptyState';
 
 // Type definitions for raw review data from API
 interface RawReviewAuthor {
@@ -144,47 +145,31 @@ const mapToReviewedDataProps = (review: ReturnType<typeof toReviewBlockReview>):
   };
 };
 
-interface CustomType {
-  text: string,
-  value: string,
-}
-
-const userService = new UserService()
 const reviewService = new ReviewService();
 
 interface RestaurantReviewsProps {
   restaurantId: number;
+  restaurantUuid?: string; // Restaurant UUID for V2 API
+  reviews?: GraphQLReview[]; // Optional reviews from parent (like mobile)
   onReviewsUpdate?: (reviews: GraphQLReview[]) => void;
   reviewCount?: number;
 }
 
-export default function RestaurantReviews({ restaurantId, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
-  // Session and user state
+export default function RestaurantReviews({ restaurantId, restaurantUuid, reviews: initialReviews, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
+  // Session state
   const { data: session } = useSession();
-  const currentUserId = session?.user?.id || null;
 
-  // Review and filter state
+  // Review state (simplified like mobile)
   const [allReviews, setAllReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTab, setCurrentTab] = useState<"all" | "photos">("all");
-  const [selectedReviewFilter, setSelectedReviewFilter] = useState<CustomType>({text: "", value: ""});
-  const [sortOrder, setSortOrder] = useState<CustomType>({text: "Newest First", value: "newest"});
-  const [followingUserIds, setFollowingUserIds] = useState<string[]>([]);
+  
+  // Track if reviews came from parent or fetch to prevent circular updates
+  const reviewsSourceRef = useRef<'parent' | 'fetch' | null>(null);
 
   // Constants
   const REVIEWS_PER_PAGE = 5;
-  const reviewFilterOptions = [
-    { value: '', label: 'All Reviews' },
-    { value: 'following', label: 'Following' },
-    { value: 'mine', label: 'My Reviews' },
-  ];
-  const sortOptions = [
-    { value: "newest", label: "Newest First" },
-    { value: "oldest", label: "Oldest First" },
-    { value: "highest", label: "Highest Rated" },
-    { value: "lowest", label: "Lowest Rated" },
-  ];
   const PHOTOS_PER_PAGE = 18;
   // Flattened photo items from allReviews
   const allPhotoItems = allReviews.flatMap((review) => {
@@ -205,55 +190,89 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
   );
   const totalPhotoPages = Math.ceil(allPhotoItems.length / PHOTOS_PER_PAGE);
 
-  // Fetch all reviews for the restaurant (all pages)
+  // Fetch all reviews for the restaurant using V2 API
   const fetchAllReviews = useCallback(async () => {
+    if (!restaurantUuid) {
+      console.warn('RestaurantReviews: restaurantUuid is required for V2 API');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     let allFetched: GraphQLReview[] = [];
-    let after: string | undefined = undefined;
-    let hasNext = true;
+    
     try {
-      while (hasNext) {
-        const data = await reviewService.fetchRestaurantReviews(
-          restaurantId,
-          session?.accessToken,
-          50,
-          after
+      let offset = 0;
+      const limit = 50;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await reviewV2Service.getReviewsByRestaurant(restaurantUuid, {
+          limit,
+          offset
+        });
+
+        // Transform ReviewV2 to GraphQLReview
+        const transformed = response.reviews.map((review) => 
+          transformReviewV2ToGraphQLReview(review, restaurantId)
         );
-        allFetched = allFetched.concat(data.reviews);
-        hasNext = data.pageInfo.hasNextPage;
-        after = data.pageInfo.endCursor ?? undefined;
+
+        allFetched = allFetched.concat(transformed);
+        hasMore = response.hasMore || false;
+        offset += transformed.length;
+
+        // Safety check to prevent infinite loops
+        if (transformed.length === 0) break;
       }
+      
+      console.log('RestaurantReviews - Fetched reviews:', {
+        total: allFetched.length,
+        restaurantUuid,
+        restaurantId
+      });
+      
+      reviewsSourceRef.current = 'fetch'; // Mark that reviews came from fetch
       setAllReviews(allFetched);
-    } catch {
+    } catch (error) {
+      console.error('Error fetching restaurant reviews:', error);
       setAllReviews([]);
     } finally {
       setLoading(false);
     }
-  }, [restaurantId, session?.accessToken]);
+  }, [restaurantId, restaurantUuid]);
 
-  // Fetch following user IDs on mount/session change
-  useEffect(() => {
-    const fetchFollowing = async () => {
-      if (!session?.user?.id || !session?.accessToken) return;
-      try {
-        const followingList = await userService.getFollowingList(session.user.id, session.accessToken);
-        setFollowingUserIds(followingList.map((u: Record<string, unknown>) => String(u.id)));
-      } catch {
-        setFollowingUserIds([]);
-      }
-    };
-    fetchFollowing();
-  }, [session, fetchAllReviews]);
 
-  // Fetch reviews on restaurant, tab, or session change
+  // Handle initialReviews updates from parent (separate effect to prevent circular updates)
   useEffect(() => {
-    fetchAllReviews();
-    setCurrentPage(1);
-  }, [restaurantId, currentTab, session, fetchAllReviews]);
+    if (initialReviews && initialReviews.length > 0) {
+      // Only update if reviews actually changed to prevent unnecessary re-renders
+      setAllReviews((prev) => {
+        // Compare by length and first review ID to detect actual changes
+        if (prev.length !== initialReviews.length || 
+            (prev.length > 0 && initialReviews.length > 0 && prev[0]?.id !== initialReviews[0]?.id)) {
+          reviewsSourceRef.current = 'parent'; // Mark that reviews came from parent
+          return initialReviews;
+        }
+        return prev;
+      });
+      setLoading(false);
+    }
+  }, [initialReviews]);
 
-  // Notify parent component when reviews are updated
+  // Fetch reviews if not provided from parent
   useEffect(() => {
-    if (onReviewsUpdate && allReviews.length > 0) {
+    if ((!initialReviews || initialReviews.length === 0) && restaurantUuid) {
+      fetchAllReviews();
+      setCurrentPage(1);
+    } else if (!restaurantUuid && (!initialReviews || initialReviews.length === 0)) {
+      setLoading(false);
+    }
+  }, [restaurantId, restaurantUuid, fetchAllReviews, initialReviews]);
+
+  // Notify parent component when reviews are updated (only when we fetch, not when parent provides)
+  useEffect(() => {
+    // Only call onReviewsUpdate if we fetched reviews ourselves to prevent circular updates
+    if (onReviewsUpdate && allReviews.length > 0 && reviewsSourceRef.current === 'fetch') {
       onReviewsUpdate(allReviews);
     }
   }, [allReviews, onReviewsUpdate]);
@@ -264,42 +283,15 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
     setCurrentPage(1);
   };
 
-  // Helper: Ensure rating is always a number for filtering/sorting
-  const getNumericRating = (review: GraphQLReview) => {
-    if (typeof review.reviewStars === 'number') return review.reviewStars;
-    if (typeof review.reviewStars === 'string' && !isNaN(Number(review.reviewStars))) return Number(review.reviewStars);
-    return 0;
-  };
-
-  // Filtering and sorting logic
-  const filteredReviews = allReviews.filter((review) => {
-    if (!selectedReviewFilter?.value) return true;
-    if (selectedReviewFilter?.value === 'following') {
-      const authorId = String(review.author?.node?.databaseId ?? '');
-      return followingUserIds.includes(authorId);
-    }
-    if (selectedReviewFilter?.value === 'mine') {
-      return String(review.author?.node?.databaseId) === String(currentUserId);
-    }
-    return true;
-  });
-
-  const sortedReviews = [...filteredReviews].sort((a, b) => {
-    if (sortOrder?.value === "newest") {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    } else if (sortOrder?.value === "oldest") {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    } else if (sortOrder?.value === "highest") {
-      return getNumericRating(b) - getNumericRating(a);
-    } else if (sortOrder?.value === "lowest") {
-      return getNumericRating(a) - getNumericRating(b);
-    }
-    return 0;
-  });
+  // Simple sorting logic (like mobile) - sort by newest first
+  const sortedReviews = [...allReviews].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   // Pagination
   const paginatedReviews = sortedReviews.slice((currentPage - 1) * REVIEWS_PER_PAGE, currentPage * REVIEWS_PER_PAGE);
   const totalPages = Math.ceil(sortedReviews.length / REVIEWS_PER_PAGE);
+
   // Tab content
   const tabs = [
     {
@@ -315,30 +307,38 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
             </>
           ) : paginatedReviews.length ? (
             <>
-              {paginatedReviews.map((review) => (
-                <ReviewBlock
-                  key={review.databaseId.toString()}
-                  review={{
-                    databaseId: review.databaseId,
-                    id: review.id,
-                    authorId: review.author?.node?.databaseId ?? 0,
-                    restaurantId: restaurantId.toString(),
-                    user: review.author?.node?.name ?? review.author?.name ?? "Unknown",
-                    rating: Number(review.reviewStars) || 0,
-                    date: review.date,
-                    title: review.reviewMainTitle,
-                    comment: review.content,
-                    images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
-                    userImage: review.userAvatar ?? DEFAULT_USER_ICON,
-                    recognitions: review.recognitions ?? [],
-                    palateNames: typeof review.palates === "string"
-                      ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
-                      : [],
-                    commentLikes: review.commentLikes ?? 0,
-                    userLiked: review.userLiked ?? false,
-                  }}
-                />
-              ))}
+              {paginatedReviews.map((review) => {
+                // Get the UUID string from author.node.id or userId field (both are UUIDs from restaurant_users)
+                const authorUuid = review.author?.node?.id ?? review.userId ?? undefined;
+                // Get numeric databaseId for backward compatibility
+                const authorDatabaseId = review.author?.node?.databaseId ?? 0;
+                
+                return (
+                  <ReviewBlock
+                    key={review.databaseId.toString()}
+                    review={{
+                      databaseId: review.databaseId,
+                      id: review.id,
+                      authorId: authorDatabaseId, // Numeric ID for backward compatibility
+                      authorUuid: authorUuid ? String(authorUuid) : undefined, // UUID string for restaurant_users lookup
+                      restaurantId: restaurantId.toString(),
+                      user: review.author?.node?.name ?? review.author?.name ?? "Unknown User",
+                      rating: Number(review.reviewStars) || 0,
+                      date: review.date,
+                      title: review.reviewMainTitle,
+                      comment: review.content,
+                      images: review.reviewImages?.map(img => img.sourceUrl) ?? [],
+                      userImage: review.userAvatar ?? review.author?.node?.avatar?.url ?? DEFAULT_USER_ICON,
+                      recognitions: review.recognitions ?? [],
+                      palateNames: typeof review.palates === "string"
+                        ? review.palates.split("|").map(p => p.trim()).filter(Boolean)
+                        : [],
+                      commentLikes: review.commentLikes ?? 0,
+                      userLiked: review.userLiked ?? false,
+                    }}
+                  />
+                );
+              })}
               <Pagination
                 currentPage={currentPage}
                 hasNextPage={currentPage < totalPages}
@@ -346,7 +346,10 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
               />
             </>
           ) : (
-            <h1>No reviews</h1>
+            <EmptyState 
+              heading="No Reviews Found"
+              message="No reviews have been made yet."
+            />
           )}
         </div>
       ),
@@ -356,26 +359,41 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
       label: "Photos",
       content: (
         <>
-          <Masonry
-            key={`photo-page-${currentPage}`} // <-- Forces reset on page change
-            items={paginatedPhotoItems}
-            render={({ data }) => (
-              <Photos
-                key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
-                data={mapToReviewedDataProps(toReviewBlockReview(data.review))}
-                image={data.image}
-                index={data.imageIndex}
+          {loading && allPhotoItems.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-200 animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : paginatedPhotoItems.length > 0 ? (
+            <>
+              <Masonry
+                key={`photo-page-${currentPage}`}
+                items={paginatedPhotoItems}
+                render={({ data }) => (
+                  <Photos
+                    key={(data.image.id as string) || `${data.review.databaseId}-${data.imageIndex}`}
+                    data={mapToReviewedDataProps(toReviewBlockReview(data.review))}
+                    image={data.image}
+                    index={data.imageIndex}
+                  />
+                )}
+                columnGutter={32}
+                columnWidth={304}
+                maxColumnCount={4}
               />
-            )}
-            columnGutter={32}
-            columnWidth={304}
-            maxColumnCount={4}
-          />
-          {totalPhotoPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              hasNextPage={currentPage < totalPhotoPages}
-              onPageChange={(page) => setCurrentPage(page)}
+              {totalPhotoPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  hasNextPage={currentPage < totalPhotoPages}
+                  onPageChange={(page) => setCurrentPage(page)}
+                />
+              )}
+            </>
+          ) : (
+            <EmptyState 
+              heading="No Photos Found"
+              message="No photos have been uploaded yet."
             />
           )}
         </>
@@ -391,46 +409,6 @@ export default function RestaurantReviews({ restaurantId, onReviewsUpdate, revie
           <h2 className="text-lg font-normal text-[#31343F]">
             Recommended Reviews ({reviewCount || allReviews.length})
           </h2>
-        </div>
-        <div className="flex gap-3">
-          <div className="search-bar">
-            <CustomPopover
-              align="center"
-              trigger={
-                <button className="review-filter text-sm">
-                  {!selectedReviewFilter.text ? 'All Reviews' : selectedReviewFilter.text}
-                </button>
-              }
-              content={
-                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
-                  {reviewFilterOptions.map((option, index) =>
-                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold text-sm" onClick={() => { setSelectedReviewFilter({text: option.label, value: option.value}); setCurrentPage(1); }}>
-                      {option.label}
-                    </li>
-                  )}
-                </ul>
-              }
-            />
-          </div>
-          <div className="search-bar">
-            <CustomPopover
-              align="center"
-              trigger={
-                <button className="review-filter text-sm">
-                  {!sortOrder.text ? 'All Reviews' : sortOrder.text}
-                </button>
-              }
-              content={
-                <ul className="bg-white flex flex-col rounded-2xl text-[#494D5D] border border-[#CACACA]">
-                  {sortOptions.map((option, index) =>
-                    <li key={index} className="text-left pl-3.5 pr-12 py-3.5 font-semibold text-sm" onClick={() => { setSortOrder({text: option.label, value: option.value}); setCurrentPage(1); }}>
-                      {option.label}
-                    </li>
-                  )}
-                </ul>
-              }
-            />
-          </div>
         </div>
       </div>
       <Tabs

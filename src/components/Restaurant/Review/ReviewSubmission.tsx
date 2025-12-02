@@ -109,7 +109,7 @@ const ReviewSubmissionPage = () => {
               slug: v2Data.slug || restaurantSlug,
               address: v2Data.listing_street || v2Data.address?.street_address || '',
               phone: v2Data.phone || '',
-              priceRange: v2Data.price_range || '',
+              priceRange: v2Data.restaurant_price_range?.display_name || '',
               rating: v2Data.average_rating || 0,
             }));
           } else {

@@ -102,7 +102,7 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
     averageRating: restaurant.average_rating || 0,
     status: restaurant.status,
     listingStreet: restaurant.listing_street || '',
-    priceRange: restaurant.restaurant_price_range?.display_name || restaurant.price_range || '',
+    priceRange: restaurant.restaurant_price_range?.display_name || '',
     databaseId: restaurant.id,
     palates: {
       nodes: palatesArray.map((p: any) => ({
@@ -132,8 +132,9 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
       nodes: address?.country ? [{ name: address.country }] : []
     },
     ratingsCount: restaurant.ratings_count || 0,
-    restaurant_price_range: restaurant.restaurant_price_range
-  } as Listing & { restaurant_price_range?: { display_name: string } };
+    restaurant_price_range: restaurant.restaurant_price_range,
+    price_range_id: restaurant.price_range_id
+  } as Listing & { restaurant_price_range?: { display_name: string }; price_range_id?: number };
 };
 
 /**
@@ -178,7 +179,7 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
       slug: typeof c === 'string' ? c.toLowerCase().replace(/\s+/g, '-') : (c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '')
     })),
     countries: address?.country || '',
-    priceRange: restaurant.price_range || '',
+    priceRange: restaurant.restaurant_price_range?.display_name || '',
     averageRating: restaurant.average_rating || 0,
     ratingsCount: restaurant.ratings_count || 0,
     streetAddress: restaurant.listing_street || '',

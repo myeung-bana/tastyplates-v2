@@ -3,6 +3,7 @@
 
 import { ReviewV2, ReviewImage } from '@/app/api/v1/services/reviewV2Service';
 import { ReviewedDataProps } from '@/interfaces/Reviews/review';
+import { GraphQLReview, GraphQLReviewImage, GraphQLAuthor, GraphQLCommentedOn } from '@/types/graphql';
 import { DEFAULT_USER_ICON } from '@/constants/images';
 
 /**
@@ -305,6 +306,96 @@ export function transformReviewV2ToReviewedDataProps(review: ReviewV2): Reviewed
         }
       }
     }
+  };
+}
+
+/**
+ * Transform ReviewV2 (Hasura) to GraphQLReview (component format)
+ * Used for RestaurantReviews component on restaurant detail pages
+ */
+export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDatabaseId?: number): GraphQLReview {
+  // Parse images from JSONB
+  const images = Array.isArray(review.images) ? review.images : [];
+  const reviewImages: GraphQLReviewImage[] = images.map((img: any, index: number) => ({
+    databaseId: index,
+    id: img.id || `${review.id}-${index}`,
+    sourceUrl: typeof img === 'string' ? img : (img.url || img.sourceUrl || '')
+  }));
+
+  // Get author info
+  const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+  const authorAvatar = review.author?.profile_image 
+    ? (getProfileImageUrl(review.author.profile_image) || DEFAULT_USER_ICON)
+    : DEFAULT_USER_ICON;
+
+  // Generate databaseId from UUID (for compatibility)
+  const databaseId = parseInt(review.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
+
+  // Generate userId from author_id UUID
+  const userId = review.author?.id 
+    ? parseInt(review.author.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+    : 0;
+
+  // Get restaurant info
+  const restaurantTitle = review.restaurant?.title || '';
+  const restaurantSlug = review.restaurant?.slug || '';
+  const restaurantImage = review.restaurant?.featured_image_url || '';
+  const restaurantDbId = restaurantDatabaseId 
+    || review.restaurant?.id 
+    || parseInt(review.restaurant?.uuid?.replace(/-/g, '').substring(0, 8) || '0', 16) % 2147483647 
+    || 0;
+
+  // Parse palates
+  const palatesArray = Array.isArray(review.palates) ? review.palates : [];
+  const palatesString = palatesArray.join('|');
+
+  // Format date
+  const date = review.published_at || review.created_at;
+
+  return {
+    id: review.id,
+    databaseId,
+    uri: '',
+    reviewMainTitle: review.title || '',
+    commentLikes: review.likes_count || 0,
+    userLiked: review.user_liked || false,
+    reviewStars: String(review.rating || 0),
+    date,
+    content: review.content,
+    reviewImages,
+    palates: palatesString,
+    userAvatar: authorAvatar,
+    author: {
+      name: authorName,
+      node: {
+        id: review.author_id,
+        databaseId: userId,
+        name: authorName,
+        avatar: {
+          url: authorAvatar
+        }
+      }
+    },
+    commentedOn: {
+      node: {
+        databaseId: restaurantDbId,
+        title: restaurantTitle,
+        slug: restaurantSlug,
+        fieldMultiCheck90: '',
+        featuredImage: {
+          node: {
+            databaseId: restaurantImage,
+            altText: restaurantTitle,
+            mediaItemUrl: restaurantImage,
+            mimeType: 'image/jpeg',
+            mediaType: 'image',
+          }
+        }
+      }
+    },
+    recognitions: review.recognitions || [],
+    userId: review.author_id,
+    hashtags: review.hashtags || []
   };
 }
 

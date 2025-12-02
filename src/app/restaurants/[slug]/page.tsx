@@ -1,11 +1,13 @@
 "use client";
 import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { transformRestaurantV2ToListing } from "@/utils/restaurantTransformers";
 import { isFeatureEnabled } from "@/constants/featureFlags";
+import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
+import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/Restaurant/RestaurantReviews";
 import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMobile";
@@ -306,6 +308,49 @@ export default function RestaurantDetail() {
     }
   }, [restaurant, restaurantReviews, allReviews, palatesParam, session?.user?.palates]);
 
+  // Fetch restaurant reviews from new V2 API
+  useEffect(() => {
+    if (!restaurant?.id) return; // restaurant.id is the UUID
+
+    const fetchRestaurantReviews = async () => {
+      try {
+        let allFetched: GraphQLReview[] = [];
+        let offset = 0;
+        const limit = 50;
+        let hasMore = true;
+
+        // Fetch all reviews using offset-based pagination
+        while (hasMore) {
+          const response = await reviewV2Service.getReviewsByRestaurant(restaurant.id, {
+            limit,
+            offset
+          });
+
+          // Transform ReviewV2 to GraphQLReview
+          const transformed = response.reviews.map((review) => 
+            transformReviewV2ToGraphQLReview(review, restaurant.databaseId)
+          );
+
+          allFetched = allFetched.concat(transformed);
+          hasMore = response.hasMore || false;
+          offset += transformed.length;
+
+          // Safety check to prevent infinite loops
+          if (transformed.length === 0) break;
+        }
+
+        setRestaurantReviews(allFetched);
+        setAllReviews(allFetched);
+      } catch (error) {
+        console.error('Error fetching restaurant reviews:', error);
+        setRestaurantReviews([]);
+        setAllReviews([]);
+      }
+    };
+
+    fetchRestaurantReviews();
+  }, [restaurant?.id, restaurant?.databaseId]);
+
   const addReview = () => {
     if (!session?.user) {
       setIsShowSignin(true);
@@ -316,6 +361,15 @@ export default function RestaurantDetail() {
     );
   };
 
+  // Unified reviews data source - prioritize allReviews, fallback to restaurantReviews
+  // This ensures both desktop and mobile see the same reviews
+  const unifiedReviews = useMemo(() => {
+    return allReviews.length > 0 ? allReviews : restaurantReviews;
+  }, [allReviews, restaurantReviews]);
+
+  const reviewCount = useMemo(() => {
+    return calculateOverallRating(unifiedReviews).count;
+  }, [unifiedReviews]);
 
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
@@ -418,11 +472,13 @@ export default function RestaurantDetail() {
         {/* Full-Width Reviews Section */}
         <div className="mt-12">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-            {/* Always fetch reviews (hidden on mobile) but use data for both */}
+            {/* Desktop view */}
             <div className={isMobile ? "hidden" : ""}>
               <RestaurantReviews 
-                restaurantId={restaurant.databaseId || 0} 
-                reviewCount={calculateOverallRating(restaurantReviews).count}
+                restaurantId={restaurant.databaseId || 0}
+                restaurantUuid={restaurant.id}
+                reviews={unifiedReviews}
+                reviewCount={reviewCount}
                 onReviewsUpdate={(reviews) => {
                   setRestaurantReviews(reviews);
                   setAllReviews(reviews);
@@ -432,7 +488,7 @@ export default function RestaurantDetail() {
             {/* Mobile view */}
             {isMobile && (
               <RestaurantReviewsMobile
-                reviews={allReviews.length > 0 ? allReviews : restaurantReviews}
+                reviews={unifiedReviews}
                 restaurantId={restaurant.databaseId || 0}
                 onOpenModal={() => setShowReviewsModal(true)}
               />
@@ -462,7 +518,7 @@ export default function RestaurantDetail() {
       {/* Restaurant Reviews Modal */}
       {isMobile && (
         <RestaurantReviewsViewerModal
-          reviews={allReviews.length > 0 ? allReviews : restaurantReviews}
+          reviews={unifiedReviews}
           isOpen={showReviewsModal}
           onClose={() => setShowReviewsModal(false)}
           initialIndex={0}

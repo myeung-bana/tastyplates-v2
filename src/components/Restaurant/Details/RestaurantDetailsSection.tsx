@@ -3,6 +3,7 @@ import React from "react";
 import { FiPhone, FiDollarSign } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import OpeningHoursDisplay from "./OpeningHoursDisplay";
+import { usePriceRanges } from "@/hooks/usePriceRanges";
 
 interface RestaurantDetailsSectionProps {
   restaurant: Listing;
@@ -11,6 +12,15 @@ interface RestaurantDetailsSectionProps {
 const RestaurantDetailsSection: React.FC<RestaurantDetailsSectionProps> = ({
   restaurant,
 }) => {
+  // Use the price ranges hook to get display name
+  const { getDisplayNameById } = usePriceRanges();
+  
+  // Get price range display name - try relationship first, then hook, then fallback
+  const priceRangeDisplay = restaurant.restaurant_price_range?.display_name 
+    || (restaurant.price_range_id ? getDisplayNameById(restaurant.price_range_id) : null)
+    || restaurant.priceRange
+    || 'Not available';
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
       <h3 className="text-lg font-normal font-neusans mb-4">
@@ -49,7 +59,7 @@ const RestaurantDetailsSection: React.FC<RestaurantDetailsSectionProps> = ({
               Price Range
             </span>
             <span className="text-gray-700 font-neusans font-normal">
-              {restaurant.priceRange || "Not available"}
+              {priceRangeDisplay}
             </span>
           </div>
         </div>

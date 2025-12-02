@@ -11,7 +11,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useSession } from "next-auth/react";
-import { capitalizeWords, formatDate, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewPopUpModal from "./ReviewPopUpModal";
@@ -23,6 +23,7 @@ import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_H
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
 import PalateTags from "../ui/PalateTags/PalateTags";
+import { useUserData } from '@/hooks/useUserData';
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -38,7 +39,8 @@ interface ReviewBlockProps {
   review: {
     databaseId: number;
     id: string;
-    authorId: number;
+    authorId: number | string; // Support both numeric ID and UUID string
+    authorUuid?: string; // Optional UUID field for restaurant_users lookup
     restaurantId: string;
     user: string;
     rating: number;
@@ -80,7 +82,10 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     return `${type}:${id}`;
   };
 
-  const userRelayId = encodeRelayId('user', review.authorId);
+  // Handle both UUID strings and numeric IDs
+  const authorIdNum = typeof review.authorId === 'number' ? review.authorId : 0;
+  const authorUuidStr = review.authorUuid || (typeof review.authorId === 'string' ? review.authorId : undefined);
+  const userRelayId = authorUuidStr || encodeRelayId('user', authorIdNum);
 
   return {
     databaseId: review.databaseId,
@@ -99,14 +104,14 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
       name: review.user,
       node: {
         id: userRelayId,
-        databaseId: review.authorId,
+        databaseId: authorIdNum,
         name: review.user,
         avatar: {
           url: review.userImage || DEFAULT_USER_ICON,
         },
       },
     },
-    userId: review.authorId,
+    userId: authorIdNum,
     commentedOn: {
       node: {
         databaseId: parseInt(review.restaurantId),
@@ -197,45 +202,81 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     setSelectedPhotoIndex(0);
   };
 
+  // Helper to check if a value is a UUID string
+  const isUuid = (id: string | number): boolean => {
+    if (typeof id === 'string') {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    }
+    return false;
+  };
+
+  // Get the UUID string for profile URLs and session comparison
+  // Priority: authorUuid prop > authorId if it's a UUID string
+  const authorUuid = review.authorUuid || (typeof review.authorId === 'string' && isUuid(review.authorId) ? review.authorId : undefined);
+  
+  // For session comparison: use UUID if available, otherwise use encoded numeric ID
+  const isOwnProfile = authorUuid 
+    ? (session?.user?.id && String(session.user.id) === String(authorUuid))
+    : (session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId as number)));
+  
+  // Generate profile URL: use UUID if available, otherwise use numeric ID
+  const profileUrl = authorUuid ? generateProfileUrl(authorUuid) : generateProfileUrl(review.authorId);
+
+  // Fetch user data from restaurant_users if UUID is available and review data is incomplete
+  const { userData: fetchedUserData, loading: userDataLoading } = useUserData(
+    authorUuid && (review.user === "Unknown User" || !review.user || review.userImage === DEFAULT_USER_ICON)
+      ? authorUuid
+      : undefined
+  );
+
+  // Use fetched data as fallback if review data is incomplete
+  const displayName = review.user && review.user !== "Unknown User" 
+    ? review.user 
+    : (fetchedUserData?.display_name || "Unknown User");
+
+  const displayImage = review.userImage && review.userImage !== DEFAULT_USER_ICON
+    ? review.userImage
+    : (fetchedUserData?.profile_image || DEFAULT_USER_ICON);
+
   return (
     <div className="review-block">
       <div className="review-block__header">
         <div className="review-block__user">
-          {(review.authorId) ? (
-            session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+          {(review.authorId || authorUuid) ? (
+            isOwnProfile ? (
               <a href={PROFILE}>
                 <Image
-                  src={review?.userImage || DEFAULT_USER_ICON}
-                  alt={review?.user || "User"}
+                  src={displayImage}
+                  alt={displayName}
                   width={48}
                   height={48}
                   className="review-block__user-image cursor-pointer"
                 />
               </a>
-            ) : session ? (
-              <a href={generateProfileUrl(review.authorId)}>
+              ) : session ? (
+                <a href={profileUrl}>
+                  <Image
+                    src={displayImage}
+                    alt={displayName}
+                    width={48}
+                    height={48}
+                    className="review-block__user-image cursor-pointer"
+                  />
+                </a>
+              ) : (
                 <Image
-                  src={review?.userImage || DEFAULT_USER_ICON}
-                  alt={review?.user || "User"}
+                  src={displayImage}
+                  alt={displayName}
                   width={48}
                   height={48}
                   className="review-block__user-image cursor-pointer"
+                  onClick={() => setIsShowSignin(true)}
                 />
-              </a>
-            ) : (
-              <Image
-                src={review?.userImage || DEFAULT_USER_ICON}
-                alt={review?.user || "User"}
-                width={48}
-                height={48}
-                className="review-block__user-image cursor-pointer"
-                onClick={() => setIsShowSignin(true)}
-              />
-            )
+              )
           ) : (
             <FallbackImage
-              src={review?.userImage || DEFAULT_USER_ICON}
-              alt={review?.user || "User"}
+              src={displayImage}
+              alt={displayName}
               width={48}
               height={48}
               className="review-block__user-image"
@@ -244,17 +285,17 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           )}
           <div className="review-block__user-info">
             {/* Make username clickable and handle auth logic */}
-            {(review.authorId) ? (
-              session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId)) ? (
+            {(review.authorId || authorUuid) ? (
+              isOwnProfile ? (
                 <a href={PROFILE}>
                   <h3 className="review-block__username cursor-pointer">
-                    {review?.user || "Unknown User"}
+                    {displayName}
                   </h3>
                 </a>
               ) : session ? (
-                <a href={generateProfileUrl(review.authorId)}>
+                <a href={profileUrl}>
                   <h3 className="review-block__username cursor-pointer">
-                    {review?.user || "Unknown User"}
+                    {displayName}
                   </h3>
                 </a>
               ) : (
@@ -262,12 +303,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                   className="review-block__username cursor-pointer"
                   onClick={() => setIsShowSignin(true)}
                 >
-                  {review?.user || "Unknown User"}
+                  {displayName}
                 </h3>
               )
             ) : (
               <h3 className="review-block__username">
-                {review?.user || "Unknown User"}
+                {displayName}
               </h3>
             )}
           </div>
@@ -285,7 +326,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             );
           })}
           <span className="review-block__timestamp">
-            {formatDate(review.date)}
+            {formatDateT(review.date)}
           </span>
         </div>
       </div>

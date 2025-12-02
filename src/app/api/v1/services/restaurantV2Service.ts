@@ -7,7 +7,6 @@ export interface RestaurantV2 {
   slug: string;
   status: string;
   content?: string;
-  price_range?: string;
   price_range_id?: number;
   price?: number;
   average_rating?: number;

@@ -65,6 +65,7 @@ export interface Listing {
         symbol?: string;
         slug: string;
     };
+    price_range_id?: number;
 }
 
 

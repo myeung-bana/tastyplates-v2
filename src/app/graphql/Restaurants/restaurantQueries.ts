@@ -20,7 +20,7 @@ export const GET_ALL_RESTAURANTS = `
       slug
       status
       content
-      price_range
+      price_range_id
       price
       average_rating
       ratings_count
@@ -58,7 +58,7 @@ export const GET_RESTAURANT_BY_UUID = `
       slug
       status
       content
-      price_range
+      price_range_id
       price
       average_rating
       ratings_count
@@ -91,7 +91,6 @@ export const GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE = `
       slug
       status
       content
-      price_range
       price_range_id
       price
       average_rating
@@ -132,7 +131,7 @@ export const GET_RESTAURANT_BY_SLUG_HASURA = `
       slug
       status
       content
-      price_range
+      price_range_id
       price
       average_rating
       ratings_count
@@ -165,7 +164,6 @@ export const GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE = `
       slug
       status
       content
-      price_range
       price_range_id
       price
       average_rating
