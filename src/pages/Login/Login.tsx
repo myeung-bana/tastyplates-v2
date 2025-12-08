@@ -43,6 +43,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       // Force session refresh to get latest user data
       if (update) {
         await update();
+        // Wait a bit for session to propagate to all components
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       // Close modal if callback provided
       onLoginSuccess?.();
@@ -51,7 +53,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       // Small delay to ensure session is updated before navigation
       setTimeout(() => {
         router.push(HOME);
-      }, 100);
+      }, 300); // Increased from 100ms to 300ms for better session propagation
     } catch (error) {
       console.error('Error in login success handler:', error);
       // Still try to close modal and navigate even if update fails
@@ -151,6 +153,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       const result = await firebaseAuthService.signInWithGoogle();
       
       if (result.success && result.firebase_uuid && result.user) {
+        // Increase delay to ensure user is fully available in Hasura
+        // Firebase creates user, then Hasura creates user, then we need to wait for consistency
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 500ms to 1000ms
+        
         // Sign in with NextAuth using firebase_uuid
         const nextAuthResult = await signIn('credentials', {
           email: result.user.email || '',
@@ -158,12 +164,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
           redirect: false,
         });
         
+        // Check for error in result
+        if (nextAuthResult?.error) {
+          console.error('NextAuth error:', nextAuthResult.error);
+          
+          // Handle specific error cases
+          if (nextAuthResult.error === 'CredentialsSignin') {
+            setMessage('Authentication failed. Please try again in a moment.');
+          } else {
+            setMessage('Authentication failed. Please try again.');
+          }
+          setMessageType(responseStatus.error);
+          setIsLoading(false);
+          return;
+        }
+        
         if (nextAuthResult?.ok) {
           await handleLoginSuccess();
         } else {
-          setMessage('Authentication failed. Please try again.');
-          setMessageType(responseStatus.error);
-          setIsLoading(false);
+          // If no error but not ok, might be a redirect
+          if (nextAuthResult?.url) {
+            // This shouldn't happen with redirect: false, but handle it
+            console.warn('Unexpected redirect URL:', nextAuthResult.url);
+            setMessage('Authentication in progress...');
+            // Don't redirect, let the user stay in the modal
+          } else {
+            setMessage('Authentication failed. Please try again.');
+            setMessageType(responseStatus.error);
+            setIsLoading(false);
+          }
         }
       } else {
         setMessage(result.error || 'Google sign in failed');

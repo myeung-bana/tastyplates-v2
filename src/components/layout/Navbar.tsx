@@ -61,9 +61,29 @@ export default function Navbar(props: Record<string, unknown>) {
   const pathname = usePathname();
   
   // Fetch current user profile data for authenticated users
-  // Use session.user.id directly (can be UUID string or numeric ID)
+  // Only fetch if session is authenticated and has a valid ID
   const currentUserId = session?.user?.id || null;
-  const { userData } = useProfileData(currentUserId || '');
+  const shouldFetchProfile = status === 'authenticated' && !!currentUserId;
+  const { userData } = useProfileData(shouldFetchProfile ? currentUserId : '');
+  
+  // Debug: Log session state for troubleshooting
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const userId = session.user.id;
+      const isUUID = userId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(userId)) : false;
+      console.log('[Navbar] Session authenticated:', {
+        userId: userId,
+        userIdType: typeof userId,
+        isUUID: isUUID,
+        hasEmail: !!session.user.email,
+        hasName: !!session.user.name,
+        status: status
+      });
+    } else if (status === 'unauthenticated') {
+      console.log('[Navbar] Session unauthenticated');
+    }
+  }, [session, status]);
+  
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
     hasSearchBar?: boolean;

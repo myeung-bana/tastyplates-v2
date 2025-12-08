@@ -128,8 +128,8 @@ export const authOptions: AuthOptions = {
                         
                         // If user not found, retry once (in case of race condition)
                         if (!hasuraUser) {
-                            console.log('[NextAuth] User not found in Hasura, retrying after 1 second...', firebase_uuid);
-                            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                            console.log('[NextAuth] User not found in Hasura, retrying after 1.5 seconds...', firebase_uuid);
+                            await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5 seconds
                             
                             try {
                                 const retryResult = await hasuraQuery(GET_RESTAURANT_USER_BY_FIREBASE_UUID, { firebase_uuid });
@@ -153,26 +153,67 @@ export const authOptions: AuthOptions = {
                             }
                         }
                         
+                        // If still not found, try one more time with longer delay
+                        if (!hasuraUser) {
+                            console.log('[NextAuth] User still not found, final retry after 2 seconds...', firebase_uuid);
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            try {
+                                const finalRetryResult = await hasuraQuery(GET_RESTAURANT_USER_BY_FIREBASE_UUID, { firebase_uuid });
+                                
+                                if (!finalRetryResult.errors && finalRetryResult.data?.restaurant_users?.[0]) {
+                                    hasuraUser = finalRetryResult.data.restaurant_users[0];
+                                    console.log('[NextAuth] Final retry successful:', {
+                                        hasData: !!hasuraUser,
+                                        userId: hasuraUser?.id
+                                    });
+                                }
+                            } catch (finalError: any) {
+                                console.error('[NextAuth] Error in final retry:', finalError.message);
+                            }
+                        }
+                        
                         if (hasuraUser) {
                             console.log('[NextAuth] User found, creating session:', {
                                 id: hasuraUser.id,
                                 email: hasuraUser.email,
-                                username: hasuraUser.username
+                                username: hasuraUser.username,
+                                firebase_uuid: hasuraUser.firebase_uuid,
+                                onboarding_complete: hasuraUser.onboarding_complete
                             });
                             await setCookies({ logInMessage: logInSuccessfull });
                             
                             // Return user data for NextAuth session
-                            // Note: We don't have a JWT token from Hasura yet, so we'll use firebase_uuid as identifier
-                            // In the future, you might want to generate a custom token or use Hasura JWT
-                            return {
-                                id: hasuraUser.id,
-                                userId: hasuraUser.id,
-                                name: hasuraUser.display_name || hasuraUser.username,
-                                email: hasuraUser.email,
+                            // CRITICAL: Hasura IDs are UUIDs (strings), ensure we preserve the format
+                            // NextAuth requires id to be a string
+                            const userId = hasuraUser.id; // Hasura ID is already a UUID string
+                            const userObject = {
+                                id: userId, // Keep as UUID string (no conversion needed)
+                                userId: userId, // Keep as UUID string for consistency
+                                name: hasuraUser.display_name || hasuraUser.username || 'User',
+                                email: hasuraUser.email || '',
                                 firebase_uuid: hasuraUser.firebase_uuid,
                                 onboarding_complete: hasuraUser.onboarding_complete || false,
                                 token: null, // TODO: Generate custom token if needed for Hasura permissions
                             };
+                            
+                            // Validate UUID format
+                            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(userId));
+                            
+                            console.log('[NextAuth] Returning user object:', {
+                                hasId: !!userObject.id,
+                                idValue: userObject.id,
+                                idType: typeof userObject.id,
+                                isUUID: isUUID,
+                                hasEmail: !!userObject.email,
+                                hasName: !!userObject.name
+                            });
+                            
+                            if (!isUUID) {
+                                console.warn('[NextAuth] WARNING: User ID is not in UUID format:', userId);
+                            }
+                            
+                            return userObject;
                         }
                         
                         // User doesn't exist in Hasura - this shouldn't happen if Firebase auth worked
@@ -219,9 +260,10 @@ export const authOptions: AuthOptions = {
         // Authentication flow: Frontend -> Firebase Auth -> Hasura (via authorize()) -> NextAuth session
         // All authentication now uses Firebase, with user data fetched from Hasura
         async jwt({ token, user, account, trigger, session }) {
-            const provider = account?.provider || 'unknown';
-            
-            if (user) {
+            try {
+                const provider = account?.provider || 'unknown';
+                
+                if (user) {
                 const extendedUser = user as ExtendedUser;
                 
                 console.log('JWT: Processing JWT callback', {
@@ -392,61 +434,103 @@ export const authOptions: AuthOptions = {
                 }
             }
 
-            // CRITICAL: Always return token, even if empty, so middleware can check it
-            // Ensure token is truthy for middleware authorization
-            return token;
+                // CRITICAL: Always return token, even if empty, so middleware can check it
+                // Ensure token is truthy for middleware authorization
+                return token;
+            } catch (error) {
+                console.error('JWT: Error in JWT callback:', error);
+                // Return existing token on error to prevent authentication failure
+                // This prevents the error=undefined redirect
+                // Preserve existing token data if available
+                if (token && token.sub) {
+                    // Token exists, return it as-is to maintain session
+                    return token;
+                }
+                // If no token exists, this is a new auth attempt that failed
+                // Return minimal token to prevent redirect loop
+                return {
+                    ...token,
+                    sub: token?.sub || undefined,
+                    user: token?.user || undefined,
+                } as any;
+            }
         },
         async session({ session, token }) {
-            if (token) {
-                const tokenUser = token.user as Record<string, unknown> | undefined;
-                
-                if (tokenUser) {
-                    // Map token user to session user
-                    // Unified structure: both providers now have { id, userId, name, email, token, image }
-                    // Fallbacks only for edge cases
-                    const sessionEmail = tokenUser.email || (token as any).email || null;
-                    const sessionName = tokenUser.name || null;
-                    const sessionImage = tokenUser.image || null;
+            try {
+                if (token) {
+                    const tokenUser = token.user as Record<string, unknown> | undefined;
                     
-                    session.user = {
-                        ...tokenUser,
-                        id: tokenUser.id || tokenUser.userId || null,
-                        userId: tokenUser.userId || tokenUser.id || null,
-                        email: sessionEmail,
-                        name: sessionName,
-                        image: sessionImage, // Explicitly include image for profile display
-                        onboarding_complete: tokenUser.onboarding_complete ?? false,
-                    } as typeof session.user;
+                    if (tokenUser) {
+                        // Map token user to session user
+                        // Unified structure: both providers now have { id, userId, name, email, token, image }
+                        // Fallbacks only for edge cases
+                        const sessionEmail = tokenUser.email || (token as any).email || null;
+                        const sessionName = tokenUser.name || null;
+                        const sessionImage = tokenUser.image || null;
+                        
+                        session.user = {
+                            ...tokenUser,
+                            id: tokenUser.id || tokenUser.userId || null,
+                            userId: tokenUser.userId || tokenUser.id || null,
+                            email: sessionEmail,
+                            name: sessionName,
+                            image: sessionImage, // Explicitly include image for profile display
+                            onboarding_complete: tokenUser.onboarding_complete ?? false,
+                        } as typeof session.user;
+                        
+                        // Validate and log session data for debugging
+                        const sessionUserId = session.user?.id;
+                        const isUUID = sessionUserId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(sessionUserId)) : false;
+                        
+                        console.log('[NextAuth] Session callback - user data:', {
+                            hasUser: !!session.user,
+                            userId: sessionUserId,
+                            userIdType: typeof sessionUserId,
+                            isUUID: isUUID,
+                            email: session.user?.email,
+                            onboarding_complete: session.user?.onboarding_complete,
+                            hasFirebaseUuid: !!(tokenUser.firebase_uuid as any)
+                        });
+                        
+                        if (sessionUserId && !isUUID) {
+                            console.warn('[NextAuth] WARNING: Session user ID is not in UUID format:', sessionUserId);
+                        }
+                    } else {
+                        // Fix 2: Fallback - if tokenUser is missing, try to get email and id from token
+                        // This ensures session has both email and user ID for authentication
+                        session.user = {
+                            ...session.user,
+                            email: (token as any).email || null,
+                            id: token.sub || token.id || null,
+                            userId: token.sub || token.id || null,
+                            image: (token as any).image || null, // Include image in fallback
+                        } as typeof session.user;
+                    }
                     
-                    // Log session data for debugging
-                    console.log('[NextAuth] Session callback - user data:', {
-                        hasUser: !!session.user,
-                        userId: session.user?.id,
-                        email: session.user?.email,
-                        onboarding_complete: session.user?.onboarding_complete,
-                        hasFirebaseUuid: !!(tokenUser.firebase_uuid as any)
-                    });
-                } else {
-                    // Fix 2: Fallback - if tokenUser is missing, try to get email and id from token
-                    // This ensures session has both email and user ID for authentication
-                    session.user = {
-                        ...session.user,
-                        email: (token as any).email || null,
-                        id: token.sub || token.id || null,
-                        userId: token.sub || token.id || null,
-                        image: (token as any).image || null, // Include image in fallback
-                    } as typeof session.user;
+                    session.accessToken = token.accessToken as string | undefined;
                 }
                 
-                session.accessToken = token.accessToken as string | undefined;
+                return session;
+            } catch (error) {
+                console.error('[NextAuth] Error in session callback:', error);
+                // Return session with minimal data to prevent redirect
+                // This ensures NextAuth doesn't redirect to /api/auth/error
+                return {
+                    ...session,
+                    user: {
+                        ...session.user,
+                        id: token?.sub || token?.id || null,
+                        userId: token?.sub || token?.id || null,
+                    },
+                };
             }
-            
-            return session;
         },
     },
     pages: {
         signIn: HOME,
         signOut: HOME, // suppress /api/auth/signout
+        // Removed error page redirect - errors are handled in frontend via nextAuthResult?.error
+        // This prevents ?error=undefined redirects
     },
     session: {
         strategy: "jwt",

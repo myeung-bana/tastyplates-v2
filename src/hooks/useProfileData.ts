@@ -53,6 +53,31 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
         // Convert targetUserId to string for API call
         const userIdStr = String(targetUserId);
         
+        // Validate ID format before making API call
+        // Hasura uses UUID format, but we also support numeric IDs for legacy compatibility
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdStr);
+        const isNumeric = /^\d+$/.test(userIdStr);
+        
+        if (!isUUID && !isNumeric) {
+          console.error('useProfileData: Invalid user ID format:', userIdStr);
+          setError('Invalid user ID format');
+          setUserData(null);
+          setLoading(false);
+          setNameLoading(false);
+          setAboutMeLoading(false);
+          setPalatesLoading(false);
+          return;
+        }
+        
+        // Log ID format for debugging
+        console.log('[useProfileData] Fetching user data:', {
+          userId: userIdStr,
+          isUUID: isUUID,
+          isNumeric: isNumeric,
+          targetUserId: targetUserId,
+          targetUserIdType: typeof targetUserId
+        });
+        
         // Fetch user data from Hasura using restaurant_users API
         const response = await restaurantUserService.getUserById(userIdStr);
         
