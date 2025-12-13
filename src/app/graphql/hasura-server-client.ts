@@ -15,27 +15,58 @@ export async function hasuraQuery<T = any>(
   variables?: Record<string, any>
 ): Promise<GraphQLResponse<T>> {
   if (!HASURA_URL) {
-    throw new Error('NEXT_PUBLIC_HASURA_GRAPHQL_API_URL is not configured');
+    const error = new Error('NEXT_PUBLIC_HASURA_GRAPHQL_API_URL is not configured');
+    console.error('Hasura configuration error:', error.message);
+    throw error;
   }
 
-  const response = await fetch(HASURA_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-hasura-admin-secret': HASURA_ADMIN_SECRET || '',
-    },
-    body: JSON.stringify({
-      query,
-      variables: variables || {},
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Hasura request failed: ${response.status}`);
+  if (!HASURA_ADMIN_SECRET) {
+    console.warn('HASURA_ADMIN_SECRET is not configured - requests may fail if Hasura requires authentication');
   }
 
-  const result: GraphQLResponse<T> = await response.json();
-  return result;
+  try {
+    const response = await fetch(HASURA_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hasura-admin-secret': HASURA_ADMIN_SECRET || '',
+      },
+      body: JSON.stringify({
+        query,
+        variables: variables || {},
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      const error = new Error(`Hasura request failed: ${response.status} ${response.statusText}. ${errorText}`);
+      console.error('Hasura request failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: HASURA_URL,
+        errorText: errorText.substring(0, 500), // Limit error text length
+      });
+      throw error;
+    }
+
+    const result: GraphQLResponse<T> = await response.json();
+    
+    // Log if there are GraphQL errors (but don't throw - let the caller handle it)
+    if (result.errors && result.errors.length > 0) {
+      console.error('Hasura GraphQL errors:', JSON.stringify(result.errors, null, 2));
+    }
+    
+    return result;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Hasura query error:', error.message);
+      // Check if it's a network error
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        throw new Error(`Failed to connect to Hasura at ${HASURA_URL}. Check your network connection and Hasura URL.`);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function hasuraMutation<T = any>(

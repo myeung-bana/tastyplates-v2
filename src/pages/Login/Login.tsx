@@ -2,14 +2,13 @@
 import { useState, useEffect } from "react";
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
-import { signIn, useSession } from "next-auth/react";
 import { useRouter } from 'next/navigation';
 import Spinner from "@/components/common/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
-import { responseStatus, sessionProvider as provider } from "@/constants/response";
+import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
 import { validEmail } from "@/lib/utils";
 import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
@@ -24,9 +23,6 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword, onLoginSuccess }) => {
   const router = useRouter();
-  const session = useSession();
-  const update = session?.update;
-  // Removed unused variable
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,26 +33,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const [passwordError, setPasswordError] = useState<string>("");
 
   // Unified login success handler for both manual and OAuth flows
-  // This ensures consistent behavior regardless of login method
+  // Firebase handles session automatically via onAuthStateChanged
   const handleLoginSuccess = async () => {
     try {
-      // Force session refresh to get latest user data
-      if (update) {
-        await update();
-        // Wait a bit for session to propagate to all components
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
       // Close modal if callback provided
       onLoginSuccess?.();
-      // Refresh router to update server components with new session
+      // Refresh router to update server components
       router.refresh();
-      // Small delay to ensure session is updated before navigation
+      // Small delay to ensure Firebase session propagates
       setTimeout(() => {
         router.push(HOME);
-      }, 300); // Increased from 100ms to 300ms for better session propagation
+      }, 300);
     } catch (error) {
       console.error('Error in login success handler:', error);
-      // Still try to close modal and navigate even if update fails
+      // Still try to close modal and navigate
       onLoginSuccess?.();
       router.refresh();
     }
@@ -112,25 +102,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
 
     try {
-      // Use Firebase authentication
+      // Use Firebase authentication - Firebase handles session automatically
       const result = await firebaseAuthService.signInWithEmail(email, password);
       
       if (result.success && result.firebase_uuid && result.user) {
-        // Sign in with NextAuth using firebase_uuid
-        const nextAuthResult = await signIn(provider.credentials, {
-          email: result.user.email || email,
-          firebase_uuid: result.firebase_uuid,
-          redirect: false,
-          callbackUrl: typeof window !== 'undefined' ? window.location.href : HOME
-        });
-
-        if (nextAuthResult?.error) {
-          setMessage(loginFailed);
-          setMessageType(responseStatus.error);
-          setIsLoading(false);
-        } else if (nextAuthResult?.ok) {
-          await handleLoginSuccess();
-        }
+        // Firebase session is automatically set
+        // Just handle UI success
+        await handleLoginSuccess();
       } else {
         setMessage(result.error || loginFailed);
         setMessageType(responseStatus.error);
@@ -155,45 +133,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       if (result.success && result.firebase_uuid && result.user) {
         // Increase delay to ensure user is fully available in Hasura
         // Firebase creates user, then Hasura creates user, then we need to wait for consistency
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Increased from 500ms to 1000ms
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Sign in with NextAuth using firebase_uuid
-        const nextAuthResult = await signIn('credentials', {
-          email: result.user.email || '',
-          firebase_uuid: result.firebase_uuid,
-          redirect: false,
-        });
-        
-        // Check for error in result
-        if (nextAuthResult?.error) {
-          console.error('NextAuth error:', nextAuthResult.error);
-          
-          // Handle specific error cases
-          if (nextAuthResult.error === 'CredentialsSignin') {
-            setMessage('Authentication failed. Please try again in a moment.');
-          } else {
-            setMessage('Authentication failed. Please try again.');
-          }
-          setMessageType(responseStatus.error);
-          setIsLoading(false);
-          return;
-        }
-        
-        if (nextAuthResult?.ok) {
-          await handleLoginSuccess();
-        } else {
-          // If no error but not ok, might be a redirect
-          if (nextAuthResult?.url) {
-            // This shouldn't happen with redirect: false, but handle it
-            console.warn('Unexpected redirect URL:', nextAuthResult.url);
-            setMessage('Authentication in progress...');
-            // Don't redirect, let the user stay in the modal
-          } else {
-            setMessage('Authentication failed. Please try again.');
-            setMessageType(responseStatus.error);
-            setIsLoading(false);
-          }
-        }
+        // Firebase session is automatically set via onAuthStateChanged
+        // Just handle UI success
+        await handleLoginSuccess();
       } else {
         setMessage(result.error || 'Google sign in failed');
         setMessageType(responseStatus.error);

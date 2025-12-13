@@ -6,7 +6,7 @@ import ReviewCard2 from "./ReviewCard2";
 import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 
@@ -37,7 +37,7 @@ type TabType = 'trending' | 'foryou';
 
 const Reviews = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trending');
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const { showSignin } = useAuthModal();
   
   // Trending reviews state
@@ -71,7 +71,22 @@ const Reviews = () => {
     
     setLoading(true);
     const first = isFirstLoad.current ? 16 : 8;
-    const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, session?.accessToken);
+    
+    // Get Firebase ID token for API call
+    let token: string | undefined = undefined;
+    if (user?.firebase_uuid) {
+      try {
+        const { auth } = await import('@/lib/firebase');
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          token = await currentUser.getIdToken();
+        }
+      } catch (error) {
+        console.error('Error getting Firebase token:', error);
+      }
+    }
+    
+    const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, token);
     
     // Calculate how many reviews we can add without exceeding the limit
     const currentCount = trendingReviews.length;
@@ -93,7 +108,7 @@ const Reviews = () => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
     }
-  }, [loading, hasNextPage, hasReachedLimit, trendingReviews.length, endCursor, session?.accessToken]);
+  }, [loading, hasNextPage, hasReachedLimit, trendingReviews.length, endCursor, user]);
 
   // Load trending reviews on mount or when switching to trending tab
   useEffect(() => {
@@ -130,7 +145,7 @@ const Reviews = () => {
 
   // Setup Intersection Observer for For You
   useEffect(() => {
-    if (activeTab !== 'foryou' || !session?.accessToken) return;
+    if (activeTab !== 'foryou' || !user) return;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting && forYouHasMore && !forYouLoading && !forYouInitialLoading) {
@@ -146,10 +161,10 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [forYouHasMore, forYouLoading, forYouInitialLoading, loadMoreForYou, activeTab, session?.accessToken]);
+  }, [forYouHasMore, forYouLoading, forYouInitialLoading, loadMoreForYou, activeTab, user]);
 
   const handleTabClick = (tab: TabType) => {
-    if (tab === 'foryou' && !session?.user) {
+    if (tab === 'foryou' && !user) {
       showSignin();
       return;
     }
@@ -273,7 +288,7 @@ const Reviews = () => {
               )}
             </div>
           </>
-        ) : activeTab === 'foryou' && session?.user ? (
+        ) : activeTab === 'foryou' && user ? (
           <div className="text-center py-12 mt-10">
             <p className="text-gray-500 font-neusans">
               {forYouInitialLoading 

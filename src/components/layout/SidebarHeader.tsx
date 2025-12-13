@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useRouter } from "next/navigation";
 import { 
   FiEdit3, 
   FiSearch, 
@@ -37,7 +38,8 @@ interface SidebarItem {
 
 export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
+  const router = useRouter();
   const { selectedLocation } = useLocation();
   const [showLocationModal, setShowLocationModal] = useState(false);
 
@@ -72,7 +74,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
 
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase first
+      // Sign out from Firebase
       await firebaseAuthService.signOut();
       console.log('[SidebarHeader] Firebase sign out successful');
     } catch (error) {
@@ -85,8 +87,9 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
     localStorage.clear();
     localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
 
-    // Sign out from NextAuth session
-    await signOut({ redirect: true, callbackUrl: HOME });
+    // Redirect to home
+    router.push(HOME);
+    router.refresh();
     onClose();
   };
 
@@ -147,16 +150,16 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
 
   const sidebarSections = [
     // Section 1: Write a Review (only if authenticated)
-    session?.user ? [
+    user ? [
       { name: "Write a Review", href: LISTING, icon: FiEdit3 },
     ] : [],
     // Section 2: Explore & Following (Following only for authenticated users)
     [
       { name: "Explore", href: RESTAURANTS, icon: FiSearch },
-      ...(session?.user ? [{ name: "Following", href: "/following", icon: FiHeart }] : []),
+      ...(user ? [{ name: "Following", href: "/following", icon: FiHeart }] : []),
     ],
     // Section 3: Profile & Settings (only for authenticated users)
-    session?.user ? [
+    user ? [
       { name: "Profile", href: PROFILE, icon: FiUser },
       { name: "Settings", href: SETTINGS, icon: FiSettings },
     ] : [],
@@ -174,7 +177,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       },
     ],
     // Section 6: Log out (only if authenticated)
-    session?.user ? [
+    user ? [
       { 
         name: "Log out", 
         icon: FiLogOut, 

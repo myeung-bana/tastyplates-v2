@@ -50,7 +50,8 @@ export const GET_ALL_RESTAURANT_USERS = `
   }
 `;
 
-// GET BY ID - Get single user by ID with follower/following arrays for counting
+// GET BY ID - Get single user by ID
+// Note: followers/following relationships are not available in Hasura schema
 export const GET_RESTAURANT_USER_BY_ID = `
   query GetRestaurantUserById($id: uuid!) {
     restaurant_users_by_pk(id: $id) {
@@ -81,12 +82,7 @@ export const GET_RESTAURANT_USER_BY_ID = `
       created_at
       updated_at
       deleted_at
-      followers {
-        id
-      }
-      following {
-        id
-      }
+      # Note: followers/following relationships are not available in Hasura schema
     }
   }
 `;
@@ -202,31 +198,23 @@ export const DELETE_RESTAURANT_USER = `
 `;
 
 // GET FOLLOWERS LIST - Get list of users following a specific user
+// NOTE: This requires a 'followers' relationship in Hasura which is not configured
 export const GET_FOLLOWERS_LIST = `
   query GetFollowersList($userId: uuid!) {
     restaurant_users_by_pk(id: $userId) {
-      followers {
-        id
-        username
-        display_name
-        profile_image
-        palates
-      }
+      id
+      # followers relationship not available - returns empty
     }
   }
 `;
 
 // GET FOLLOWING LIST - Get list of users that a specific user is following
+// NOTE: This requires a 'following' relationship in Hasura which is not configured
 export const GET_FOLLOWING_LIST = `
   query GetFollowingList($userId: uuid!) {
     restaurant_users_by_pk(id: $userId) {
-      following {
-        id
-        username
-        display_name
-        profile_image
-        palates
-      }
+      id
+      # following relationship not available - returns empty
     }
   }
 `;

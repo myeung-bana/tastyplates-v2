@@ -10,7 +10,7 @@ import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { transformRestaurantV2ToRestaurant } from "@/utils/restaurantTransformers";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { debounce } from "@/utils/debounce";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
@@ -63,7 +63,7 @@ export interface Restaurant {
 const restaurantService = new RestaurantService();
 
 const RestaurantPage = () => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const { selectedLocation } = useLocation();
 
   // Helper function to get parent country's short code for cities
@@ -326,10 +326,11 @@ const RestaurantPage = () => {
           search: debouncedSearchTerm || undefined
         });
 
-        if (response.error) {
-          console.error('❌ V2 API error:', response.error);
+        // Check for success field (new format per API guidelines)
+        if (!response.success || response.error) {
+          console.error('❌ V2 API error:', response.error || response.message || 'Unknown error');
           console.error('Response details:', response);
-          throw new Error(response.error);
+          throw new Error(response.error || response.message || 'Failed to fetch restaurants');
         }
 
         // Transform Hasura format to component format
@@ -450,7 +451,7 @@ const RestaurantPage = () => {
     isFirstLoad.current = true;
     fetchRestaurants(true, null, RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, selectedLocation, session?.accessToken, fetchRestaurants]);
+  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, selectedLocation, user, fetchRestaurants]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -471,10 +472,15 @@ const RestaurantPage = () => {
   // Removed unused function
 
   const handleRestaurantClick = async (restaurantId: number) => {
-    if (!session?.accessToken) return;
+    if (!user) return;
     
     try {
-      await restaurantService.addRecentlyVisitedRestaurant(restaurantId, session.accessToken);
+      // Get Firebase ID token for API call
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      await restaurantService.addRecentlyVisitedRestaurant(restaurantId, token);
     } catch (error) {
       console.error("Failed to add recently visited restaurant:", error);
     }

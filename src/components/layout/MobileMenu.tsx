@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiSearch, FiHeart, FiUser, FiSettings } from "react-icons/fi";
 import { PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
-import { sessionStatus } from "@/constants/response";
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  status: string;
+  isAuthenticated: boolean;
   onOpenSignin: () => void;
   onOpenSignup: () => void;
 }
@@ -22,7 +21,7 @@ const navigationItems = [
 export default function MobileMenu({
   isOpen,
   onClose,
-  status,
+  isAuthenticated,
   onOpenSignin,
   onOpenSignup,
 }: MobileMenuProps) {
@@ -74,7 +73,7 @@ export default function MobileMenu({
           <div className="space-y-2 font-neusans">
             {navigationItems.map((item) => {
               // Show all items if authenticated, only Explore if not authenticated
-              if (status !== sessionStatus.authenticated && item.name !== "Explore") return null;
+              if (!isAuthenticated && item.name !== "Explore") return null;
 
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -99,7 +98,7 @@ export default function MobileMenu({
             })}
 
             {/* Profile and Settings for authenticated users */}
-            {status === sessionStatus.authenticated && (
+            {isAuthenticated && (
               <>
                 <Link
                   href={PROFILE}
@@ -139,7 +138,7 @@ export default function MobileMenu({
             )}
 
             {/* Auth buttons for non-authenticated users */}
-            {status !== sessionStatus.authenticated && (
+            {!isAuthenticated && (
               <div className="pt-4 space-y-2">
                 <button
                   onClick={() => {

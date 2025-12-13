@@ -37,6 +37,27 @@ export interface RestaurantV2 {
   published_at?: string;
   cuisines?: Array<{ id: number; name: string; slug: string }>;
   palates?: Array<{ id: number; name: string; slug: string }>;
+  categories?: Array<{ id: number; name: string; slug: string }>;
+  is_main_location?: boolean;
+  branch_group_id?: number;
+  branches?: Array<{
+    id: number;
+    uuid: string;
+    title: string;
+    slug: string;
+    listing_street?: string;
+    address?: any;
+    featured_image_url?: string;
+  }>;
+  parent_restaurant?: {
+    id: number;
+    uuid: string;
+    title: string;
+    slug: string;
+    listing_street?: string;
+    address?: any;
+    featured_image_url?: string;
+  } | null;
   restaurant_price_range?: {
     id: number;
     display_name: string;
@@ -47,6 +68,7 @@ export interface RestaurantV2 {
 }
 
 export interface RestaurantsV2Response {
+  success: boolean;
   data: RestaurantV2[];
   meta: {
     total: number;
@@ -56,14 +78,18 @@ export interface RestaurantsV2Response {
     fetchedAt: string;
   };
   error?: string;
+  message?: string;
+  details?: any[];
 }
 
 export interface RestaurantV2Response {
+  success?: boolean;
   data: RestaurantV2;
   meta: {
     fetchedAt: string;
   };
   error?: string;
+  message?: string;
 }
 
 class RestaurantV2Service {
@@ -74,6 +100,17 @@ class RestaurantV2Service {
     offset?: number;
     status?: string;
     search?: string;
+    cuisine_ids?: number[];
+    palate_ids?: number[];
+    category_ids?: number[];
+    price_range_id?: number;
+    min_rating?: number;
+    max_rating?: number;
+    latitude?: number;
+    longitude?: number;
+    radius_km?: number;
+    is_main_location?: boolean;
+    order_by?: 'rating' | 'price' | 'created_at' | 'updated_at' | 'distance';
   }): Promise<RestaurantsV2Response> {
     try {
       const queryParams = new URLSearchParams();
@@ -81,6 +118,17 @@ class RestaurantV2Service {
       if (params?.offset) queryParams.append('offset', params.offset.toString());
       if (params?.status) queryParams.append('status', params.status);
       if (params?.search) queryParams.append('search', params.search);
+      if (params?.cuisine_ids?.length) queryParams.append('cuisine_ids', params.cuisine_ids.join(','));
+      if (params?.palate_ids?.length) queryParams.append('palate_ids', params.palate_ids.join(','));
+      if (params?.category_ids?.length) queryParams.append('category_ids', params.category_ids.join(','));
+      if (params?.price_range_id) queryParams.append('price_range_id', params.price_range_id.toString());
+      if (params?.min_rating !== undefined) queryParams.append('min_rating', params.min_rating.toString());
+      if (params?.max_rating !== undefined) queryParams.append('max_rating', params.max_rating.toString());
+      if (params?.latitude) queryParams.append('latitude', params.latitude.toString());
+      if (params?.longitude) queryParams.append('longitude', params.longitude.toString());
+      if (params?.radius_km) queryParams.append('radius_km', params.radius_km.toString());
+      if (params?.is_main_location !== undefined) queryParams.append('is_main_location', params.is_main_location.toString());
+      if (params?.order_by) queryParams.append('order_by', params.order_by);
 
       const url = `${this.baseUrl}/get-restaurants${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await fetch(url);
@@ -88,6 +136,7 @@ class RestaurantV2Service {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         return {
+          success: false,
           data: [],
           meta: {
             total: 0,
@@ -96,14 +145,48 @@ class RestaurantV2Service {
             hasMore: false,
             fetchedAt: new Date().toISOString()
           },
-          error: errorData.error || `Failed to fetch restaurants: ${response.statusText}`
+          error: errorData.error || `Failed to fetch restaurants: ${response.statusText}`,
+          message: errorData.message,
+          details: errorData.details
         };
       }
 
-      return response.json();
+      const result = await response.json();
+      
+      // Check if response has success field (new format per API guidelines)
+      if (result.success === false) {
+        return {
+          success: false,
+          data: [],
+          meta: {
+            total: 0,
+            limit: params?.limit || 100,
+            offset: params?.offset || 0,
+            hasMore: false,
+            fetchedAt: new Date().toISOString()
+          },
+          error: result.error || 'Failed to fetch restaurants',
+          message: result.message,
+          details: result.details
+        };
+      }
+
+      // Return success response (handle both new format with success field and legacy format)
+      return {
+        success: result.success !== undefined ? result.success : true,
+        data: result.data || [],
+        meta: result.meta || {
+          total: 0,
+          limit: params?.limit || 100,
+          offset: params?.offset || 0,
+          hasMore: false,
+          fetchedAt: new Date().toISOString()
+        }
+      };
     } catch (error) {
       console.error('Get all restaurants error:', error);
       return {
+        success: false,
         data: [],
         meta: {
           total: 0,
@@ -167,4 +250,3 @@ class RestaurantV2Service {
 }
 
 export const restaurantV2Service = new RestaurantV2Service();
-

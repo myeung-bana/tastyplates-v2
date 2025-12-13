@@ -7,14 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import Cookies from "js-cookie";
-import { signIn, useSession } from "next-auth/react";
-import { sessionProvider as provider } from "@/constants/response";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 
 // Component that uses useSearchParams - must be wrapped in Suspense
 const OnboardingContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { update } = useSession();
+  const { user, loading } = useFirebaseSession();
   const [currentStep, setCurrentStep] = useState(1);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -33,26 +32,24 @@ const OnboardingContent = () => {
   }, [searchParams]);
 
   // Check for registration data and handle session-based onboarding check
-  const { data: session, status } = useSession();
-  
   useEffect(() => {
     if (!hasMounted) return;
     
-    // Wait for session to finish loading before making decisions
-    if (status === 'loading') {
-      console.log('[Onboarding] Session is loading, waiting...');
+    // Wait for Firebase session to finish loading before making decisions
+    if (loading) {
+      console.log('[Onboarding] Firebase session is loading, waiting...');
       return; // Don't redirect while loading
     }
     
-    // Check if user is logged in with new Firebase method
-    if (session?.user?.id) {
+    // Check if user is logged in with Firebase
+    if (user?.id) {
       console.log('[Onboarding] User authenticated:', {
-        userId: session.user.id,
-        onboarding_complete: session.user.onboarding_complete
+        userId: user.id,
+        onboarding_complete: user.onboarding_complete
       });
       
       // If onboarding is already complete, redirect to home
-      if (session.user.onboarding_complete === true) {
+      if (user.onboarding_complete === true) {
         console.log('[Onboarding] Onboarding complete, redirecting to home');
         router.replace(HOME);
         return;
@@ -93,7 +90,7 @@ const OnboardingContent = () => {
       console.log('[Onboarding] No session and no registration data, redirecting to home');
       router.replace(HOME);
     }
-  }, [router, hasMounted, session, status]);
+  }, [router, hasMounted, user, loading]);
 
   const handleNext = () => {
     if (currentStep < 2) {

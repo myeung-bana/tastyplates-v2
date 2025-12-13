@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { FiSearch, FiMenu } from "react-icons/fi";
 import { RESTAURANTS } from "@/constants/pages";
 import SidebarHeader from "./SidebarHeader";
@@ -13,7 +13,7 @@ interface MobileTopBarProps {
 
 const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -26,7 +26,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
 
   // Only show Following for authenticated users
   const navItems = [
-    ...(session?.user ? [{ name: "Following", href: "/following" }] : []),
+    ...(user ? [{ name: "Following", href: "/following" }] : []),
     { name: "Explore", href: RESTAURANTS },
   ];
 

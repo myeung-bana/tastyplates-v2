@@ -11,16 +11,13 @@ import SigninModal from "../auth/SigninModal";
 import Image from "next/image";
 import CustomPopover from "../ui/Popover/Popover";
 import { PiCaretDown } from "react-icons/pi";
-import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from 'next/navigation';
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { logOutSuccessfull } from "@/constants/messages";
 import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
-import { sessionStatus } from "@/constants/response";
 import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
 import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TASTYPLATES_LOGO_WHITE } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import PasswordUpdatedModal from "../ui/Modal/PasswordUpdatedModal";
@@ -31,6 +28,7 @@ import NavbarSearchBar from "../navigation/NavbarSearchBar";
 import LocationButton from "../navigation/LocationButton";
 import MobileMenu from "./MobileMenu";
 import { useProfileData } from "@/hooks/useProfileData";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -56,33 +54,30 @@ const navigationItems = [
 ];
 
 export default function Navbar(props: Record<string, unknown>) {
-  const { data: session, status } = useSession();
+  const { user, firebaseUser, loading } = useFirebaseSession();
   const router = useRouter();
   const pathname = usePathname();
   
   // Fetch current user profile data for authenticated users
-  // Only fetch if session is authenticated and has a valid ID
-  const currentUserId = session?.user?.id || null;
-  const shouldFetchProfile = status === 'authenticated' && !!currentUserId;
+  // Only fetch if user is authenticated and has a valid ID
+  const currentUserId = user?.id || null;
+  const shouldFetchProfile = !loading && !!user && !!currentUserId;
   const { userData } = useProfileData(shouldFetchProfile ? currentUserId : '');
   
   // Debug: Log session state for troubleshooting
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const userId = session.user.id;
-      const isUUID = userId ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(userId)) : false;
-      console.log('[Navbar] Session authenticated:', {
+    if (!loading && user && firebaseUser) {
+      const userId = user.id;
+      console.log('[Navbar] Firebase session authenticated:', {
         userId: userId,
-        userIdType: typeof userId,
-        isUUID: isUUID,
-        hasEmail: !!session.user.email,
-        hasName: !!session.user.name,
-        status: status
+        email: user.email,
+        displayName: user.display_name,
+        hasProfileImage: !!user.profile_image,
       });
-    } else if (status === 'unauthenticated') {
-      console.log('[Navbar] Session unauthenticated');
+    } else if (!loading && !user) {
+      console.log('[Navbar] Firebase session unauthenticated');
     }
-  }, [session, status]);
+  }, [user, firebaseUser, loading]);
   
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
@@ -97,7 +92,7 @@ export default function Navbar(props: Record<string, unknown>) {
 
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase first
+      // Sign out from Firebase
       await firebaseAuthService.signOut();
       console.log('[Navbar] Firebase sign out successful');
     } catch (error) {
@@ -110,8 +105,9 @@ export default function Navbar(props: Record<string, unknown>) {
     localStorage.clear();
     localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
 
-    // Sign out from NextAuth session
-    await signOut({ redirect: true, callbackUrl: HOME });
+    // Redirect to home
+    router.push(HOME);
+    router.refresh();
   };
 
   const changeNavBg = () => {
@@ -154,7 +150,7 @@ export default function Navbar(props: Record<string, unknown>) {
 
     // Clean up OAuth callback cookies after successful authentication
     const oauthFromModal = Cookies.get('oauth_from_modal');
-    if (oauthFromModal === 'true' && session?.user) {
+    if (oauthFromModal === 'true' && user) {
       Cookies.remove('oauth_from_modal');
       Cookies.remove('oauth_callback_url');
     }
@@ -163,7 +159,7 @@ export default function Navbar(props: Record<string, unknown>) {
     return () => {
       window.removeEventListener("scroll", changeNavBg);
     };
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
@@ -244,7 +240,7 @@ export default function Navbar(props: Record<string, unknown>) {
               {/* Center Search Bar */}
               <div className="navbar__center">
                 <NavbarSearchBar 
-                  isAuthenticated={!!session} 
+                  isAuthenticated={!loading && !!user} 
                   isTransparent={isLandingPage && !navBg}
                 />
               </div>
@@ -253,8 +249,7 @@ export default function Navbar(props: Record<string, unknown>) {
               <div className="navbar__menu justify-start">
                 {navigationItems.map((item) => {
                   // Show all items if authenticated, only Explore if not authenticated
-                  // Use both status and session.user for more robust check
-                  const isAuthenticated = status === sessionStatus.authenticated && !!session?.user;
+                  const isAuthenticated = !loading && !!user;
                   if (!isAuthenticated && item.name !== "Explore") return null;
                   
                   return (
@@ -271,9 +266,9 @@ export default function Navbar(props: Record<string, unknown>) {
               </div>
             </div>
             <div className="navbar__auth">
-              {/* Use more robust authentication check */}
+              {/* Use Firebase session for authentication check */}
               {(() => {
-                const isAuthenticated = status === sessionStatus.authenticated && !!session?.user;
+                const isAuthenticated = !loading && !!user;
                 if (!isAuthenticated && validatePage) {
                   return (
                     <div className="w-9 h-9 rounded-full overflow-hidden">
@@ -353,12 +348,12 @@ export default function Navbar(props: Record<string, unknown>) {
                       <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
                           src={
-                            // Priority order: profile_image from API > session.user.image > default
+                            // Priority order: profile_image from API > userData > default
                             getProfileImageUrl(userData?.profile_image) ||
-                            (session?.user?.image as string) ||
+                            getProfileImageUrl(user?.profile_image) ||
                             DEFAULT_USER_ICON
                           }
-                          alt={session?.user?.name || "Profile"}
+                          alt={user?.display_name || user?.username || "Profile"}
                           width={36}
                           height={36}
                           className="w-full h-full object-cover rounded-full"
@@ -369,7 +364,7 @@ export default function Navbar(props: Record<string, unknown>) {
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link 
-                          href={session?.user?.id ? `/profile/${session.user.id}` : PROFILE} 
+                          href={user?.id ? `/profile/${user.id}` : PROFILE} 
                           className='font-neusans text-left pl-3.5 pr-12 py-3.5'
                         >
                           My Profile
@@ -398,7 +393,7 @@ export default function Navbar(props: Record<string, unknown>) {
         <MobileMenu
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
-          status={status}
+          isAuthenticated={!loading && !!user}
           onOpenSignin={() => setIsOpenSignin(true)}
           onOpenSignup={() => setIsOpenSignup(true)}
         />

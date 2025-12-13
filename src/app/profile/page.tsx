@@ -1,27 +1,27 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import ProfileHeaderSkeleton from "@/components/ui/Skeleton/ProfileHeaderSkeleton";
 
 const ProfilePage = () => {
-  const { data: session, status } = useSession();
+  const { user, loading } = useFirebaseSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return; // Wait for session to load
+    if (loading) return; // Wait for session to load
     
-    if (!session || !session.user || !session.user.id) {
+    if (!user || !user.id) {
       // Redirect to login if not authenticated
-      router.push("/login");
+      router.push("/");
       return;
     }
 
     // Redirect to the user's profile with restaurant_users.id (UUID)
     // Use the UUID directly from Hasura
-    const profileUrl = `/profile/${session.user.id}`;
+    const profileUrl = `/profile/${user.id}`;
     router.replace(profileUrl);
-  }, [session, status, router]);
+  }, [user, loading, router]);
 
   // Show skeleton loading while redirecting
   return (

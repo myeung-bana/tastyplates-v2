@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { FaPen } from "react-icons/fa";
@@ -28,7 +28,7 @@ interface ProfileProps {
 }
 
 const Profile = ({ targetUserId }: ProfileProps) => {
-  const { data: session, status } = useSession();
+  const { user, loading } = useFirebaseSession();
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [userReviewCount, setUserReviewCount] = useState(0);
@@ -60,7 +60,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     nameLoading,
     aboutMeLoading,
     palatesLoading,
-    loading,
+    loading: profileDataLoading,
     isViewingOwnProfile,
     error: profileError,
     followersCount: profileFollowersCount,
@@ -73,11 +73,11 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       userDataId: userData?.id,
       targetUserId: userData?.id as string || '',
       userDataType: typeof userData?.id,
-      status,
+      profileDataLoading,
       hasUserData: !!userData,
       userDataKeys: userData ? Object.keys(userData) : []
     });
-  }, [userData, status]);
+  }, [userData, profileDataLoading]);
 
   // Pass targetUserId directly to useFollowData - it now supports UUIDs
   const {
@@ -108,16 +108,32 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     );
   }, []);
 
+  // Get Firebase ID token for API calls
+  const getFirebaseToken = async () => {
+    if (!user?.firebase_uuid) return null;
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+    } catch (error) {
+      console.error('Error getting Firebase token:', error);
+    }
+    return null;
+  };
+
   // Custom follow/unfollow handlers for profile header
   const handleProfileFollow = useCallback(async (id: string) => {
-    if (!session?.accessToken) return;
+    const token = await getFirebaseToken();
+    if (!token) return;
     
     setFollowLoading(true);
     try {
       const userIdNum = Number(id);
       if (isNaN(userIdNum)) return;
       
-      const response = await followService.followUser(userIdNum, session.accessToken);
+      const response = await followService.followUser(userIdNum, token);
       if (response.status === 200) {
         setIsFollowing(true);
         // Also update the followers count by refreshing follow data
@@ -129,17 +145,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [session?.accessToken, followService, handleFollow]);
+  }, [user, followService, handleFollow]);
 
   const handleProfileUnfollow = useCallback(async (id: string) => {
-    if (!session?.accessToken) return;
+    const token = await getFirebaseToken();
+    if (!token) return;
     
     setFollowLoading(true);
     try {
       const userIdNum = Number(id);
       if (isNaN(userIdNum)) return;
       
-      const response = await followService.unfollowUser(userIdNum, session.accessToken);
+      const response = await followService.unfollowUser(userIdNum, token);
       if (response.status === 200) {
         setIsFollowing(false);
         // Also update the followers count by refreshing follow data
@@ -151,7 +168,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [session?.accessToken, followService, handleUnfollow]);
+  }, [user, followService, handleUnfollow]);
 
   // Welcome message effect
   useEffect(() => {
@@ -167,13 +184,18 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   // Check if current user is following the target user
   useEffect(() => {
     const checkFollowingStatus = async () => {
-      if (!session?.accessToken || !validUserId || isViewingOwnProfile) {
+      if (!user || !validUserId || isViewingOwnProfile) {
         setIsFollowing(false);
         return;
       }
 
       try {
-        const response = await followService.isFollowingUser(validUserId, session.accessToken);
+        const token = await getFirebaseToken();
+        if (!token) {
+          setIsFollowing(false);
+          return;
+        }
+        const response = await followService.isFollowingUser(validUserId, token);
         setIsFollowing(response.is_following || false);
       } catch (error) {
         console.error("Error checking following status:", error);
@@ -182,7 +204,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     };
 
     checkFollowingStatus();
-  }, [session?.accessToken, validUserId, isViewingOwnProfile, followService]);
+  }, [user, validUserId, isViewingOwnProfile, followService]);
 
   // Fetch wishlist data - DELAYED LOADING (Priority 3 - after reviews)
   useEffect(() => {
@@ -261,7 +283,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       label: "Reviews",
       content: <ReviewsTab 
         targetUserId={userData?.id as string || ''} 
-        status={status} 
+        isAuthenticated={!loading && !!user} 
         onReviewCountChange={setUserReviewCount}
       />
     },
@@ -291,7 +313,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
   ];
 
   // Show error message if profile data failed to load
-  if (profileError && !loading) {
+  if (profileError && !profileDataLoading) {
     return (
       <div className="flex flex-col justify-center items-center h-screen px-4">
         <p className="text-lg text-gray-600 mb-2">Unable to load profile</p>
@@ -306,7 +328,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   return (
     <div className="w-full min-h-screen bg-white">
-      {loading ? (
+      {profileDataLoading ? (
         <ProfileHeaderSkeleton />
       ) : (
         <ProfileHeader
@@ -326,7 +348,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           onShowFollowing={() => setShowFollowing(true)}
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
-          session={session}
+          currentUser={user}
           targetUserId={targetUserId}
           isFollowing={isFollowing}
           followLoading={followLoading}

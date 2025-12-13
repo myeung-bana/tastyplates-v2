@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import toast from "react-hot-toast";
@@ -13,11 +13,11 @@ import { LAST_ACTIVE_KEY } from "@/constants/session";
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
 
 export default function InactivityLogout() {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!session?.accessToken) return;
+    if (!user) return;
 
     const now = Date.now();
     const lastActiveRaw = localStorage.getItem(LAST_ACTIVE_KEY);
@@ -38,8 +38,8 @@ export default function InactivityLogout() {
       localStorage.clear();
       localStorage.removeItem(LAST_ACTIVE_KEY);
       
-      // Sign out from NextAuth session
-      await signOut({ redirect: true, callbackUrl: HOME });
+      // Redirect to home
+      window.location.href = HOME;
       toast.error(Inactive);
     };
 
@@ -68,7 +68,7 @@ export default function InactivityLogout() {
         window.removeEventListener(event, resetInactivityTimer)
       );
     };
-  }, [session]);
+  }, [user]);
 
   return null;
 }

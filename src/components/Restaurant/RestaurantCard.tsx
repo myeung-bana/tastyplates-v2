@@ -3,7 +3,7 @@ import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
 import "@/styles/components/_restaurant-card.scss";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useState, useEffect } from "react";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
@@ -80,7 +80,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const [endCursor, setEndCursor] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +97,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!session) {
+    if (!user || !firebaseUser) {
       setShowSignin(true);
       return;
     }
@@ -108,11 +108,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
       let res: Record<string, unknown>;
       if (action === "save") {
-        res = await restaurantService.saveFavoriteListing(restaurant.slug, session?.accessToken);
+        res = await restaurantService.saveFavoriteListing(restaurant.slug, idToken);
       } else {
-        res = await restaurantService.unsaveFavoriteListing(restaurant.slug, session?.accessToken);
+        res = await restaurantService.unsaveFavoriteListing(restaurant.slug, idToken);
       }
       
       if (res.status === "saved" || res.status === "unsaved") {
@@ -148,7 +150,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   };
 
   const handleConfirmDelete = async () => {
-    if (!session) {
+    if (!user || !firebaseUser) {
       setShowSignin(true);
       setIsDeleteModalOpen(false);
       return;
@@ -160,9 +162,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
       const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurant.slug, action: "unsave" },
-        session?.accessToken // can be undefined
+        idToken
       );
 
       if (res.status == code.success) {
@@ -210,7 +214,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!session) {
+    if (!user || !firebaseUser) {
       setShowSignin(true);
       return;
     }
@@ -225,9 +229,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     if (restaurant.databaseId) {
       setLoadingReviews(true);
       try {
+        // Get Firebase ID token for authentication
+        const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
         const response = await reviewService.fetchRestaurantReviews(
           restaurant.databaseId,
-          session?.accessToken,
+          idToken,
           10 // Initial load of 10 reviews
         );
         setRestaurantReviews(response.reviews);
@@ -249,9 +255,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     }
     
     try {
+      // Get Firebase ID token for authentication
+      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
       const response = await reviewService.fetchRestaurantReviews(
         restaurant.databaseId,
-        session?.accessToken,
+        idToken,
         10,
         endCursor
       );

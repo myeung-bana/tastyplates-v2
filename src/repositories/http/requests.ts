@@ -5,20 +5,28 @@ import { responseStatusCode as code, jwtAuthInvalidCode } from "@/constants/resp
 import { SESSION_EXPIRED_KEY } from "@/constants/session";
 import { HttpResponse } from "@/interfaces/httpResponse";
 import { removeAllCookies } from "@/utils/removeAllCookies";
-import { getSession, signOut } from "next-auth/react";
+import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 const USE_WP_PROXY = process.env.NEXT_PUBLIC_USE_WP_PROXY === 'true';
 
 const handleUnauthorized = async () => {
+    try {
+        // Sign out from Firebase
+        await firebaseAuthService.signOut();
+    } catch (error) {
+        console.error('Error signing out from Firebase:', error);
+    }
+    
     removeAllCookies();
     localStorage.clear();
     sessionStorage.clear();
-    document.cookie = '__Host-next-auth.csrf-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; Secure; SameSite=Lax';
     localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
-    await signOut({
-        callbackUrl: HOME,
-    })
+    
+    // Redirect to home
+    if (typeof window !== 'undefined') {
+        window.location.href = HOME;
+    }
 }
 
 export default class HttpMethods {
@@ -95,7 +103,6 @@ export default class HttpMethods {
 
         // Handle error responses (401, 403)
         if (response.status == code.unauthorized || response.status == code.forbidden) {
-            const session = await getSession();
             const clonedResponse = response.clone();
             
             try {
@@ -112,8 +119,18 @@ export default class HttpMethods {
                 }
 
                 // For public GET requests, handle JWT auth errors
-                if (typeof window !== 'undefined' && (session?.accessToken && jsonData?.code == jwtAuthInvalidCode)) {
-                    await handleUnauthorized();
+                // Check if user is authenticated via Firebase
+                if (typeof window !== 'undefined') {
+                    try {
+                        const { auth } = await import('@/lib/firebase');
+                        const currentUser = auth.currentUser;
+                        if (currentUser && jsonData?.code == jwtAuthInvalidCode) {
+                            await handleUnauthorized();
+                        }
+                    } catch (firebaseError) {
+                        // Firebase not available, skip unauthorized handling
+                        console.warn('Firebase auth not available:', firebaseError);
+                    }
                 }
                 
                 // Return the error response for public endpoints (GET requests without auth)

@@ -1,6 +1,5 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import Cookies from 'js-cookie';
 import { 
   SUPPORTED_LANGUAGES, 
@@ -10,6 +9,7 @@ import {
   LANGUAGE_COOKIE_EXPIRY,
   LanguageOption 
 } from '@/constants/languages';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 
 interface LanguageContextType {
   selectedLanguage: LanguageOption;
@@ -20,9 +20,9 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Internal provider that uses useSession
+// Internal provider that uses Firebase session
 const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { data: session, update } = useSession();
+  const { user } = useFirebaseSession();
   const [selectedLanguage, setSelectedLanguageState] = useState<LanguageOption>(DEFAULT_LANGUAGE || SUPPORTED_LANGUAGES[0]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,9 +32,9 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
       let languageCode = DEFAULT_LANGUAGE?.code || SUPPORTED_LANGUAGES[0].code;
 
       try {
-        // 1. Check user session first
-        if (session?.user?.language) {
-          languageCode = session.user.language;
+        // 1. Check user session first (from Hasura user data)
+        if (user?.language_preference) {
+          languageCode = user.language_preference;
         } else {
           // 2. Check localStorage (only in browser)
           if (typeof window !== 'undefined') {
@@ -68,7 +68,7 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     loadLanguage();
-  }, [session?.user?.language]);
+  }, [user?.language_preference]);
 
   const setSelectedLanguage = (language: LanguageOption) => {
     setSelectedLanguageState(language);
@@ -83,8 +83,8 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
         document.documentElement.lang = language.locale;
       }
       
-      // Update user session if logged in
-      if (session?.user) {
+      // Update user language preference if logged in
+      if (user?.id) {
         updateUserLanguagePreference(language.code);
       }
     } catch (error) {
@@ -93,28 +93,19 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const updateUserLanguagePreference = async (languageCode: string) => {
-    if (!session?.user?.userId || !session?.accessToken) return;
+    if (!user?.id) return;
 
     try {
       // Update via your existing user service
-      const { UserService } = await import('@/services/user/userService');
-      const userService = new UserService();
+      const { RestaurantUserService } = await import('@/app/api/v1/services/restaurantUserService');
+      const userService = new RestaurantUserService();
       
-      await userService.updateUserFields(
-        { language: languageCode },
-        session.accessToken
-      );
+      await userService.updateUser(user.id, {
+        language_preference: languageCode,
+      });
 
-      // Update session
-      if (update) {
-        await update({
-          ...session,
-          user: {
-            ...session.user,
-            language: languageCode,
-          },
-        });
-      }
+      // Note: Firebase session will automatically update via onAuthStateChanged
+      // when user data is refetched
     } catch (error) {
       console.error('Failed to update user language preference:', error);
     }

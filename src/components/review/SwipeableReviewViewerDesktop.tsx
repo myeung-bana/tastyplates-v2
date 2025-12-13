@@ -6,7 +6,7 @@ import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart, FiChevronLeft, FiChevronRight, FiStar, FiMapPin, FiSend } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
 import { FollowService } from "@/services/follow/followService";
@@ -15,6 +15,16 @@ import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+
+// Helper function to extract profile image URL from JSONB format
+const getProfileImageUrl = (profileImage: any): string | null => {
+  if (!profileImage) return null;
+  if (typeof profileImage === 'string') return profileImage;
+  if (typeof profileImage === 'object') {
+    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+  }
+  return null;
+};
 import { commentLikedSuccess, commentUnlikedSuccess, authorIdMissing, errorOccurred } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import toast from "react-hot-toast";
@@ -40,8 +50,23 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   isOpen,
   onClose,
 }) => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const { setFollowState } = useFollowContext();
+  
+  // Helper to get Firebase ID token for API calls
+  const getFirebaseToken = useCallback(async () => {
+    if (!user?.firebase_uuid) return null;
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+    } catch (error) {
+      console.error('Error getting Firebase token:', error);
+    }
+    return null;
+  }, [user]);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
@@ -137,13 +162,13 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
   // Check follow state when review changes
   useEffect(() => {
-    if (!isOpen || !session?.accessToken) return;
+    if (!isOpen || !user) return;
     
     const review = reviews[currentIndex];
     if (!review?.author?.node?.databaseId) return;
 
     const authorUserId = review.author.node.databaseId;
-    const currentUserId = session?.user?.userId ? parseInt(String(session.user.userId)) : null;
+    const currentUserId = user?.id ? parseInt(String(user.id)) : null;
 
     // Don't check follow state for own profile
     if (currentUserId && authorUserId === currentUserId) {
@@ -152,17 +177,20 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     }
 
     // Fetch follow state for current review
-    userService
-      .isFollowingUser(authorUserId, session.accessToken)
-      .then((result) => {
-        setIsFollowing((prev) => ({ ...prev, [authorUserId]: !!result.is_following }));
-        setFollowState(authorUserId, !!result.is_following);
-      })
-      .catch((err) => {
-        console.error("Error fetching follow state:", err);
-        setIsFollowing((prev) => ({ ...prev, [authorUserId]: false }));
-      });
-  }, [currentIndex, isOpen, session?.accessToken, reviews, setFollowState]);
+    getFirebaseToken().then((token) => {
+      if (!token) return;
+      userService
+        .isFollowingUser(authorUserId, token)
+        .then((result) => {
+          setIsFollowing((prev) => ({ ...prev, [authorUserId]: !!result.is_following }));
+          setFollowState(authorUserId, !!result.is_following);
+        })
+        .catch((err) => {
+          console.error("Error fetching follow state:", err);
+          setIsFollowing((prev) => ({ ...prev, [authorUserId]: false }));
+        });
+    });
+  }, [currentIndex, isOpen, user, reviews, setFollowState]);
 
   // Fetch comment counts only for visible reviews
   useEffect(() => {
@@ -227,7 +255,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   // Handle like/unlike
   const handleLike = useCallback(
     async (review: GraphQLReview) => {
-      if (!session?.user) {
+      if (!user) {
         toast.error("Please sign in to like reviews");
         return;
       }
@@ -253,7 +281,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
         console.error("Like error:", error);
       }
     },
-    [session, userLiked]
+    [user, userLiked]
   );
 
   // Navigate between images in current review
@@ -278,7 +306,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
   // Handle follow/unfollow
   const handleFollowClick = useCallback(async () => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -290,7 +318,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     }
 
     const authorUserId = review.author.node.databaseId;
-    const currentUserId = session?.user?.userId ? parseInt(String(session.user.userId)) : null;
+    const currentUserId = user?.id ? parseInt(String(user.id)) : null;
 
     // Don't allow following yourself
     if (currentUserId && authorUserId === currentUserId) {
@@ -299,11 +327,18 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
     setFollowLoading((prev) => ({ ...prev, [authorUserId]: true }));
     try {
+      const token = await getFirebaseToken();
+      if (!token) {
+        toast.error("Authentication required");
+        setFollowLoading((prev) => ({ ...prev, [authorUserId]: false }));
+        return;
+      }
+      
       let response;
       if (isFollowing[authorUserId]) {
-        response = await followService.unfollowUser(authorUserId, session.accessToken || "");
+        response = await followService.unfollowUser(authorUserId, token);
       } else {
-        response = await followService.followUser(authorUserId, session.accessToken || "");
+        response = await followService.followUser(authorUserId, token);
       }
 
       if (response.status === code.success) {
@@ -320,7 +355,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     } finally {
       setFollowLoading((prev) => ({ ...prev, [authorUserId]: false }));
     }
-  }, [session, currentIndex, reviews, isFollowing, setFollowState]);
+  }, [user, currentIndex, reviews, isFollowing, setFollowState, getFirebaseToken]);
 
   // Navigate between reviews
   const navigateReview = useCallback((direction: "up" | "down") => {
@@ -344,7 +379,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isSubmittingComment || cooldown > 0) return;
-    if (!session?.user) {
+    if (!user) {
       toast.error("Please sign in to comment");
       return;
     }
@@ -360,7 +395,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     setIsSubmittingComment(true);
 
     // Optimistically add reply at the top
-    const userName = session.user.name || session.user.email?.split('@')[0] || "You";
+    const userName = user.display_name || user.username || user.email?.split('@')[0] || "You";
     
     // Create proper ISO timestamp for optimistic reply
     const now = new Date();
@@ -376,17 +411,17 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       date: isoDate,
       content: commentText,
       reviewImages: [],
-      palates: session.user.palates || "",
-      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      palates: "",
+      userAvatar: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
       hashtags: [],
       author: {
         name: userName,
         node: {
-          id: String(session.user.id || ""),
-          databaseId: session.user.userId ? parseInt(String(session.user.userId)) : 0,
+          id: String(user.id || ""),
+          databaseId: user.id ? parseInt(String(user.id)) : 0,
           name: userName,
           avatar: {
-            url: session.user.image || DEFAULT_USER_ICON,
+            url: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
           },
         },
       },
@@ -413,14 +448,22 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     setCommentText("");
 
     try {
+      const token = await getFirebaseToken();
+      if (!token) {
+        toast.error("Authentication required");
+        setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
+        setIsSubmittingComment(false);
+        return;
+      }
+      
       const payload = {
         content: commentText,
         restaurantId: review.commentedOn?.node?.databaseId,
         parent: review.databaseId,
-        authorId: session?.user?.userId,
+        authorId: user?.id ? parseInt(String(user.id)) : null,
       };
       
-      const response = await reviewService.postReview(payload, session?.accessToken ?? "");
+      const response = await reviewService.postReview(payload, token);
 
       // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
       const isSuccess = (status: number | string) => {
@@ -464,7 +507,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     } finally {
       setIsSubmittingComment(false);
     }
-  }, [commentText, isSubmittingComment, cooldown, session, reviews, currentIndex]);
+  }, [commentText, isSubmittingComment, cooldown, user, reviews, currentIndex, getFirebaseToken]);
 
   // Wheel gesture handler (two-finger scroll or mouse wheel)
   const bindWheel = useWheel(
@@ -636,8 +679,8 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           <div className="swipeable-review-viewer-desktop__header">
             <div className="swipeable-review-viewer-desktop__user-info">
               {currentReview.author?.node?.databaseId ? (
-                session?.user?.id &&
-                String(session.user.id) === String(currentReview.author?.node?.databaseId) ? (
+                user?.id &&
+                String(user.id) === String(currentReview.author?.node?.databaseId) ? (
                   <Link href={PROFILE}>
                     <FallbackImage
                       src={currentReview.userAvatar || DEFAULT_USER_ICON}
@@ -648,7 +691,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                       type={FallbackImageType.Icon}
                     />
                   </Link>
-                ) : session ? (
+                ) : user ? (
                   <Link href={generateProfileUrl(currentReview.author?.node?.databaseId)} prefetch={false}>
                     <FallbackImage
                       src={currentReview.userAvatar || DEFAULT_USER_ICON}
@@ -687,8 +730,8 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                   </h3>
                   {/* Follow/Unfollow Button */}
                   {currentReview.author?.node?.databaseId && 
-                   (!session?.user?.userId || 
-                    parseInt(String(session.user.userId)) !== currentReview.author.node.databaseId) && (
+                   (!user?.id || 
+                    parseInt(String(user.id)) !== currentReview.author.node.databaseId) && (
                     <button
                       onClick={handleFollowClick}
                       disabled={followLoading[currentReview.author.node.databaseId] || !currentReview.author.node.databaseId}
@@ -789,7 +832,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
               </h3>
                 
                 {/* Comment input */}
-                {session?.user ? (
+                {user ? (
                   <div className="swipeable-review-viewer-desktop__comment-input">
                     {isSubmittingComment ? (
                       <div className="flex-1 text-xs text-gray-500 italic">

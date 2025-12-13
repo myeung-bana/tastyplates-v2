@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 
 /**
- * Simplified OAuth callback handler
- * With unified authentication flow using JWT Auth plugin,
- * NextAuth should handle OAuth callbacks automatically.
- * This component only cleans up cookies and refreshes the router.
+ * OAuth callback handler for Firebase authentication
+ * Cleans up OAuth cookies and refreshes the router after authentication
+ * Firebase handles OAuth callbacks automatically via popup/redirect
  */
 export default function OAuthCallbackHandler() {
-    const { status } = useSession();
+    const { loading } = useFirebaseSession();
     const router = useRouter();
 
     useEffect(() => {
@@ -20,8 +19,8 @@ export default function OAuthCallbackHandler() {
         const oauthFromModal = Cookies.get('oauth_from_modal');
         
         if (oauthFromModal === 'true') {
-            // Wait for session to be ready (authenticated or unauthenticated)
-            if (status === 'loading') {
+            // Wait for Firebase session to be ready (authenticated or unauthenticated)
+            if (loading) {
                 return;
             }
 
@@ -32,7 +31,7 @@ export default function OAuthCallbackHandler() {
             // Refresh router to update server components with new session
             router.refresh();
         }
-    }, [status, router]);
+    }, [loading, router]);
 
     return null;
 }

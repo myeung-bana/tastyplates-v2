@@ -3,7 +3,7 @@ import React, { FormEvent, useEffect, useState, useCallback } from "react";
 import "@/styles/pages/_settings.scss";
 import CustomSelect from "@/components/ui/Select/Select";
 import { languageOptions } from "@/constants/formOptions";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { UserService } from "@/services/user/userService";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { birthdateLimit, birthdateRequired, confirmPasswordRequired, currentPasswordError, currentPasswordRequired, emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, saveSettingsFailed } from "@/constants/messages";
@@ -33,7 +33,7 @@ const formatDateForDisplay = (dateString: string) => {
 const userService = new UserService()
 
 const Settings = () => {
-  const { data: session, status, update } = useSession(); // Add status from useSession
+  const { user, loading } = useFirebaseSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [isPersonalInfoLoading, setIsPersonalInfoLoading] = useState(true);
   const [setting, setSetting] = useState<Record<string, unknown>>({});
@@ -55,7 +55,23 @@ const Settings = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const isGoogleAuth = session?.user?.provider === provider.google;
+  // Check if user authenticated via Google (Firebase auth method)
+  const isGoogleAuth = user?.auth_method === 'google.com';
+  
+  // Helper to get Firebase ID token for API calls
+  const getFirebaseToken = async () => {
+    if (!user?.firebase_uuid) return null;
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+    } catch (error) {
+      console.error('Error getting Firebase token:', error);
+    }
+    return null;
+  };
 
   const validateBirthdate = (birthdate: string) => {
     if (!birthdate) return birthdateRequired;
@@ -105,7 +121,9 @@ const Settings = () => {
 
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
-      const response = await userService.validatePassword(password, session?.accessToken);
+      const token = await getFirebaseToken();
+      if (!token) return false;
+      const response = await userService.validatePassword(password, token);
       return Boolean(response.valid) && response.status === code.success;
     } catch {
       return false;
@@ -163,8 +181,13 @@ const Settings = () => {
     }
 
     try {
-      if (!session?.user?.userId || !session?.accessToken) {
+      if (!user?.id) {
         throw new Error('User session not found');
+      }
+
+      const token = await getFirebaseToken();
+      if (!token) {
+        throw new Error('Failed to get authentication token');
       }
 
       const updateData: Record<string, unknown> = {};
@@ -185,7 +208,7 @@ const Settings = () => {
 
       const response = await userService.updateUserFields(
         updateData,
-        session.accessToken
+        token
       );
 
       if (response?.code == emailExistCode) {
@@ -200,27 +223,12 @@ const Settings = () => {
       }
 
       // Update local cache
-      const localKey = `userData_${session.user.email}`;
+      const localKey = `userData_${user.email}`;
       const cachedData = JSON.parse(localStorage.getItem(localKey) || '{}');
       localStorage.setItem(localKey, JSON.stringify({
         ...cachedData,
         ...updateData,
       }));
-
-      const updatedUser: Record<string, unknown> = {
-        ...session.user,
-        language: updateData.language,
-        birthdate: updateData.birthdate,
-      };
-      
-      if (!isGoogleAuth && updateData.email) {
-        updatedUser.email = updateData.email;
-      }
-      
-      await update({
-        ...session,
-        user: updatedUser,
-      });
 
       setIsSubmitted(true);
       setEditable(Field.None);
@@ -237,12 +245,12 @@ const Settings = () => {
   };
 
   const fetchUserData = useCallback(async () => {
-    // Don't fetch if session is still loading
-    if (status === "loading") return;
+    // Don't fetch if Firebase session is still loading
+    if (loading) return;
 
-    if (session?.user?.email && session?.accessToken) {
+    if (user?.email) {
       setIsPersonalInfoLoading(true);
-      const localKey = `userData_${session.user.email}`;
+      const localKey = `userData_${user.email}`;
       const cached = typeof window !== "undefined" ? localStorage.getItem(localKey) : null;
 
       if (cached) {
@@ -250,26 +258,30 @@ const Settings = () => {
         setUserData(parsedData);
         setSetting((prev: Record<string, unknown>) => ({
           ...prev,
-          email: parsedData.email || parsedData.user_email || "",
-          language: parsedData.language || "en",
-          birthdate: formatDateForInput(parsedData.birthdate)
+          email: parsedData.email || parsedData.user_email || user.email || "",
+          language: parsedData.language || user.language_preference || "en",
+          birthdate: formatDateForInput(parsedData.birthdate || user.birthdate)
         }));
         setIsPersonalInfoLoading(false);
         return;
       }
 
       try {
-        const data = await userService.getCurrentUser(
-          session.accessToken as string
-        );
+        const token = await getFirebaseToken();
+        if (!token) {
+          setIsPersonalInfoLoading(false);
+          return;
+        }
+
+        const data = await userService.getCurrentUser(token);
 
         setUserData(data as unknown as Record<string, unknown>);
         // Initialize setting with formatted date
         setSetting((prev: Record<string, unknown>) => ({
           ...prev,
-          email: data.user_email || "",
-          language: data.language || "en",
-          birthdate: formatDateForInput(data.birthdate as string)
+          email: data.user_email || user.email || "",
+          language: data.language || user.language_preference || "en",
+          birthdate: formatDateForInput(data.birthdate as string || user.birthdate || "")
         }));
         if (typeof window !== "undefined") {
           localStorage.setItem(localKey, JSON.stringify(data));
@@ -280,11 +292,11 @@ const Settings = () => {
         setIsPersonalInfoLoading(false);
       }
     }
-  }, [status, session?.user?.email, session?.accessToken]);
+  }, [loading, user]);
 
   useEffect(() => {
     fetchUserData();
-  }, [session?.user?.email, session?.accessToken, status, fetchUserData]); // Add status dependency
+  }, [user?.email, loading, fetchUserData]);
 
   const toggleCurrentPassword = () => setShowCurrentPassword(!showCurrentPassword);
   const toggleNewPassword = () => setShowNewPassword(!showNewPassword);

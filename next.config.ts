@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
   },
   sassOptions: {
     includePaths: ["./src/styles"],
-    prependData: `@import "base/variables";`,
   },
   images: {
     remotePatterns: [

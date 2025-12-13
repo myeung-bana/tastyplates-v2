@@ -16,7 +16,6 @@ import { validEmail } from "@/lib/utils";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import { IRegisterData } from "@/interfaces/user/user";
-import { signIn, useSession } from "next-auth/react";
 
 // Note: Type definitions for Google Identity Services are in Login.tsx to avoid duplicate declarations
 
@@ -30,9 +29,7 @@ const userService = new UserService()
 const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const session = useSession();
-  const update = session?.update;
-  // isOAuthFlow removed - using Firebase authentication instead
+  // Using Firebase authentication - no NextAuth session needed
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -129,45 +126,19 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       
       if (result.success && result.firebase_uuid && result.user) {
         // User is created in Hasura by firebaseAuthService
-        // Now sign in with NextAuth
-        const nextAuthResult = await signIn('credentials', {
-          email: result.user.email || email,
-          firebase_uuid: result.firebase_uuid,
-          redirect: false,
-        });
+        // Firebase session is automatically set
         
-        if (nextAuthResult?.ok) {
-          // Store onboarding data
-          const onboardingData = {
-            email: result.user.email || email,
-            username: result.user.displayName || email.split('@')[0],
-            firebase_uuid: result.firebase_uuid,
-            id: result.firebase_uuid,
-            isPartialRegistration: true,
-          };
-          
-          localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
-          router.push(ONBOARDING_ONE);
-        } else {
-          // Better error message - check for detailed error info
-          const errorMsg = nextAuthResult?.error || 'Authentication failed. User may not exist in database.';
-          console.error('NextAuth sign-in failed:', {
-            ok: nextAuthResult?.ok,
-            error: nextAuthResult?.error,
-            status: nextAuthResult?.status,
-            url: nextAuthResult?.url,
-            fullResult: nextAuthResult
-          });
-          
-          // More specific error message based on the error
-          let displayError = errorMsg;
-          if (errorMsg === 'CredentialsSignin' || !errorMsg || errorMsg === '{}') {
-            displayError = 'Authentication failed. The user account may not exist in the database yet. Please try again in a moment or contact support.';
-          }
-          
-          setError(displayError);
-          setIsLoading(false);
-        }
+        // Store onboarding data
+        const onboardingData = {
+          email: result.user.email || email,
+          username: result.user.displayName || email.split('@')[0],
+          firebase_uuid: result.firebase_uuid,
+          id: result.firebase_uuid,
+          isPartialRegistration: true,
+        };
+        
+        localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+        router.push(ONBOARDING_ONE);
       } else {
         setError(result.error || 'Registration failed');
         setIsLoading(false);
@@ -195,62 +166,28 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       
       if (result.success && result.firebase_uuid && result.user) {
         // User is created in Hasura by firebaseAuthService
-        // Add delay to ensure user is fully available before NextAuth sign-in
+        // Firebase session is automatically set
+        // Add delay to ensure user is fully available in Hasura
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Now sign in with NextAuth
-        const nextAuthResult = await signIn('credentials', {
+        // Store onboarding data
+        const onboardingData = {
           email: result.user.email || '',
+          username: result.user.displayName || result.user.email?.split('@')[0] || '',
           firebase_uuid: result.firebase_uuid,
-          redirect: false,
-        });
+          id: result.firebase_uuid,
+          isPartialRegistration: true,
+        };
         
-        if (nextAuthResult?.ok) {
-          // Force session refresh to get latest user data
-          if (update) {
-            await update();
-            // Wait a bit for session to propagate to all components
-            await new Promise(resolve => setTimeout(resolve, 200));
-          }
-          
-          // Store onboarding data
-          const onboardingData = {
-            email: result.user.email || '',
-            username: result.user.displayName || result.user.email?.split('@')[0] || '',
-            firebase_uuid: result.firebase_uuid,
-            id: result.firebase_uuid,
-            isPartialRegistration: true,
-          };
-          
-          localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
-          
-          // Refresh router to update server components with new session
-          router.refresh();
-          
-          // Small delay to ensure session is updated before navigation
-          setTimeout(() => {
-            router.push(ONBOARDING_ONE);
-          }, 300);
-        } else {
-          // Better error message - check for detailed error info
-          const errorMsg = nextAuthResult?.error || 'Authentication failed. User may not exist in database.';
-          console.error('NextAuth sign-in failed:', {
-            ok: nextAuthResult?.ok,
-            error: nextAuthResult?.error,
-            status: nextAuthResult?.status,
-            url: nextAuthResult?.url,
-            fullResult: nextAuthResult
-          });
-          
-          // More specific error message based on the error
-          let displayError = errorMsg;
-          if (errorMsg === 'CredentialsSignin' || !errorMsg || errorMsg === '{}') {
-            displayError = 'Authentication failed. The user account may not exist in the database yet. Please try again in a moment or contact support.';
-          }
-          
-          setError(displayError);
-          setIsLoading(false);
-        }
+        localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
+        
+        // Refresh router to update server components
+        router.refresh();
+        
+        // Small delay to ensure Firebase session propagates
+        setTimeout(() => {
+          router.push(ONBOARDING_ONE);
+        }, 300);
       } else {
         setError(result.error || 'Google registration failed');
         setIsLoading(false);

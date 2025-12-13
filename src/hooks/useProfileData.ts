@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
 interface UseProfileDataReturn {
@@ -16,7 +16,7 @@ interface UseProfileDataReturn {
 
 // Support both UUID (string) and legacy numeric IDs
 export const useProfileData = (targetUserId: string | number): UseProfileDataReturn => {
-  const { data: session, status } = useSession();
+  const { user } = useFirebaseSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [nameLoading, setNameLoading] = useState(true);
   const [aboutMeLoading, setAboutMeLoading] = useState(true);
@@ -28,8 +28,8 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
 
   const isViewingOwnProfile = useMemo(() => {
     // Compare as strings to handle both UUID and numeric IDs
-    return String(session?.user?.id) === String(targetUserId);
-  }, [session?.user?.id, targetUserId]);
+    return String(user?.id) === String(targetUserId);
+  }, [user?.id, targetUserId]);
 
   useEffect(() => {
     const fetchPublicUserData = async () => {
@@ -133,7 +133,7 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
     };
 
     fetchPublicUserData();
-  }, [targetUserId, isViewingOwnProfile, session?.user]);
+  }, [targetUserId, isViewingOwnProfile, user]);
 
   return {
     userData,

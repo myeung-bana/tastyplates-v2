@@ -17,7 +17,7 @@ const httpLink = createHttpLink({
   uri: graphqlUrl,
 });
 
-// Cache for session token to avoid fetching on every GraphQL request
+// Cache for Firebase token to avoid fetching on every GraphQL request
 let cachedToken: string | null = null;
 let tokenCacheTime: number = 0;
 const TOKEN_CACHE_TTL = 60000; // Cache for 60 seconds
@@ -25,22 +25,33 @@ const TOKEN_CACHE_TTL = 60000; // Cache for 60 seconds
 const authLink = setContext(async (_, { headers }) => {
   let token = null;
   
+  // Only get token on client-side
+  if (typeof window === 'undefined') {
+    return { headers };
+  }
+  
   // Check if we have a cached token that's still valid
   const now = Date.now();
   if (cachedToken && (now - tokenCacheTime) < TOKEN_CACHE_TTL) {
     token = cachedToken;
   } else {
-    // Fetch fresh token from session
+    // Get Firebase ID token
     try {
-      const response = await fetch('/api/auth/session');
-      const sessionData = await response.json();
-      token = sessionData?.accessToken || null;
-      
-      // Update cache
-      cachedToken = token;
-      tokenCacheTime = now;
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        token = await currentUser.getIdToken();
+        
+        // Update cache
+        cachedToken = token;
+        tokenCacheTime = now;
+      } else {
+        // No user logged in
+        cachedToken = null;
+        tokenCacheTime = 0;
+      }
     } catch (error) {
-      console.error("Error fetching session token:", error);
+      console.error("Error fetching Firebase token:", error);
       // Clear cache on error
       cachedToken = null;
       tokenCacheTime = 0;

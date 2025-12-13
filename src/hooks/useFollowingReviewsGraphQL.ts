@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { ReviewService } from '@/services/Reviews/reviewService';
 import { FollowService } from '@/services/follow/followService';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { GraphQLReview, PageInfo } from '@/types/graphql';
 
 interface UseFollowingReviewsGraphQLReturn {
@@ -14,7 +15,7 @@ interface UseFollowingReviewsGraphQLReturn {
 }
 
 export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -26,27 +27,68 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
   
   const reviewService = useRef(new ReviewService());
   const followService = useRef(new FollowService());
+  
+  // Helper to get Firebase ID token for API calls
+  const getFirebaseToken = useCallback(async () => {
+    if (!user?.firebase_uuid) return null;
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+    } catch (error) {
+      console.error('Error getting Firebase token:', error);
+    }
+    return null;
+  }, [user]);
 
   // Fetch following user IDs
   const fetchFollowingUserIds = useCallback(async () => {
-    if (!session?.user?.userId) return [];
+    if (!user?.id) return [];
     
     try {
-      // Public endpoint - don't pass token as it doesn't require authentication
-      // Passing a token causes the JWT plugin to validate it, which can fail and block the request
-      const followingList = await followService.current.getFollowingList(
-        session.user.userId
-        // No token for public endpoint
-      );
-      return followingList.map(user => user.id as number);
+      // Use new Hasura API endpoint that accepts UUIDs
+      const userIdStr = String(user.id);
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUIDFormat = UUID_REGEX.test(userIdStr);
+      
+      if (isUUIDFormat) {
+        // Use new Hasura API endpoint for UUIDs
+        const followingResult = await restaurantUserService.getFollowingList(userIdStr);
+        
+        if (followingResult.success && followingResult.data) {
+          // The API returns user objects with UUID ids
+          // Since fetchUserReviews expects numeric IDs, we need to look them up
+          // For now, return empty array as the review service doesn't support UUIDs yet
+          // TODO: Update review service to accept UUIDs or add UUID-to-numeric-ID lookup
+          console.warn('Following list returned UUIDs, but review service requires numeric IDs. Skipping following reviews.');
+          return [];
+        }
+        return [];
+      } else {
+        // Fallback to legacy endpoint for numeric IDs
+        const numericUserId = Number(userIdStr);
+        if (isNaN(numericUserId) || numericUserId <= 0) {
+          console.warn('Invalid numeric user ID:', userIdStr);
+          return [];
+        }
+        
+        const followingList = await followService.current.getFollowingList(numericUserId);
+        return followingList.map(user => {
+          const id = user.id;
+          return typeof id === 'number' ? id : Number(id);
+        }).filter((id: number) => !isNaN(id) && id > 0);
+      }
     } catch (error) {
       console.error('Error fetching following user IDs:', error);
       return [];
     }
-  }, [session?.user?.userId]);
+  }, [user?.id]);
 
   const loadFollowingReviews = useCallback(async (append: boolean = false) => {
-    if (!session?.accessToken || followingUserIds.length === 0) {
+    const token = await getFirebaseToken();
+    if (!token || followingUserIds.length === 0) {
       if (!append) {
         setInitialLoading(false);
       }
@@ -78,7 +120,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
             userId,
             first,
             cursor,
-            session.accessToken
+            token
           );
           
           allReviews.push(...userReviews);
@@ -135,13 +177,13 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [session?.accessToken, followingUserIds, endCursor, currentUserIndex]);
+  }, [getFirebaseToken, followingUserIds, endCursor, currentUserIndex]);
 
   const loadMore = useCallback(() => {
-    if (!loading && hasMore && session?.accessToken && !initialLoading) {
+    if (!loading && hasMore && user && !initialLoading) {
       loadFollowingReviews(true);
     }
-  }, [loading, hasMore, session?.accessToken, initialLoading, loadFollowingReviews]);
+  }, [loading, hasMore, user, initialLoading, loadFollowingReviews]);
 
   const refreshFollowingReviews = useCallback(async () => {
     setEndCursor(null);
@@ -150,24 +192,24 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
     await loadFollowingReviews(false);
   }, [loadFollowingReviews]);
 
-  // Initialize following user IDs when session is available
+  // Initialize following user IDs when user is available
   useEffect(() => {
-    if (session?.accessToken && !isInitialized) {
+    if (user && !isInitialized) {
       setIsInitialized(true);
       fetchFollowingUserIds().then(setFollowingUserIds);
     }
-  }, [session?.accessToken, isInitialized, fetchFollowingUserIds]);
+  }, [user, isInitialized, fetchFollowingUserIds]);
 
   // Load reviews when following user IDs are available
   useEffect(() => {
     if (followingUserIds.length > 0 && isInitialized) {
       loadFollowingReviews(false);
     }
-  }, [followingUserIds, isInitialized]); // Removed loadFollowingReviews from dependencies
+  }, [followingUserIds, isInitialized, loadFollowingReviews]);
 
-  // Reset state when session is lost
+  // Reset state when user is lost
   useEffect(() => {
-    if (!session?.accessToken && isInitialized) {
+    if (!user && isInitialized) {
       setReviews([]);
       setFollowingUserIds([]);
       setEndCursor(null);
@@ -176,7 +218,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       setCurrentUserIndex(0);
       setIsInitialized(false);
     }
-  }, [session?.accessToken, isInitialized]);
+  }, [user, isInitialized]);
 
   return {
     reviews,

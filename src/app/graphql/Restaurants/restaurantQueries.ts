@@ -1,6 +1,7 @@
 // restaurantQueries.ts - GraphQL queries for restaurants table (Hasura)
 
 // GET ALL RESTAURANTS - List all restaurants with pagination and filtering
+// Enhanced with all fields from documentation including categories, branches, and relationships
 export const GET_ALL_RESTAURANTS = `
   query GetAllRestaurants(
     $limit: Int
@@ -21,7 +22,6 @@ export const GET_ALL_RESTAURANTS = `
       status
       content
       price_range_id
-      price
       average_rating
       ratings_count
       listing_street
@@ -39,6 +39,12 @@ export const GET_ALL_RESTAURANTS = `
       published_at
       cuisines
       palates
+      categories
+      is_main_location
+      branch_group_id
+      # Note: branches, parent_restaurant, and restaurant_price_range relationships not available in Hasura schema
+      # Use branch_group_id to query related restaurants separately if needed
+      # Use price_range_id field directly instead of relationship
     }
     restaurants_aggregate(where: $where) {
       aggregate {
@@ -59,7 +65,6 @@ export const GET_RESTAURANT_BY_UUID = `
       status
       content
       price_range_id
-      price
       average_rating
       ratings_count
       listing_street
@@ -92,7 +97,6 @@ export const GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE = `
       status
       content
       price_range_id
-      price
       average_rating
       ratings_count
       listing_street
@@ -132,7 +136,6 @@ export const GET_RESTAURANT_BY_SLUG_HASURA = `
       status
       content
       price_range_id
-      price
       average_rating
       ratings_count
       listing_street
@@ -165,7 +168,6 @@ export const GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE = `
       status
       content
       price_range_id
-      price
       average_rating
       ratings_count
       listing_street
@@ -193,4 +195,3 @@ export const GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE = `
     }
   }
 `;
-

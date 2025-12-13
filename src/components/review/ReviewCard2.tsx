@@ -8,7 +8,7 @@ import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
@@ -32,7 +32,7 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   const handleCardClick = () => {
     setIsModalOpen(true);
@@ -101,8 +101,8 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
         <div className="flex items-center gap-3 mb-2">
           {/* User Avatar */}
           {data.author?.node?.databaseId || data.id ? (
-            session?.user?.id &&
-            String(session.user.id) ===
+            user?.id &&
+            String(user.id) ===
               String(data.author?.node?.databaseId || data.id) ? (
               <Link href={PROFILE}>
                 <FallbackImage
@@ -114,7 +114,7 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
                   type={FallbackImageType.Icon}
                 />
               </Link>
-            ) : session ? (
+            ) : user ? (
               <Link
                 href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                 prefetch={false}
@@ -153,15 +153,15 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
           {/* User Name - Matching ReviewCard font sizes */}
           <div className="flex-1 min-w-0">
             {data.author?.node?.databaseId || data.id ? (
-              session?.user?.id &&
-              String(session.user.id) ===
+              user?.id &&
+              String(user.id) ===
                 String(data.author?.node?.databaseId || data.id) ? (
                 <Link href={PROFILE}>
                   <h3 className="text-[12px] md:text-xs font-medium text-[#31343F] truncate cursor-pointer">
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
-              ) : session ? (
+              ) : user ? (
                 <Link
                   href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
                   prefetch={false}

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { 
   FiHome, 
   FiCompass, 
@@ -13,6 +12,7 @@ import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages"
 import { useAuthModal } from "../auth/AuthModalWrapper";
 import { useProfileData } from "@/hooks/useProfileData";
 import { DEFAULT_USER_ICON } from "@/constants/images";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -34,15 +34,14 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, loading } = useFirebaseSession();
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { showSignin } = useAuthModal();
   
   // Fetch current user profile data for authenticated users
-  // Use session.user.id directly (can be UUID string or numeric ID)
-  const currentUserId = session?.user?.id || null;
+  const currentUserId = user?.id || null;
   const { userData } = useProfileData(currentUserId || '');
 
   // Check if mobile on mount and resize
@@ -88,7 +87,7 @@ const BottomNav: React.FC = () => {
 
   // Handle profile click for non-authenticated users
   const handleProfileClick = (e: React.MouseEvent) => {
-    if (!session?.user) {
+    if (!user || loading) {
       e.preventDefault();
       showSignin();
     }
@@ -96,7 +95,7 @@ const BottomNav: React.FC = () => {
 
   // Handle click for items that require auth
   const handleAuthRequiredClick = (e: React.MouseEvent, item: any) => {
-    if (!session?.user) {
+    if (!user || loading) {
       e.preventDefault();
       showSignin();
     }
@@ -154,7 +153,7 @@ const BottomNav: React.FC = () => {
     }`}>
       <div className="flex items-center justify-around px-2 py-1">
         {navItems
-          .filter(item => !item.requiresAuth || session?.user || item.showWhenUnauthenticated)
+          .filter(item => !item.requiresAuth || (!loading && !!user) || item.showWhenUnauthenticated)
           .map((item) => {
           const Icon = item.icon;
           const active = isActive(item.activePaths);
@@ -171,11 +170,11 @@ const BottomNav: React.FC = () => {
               }`}
             >
               {item.isAvatar && (getProfileImageUrl(userData?.profile_image) || 
-                                 session?.user?.image) ? (
+                                 getProfileImageUrl(user?.profile_image)) ? (
                 <img
                   src={
                     getProfileImageUrl(userData?.profile_image) ||
-                    (session?.user?.image as string) ||
+                    getProfileImageUrl(user?.profile_image) ||
                     DEFAULT_USER_ICON
                   }
                   alt="Profile"
