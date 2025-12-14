@@ -179,20 +179,6 @@ export interface ReviewBlockProps {
   };
 }
 
-export interface RestaurantCardProps {
-  restaurant: {
-    id: string;
-    databaseId: number;
-    slug: string;
-    name: string;
-    image: string;
-    rating: number;
-    palatesNames?: string[];
-    streetAddress?: string;
-    countries: string;
-    priceRange: string;
-    averageRating?: number;
-    ratingsCount?: number;
-    status?: string;
-  };
-}
+// RestaurantCardProps moved to src/types/restaurant.ts
+// This export is kept for backward compatibility but will be deprecated
+export type { RestaurantCardProps } from "./restaurant"

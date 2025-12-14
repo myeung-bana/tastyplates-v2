@@ -27,6 +27,7 @@
     "@heroui/theme": "^2.4.13",
     "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-slot": "^1.2.4",
     "@react-google-maps/api": "^2.20.6",
     "@tailwindcss/typography": "^0.5.16",
     "@use-gesture/react": "^10.3.1",

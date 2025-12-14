@@ -124,8 +124,11 @@ export class RestaurantService {
         try {
             return await restaurantRepo.addRecentlyVisitedRestaurant(postId, accessToken);
         } catch (error) {
-            console.error('Error adding recently visited restaurant:', error);
-            throw new Error('Failed to add recently visited restaurant');
+            // Gracefully handle error - recently visited is a non-critical feature
+            // The WordPress API may not be available, so we fail silently
+            console.warn('Failed to add recently visited restaurant (non-critical):', error);
+            // Return false instead of throwing to prevent breaking user experience
+            return false;
         }
     }
 

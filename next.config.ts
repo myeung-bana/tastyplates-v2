@@ -7,10 +7,8 @@ const nextConfig: NextConfig = {
     // Ignore TypeScript errors during build (temporary fix)
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Ignore ESLint errors during build (temporary fix)
-    ignoreDuringBuilds: true,
-  },
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {},
   sassOptions: {
     includePaths: ["./src/styles"],
   },

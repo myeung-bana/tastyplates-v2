@@ -3,6 +3,7 @@
 import { RestaurantV2 } from '@/app/api/v1/services/restaurantV2Service';
 import { Listing } from '@/interfaces/restaurant/restaurant';
 import { DEFAULT_RESTAURANT_IMAGE } from '@/constants/images';
+import { getBestAddress } from '@/utils/addressUtils';
 
 // Restaurant type for list view (matches component interface)
 export interface Restaurant {

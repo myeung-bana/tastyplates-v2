@@ -133,6 +133,57 @@ export const GET_USER_REVIEWS = `
   }
 `;
 
+// GET USER'S DRAFT REVIEWS
+export const GET_USER_DRAFT_REVIEWS = `
+  query GetUserDraftReviews(
+    $authorId: uuid!
+    $limit: Int
+    $offset: Int
+  ) {
+    restaurant_reviews(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "draft" }
+      }
+      order_by: { created_at: desc }
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      updated_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "draft" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 // CREATE REVIEW MUTATION
 export const CREATE_REVIEW = `
   mutation CreateReview($object: restaurant_reviews_insert_input!) {
@@ -294,6 +345,53 @@ export const CHECK_REVIEW_LIKES_BATCH = `
     ) {
       review_id
       id
+    }
+  }
+`;
+
+// GET ALL REVIEWS (for trending/feed)
+export const GET_ALL_REVIEWS = `
+  query GetAllReviews(
+    $limit: Int
+    $offset: Int
+  ) {
+    restaurant_reviews(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+      order_by: { created_at: desc }
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
     }
   }
 `;

@@ -150,6 +150,33 @@ class ReviewV2Service {
     };
   }
 
+  async getAllReviews(
+    options?: { limit?: number; offset?: number }
+  ): Promise<ReviewsResponse> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+
+    const response = await fetch(`${this.baseUrl}/get-all-reviews?${params}`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to fetch reviews' }));
+      throw new Error(error.error || 'Failed to fetch reviews');
+    }
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch reviews');
+    }
+    
+    // Transform response to match ReviewsResponse interface
+    return {
+      reviews: result.data || [],
+      total: result.meta?.total || 0,
+      limit: result.meta?.limit || 0,
+      offset: result.meta?.offset || 0,
+      hasMore: result.meta?.hasMore || false
+    };
+  }
+
   async getUserReviews(
     authorId: string,
     options?: { limit?: number; offset?: number; status?: string }
@@ -247,6 +274,41 @@ class ReviewV2Service {
     }
     const result = await response.json();
     return result.success ? result.data?.liked || false : false;
+  }
+
+  async getDraftReviews(
+    accessToken: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<ReviewsResponse> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+
+    const response = await fetch(`${this.baseUrl}/get-draft-reviews?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to fetch draft reviews' }));
+      throw new Error(error.error || 'Failed to fetch draft reviews');
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch draft reviews');
+    }
+    
+    // Transform response to match ReviewsResponse interface
+    return {
+      reviews: result.data || [],
+      total: result.meta?.total || 0,
+      limit: result.meta?.limit || 0,
+      offset: result.meta?.offset || 0,
+      hasMore: result.meta?.hasMore || false
+    };
   }
 }
 

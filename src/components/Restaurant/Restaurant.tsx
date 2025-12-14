@@ -480,9 +480,13 @@ const RestaurantPage = () => {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
       const token = await currentUser.getIdToken();
+      // Non-blocking: recently visited is a non-critical feature
+      // Errors are handled gracefully in the service layer
       await restaurantService.addRecentlyVisitedRestaurant(restaurantId, token);
     } catch (error) {
-      console.error("Failed to add recently visited restaurant:", error);
+      // Silently handle error - this is a non-critical feature
+      // The error is already logged in the service layer
+      console.warn("Failed to add recently visited restaurant (non-critical):", error);
     }
   };
 

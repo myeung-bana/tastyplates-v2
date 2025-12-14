@@ -153,7 +153,7 @@ const ReviewSubmissionPage = () => {
             }
           } else {
             console.warn('No access token available for WordPress fallback');
-            // Set defaults if no session
+            // Set defaults if no firebaseUser
             setRestaurantName('Restaurant');
             setRestaurantLocation('Location not available');
           }
@@ -167,7 +167,7 @@ const ReviewSubmissionPage = () => {
     };
 
     fetchRestaurantData();
-  }, [restaurantSlug, session]);
+  }, [restaurantSlug, firebaseUser]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);

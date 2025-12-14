@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { HOME } from '@/constants/pages';
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
@@ -22,6 +22,20 @@ export default function AuthErrorPage() {
         <p className="text-gray-600">Redirecting...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }
 

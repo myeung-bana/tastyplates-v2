@@ -43,8 +43,8 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
   const router = useRouter();
 
   const handleEdit = () => {
-    // Navigate to edit-review page with the review ID
-    router.push(PAGE(EDIT_REVIEW, ["draft", reviewDraft.id.toString()]));
+    // Navigate to edit-review page with restaurant slug and review UUID
+    router.push(PAGE(EDIT_REVIEW, [reviewDraft.restaurantSlug, reviewDraft.uuid]));
   };
 
   // Extract first image URL with better error handling

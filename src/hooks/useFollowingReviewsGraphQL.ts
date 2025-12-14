@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
-import { ReviewService } from '@/services/Reviews/reviewService';
-import { FollowService } from '@/services/follow/followService';
+import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
+import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
-import { GraphQLReview, PageInfo } from '@/types/graphql';
+import { GraphQLReview } from '@/types/graphql';
 
 interface UseFollowingReviewsGraphQLReturn {
   reviews: GraphQLReview[];
@@ -20,35 +20,16 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
-  const [followingUserIds, setFollowingUserIds] = useState<number[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [followingUserIds, setFollowingUserIds] = useState<string[]>([]); // Changed to UUIDs
   const [currentUserIndex, setCurrentUserIndex] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  const reviewService = useRef(new ReviewService());
-  const followService = useRef(new FollowService());
-  
-  // Helper to get Firebase ID token for API calls
-  const getFirebaseToken = useCallback(async () => {
-    if (!user?.firebase_uuid) return null;
-    try {
-      const { auth } = await import('@/lib/firebase');
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        return await currentUser.getIdToken();
-      }
-    } catch (error) {
-      console.error('Error getting Firebase token:', error);
-    }
-    return null;
-  }, [user]);
 
-  // Fetch following user IDs
+  // Fetch following user IDs (now returns UUIDs)
   const fetchFollowingUserIds = useCallback(async () => {
     if (!user?.id) return [];
     
     try {
-      // Use new Hasura API endpoint that accepts UUIDs
       const userIdStr = String(user.id);
       const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isUUIDFormat = UUID_REGEX.test(userIdStr);
@@ -58,27 +39,13 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
         const followingResult = await restaurantUserService.getFollowingList(userIdStr);
         
         if (followingResult.success && followingResult.data) {
-          // The API returns user objects with UUID ids
-          // Since fetchUserReviews expects numeric IDs, we need to look them up
-          // For now, return empty array as the review service doesn't support UUIDs yet
-          // TODO: Update review service to accept UUIDs or add UUID-to-numeric-ID lookup
-          console.warn('Following list returned UUIDs, but review service requires numeric IDs. Skipping following reviews.');
-          return [];
+          // Extract UUIDs from the following list
+          return followingResult.data.map((followedUser: any) => followedUser.id).filter(Boolean);
         }
         return [];
       } else {
-        // Fallback to legacy endpoint for numeric IDs
-        const numericUserId = Number(userIdStr);
-        if (isNaN(numericUserId) || numericUserId <= 0) {
-          console.warn('Invalid numeric user ID:', userIdStr);
-          return [];
-        }
-        
-        const followingList = await followService.current.getFollowingList(numericUserId);
-        return followingList.map(user => {
-          const id = user.id;
-          return typeof id === 'number' ? id : Number(id);
-        }).filter((id: number) => !isNaN(id) && id > 0);
+        console.warn('User ID is not in UUID format. Cannot fetch following reviews.');
+        return [];
       }
     } catch (error) {
       console.error('Error fetching following user IDs:', error);
@@ -87,8 +54,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
   }, [user?.id]);
 
   const loadFollowingReviews = useCallback(async (append: boolean = false) => {
-    const token = await getFirebaseToken();
-    if (!token || followingUserIds.length === 0) {
+    if (followingUserIds.length === 0) {
       if (!append) {
         setInitialLoading(false);
       }
@@ -97,15 +63,17 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
     
     if (!append) {
       setInitialLoading(true);
+      setOffset(0);
     } else {
       setLoading(true);
     }
     
     try {
-      const first = append ? 8 : 16;
+      const limit = append ? 8 : 16;
+      const currentOffset = append ? offset : 0;
       const allReviews: GraphQLReview[] = [];
-      let hasNextPage = false;
-      let lastEndCursor: string | null = null;
+      let hasMoreReviews = false;
+      let totalFetched = 0;
 
       // If this is the first load, fetch from all users
       // If loading more, continue from where we left off
@@ -113,30 +81,35 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       
       for (let i = startUserIndex; i < followingUserIds.length; i++) {
         const userId = followingUserIds[i];
-        const cursor = (i === startUserIndex && append) ? endCursor : null;
+        const userOffset = (i === startUserIndex && append) ? currentOffset : 0;
         
         try {
-          const { reviews: userReviews, pageInfo } = await reviewService.current.fetchUserReviews(
-            userId,
-            first,
-            cursor,
-            token
+          const response = await reviewV2Service.getUserReviews(userId, {
+            limit,
+            offset: userOffset
+          });
+          
+          // Transform ReviewV2 to GraphQLReview
+          const transformedReviews = response.reviews.map(review => 
+            transformReviewV2ToGraphQLReview(review)
           );
           
-          allReviews.push(...userReviews);
+          allReviews.push(...transformedReviews);
+          totalFetched += transformedReviews.length;
           
-          // If this user has more pages, we'll continue from here next time
-          if (pageInfo.hasNextPage) {
-            hasNextPage = true;
-            lastEndCursor = pageInfo.endCursor;
+          // If this user has more reviews, we'll continue from here next time
+          if (response.hasMore) {
+            hasMoreReviews = true;
             setCurrentUserIndex(i);
+            setOffset(userOffset + transformedReviews.length);
             break;
           }
           
           // If we've reached the end for this user, move to next user
           if (i === followingUserIds.length - 1) {
-            hasNextPage = false;
+            hasMoreReviews = false;
             setCurrentUserIndex(0); // Reset for next refresh
+            setOffset(0);
           }
         } catch (error) {
           console.error(`Error fetching reviews for user ${userId}:`, error);
@@ -164,8 +137,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
         setReviews(uniqueReviews);
       }
       
-      setEndCursor(lastEndCursor);
-      setHasMore(hasNextPage);
+      setHasMore(hasMoreReviews);
       
     } catch (error) {
       console.error('Error loading following reviews:', error);
@@ -177,7 +149,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [getFirebaseToken, followingUserIds, endCursor, currentUserIndex]);
+  }, [followingUserIds, offset, currentUserIndex]);
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore && user && !initialLoading) {
@@ -186,7 +158,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
   }, [loading, hasMore, user, initialLoading, loadFollowingReviews]);
 
   const refreshFollowingReviews = useCallback(async () => {
-    setEndCursor(null);
+    setOffset(0);
     setHasMore(true);
     setCurrentUserIndex(0);
     await loadFollowingReviews(false);
@@ -212,7 +184,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
     if (!user && isInitialized) {
       setReviews([]);
       setFollowingUserIds([]);
-      setEndCursor(null);
+      setOffset(0);
       setHasMore(true);
       setInitialLoading(true);
       setCurrentUserIndex(0);

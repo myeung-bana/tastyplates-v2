@@ -1,6 +1,6 @@
 'use client'
-import { ReviewService } from "@/services/Reviews/reviewService";
-import { GraphQLReview } from "@/types/graphql";
+import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
+import { transformReviewV2ToReviewedDataProps } from "@/utils/reviewTransformers";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard2 from "./ReviewCard2";
 import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
@@ -10,29 +10,6 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 
-const reviewService = new ReviewService();
-
-// Helper function to convert GraphQLReview to ReviewedDataProps
-const mapToReviewedDataProps = (review: GraphQLReview): ReviewedDataProps => {
-  return {
-    databaseId: review.databaseId,
-    id: review.id,
-    reviewMainTitle: review.reviewMainTitle,
-    commentLikes: String(review.commentLikes),
-    userLiked: review.userLiked,
-    content: review.content,
-    uri: "", // Not available in GraphQLReview
-    reviewStars: String(review.reviewStars),
-    date: review.date,
-    reviewImages: review.reviewImages,
-    palates: review.palates,
-    userAvatar: review.userAvatar,
-    author: review.author,
-    userId: review.author.node.databaseId,
-    commentedOn: review.commentedOn,
-  };
-};
-
 type TabType = 'trending' | 'foryou';
 
 const Reviews = () => {
@@ -41,14 +18,13 @@ const Reviews = () => {
   const { showSignin } = useAuthModal();
   
   // Trending reviews state
-  const [trendingReviews, setTrendingReviews] = useState<GraphQLReview[]>([]);
+  const [trendingReviews, setTrendingReviews] = useState<ReviewedDataProps[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const MAX_REVIEWS = 25;
-  const [hasReachedLimit, setHasReachedLimit] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const LIMIT = 16; // Initial load
+  const LOAD_MORE_LIMIT = 8; // Subsequent loads
   const observerRef = useRef<HTMLDivElement | null>(null);
-  const isFirstLoad = useRef(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   // For You reviews (using the hook)
@@ -64,71 +40,137 @@ const Reviews = () => {
   const currentReviews = activeTab === 'trending' ? trendingReviews : forYouReviews;
   const currentLoading = activeTab === 'trending' ? loading : forYouLoading;
   const currentInitialLoading = activeTab === 'trending' ? !initialLoaded : forYouInitialLoading;
-  const currentHasMore = activeTab === 'trending' ? hasNextPage && !hasReachedLimit : forYouHasMore;
+  const currentHasMore = activeTab === 'trending' ? hasNextPage : forYouHasMore;
 
-  const loadMoreTrending = useCallback(async () => {
-    if (loading || !hasNextPage || hasReachedLimit) return;
+  const fetchTrendingReviews = useCallback(async (
+    limit = LIMIT,
+    currentOffset = 0
+  ) => {
+    if (loading || !hasNextPage) return;
     
     setLoading(true);
-    const first = isFirstLoad.current ? 16 : 8;
     
-    // Get Firebase ID token for API call
-    let token: string | undefined = undefined;
-    if (user?.firebase_uuid) {
-      try {
-        const { auth } = await import('@/lib/firebase');
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          token = await currentUser.getIdToken();
-        }
-      } catch (error) {
-        console.error('Error getting Firebase token:', error);
-      }
-    }
-    
-    const { reviews: newReviews, pageInfo } = await reviewService.fetchAllReviews(first, endCursor, token);
-    
-    // Calculate how many reviews we can add without exceeding the limit
-    const currentCount = trendingReviews.length;
-    const remainingSlots = MAX_REVIEWS - currentCount;
-    const reviewsToAdd = newReviews.slice(0, remainingSlots);
-    
-    setTrendingReviews(prev => [...prev, ...reviewsToAdd]);
-    setEndCursor(pageInfo.endCursor);
-    setHasNextPage(pageInfo.hasNextPage);
-    
-    // Check if we've reached the limit
-    if (currentCount + reviewsToAdd.length >= MAX_REVIEWS) {
-      setHasReachedLimit(true);
-      setHasNextPage(false); // Stop further loading
-    }
-    
-    setLoading(false);
+    try {
+      console.log('Reviews - fetchTrendingReviews called:', {
+        limit,
+        currentOffset
+      });
+      
+      // Fetch reviews from new API
+      const response = await reviewV2Service.getAllReviews({
+        limit,
+        offset: currentOffset
+      });
 
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false;
+      console.log('Reviews - API Response:', {
+        success: response.reviews ? true : false,
+        dataLength: response.reviews?.length,
+        meta: { total: response.total, hasMore: response.hasMore },
+        firstItem: response.reviews?.[0]
+      });
+
+      if (!response.reviews || response.reviews.length === 0) {
+        console.log('Reviews - No reviews returned');
+        setHasNextPage(false);
+        setLoading(false);
+        return;
+      }
+
+      // Transform ReviewV2 items to ReviewedDataProps format (same as profile tab)
+      const reviewV2Items: ReviewV2[] = response.reviews.map((item: any) => {
+        const reviewV2: ReviewV2 = {
+          id: item.id,
+          restaurant_uuid: item.restaurant_uuid || item.restaurant?.uuid || '',
+          author_id: item.author_id,
+          parent_review_id: null,
+          title: item.title,
+          content: item.content,
+          rating: item.rating,
+          images: item.images,
+          palates: item.palates,
+          hashtags: item.hashtags,
+          mentions: null,
+          recognitions: item.recognitions,
+          likes_count: item.likes_count || 0,
+          replies_count: item.replies_count || 0,
+          status: item.status as any,
+          is_pinned: false,
+          is_featured: false,
+          created_at: item.created_at,
+          updated_at: item.updated_at || item.created_at,
+          published_at: item.published_at,
+          deleted_at: null,
+          author: item.author,
+          restaurant: item.restaurant,
+          user_liked: false
+        };
+        return reviewV2;
+      });
+
+      console.log('Reviews - ReviewV2 items created:', reviewV2Items.length);
+
+      // Transform to ReviewedDataProps (same as profile tab)
+      const transformedReviews = reviewV2Items.map((reviewV2) => {
+        return transformReviewV2ToReviewedDataProps(reviewV2);
+      });
+
+      console.log('Reviews - Transformed reviews:', transformedReviews.length);
+
+      setTrendingReviews((prev) => {
+        if (currentOffset === 0) {
+          return transformedReviews;
+        }
+        const all = [...prev, ...transformedReviews];
+        // Remove duplicates
+        const uniqueMap = new Map(all.map((r) => [r.id, r]));
+        return Array.from(uniqueMap.values());
+      });
+
+      setOffset(currentOffset + transformedReviews.length);
+      setHasNextPage(response.hasMore || false);
+      
+      console.log('Reviews - Final state:', {
+        reviewsCount: transformedReviews.length,
+        total: response.total,
+        offset: currentOffset + transformedReviews.length,
+        hasNextPage: response.hasMore || false
+      });
+    } catch (error) {
+      console.error('Error loading trending reviews:', error);
+      setHasNextPage(false);
+    } finally {
+      setLoading(false);
     }
-  }, [loading, hasNextPage, hasReachedLimit, trendingReviews.length, endCursor, user]);
+  }, [loading, hasNextPage]);
+
+  const loadMoreTrending = useCallback(async () => {
+    if (loading || !hasNextPage) return;
+    await fetchTrendingReviews(LOAD_MORE_LIMIT, offset);
+  }, [loading, hasNextPage, offset, fetchTrendingReviews]);
 
   // Load trending reviews on mount or when switching to trending tab
   useEffect(() => {
     if (activeTab === 'trending' && !initialLoaded) {
+      console.log('Reviews - Starting initial fetch');
+      setTrendingReviews([]);
+      setOffset(0);
+      setHasNextPage(true);
       setInitialLoaded(true);
+      fetchTrendingReviews(LIMIT, 0);
     }
-  }, [activeTab, initialLoaded]);
-
-  useEffect(() => {
-    if (activeTab === 'trending' && initialLoaded) {
-      loadMoreTrending();
-    }
-  }, [activeTab, initialLoaded, loadMoreTrending]);
+    return () => {
+      if (activeTab !== 'trending') {
+        setTrendingReviews([]);
+      }
+    };
+  }, [activeTab, initialLoaded, fetchTrendingReviews]);
 
   // Setup Intersection Observer for trending
   useEffect(() => {
-    if (activeTab !== 'trending' || !initialLoaded || hasReachedLimit) return;
+    if (activeTab !== 'trending' || !initialLoaded) return;
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0]?.isIntersecting && hasNextPage && !loading && !hasReachedLimit) {
+        if (entries[0]?.isIntersecting && hasNextPage && !loading) {
           loadMoreTrending();
         }
       },
@@ -141,7 +183,7 @@ const Reviews = () => {
     return () => {
       if (current) observer.unobserve(current);
     };
-  }, [hasNextPage, loading, initialLoaded, hasReachedLimit, loadMoreTrending, activeTab]);
+  }, [hasNextPage, loading, initialLoaded, loadMoreTrending, activeTab]);
 
   // Setup Intersection Observer for For You
   useEffect(() => {
@@ -256,7 +298,7 @@ const Reviews = () => {
               {currentReviews.map((review, index) => (
                 <ReviewCard2 
                   key={review.id}
-                  data={mapToReviewedDataProps(review)}
+                  data={review}
                   reviews={currentReviews}
                   reviewIndex={index}
                 />
@@ -273,15 +315,8 @@ const Reviews = () => {
             )}
             
             <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-              {activeTab === 'trending' && hasReachedLimit && (
-                <div className="text-center">
-                  <p className="text-gray-400 text-sm mb-2">
-                    Showing {currentReviews.length} of the latest reviews
-                  </p>
-                  <p className="text-gray-500 text-xs">
-                    Visit our restaurants page to see more reviews
-                  </p>
-                </div>
+              {!currentHasMore && !currentLoading && activeTab === 'trending' && (
+                <p className="text-gray-400 text-sm">No more reviews to load.</p>
               )}
               {!currentHasMore && !currentLoading && activeTab === 'foryou' && (
                 <p className="text-gray-400 text-sm">No more reviews to load.</p>

@@ -11,7 +11,7 @@ import type { DraftReviewData } from "./DraftReviewCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
-import { ReviewService } from "@/services/Reviews/reviewService";
+import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 // Using DraftReviewData from DraftReviewCard instead
 import SkeletonListingCard from "@/components/ui/Skeleton/SkeletonListingCard";
@@ -53,7 +53,6 @@ interface Restaurant {
 }
 
 const restaurantService = new RestaurantService();
-const reviewService = new ReviewService();
 
 const ListingPage = () => {
   const { user, firebaseUser } = useFirebaseSession();
@@ -70,6 +69,8 @@ const ListingPage = () => {
   const [draftToDelete, setDraftToDelete] = useState<DraftReviewData | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   const [recentlyVisitedRestaurants, setRecentlyVisitedRestaurants] = useState<Restaurant[]>([]);
+  // Map numeric IDs to UUIDs for deletion
+  const [draftIdToUuidMap, setDraftIdToUuidMap] = useState<Map<number, string>>(new Map());
 
   // Helper: transform GraphQL node to Restaurant
   const transformNodes = useCallback((nodes: Record<string, unknown>[]): Restaurant[] => {
@@ -121,72 +122,69 @@ const ListingPage = () => {
     });
   }, []);
 
-  const transformReviewDrafts = useCallback((nodes: Record<string, unknown>[]): DraftReviewData[] => {
-    return nodes.map((item: Record<string, unknown>) => {
-      // Debug logging for images
-      console.log('=== Draft Review Transformation Debug ===');
-      console.log('Item ID:', item.id);
-      console.log('Raw item.review_images:', item.review_images);
-      console.log('Type of review_images:', typeof item.review_images);
-      console.log('Is array?', Array.isArray(item.review_images));
+  // Transform ReviewV2 to DraftReviewData format
+  const transformReviewDrafts = useCallback((reviews: ReviewV2[]): DraftReviewData[] => {
+    return reviews.map((review: ReviewV2) => {
+      // Convert UUID to numeric ID for compatibility (using hash of first 8 chars)
+      const numericId = parseInt(review.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
       
-      if (Array.isArray(item.review_images)) {
-        console.log('review_images array length:', item.review_images.length);
-        item.review_images.forEach((img, idx) => {
-          console.log(`  Image ${idx}:`, img);
-          console.log(`    Type:`, typeof img);
-          console.log(`    Has sourceUrl:`, !!(img as Record<string, unknown>)?.sourceUrl);
-          console.log(`    Has id:`, !!(img as Record<string, unknown>)?.id);
-        });
-      }
+      // Get restaurant database ID
+      const restaurantDbId = review.restaurant?.id || 0;
       
-      // Simplified transformation: Backend already returns {id, sourceUrl} - use directly like EditReviewSubmission does
-      const finalImages = ((item.review_images as Record<string, unknown>[]) || [])
-        .map((img: Record<string, unknown>) => {
-          console.log('Processing image:', img);
-          // Backend already returns {id, sourceUrl} - use directly
-          if (img && typeof img === 'object' && img.sourceUrl) {
-            const imageId = typeof img.id === 'number' 
-              ? img.id 
-              : (typeof img.id === 'string' ? parseInt(img.id, 10) : 0);
-            
-            console.log('  → Valid image with sourceUrl:', img.sourceUrl);
-            return {
-              databaseId: imageId || 0,
-              id: String(img.id || imageId || ''),
-              sourceUrl: img.sourceUrl as string,
-            };
-          }
-          console.log('  → Skipping invalid image');
-          return null;
-        })
-        .filter((img): img is { databaseId: number; id: string; sourceUrl: string } => 
-          img !== null && 
-          typeof img.sourceUrl === 'string' && 
-          img.sourceUrl.trim().length > 0
-        );
+      // Get author database ID (convert UUID to number)
+      const authorDbId = review.author?.id 
+        ? parseInt(review.author.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+        : 0;
       
-      console.log('Final reviewImages array:', finalImages);
-      console.log('=== End Debug ===');
+      // Transform images from ReviewV2 format to DraftReviewData format
+      const reviewImages = (review.images || []).map((img: any, index: number) => {
+        const imageId = img.id || `${review.id}-${index}`;
+        const numericImageId = typeof imageId === 'string' && imageId.includes('-')
+          ? parseInt(imageId.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+          : (typeof imageId === 'number' ? imageId : parseInt(String(imageId), 10) || 0);
+        
+        return {
+          databaseId: numericImageId,
+          id: String(imageId),
+          sourceUrl: typeof img === 'string' ? img : (img.url || img.sourceUrl || '')
+        };
+      });
+      
+      // Get author name and avatar
+      const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+      const authorAvatar = review.author?.profile_image 
+        ? (typeof review.author.profile_image === 'string' 
+            ? review.author.profile_image 
+            : (review.author.profile_image as any)?.url || '')
+        : undefined;
+      
+      // Format date
+      const date = review.published_at || review.created_at;
+      
+      // Generate link (using restaurant slug if available)
+      const restaurantSlug = review.restaurant?.slug || 'restaurant';
+      const link = `/restaurants/${restaurantSlug}`;
       
       return {
-        id: item.id as number,
-        post: item.post as number,
-        author: item.author as number,
-        authorName: item.author_name as string,
-        authorAvatar: (item.author_avatar as string) || undefined,
+        id: numericId,
+        post: restaurantDbId,
+        author: authorDbId,
+        authorName: authorName,
+        authorAvatar: authorAvatar,
         content: {
-          rendered: (item.content as Record<string, unknown>)?.rendered as string || "",
-          raw: (item.content as Record<string, unknown>)?.raw as string || ""
+          rendered: review.content || "",
+          raw: review.content || ""
         },
-        date: item.date as string,
-        link: item.link as string,
-        status: item.status as string,
-        type: item.type as string,
-        recognitions: (item.recognitions as string[]) || ((item.meta as Record<string, unknown>)?.recognitions as string[]) || [],
-        reviewImages: finalImages,
-        reviewMainTitle: item.review_main_title as string,
-        reviewStars: item.review_stars as string,
+        date: date,
+        link: link,
+        status: review.status || 'draft',
+        type: 'draft',
+        recognitions: review.recognitions || [],
+        reviewImages: reviewImages,
+        reviewMainTitle: review.title || '',
+        reviewStars: String(review.rating || 0),
+        uuid: review.id, // Add UUID for navigation
+        restaurantSlug: restaurantSlug, // Add restaurant slug for navigation
       };
     });
   }, []);
@@ -224,15 +222,38 @@ const ListingPage = () => {
   const fetchReviewDrafts = useCallback(async () => {
     setLoadingDrafts(true);
     try {
-      if (!firebaseUser) return;
+      if (!firebaseUser) {
+        setLoadingDrafts(false);
+        return;
+      }
+      
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
-      const data = await reviewService.fetchReviewDrafts(idToken);
-      const transformedDrafts = transformReviewDrafts(data);
-      setAllDrafts(transformedDrafts)
+      
+      // Fetch draft reviews from new Hasura API
+      const response = await reviewV2Service.getDraftReviews(idToken, {
+        limit: 100,
+        offset: 0
+      });
+      
+      // Transform ReviewV2 to DraftReviewData format
+      const transformedDrafts = transformReviewDrafts(response.reviews);
+      
+      // Create mapping from numeric ID to UUID for deletion
+      const idMap = new Map<number, string>();
+      response.reviews.forEach((review: ReviewV2) => {
+        const numericId = parseInt(review.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
+        idMap.set(numericId, review.id);
+      });
+      setDraftIdToUuidMap(idMap);
+      
+      setAllDrafts(transformedDrafts);
       setReviewDrafts(transformedDrafts.slice(0, 4));
     } catch (error) {
       console.error("Error fetching review drafts:", error);
+      // Set empty arrays on error to prevent UI issues
+      setAllDrafts([]);
+      setReviewDrafts([]);
     } finally {
       setLoadingDrafts(false);
     }
@@ -245,21 +266,37 @@ const ListingPage = () => {
   }, [firebaseUser, debouncedSearchTerm, fetchReviewDrafts]);
 
   const confirmDeleteDraft = async (draftId: number) => {
-    if (!firebaseUser) return;
+    if (!firebaseUser) return false;
+    
+    // Get UUID from mapping
+    const reviewUuid = draftIdToUuidMap.get(draftId);
+    if (!reviewUuid) {
+      console.error("Could not find UUID for draft ID:", draftId);
+      toast.error("Failed to delete draft: UUID not found");
+      return false;
+    }
+    
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
-      await reviewService.deleteReviewDraft(draftId, idToken, true);
+      // Use new Hasura API to delete review
+      await reviewV2Service.deleteReview(reviewUuid);
+      
+      // Update state
       setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
       const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
       setAllDrafts(updatedAllDrafts);
       setReviewDrafts(updatedAllDrafts.slice(0, 4));
+      
+      // Remove from UUID map
+      const updatedMap = new Map(draftIdToUuidMap);
+      updatedMap.delete(draftId);
+      setDraftIdToUuidMap(updatedMap);
+      
       setDraftToDelete(null);
-      toast.success(deleteDraftSuccess)
+      toast.success(deleteDraftSuccess);
       return true;
     } catch (error) {
       console.error("Error deleting draft", error);
-      toast.error(deleteDraftError)
+      toast.error(deleteDraftError);
       return false;
     }
   };

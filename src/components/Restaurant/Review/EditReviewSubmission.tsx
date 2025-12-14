@@ -12,7 +12,7 @@ import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
-import { useSession } from 'next-auth/react'
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, transformReviewImagesToUrls } from "@/utils/reviewTransformers";
@@ -84,10 +84,14 @@ const EditReviewSubmissionPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!reviewId || !restaurantSlug) return;
+      if (!firebaseUser) {
+        setLoading(false);
+        return;
+      }
 
       try {
         // Get user ID for fetching review with like status
-        const userId = session?.user?.id || session?.user?.userId;
+        const userId = user?.id;
 
         // Fetch review using V2 API (UUID)
         try {
@@ -122,7 +126,8 @@ const EditReviewSubmissionPage = () => {
 
           // Fetch restaurant data using slug
           try {
-            const restaurantData = await restaurantV2Service.getRestaurantBySlug(restaurantSlug);
+            const restaurantResponse = await restaurantV2Service.getRestaurantBySlug(restaurantSlug);
+            const restaurantData = restaurantResponse.data;
             setRestaurantName(restaurantData.title || '');
             setRestaurantImage(restaurantData.featured_image_url || '');
             setRestaurantLocation(restaurantData.listing_street || restaurantData.address?.street_address || '');
@@ -209,19 +214,6 @@ const EditReviewSubmissionPage = () => {
             }
           }
         }
-        
-        // Set recognition tags if available - keep original names for saving, normalize only for comparison
-        if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
-          // Store original tag names as received from backend (preserve case)
-          const recognitions = (reviewData.recognitions as string[])
-            .map(rec => rec.trim())
-            .filter(Boolean);
-          
-          setRestaurant(prev => ({
-            ...prev,
-            recognition: recognitions
-          }));
-        }
 
       } catch (error) {
         console.error(error);
@@ -232,7 +224,7 @@ const EditReviewSubmissionPage = () => {
     };
 
     fetchData();
-  }, [reviewId, session]);
+  }, [reviewId, restaurantSlug, user, firebaseUser]);
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -310,7 +302,7 @@ const EditReviewSubmissionPage = () => {
 
     try {
       // Get user UUID
-      const userId = session?.user?.id || session?.user?.userId;
+      const userId = user?.id;
       if (!userId) {
         toast.error('User not authenticated');
         setIsLoading(false);
@@ -337,11 +329,11 @@ const EditReviewSubmissionPage = () => {
       try {
         const updateData = {
           title: review_main_title || null,
-        content,
+          content,
           rating: review_stars,
           images: reviewImages.length > 0 ? reviewImages : null,
           recognitions: recognitions.length > 0 ? recognitions : null,
-          status: mode === 'publish' ? 'pending' : 'draft', // 'pending' for publish, 'draft' for save
+          status: (mode === 'publish' ? 'pending' : 'draft') as 'draft' | 'pending' | 'approved', // 'pending' for publish, 'draft' for save
         };
 
         const updatedReview = await reviewV2Service.updateReview(currentReviewId, updateData);
@@ -520,11 +512,13 @@ const EditReviewSubmissionPage = () => {
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length + selectedFiles.length > maximumImage) {
-                          setUploadedImageError(maximumImageLimit);
+                          const errorMsg = maximumImageLimit(maximumImage);
+                          setUploadedImageError(errorMsg);
                           return;
                         }
                         if (files.length < minimumImage) {
-                          setUploadedImageError(minimumImageLimit);
+                          const errorMsg = minimumImageLimit(minimumImage);
+                          setUploadedImageError(errorMsg);
                           return;
                         }
                         setUploadedImageError('');
