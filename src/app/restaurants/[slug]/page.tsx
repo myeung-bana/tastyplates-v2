@@ -14,7 +14,7 @@ import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMo
 import RestaurantReviewsViewerModal from "@/components/Restaurant/RestaurantReviewsViewerModal";
 import RestaurantDetailSkeleton from "@/components/ui/Skeleton/RestaurantDetailSkeleton";
 import { useIsMobile } from "@/utils/deviceUtils";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
@@ -62,7 +62,7 @@ function getRestaurantImages(restaurant: Listing): string[] {
 const restaurantService = new RestaurantService();
 
 export default function RestaurantDetail() {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [restaurant, setRestaurant] = useState<Listing | null>(null);
@@ -293,7 +293,7 @@ export default function RestaurantDetail() {
   // Calculate rating metrics when data changes
   useEffect(() => {
     if (restaurant && restaurantReviews.length > 0) {
-      const userPalates = session?.user?.palates || null;
+      const userPalates = user?.palates || null;
       const metrics = calculateRatingMetrics(
         restaurantReviews,
         allReviews,
@@ -306,7 +306,7 @@ export default function RestaurantDetail() {
       const recognitionMetrics = calculateCommunityRecognitionMetrics(restaurantReviews);
       setCommunityRecognitionMetrics(recognitionMetrics);
     }
-  }, [restaurant, restaurantReviews, allReviews, palatesParam, session?.user?.palates]);
+  }, [restaurant, restaurantReviews, allReviews, palatesParam, user?.palates]);
 
   // Fetch restaurant reviews from new V2 API
   useEffect(() => {
@@ -352,7 +352,7 @@ export default function RestaurantDetail() {
   }, [restaurant?.id, restaurant?.databaseId]);
 
   const addReview = () => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }

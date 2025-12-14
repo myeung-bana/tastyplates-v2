@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useCallback } from "react"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
-import { useSession } from "next-auth/react"
+import { useFirebaseSession } from "@/hooks/useFirebaseSession"
 import { sessionStatus } from "@/constants/response"
 import { LISTING_EXPLANATION } from "@/constants/pages"
 
@@ -31,11 +31,11 @@ const ListingDraftPage = () => {
     const [pendingListings, setPendingListings] = useState<FetchedRestaurant[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const { data: session, status } = useSession();
-    const userId = session?.user?.id || null;
+    const { user, loading: sessionLoading } = useFirebaseSession();
+    const userId = user?.id || null;
     const getPendingListings = useCallback(async () => {
 
-        if (status !== sessionStatus.authenticated || !userId) {
+        if (sessionLoading || !userId) {
             setLoading(false);
             return;
         }
@@ -50,11 +50,11 @@ const ListingDraftPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [status, userId]);
+    }, [userId]);
 
     useEffect(() => {
         getPendingListings();
-    }, [status, userId, getPendingListings]);
+    }, [userId, getPendingListings]);
 
     const handleListingDeleted = (deletedRestaurantId: string) => {
         setPendingListings(prevListings =>

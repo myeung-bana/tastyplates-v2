@@ -4,7 +4,7 @@ import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { capitalizeWords, stripTags, generateProfileUrl, formatDate } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -39,7 +39,7 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
   onLoadMore,
   hasNextPage = false,
 }) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>(initialReviews);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
@@ -200,10 +200,14 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
   });
 
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
-    if (!session?.accessToken) {
+    if (!firebaseUser) {
       toast.error("Please sign in to like reviews");
       return;
     }
+
+    // Get Firebase ID token for authentication
+    const idToken = await firebaseUser.getIdToken();
+
     const isLiked = userLiked[review.databaseId] ?? false;
     const currentLikes = likesCount[review.databaseId] ?? 0;
     setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
@@ -213,10 +217,10 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
     }));
     try {
       if (isLiked) {
-        await reviewService.unlikeComment(review.databaseId, session.accessToken);
+        await reviewService.unlikeComment(review.databaseId, idToken);
         toast.success(commentUnlikedSuccess);
       } else {
-        await reviewService.likeComment(review.databaseId, session.accessToken);
+        await reviewService.likeComment(review.databaseId, idToken);
         toast.success(commentLikedSuccess);
       }
     } catch (error) {
@@ -291,8 +295,8 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
                 <div className="restaurant-reviews-viewer-modal__content-section">
                   <div className="restaurant-reviews-viewer-modal__user-info">
                     {review.author?.node?.databaseId ? (
-                      session?.user?.id &&
-                      String(session.user.id) === String(review.author?.node?.databaseId) ? (
+                      user?.id &&
+                      String(user.id) === String(review.author?.node?.databaseId) ? (
                         <Link href={PROFILE}>
                     <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}

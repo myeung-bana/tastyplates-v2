@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { FaRegHeart, FaHeart } from "react-icons/fa";
 import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 import toast from "react-hot-toast";
@@ -46,16 +46,16 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
   restaurantSlug,
   onShowSignin,
 }) => {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useFirebaseSession();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const checkFavoriteStatus = useCallback(async () => {
-    if (!session?.user || !restaurantSlug) return;
+    if (!user || !restaurantSlug) return;
     try {
-      const userUuid = await getUserUuid(session.user?.id);
+      const userUuid = await getUserUuid(user.id);
       if (!userUuid) return;
 
       const response = await restaurantUserService.checkFavoriteStatus({
@@ -69,10 +69,10 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
     } catch (error) {
       console.error("Error checking favorite status:", error);
     }
-  }, [session?.user, restaurantSlug]);
+  }, [user, restaurantSlug]);
 
   const toggleFavorite = useCallback(async () => {
-    if (!session?.user) {
+    if (!user) {
       onShowSignin();
       return;
     }
@@ -81,7 +81,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
     setError(null);
 
     try {
-      const userUuid = await getUserUuid(session.user?.id);
+      const userUuid = await getUserUuid(user.id);
       if (!userUuid) {
         throw new Error("Unable to get user ID");
       }
@@ -105,15 +105,15 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [session?.user, restaurantSlug, onShowSignin]);
+  }, [user, restaurantSlug, onShowSignin]);
 
   useEffect(() => {
     let isMounted = true;
     // Wait for session to finish loading
-    if (status === "loading") return;
+    if (sessionLoading) return;
     if (!restaurantSlug || initialized) return;
 
-    if (!session?.user) {
+    if (!user) {
       if (isMounted) setInitialized(true);
       return;
     }
@@ -132,7 +132,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [restaurantSlug, session, status, initialized, checkFavoriteStatus]);
+  }, [restaurantSlug, user, sessionLoading, initialized, checkFavoriteStatus]);
 
   if (error) {
     return (

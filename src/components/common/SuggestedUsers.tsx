@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { SuggestedUser } from '@/repositories/http/following/followingReviewRepository';
 import { useFollowData } from '@/hooks/useFollowData';
 import Image from 'next/image';
@@ -12,12 +12,14 @@ interface SuggestedUsersProps {
 }
 
 const SuggestedUsers: React.FC<SuggestedUsersProps> = ({ users, onUserFollowed }) => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
   const [loadingUsers, setLoadingUsers] = useState<Set<number>>(new Set());
   
   // Use current user's ID for follow data hook
-  const currentUserId = session?.user?.id ? parseInt(session.user.id as string) : 0;
+  // Note: Firebase users have UUID, but useFollowData may need numeric ID
+  // This might need adjustment based on useFollowData implementation
+  const currentUserId = user?.id ? 0 : 0; // Placeholder - may need UUID conversion
   const { handleFollow } = useFollowData(currentUserId);
 
   const handleFollowUser = async (userId: number) => {

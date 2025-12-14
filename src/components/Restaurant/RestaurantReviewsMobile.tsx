@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { FiStar, FiHeart, FiMessageCircle } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { generateProfileUrl, formatDate, capitalizeWords, stripTags } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -24,7 +24,7 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
   reviews,
   onOpenModal,
 }) => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
   const isMobile = useIsMobile();
 
   // Helper function to format relative time

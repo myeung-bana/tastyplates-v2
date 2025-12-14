@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -37,7 +37,7 @@ interface FollowingModalProps {
 const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, following, onUnfollow, onFollow }) => {
   const [localFollowing, setLocalFollowing] = useState(following);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   React.useEffect(() => {
     if (open) {
@@ -78,7 +78,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
           {localFollowing.map((user) => (
             <div key={user.id} className="flex items-center gap-3 px-6 py-3">
               {user.id ? (
-                <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
+                  <Link href={user?.id && String(user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
                   <FallbackImage
                     src={user.image || DEFAULT_USER_ICON}
                     width={40}
@@ -100,7 +100,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
               )}
               <div className="flex-1 min-w-0">
                 {user.id ? (
-                  <Link href={session?.user?.id && String(session.user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
+                  <Link href={user?.id && String(user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
                     <div className="font-semibold truncate cursor-pointer">{user.name}</div>
                   </Link>
                 ) : (

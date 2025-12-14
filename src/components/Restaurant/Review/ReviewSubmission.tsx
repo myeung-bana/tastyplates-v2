@@ -13,7 +13,7 @@ import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
-import { useSession } from 'next-auth/react'
+import { useFirebaseSession } from '@/hooks/useFirebaseSession'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
@@ -47,7 +47,7 @@ const reviewService = new ReviewService();
 const ReviewSubmissionPage = () => {
   const params = useParams() as { slug: string };
   const restaurantSlug = params.slug;
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [restaurantName, setRestaurantName] = useState('Loading...');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState('Loading...');
@@ -120,9 +120,11 @@ const ReviewSubmissionPage = () => {
         } catch (v2Error) {
           console.log('V2 API failed, trying WordPress fallback:', v2Error);
           // Fallback to WordPress API
-          if (session?.accessToken) {
+          if (firebaseUser) {
             try {
-              const data = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", session.accessToken);
+              // Get Firebase ID token for authentication
+              const idToken = await firebaseUser.getIdToken();
+              const data = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", idToken);
               if (data) {
                 setRestaurantName(data.title as string || 'Restaurant');
                 setRestaurantImage((data.featuredImage as any)?.node?.sourceUrl || '');
@@ -282,7 +284,7 @@ const ReviewSubmissionPage = () => {
 
     try {
       // Get user UUID (must be a string UUID for V2 API)
-      const userId = session?.user?.id || session?.user?.userId;
+      const userId = user?.id;
       if (!userId) {
         toast.error('User not authenticated');
         setIsLoading(false);

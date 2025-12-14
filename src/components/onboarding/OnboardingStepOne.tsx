@@ -13,7 +13,7 @@ import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useCuisines } from "@/hooks/useCuisines";
 import {
   birthdateRequired,
@@ -48,7 +48,7 @@ interface OnboardingStepOneProps {
 }
 
 const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentStep }) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -80,10 +80,10 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
     const storedData = localStorage.getItem(REGISTRATION_KEY);
     const parsedData = storedData ? JSON.parse(storedData) : {};
 
-      // Try to fetch from API if we have a session user ID
-      if (session?.user?.id) {
+      // Try to fetch from API if we have a user ID
+      if (user?.id) {
         try {
-          const userId = String(session.user.id);
+          const userId = String(user.id);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data) {
@@ -205,18 +205,18 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
     };
 
     loadUserData();
-  }, [hasMounted, session?.user?.id, hasLoadedUserData]);
+  }, [hasMounted, user?.id, hasLoadedUserData]);
 
   // Re-match palates when cuisineOptions become available
   useEffect(() => {
     if (!hasLoadedUserData || cuisinesLoading || cuisineOptions.length === 0) return;
     
     // If we have selected palates but they might not be matched yet
-    if (selectedPalates.size > 0 && session?.user?.id) {
+    if (selectedPalates.size > 0 && user?.id) {
       // Try to fetch user data again to get palates and match them
       const matchPalatesFromAPI = async () => {
         try {
-          const userId = String(session.user.id);
+          const userId = String(user.id);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data && response.data.palates) {
@@ -255,7 +255,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
       
       matchPalatesFromAPI();
     }
-  }, [cuisineOptions, cuisinesLoading, hasLoadedUserData, session?.user?.id]);
+  }, [cuisineOptions, cuisinesLoading, hasLoadedUserData, user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

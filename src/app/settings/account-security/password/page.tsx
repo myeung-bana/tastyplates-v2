@@ -1,7 +1,7 @@
 "use client";
 import React, { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { toast } from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import SettingsLayout from "@/components/Settings/SettingsLayout";
@@ -20,7 +20,7 @@ const userService = new UserService();
 
 const PasswordSettingsPage = () => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [isLoading, setIsLoading] = useState(false);
   const [passwordFields, setPasswordFields] = useState({
     current: "",
@@ -36,7 +36,7 @@ const PasswordSettingsPage = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const isGoogleAuth = session?.user?.provider === provider.google;
+  const isGoogleAuth = user?.auth_method === 'google';
 
   const validatePasswords = () => {
     const errors = { current: "", new: "", confirm: "" };
@@ -67,7 +67,9 @@ const PasswordSettingsPage = () => {
 
   const validateCurrentPassword = async (password: string): Promise<boolean> => {
     try {
-      const response = await userService.validatePassword(password, session?.accessToken);
+      if (!firebaseUser) return false;
+      const idToken = await firebaseUser.getIdToken();
+      const response = await userService.validatePassword(password, idToken);
       return response?.status === true;
     } catch {
       return false;
@@ -100,14 +102,17 @@ const PasswordSettingsPage = () => {
     }
 
     try {
-      if (!session?.user?.userId || !session?.accessToken) {
+      if (!user || !firebaseUser) {
         toast.error('Please log in to change your password');
         return;
       }
 
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+
       const response = await userService.updateUserFields(
         { password: passwordFields.new },
-        session.accessToken
+        idToken
       );
 
       if (response?.data?.status === 200 || response?.status === 200) {

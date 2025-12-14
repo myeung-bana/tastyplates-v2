@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useEffect, useState, useCallback } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import SignupModal from "@/components/auth/SignupModal";
@@ -35,7 +35,7 @@ const getUserUuid = async (sessionUserId: string | number | undefined): Promise<
 };
 
 export default function CheckInRestaurantButton({ restaurantSlug }: { restaurantSlug: string }) {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useFirebaseSession();
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -47,12 +47,12 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
   useEffect(() => {
     let isMounted = true;
     // Wait for session to finish loading
-    if (status === "loading") return;
-    if (!session?.user || !restaurantSlug || initialized) return;
+    if (sessionLoading) return;
+    if (!user || !restaurantSlug || initialized) return;
     
     const fetchCheckInStatus = async () => {
       try {
-        const userUuid = await getUserUuid(session.user?.id);
+        const userUuid = await getUserUuid(user.id);
         if (!userUuid) {
           if (isMounted) setInitialized(true);
           return;
@@ -78,10 +78,10 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
 
     fetchCheckInStatus();
     return () => { isMounted = false; };
-  }, [restaurantSlug, session, status, initialized]);
+  }, [restaurantSlug, user, sessionLoading, initialized]);
 
   const handleToggle = async () => {
-    if (!session?.user) {
+    if (!user) {
       setError("Authentication required");
       return;
     }
@@ -93,7 +93,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     window.dispatchEvent(new CustomEvent("restaurant-checkin-changed", { detail: { slug: restaurantSlug, status: !checkedIn } }));
     
     try {
-      const userUuid = await getUserUuid(session.user?.id);
+      const userUuid = await getUserUuid(user.id);
       if (!userUuid) {
         throw new Error("Unable to get user ID");
       }
@@ -122,7 +122,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     }
   };
 
-  if (!session) {
+  if (!user) {
     return (
       <>
         <button

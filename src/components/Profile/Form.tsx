@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { UserService } from "@/services/user/userService";
 import { useCuisines } from "@/hooks/useCuisines";
 import { checkImageType } from "@/constants/utils";
@@ -330,7 +330,7 @@ const FormContent = memo(({
 
 const Form = () => {
   const router = useRouter();
-  const { data: session, status: sessionStatus, update } = useSession();
+  const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -345,9 +345,9 @@ const Form = () => {
   const [tempImageSrc, setTempImageSrc] = useState("");
   const hasInitialized = useRef(false); // Track if we've initialized form state to prevent flickering
 
-  // Use the existing useProfileData hook - get current user ID from session
-  // Use session.user.id directly (can be UUID string or numeric ID)
-  const currentUserId = session?.user?.id || null;
+  // Use the existing useProfileData hook - get current user ID from Firebase session
+  // Use user.id directly (should be UUID string)
+  const currentUserId = user?.id || null;
   const {
     userData,
     loading: isLoadingData,
@@ -408,31 +408,10 @@ const Form = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // ✅ VALIDATION: Check if session and accessToken exist
-    console.log('🔍 Profile Form - Session Validation:', {
-      hasSession: !!session,
-      hasAccessToken: !!session?.accessToken,
-      tokenLength: session?.accessToken?.length,
-      tokenPreview: session?.accessToken ? `${session.accessToken.substring(0, 20)}...` : 'undefined',
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      sessionStatus: session ? 'exists' : 'null'
-    });
-
-    if (!session) {
-      console.error('❌ Profile Form: No session found');
+    // ✅ VALIDATION: Check if user and firebaseUser exist
+    if (!user || !firebaseUser) {
+      console.error('❌ Profile Form: No user found');
       toast.error('Session not found. Please log in again.');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!session.accessToken) {
-      console.error('❌ Profile Form: accessToken is undefined', {
-        sessionKeys: Object.keys(session),
-        userKeys: session.user ? Object.keys(session.user) : 'no user',
-        hasUser: !!session.user
-      });
-      toast.error('Authentication token missing. Please log in again.');
       setIsLoading(false);
       return;
     }
@@ -479,34 +458,16 @@ const Form = () => {
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (formattedPalates) updateData.palates = formattedPalates;
 
-      console.log('📤 Profile Form - Sending update request:', {
-        hasAccessToken: !!session.accessToken,
-        updateDataKeys: Object.keys(updateData),
-        updateDataValues: Object.keys(updateData).reduce((acc, key) => {
-          const value = updateData[key];
-          acc[key] = key === 'profile_image' ? 'base64_data...' : (value || '');
-          return acc;
-        }, {} as Record<string, string>)
-      });
-
-      // TypeScript: accessToken is guaranteed to exist after validation check above
-      const accessToken = session.accessToken!;
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
 
       const res = await userService.updateUserFields(
         updateData as Partial<IUserUpdate>,
-        accessToken
+        idToken
       );
 
-      // Update session with response data (response uses profile_image)
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          image: res.profile_image || session?.user?.image,
-          about_me: aboutMe,
-          palates: formattedPalates,
-        },
-      });
+      // Session will be automatically refreshed by useFirebaseSession hook
+      // Force a page reload to ensure fresh data
 
       // Refresh router to update server components with new session data
       router.refresh();
@@ -525,7 +486,7 @@ const Form = () => {
         errorStatus: error?.status,
         errorCode: error?.code,
         errorData: error?.data,
-        hasAccessToken: !!session?.accessToken,
+        hasUser: !!user,
         errorType: error?.constructor?.name || typeof error
       });
       toast.error(profileUpdateFailed);
@@ -564,13 +525,13 @@ const Form = () => {
   // Debug: Log session status changes
   useEffect(() => {
     console.log('🔍 Profile Form - Session status changed:', {
-      sessionStatus,
-      hasSession: !!session,
-      hasAccessToken: !!session?.accessToken,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email
+      sessionLoading,
+      hasUser: !!user,
+      hasFirebaseUser: !!firebaseUser,
+      userId: user?.id,
+      userEmail: user?.email
     });
-  }, [sessionStatus, session]);
+  }, [sessionLoading, user, firebaseUser]);
 
   // Update form state when userData is loaded from useProfileData hook
   // Only run once when data is first loaded to prevent flickering
@@ -639,12 +600,12 @@ const Form = () => {
       }
       
       hasInitialized.current = true; // Mark as initialized
-    } else if (!isLoadingData && !userData && session?.user && currentUserId && !hasInitialized.current) {
-      // Fallback to session data if hook hasn't loaded yet or failed (only once)
-      setAboutMe(session?.user?.about_me ?? "");
-      setProfilePreview(session?.user?.image ?? DEFAULT_USER_ICON);
-    if (session?.user?.palates) {
-      const palates = session.user.palates
+    } else if (!isLoadingData && !userData && user && currentUserId && !hasInitialized.current) {
+      // Fallback to user data if hook hasn't loaded yet or failed (only once)
+      setAboutMe(user?.about_me ?? "");
+      setProfilePreview(user?.profile_image?.url || DEFAULT_USER_ICON);
+    if (user?.palates) {
+      const palates = user.palates
         .split(/[|,]/)
         .map((p) => p.trim())
         .map((p) => capitalizeFirstLetter(p));
@@ -652,7 +613,7 @@ const Form = () => {
     }
       hasInitialized.current = true; // Mark as initialized even with fallback
     }
-  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId]); // Removed session and update from deps
+  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user]); // Removed update from deps
 
   // Reset initialization flag when user changes
   useEffect(() => {

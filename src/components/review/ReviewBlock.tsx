@@ -10,7 +10,7 @@ import { GraphQLReview } from "@/types/graphql";
 import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
@@ -135,7 +135,7 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
 const reviewService = new ReviewService();
 
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [loading, setLoading] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
@@ -163,26 +163,28 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const toggleLike = async () => {
     if (loading) return;
 
-    if (!session?.user) {
+    if (!user || !firebaseUser) {
       setIsShowSignin(true);
       return;
     }
 
     setLoading(true);
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
       let response: { userLiked: boolean; likesCount: number };
       if (userLiked) {
         // Already liked, so unlike
         response = await reviewService.unlikeComment(
           review.databaseId,
-          session.accessToken ?? ""
+          idToken
         );
         toast.success(commentUnlikedSuccess);
       } else {
         // Not liked yet, so like
         response = await reviewService.likeComment(
           review.databaseId,
-          session.accessToken ?? ""
+          idToken
         );
         toast.success("Liked comment successfully!");
       }
@@ -216,8 +218,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   
   // For session comparison: use UUID if available, otherwise use encoded numeric ID
   const isOwnProfile = authorUuid 
-    ? (session?.user?.id && String(session.user.id) === String(authorUuid))
-    : (session?.user?.id && String(session.user.id) === String(encodeRelayId('user', review.authorId as number)));
+    ? (user?.id && String(user.id) === String(authorUuid))
+    : (user?.id && String(user.id) === String(encodeRelayId('user', review.authorId as number)));
   
   // Generate profile URL: use UUID if available, otherwise use numeric ID
   const profileUrl = authorUuid ? generateProfileUrl(authorUuid) : generateProfileUrl(review.authorId);

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect } from "react";
 import { GraphQLReview } from "@/types/graphql";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { FiX, FiSend } from "react-icons/fi";
 import ReplyItem from "./ReplyItem";
@@ -34,7 +34,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   onClose,
   onCommentCountChange,
 }) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [replies, setReplies] = useState<GraphQLReview[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -101,10 +101,13 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
   // Handle reply like
   const handleReplyLike = useCallback(async (replyId: number) => {
-    if (!session?.accessToken) {
+    if (!firebaseUser) {
       toast.error("Please sign in to like comments");
       return;
     }
+
+    // Get Firebase ID token for authentication
+    const idToken = await firebaseUser.getIdToken();
 
     const isLiked = replyUserLiked[replyId] ?? false;
     const currentLikes = replyLikes[replyId] ?? 0;
@@ -119,10 +122,10 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
     try {
       if (isLiked) {
-        await reviewService.unlikeComment(replyId, session.accessToken);
+        await reviewService.unlikeComment(replyId, idToken);
         toast.success(commentUnlikedSuccess);
       } else {
-        await reviewService.likeComment(replyId, session.accessToken);
+        await reviewService.likeComment(replyId, idToken);
         toast.success(commentLikedSuccess);
       }
     } catch (error) {
@@ -137,7 +140,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setReplyLoading((prev) => ({ ...prev, [replyId]: false }));
     }
-  }, [session?.accessToken, replyUserLiked, replyLikes]);
+  }, [firebaseUser, replyUserLiked, replyLikes]);
 
   // Cooldown timer
   useEffect(() => {
@@ -197,7 +200,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
-    if (!session?.user) {
+    if (!user || !firebaseUser) {
       toast.error("Please sign in to comment");
       return;
     }
@@ -208,7 +211,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }
 
     setIsLoading(true);
-    const userName = session.user.name || session.user.email?.split('@')[0] || "You";
+    const userName = user.display_name || user.username || user.email?.split('@')[0] || "You";
     const now = new Date();
     const isoDate = now.toISOString();
     
@@ -222,18 +225,16 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       date: isoDate,
       content: commentText,
       reviewImages: [],
-      palates: session.user.palates || "",
-      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      palates: user.palates || "",
+      userAvatar: user.profile_image?.url || DEFAULT_USER_ICON,
       author: {
         name: userName,
         node: {
-          id: String(session.user.id || ""),
-          databaseId: session.user.userId
-            ? parseInt(String(session.user.userId))
-            : 0,
+          id: String(user.id || ""),
+          databaseId: 0, // Firebase users don't have numeric userId
           name: userName,
           avatar: {
-            url: session.user.image || DEFAULT_USER_ICON,
+            url: user.profile_image?.url || DEFAULT_USER_ICON,
           },
         },
       },
@@ -259,15 +260,18 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     setCommentText("");
 
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      
       const payload = {
         content: optimisticReply.content,
         restaurantId: review.commentedOn?.node?.databaseId,
         parent: review.databaseId,
-        authorId: session?.user?.userId,
+        authorId: undefined, // Firebase users use UUID, not numeric userId
       };
       const res = await reviewService.postReview(
         payload,
-        session?.accessToken ?? ""
+        idToken
       );
 
       const isSuccess = (status: number | string) => {
@@ -370,7 +374,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         </div>
 
         {/* Comment Input */}
-        {session?.user ? (
+        {user ? (
           <div className="comments-bottom-sheet__input-container">
             <div className="comments-bottom-sheet__input-wrapper">
               <input

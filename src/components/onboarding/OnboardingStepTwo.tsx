@@ -9,7 +9,7 @@ import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/valid
 import { responseStatus } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
 
@@ -20,7 +20,7 @@ interface OnboardingStepTwoProps {
 
 const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, currentStep }) => {
   const router = useRouter();
-  const { data: session, update } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [aboutMe, setAboutMe] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,10 +55,10 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
     const storedData = localStorage.getItem(REGISTRATION_KEY);
       const parsedData = storedData ? JSON.parse(storedData) : {};
 
-      // Try to fetch from API if we have a session user ID
-      if (session?.user?.id) {
+      // Try to fetch from API if we have a user ID
+      if (user?.id) {
         try {
-          const userId = String(session.user.id);
+          const userId = String(user.id);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data) {
@@ -96,7 +96,7 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
     };
 
     loadUserData();
-  }, [session?.user?.id]);
+  }, [user?.id]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError(null);
@@ -132,15 +132,15 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       return;
     }
 
-    // Get user ID from session (UUID from Hasura) - required for Firebase auth users
-    if (!session?.user?.id) {
+    // Get user ID from Firebase session (UUID from Hasura) - required for Firebase auth users
+    if (!user?.id) {
       toast.error('Session expired. Please log in again.');
       setIsLoading(false);
       router.push('/login');
       return;
     }
 
-    const userId = String(session.user.id); // UUID from Hasura
+    const userId = String(user.id); // UUID from Hasura
 
     try {
       // Get data from OnboardingStepOne (stored in localStorage)
@@ -200,11 +200,8 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       // Clear registration data from localStorage
       localStorage.removeItem(REGISTRATION_KEY);
       
-      // Refresh session to get updated user data
-      if (update) {
-        await update();
-      }
-      
+      // Session will be automatically refreshed by useFirebaseSession hook
+      // Force a page reload to ensure fresh data
       setMessage(registrationSuccess);
       localStorage.setItem(WELCOME_KEY, welcomeProfile);
       setMessageType(responseStatus.success);

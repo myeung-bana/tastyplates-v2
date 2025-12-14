@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { IoMdClose } from "react-icons/io";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import ReviewModal from "@/components/ui/Modal/ReviewModal"; 
 import toast from 'react-hot-toast';
@@ -37,8 +37,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || DEFAULT_RESTAURANT_IMAGE;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
     const countryNames = restaurant.listingDetails?.googleMapUrl.streetAddress || restaurant.listingStreet || 'Unknown Location';
-    const { data: session } = useSession();
-    const accessToken = session?.accessToken || "";
+    const { firebaseUser } = useFirebaseSession();
 
     const [isShowDelete, setIsShowDelete] = useState<boolean>(false);
     const [isLoadingDelete, setIsLoadingDelete] = useState<boolean>(false);
@@ -48,14 +47,16 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     };
 
     const confirmDelete = async () => {
-        if (!accessToken) {
+        if (!firebaseUser) {
             toast.error("Authentication token is missing. Please log in.");
             return;
         }
 
         setIsLoadingDelete(true);
         try {
-            await restaurantService.deleteRestaurantListing(restaurant.databaseId, accessToken);
+            // Get Firebase ID token for authentication
+            const idToken = await firebaseUser.getIdToken();
+            await restaurantService.deleteRestaurantListing(restaurant.databaseId, idToken);
             toast.success(deleteDraftSuccess);
             onDeleteSuccess();
             setIsShowDelete(false);

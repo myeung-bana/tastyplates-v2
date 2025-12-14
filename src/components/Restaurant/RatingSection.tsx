@@ -1,5 +1,5 @@
 import { type RatingMetrics } from "@/utils/reviewUtils";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 
 interface RatingSectionProps {
   ratingMetrics: RatingMetrics;
@@ -7,8 +7,8 @@ interface RatingSectionProps {
 }
 
 export default function RatingSection({ ratingMetrics, palatesParam }: RatingSectionProps) {
-  const { data: session } = useSession();
-  const userPalates = session?.user?.palates || null;
+  const { user } = useFirebaseSession();
+  const userPalates = user?.palates || null;
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
@@ -47,7 +47,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
         </div>
 
         {/* My Preference - Only show when user is logged in */}
-        {session?.user && userPalates && (
+        {user && userPalates && (
           <>
             <div className="h-[85%] border-l border-[#CACACA]"></div>
             

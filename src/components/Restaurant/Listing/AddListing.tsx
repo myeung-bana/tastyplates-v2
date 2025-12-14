@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import Select, { components } from "react-select";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import CustomOption from "@/components/ui/Select/CustomOption";
@@ -64,8 +64,7 @@ const AddListingPage = () => {
   const [selectedPalates, setSelectedPalates] = useState<
     { label: string; value: string }[]
   >([]);
-  const { data: session } = useSession();
-  const sess = session?.accessToken || "";
+  const { firebaseUser } = useFirebaseSession();
   const [reviewMainTitle, setReviewMainTitle] = useState("");
   const [content, setContent] = useState("");
   const [reviewStars, setReviewStars] = useState(0);
@@ -433,7 +432,13 @@ const AddListingPage = () => {
       }
 
       // ✅ API call
-      const response = await restaurantService.createRestaurantListingAndReview(payload, sess);
+      // Get Firebase ID token for authentication
+      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
+      if (!idToken) {
+        toast.error("Please log in to create a listing");
+        return;
+      }
+      const response = await restaurantService.createRestaurantListingAndReview(payload, idToken);
 
       if ((response?.listing as Record<string, unknown>)?.id || (response?.id as number)) {
         setCurrentRestaurantDbId(((response.listing as Record<string, unknown>)?.id as number) || (response.id as number));

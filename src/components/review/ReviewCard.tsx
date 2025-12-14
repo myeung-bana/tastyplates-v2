@@ -8,7 +8,7 @@ import {
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link"; // Import Link
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
@@ -25,7 +25,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
 
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   return (
     <div className="review-card !border-none font-neusans" style={{ width: `${width || 300}px` }}>
@@ -68,8 +68,8 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
         <div className="review-card__user mb-2">
           {/* Make the user image clickable and link to their profile, or show auth modal if not logged in */}
           {data.author?.node?.databaseId || data.id ? (
-            session?.user?.id &&
-            String(session.user.id) ===
+            user?.id &&
+            String(user.id) ===
               String(data.author?.node?.databaseId || data.id) ? (
               <Link href={PROFILE}>
                 <FallbackImage
@@ -120,8 +120,8 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
           <div className="review-card__user-info font-neusans">
             {/* Make username clickable and handle auth logic */}
             {data.author?.node?.databaseId || data.id ? (
-              session?.user?.id &&
-              String(session.user.id) ===
+              user?.id &&
+              String(user.id) ===
                 String(data.author?.node?.databaseId || data.id) ? (
                 <Link href={PROFILE}>
                   <h3 className="review-card__username line-clamp-1 cursor-pointer font-neusans">

@@ -47,7 +47,7 @@ const EditReviewSubmissionPage = () => {
   const params = useParams() as { slug: string; id: string };
   const restaurantSlug = params.slug;
   const reviewId = params.id; // UUID of the review
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [restaurantName, setRestaurantName] = useState('');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState('');
@@ -142,9 +142,11 @@ const EditReviewSubmissionPage = () => {
           } catch (restaurantError) {
             console.error('Failed to fetch restaurant from V2 API, trying WordPress fallback:', restaurantError);
             // Fallback to WordPress API
-            if (session?.accessToken) {
+            if (firebaseUser) {
               try {
-                const wpData = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", session.accessToken);
+                // Get Firebase ID token for authentication
+                const idToken = await firebaseUser.getIdToken();
+                const wpData = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", idToken);
                 setRestaurantName((wpData.title as string) || '');
                 setRestaurantImage((wpData.featuredImage as any)?.node?.sourceUrl || '');
                 setRestaurantLocation((wpData.address as string) || '');
@@ -158,12 +160,14 @@ const EditReviewSubmissionPage = () => {
         } catch (reviewError) {
           console.error('Failed to fetch review from V2 API, trying WordPress fallback:', reviewError);
           // Fallback to WordPress API
-          if (session?.accessToken) {
+          if (firebaseUser) {
             try {
+              // Get Firebase ID token for authentication
+              const idToken = await firebaseUser.getIdToken();
               // Try to parse reviewId as number for WordPress
               const numericReviewId = parseInt(reviewId);
               if (!isNaN(numericReviewId)) {
-                const reviewData = await reviewService.getReviewById(numericReviewId, session.accessToken);
+                const reviewData = await reviewService.getReviewById(numericReviewId, idToken);
                 
                 // Extract restaurant ID and fetch restaurant
                 const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
@@ -171,7 +175,7 @@ const EditReviewSubmissionPage = () => {
                   const restaurantData = await restaurantService.fetchRestaurantById(
                     restaurantIdFromReview.toString(),
                     "DATABASE_ID",
-                    session.accessToken
+                    idToken
                   );
                   
                   setRestaurantName((restaurantData.title as string) || '');

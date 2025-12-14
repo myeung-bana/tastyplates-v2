@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowContext } from "../FollowContext";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
@@ -155,7 +155,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     : (fetchedUserData?.profile_image || DEFAULT_USER_ICON);
 
   // Fetch replies using centralized hook
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const { 
     replies: fetchedReplies, 
     loading: isLoadingReplies, 
@@ -163,7 +163,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     refetch: refetchReplies 
   } = useReviewReplies(
     isOpen && data?.id ? data.id : undefined,
-    session?.user?.id ? String(session.user.id) : undefined,
+    user?.id ? String(user.id) : undefined,
     isOpen // Only fetch when modal is open
   );
 
@@ -200,7 +200,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     // Only run this once the modal is open, we have a session token,
     // and we can reliably read the author's databaseId.
     if (!isOpen) return;
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
     
     // Get author user ID from data
     const authorUserId = data.userId || data.author?.node?.databaseId;
@@ -211,7 +211,9 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
     (async () => {
       try {
-        const result = await userService.isFollowingUser(Number(authorUserId), session.accessToken);        
+        // Get Firebase ID token for authentication
+        const idToken = await firebaseUser.getIdToken();
+        const result = await userService.isFollowingUser(Number(authorUserId), idToken);        
         setIsFollowing(!!result.is_following);
         setFollowState(Number(authorUserId), !!result.is_following);
       } catch (err) {
@@ -219,7 +221,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
         setIsFollowing(false);
       }
     })();
-  }, [isOpen, session?.accessToken, data.userId, data.author, setFollowState]);
+  }, [isOpen, firebaseUser, data.userId, data.author, setFollowState]);
 
   // Cooldown timer
   useEffect(() => {
@@ -232,14 +234,14 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
   // Handle profile click for non-authenticated users
   const handleProfileClick = () => {
-    if (!session?.user) {
+    if (!user) {
       setPendingShowSignin(true);
     }
   };
 
   // Handle follow/unfollow
   const handleFollowClick = async () => {
-    if (!session?.user) {
+    if (!user || !firebaseUser) {
       setIsShowSignin(true);
       return;
     }
@@ -251,11 +253,13 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
     setFollowLoading(true);
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
       let response;
       if (isFollowing) {
-        response = await followService.unfollowUser(Number(authorUserId), session.accessToken || "");
+        response = await followService.unfollowUser(Number(authorUserId), idToken);
       } else {
-        response = await followService.followUser(Number(authorUserId), session.accessToken || "");
+        response = await followService.followUser(Number(authorUserId), idToken);
       }
       
       if (response.status === code.success) {
@@ -276,7 +280,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
   // Handle like/unlike main review
   const handleLikeClick = async () => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -292,7 +296,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
 
   // Handle reply like/unlike
   const handleReplyLike = async (replyId: number) => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -350,7 +354,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
   // Handle comment submission - FIXED VERSION
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
-    if (!session?.user) {
+    if (!user || !firebaseUser) {
       setIsShowSignin(true);
       return;
     }
@@ -372,17 +376,17 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
       date: new Date().toISOString(),
       content: commentText,
       reviewImages: [],
-      palates: session.user.palates || "",
-      userAvatar: session.user.image || DEFAULT_USER_ICON,
+      palates: user.palates || "",
+      userAvatar: user.profile_image?.url || DEFAULT_USER_ICON,
       hashtags: [], // Add empty hashtags array for optimistic reply
       author: {
-        name: session.user.name || "Unknown User",
+        name: user.display_name || user.username || "Unknown User",
         node: {
-          id: String(session.user.id || ""),
-          databaseId: session.user.userId ? parseInt(String(session.user.userId)) : 0,
-          name: session.user.name || "Unknown User",
+          id: String(user.id || ""),
+          databaseId: 0, // Firebase users don't have numeric userId
+          name: user.display_name || user.username || "Unknown User",
           avatar: {
-            url: session.user.image || DEFAULT_USER_ICON,
+            url: user.profile_image?.url || DEFAULT_USER_ICON,
           },
         },
       },
@@ -408,8 +412,8 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
     setCommentText("");
 
     try {
-      // Get author UUID - convert session.user.id to UUID if needed
-      const authorId = await getUserUuid(session?.user?.id);
+      // Get author UUID - user.id should already be a UUID
+      const authorId = user.id;
       if (!authorId) {
         toast.error('User not authenticated or invalid user ID');
         setReplies(prev => prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic));
@@ -440,13 +444,16 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
       // The restaurant_uuid might be in data.commentedOn, but we'll let the API fetch it if needed
       const restaurantUuid = undefined; // Let API fetch from parent review
 
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+
       // Use new createComment endpoint
       const res = await reviewService.createComment({
         parent_review_id: parentReviewId,
         author_id: authorId,
         content: optimisticReply.content,
         restaurant_uuid: restaurantUuid,
-      }, session?.accessToken ?? "");
+      }, idToken);
 
       if (res.success) {
         console.log('✅ Comment created successfully');
@@ -576,9 +583,9 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               {data.author?.node?.id ? (
-                session?.user ? (
+                user ? (
                   <Link
-                    href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                    href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                     passHref
                   >
                     <FallbackImage
@@ -614,9 +621,9 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
               
               <div>
                 <div className="flex items-center space-x-2">
-                  {session?.user ? (
+                  {user ? (
                     <Link
-                      href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                      href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                       passHref
                     >
                       <span className="font-normal text-xs cursor-pointer hover:underline">
@@ -636,7 +643,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
             </div>
 
             {/* Follow Button */}
-            {(!session?.user || (session?.user?.id !== authorUserId)) && (
+            {(!user || (user?.id !== authorUserId)) && (
               <button
                 onClick={handleFollowClick}
                 disabled={followLoading || !authorUserId}

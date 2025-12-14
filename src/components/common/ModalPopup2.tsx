@@ -12,7 +12,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { BsStarFill, BsStarHalf, BsStar } from 'react-icons/bs';
 import { ReviewModalProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowContext } from "./FollowContext";
 
 //styles
@@ -33,7 +33,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const { setFollowState } = useFollowContext();
   const [replies, setReplies] = useState<GraphQLReview[]>([]);
   const [isShowSignup, setIsShowSignup] = useState(false);
@@ -67,7 +67,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     // Only run this once the modal is open, we have a session token,
     // and we can reliably read the author’s databaseId.
     if (!isOpen) return;
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
     // prefer `data.author.node.databaseId`, fallback to data.author.databaseId
     const authorUserId = data.author?.node?.databaseId;
     if (!authorUserId) {
@@ -77,7 +77,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
     (async () => {
       try {
-        const result = await userService.isFollowingUser(authorUserId as number, session.accessToken);        
+        // Get Firebase ID token for authentication
+        const idToken = await firebaseUser.getIdToken();
+        const result = await userService.isFollowingUser(authorUserId as number, idToken);        
         setIsFollowing(!!result.is_following);
         setFollowState(authorUserId as number, !!result.is_following);
       } catch (err) {
@@ -85,7 +87,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
         setIsFollowing(false);
       }
     })();
-  }, [isOpen, session?.accessToken, data.author, setFollowState]);
+  }, [isOpen, firebaseUser, data.author, setFollowState]);
 
   const handleResize = () => {
     // Handle resize logic if needed
@@ -181,7 +183,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
 
   const handleFollowAuthor = async () => {
-    if (!session?.accessToken) {
+    if (!firebaseUser) {
       setIsShowSignup(true);
       return;
     }
@@ -193,7 +195,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await userService.followUser(authorUserId as number, session.accessToken);
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      const result = await userService.followUser(authorUserId as number, idToken);
       if (result.status !== code.success || result?.result !== "followed") {
         console.error("Follow failed", result);
         toast.error(result?.message || userFollowedFailed);
@@ -212,7 +216,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleUnfollowAuthor = async () => {
-    if (!session?.accessToken) {
+    if (!firebaseUser) {
       setIsShowSignup(true);
       return;
     }
@@ -224,7 +228,9 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
     }
     setFollowLoading(true);
     try {
-      const result = await userService.unfollowUser(authorUserId as number, session.accessToken);
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      const result = await userService.unfollowUser(authorUserId as number, idToken);
       if (result.status !== code.success || result?.result !== "unfollowed") {
         console.error("Unfollow failed", result);
         toast.error(result?.message || userUnfollowedFailed);
@@ -316,7 +322,7 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
               </div>
               <button
                 onClick={() => {
-                  if (!session?.accessToken) {
+                  if (!firebaseUser) {
                     setIsShowSignin(true);
                   } else if (isFollowing) {
                     handleUnfollowAuthor();

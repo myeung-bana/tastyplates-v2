@@ -2,7 +2,7 @@ import "@/styles/pages/_restaurant-details.scss";
 import { Tab, Tabs } from "@heroui/tabs";
 import { Masonry } from "masonic";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import Photos from "./Details/Photos";
 import Pagination from "../common/Pagination";
 import ReviewBlock from "../review/ReviewBlock";
@@ -157,7 +157,7 @@ interface RestaurantReviewsProps {
 
 export default function RestaurantReviews({ restaurantId, restaurantUuid, reviews: initialReviews, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
   // Session state
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   // Review state (simplified like mobile)
   const [allReviews, setAllReviews] = useState<GraphQLReview[]>([]);

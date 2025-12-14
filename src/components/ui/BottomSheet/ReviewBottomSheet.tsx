@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowContext } from "../../FollowContext";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { UserService } from "@/services/user/userService";
@@ -50,7 +50,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
   likesCount: likesCountProp,
   onLikeChange,
 }) => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const { setFollowState } = useFollowContext();
   
   // State management
@@ -145,14 +145,14 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
 
   // Handle profile click for non-authenticated users
   const handleProfileClick = useCallback(() => {
-    if (!session?.user) {
+    if (!user) {
       setPendingShowSignin(true);
     }
-  }, [session?.user]);
+  }, [user]);
 
   // Handle follow/unfollow
   const handleFollowClick = useCallback(async () => {
-    if (!session?.user) {
+    if (!user || !firebaseUser) {
       setIsShowSignin(true);
       return;
     }
@@ -164,11 +164,13 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
 
     setFollowLoading(true);
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
       let response;
       if (isFollowing) {
-        response = await followService.unfollowUser(Number(authorUserId), session.accessToken || "");
+        response = await followService.unfollowUser(Number(authorUserId), idToken);
       } else {
-        response = await followService.followUser(Number(authorUserId), session.accessToken || "");
+        response = await followService.followUser(Number(authorUserId), idToken);
       }
       
       if (response.status === code.success) {
@@ -185,11 +187,11 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
     } finally {
       setFollowLoading(false);
     }
-  }, [session?.user, authorUserId, isFollowing, setFollowState]);
+  }, [user, firebaseUser, authorUserId, isFollowing, setFollowState]);
 
   // Handle like/unlike main review
   const handleLikeClick = useCallback(async () => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -201,11 +203,11 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     onLikeChange?.(newLikedState, newLikedState ? likesCount + 1 : likesCount - 1);
     toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
-  }, [session?.user, userLiked, likesCount, onLikeChange]);
+  }, [user, userLiked, likesCount, onLikeChange]);
 
   // Handle reply like/unlike
   const handleReplyLike = useCallback(async (replyId: number) => {
-    if (!session?.user) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -233,7 +235,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
     } finally {
       setReplyLoading(prev => ({ ...prev, [replyId]: false }));
     }
-  }, [session?.user, replies]);
+  }, [user, replies]);
 
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
@@ -295,13 +297,16 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
     setCommentText("");
 
     try {
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      
       const payload = {
         content: optimisticReply.content,
         restaurantId: data.commentedOn?.node?.databaseId,
         parent: data.databaseId,
-        authorId: session?.user?.userId,
+        authorId: undefined, // Firebase users use UUID, not numeric userId
       };
-      const res = await reviewService.postReview(payload, session?.accessToken ?? "");
+      const res = await reviewService.postReview(payload, idToken);
       
       // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
       const isSuccess = (status: number | string) => {
@@ -347,7 +352,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [commentText, isLoading, cooldown, session?.user, data.commentedOn?.node?.databaseId, data.databaseId, data.id]);
+  }, [commentText, isLoading, cooldown, user, firebaseUser, data.commentedOn?.node?.databaseId, data.databaseId, data.id]);
 
   // Handle signin modal
   React.useEffect(() => {
@@ -431,9 +436,9 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             {data.author?.node?.id ? (
-              session?.user ? (
+              user ? (
                 <Link
-                  href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                   passHref
                 >
                   <FallbackImage
@@ -468,10 +473,10 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
             )}
             
             <div>
-              <div className="flex items-center space-x-2">
-                {session?.user ? (
+                <div className="flex items-center space-x-2">
+                {user ? (
                 <Link
-                  href={String(session.user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
                   passHref
                 >
                     <span className="font-semibold text-sm cursor-pointer hover:underline">
@@ -499,7 +504,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
           </div>
 
           {/* Follow Button */}
-          {(!session?.user || (session?.user?.id !== authorUserId)) && (
+          {(!user || (user?.id !== authorUserId)) && (
             <button
               onClick={handleFollowClick}
               disabled={followLoading || !authorUserId}

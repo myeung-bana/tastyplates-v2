@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { useFollowingReviewsGraphQL } from '@/hooks/useFollowingReviewsGraphQL';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import FollowingReviews from '@/components/review/FollowingReviews';
@@ -8,7 +8,7 @@ import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 import { FaUsers } from 'react-icons/fa';
 
 export default function FollowingPage() {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useFirebaseSession();
   const { 
     reviews, 
     loading, 
@@ -24,7 +24,7 @@ export default function FollowingPage() {
   });
 
   // Show loading state while checking authentication
-  if (status === 'loading') {
+  if (sessionLoading) {
     return (
       <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,7 +38,7 @@ export default function FollowingPage() {
   }
 
   // Redirect to sign-in if not authenticated
-  if (!session) {
+  if (!user) {
     return (
       <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,7 +51,7 @@ export default function FollowingPage() {
               Follow other food lovers to see their latest reviews and discoveries
             </p>
             <button 
-              onClick={() => window.location.href = '/api/auth/signin'}
+              onClick={() => window.location.href = '/signin'}
               className="bg-[#E36B00] hover:bg-[#c55a00] text-white px-8 py-3 rounded-full font-semibold transition-colors"
             >
               Sign In

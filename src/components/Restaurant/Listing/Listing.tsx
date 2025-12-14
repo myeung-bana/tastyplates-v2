@@ -12,7 +12,7 @@ import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 // Using DraftReviewData from DraftReviewCard instead
 import SkeletonListingCard from "@/components/ui/Skeleton/SkeletonListingCard";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
@@ -56,7 +56,7 @@ const restaurantService = new RestaurantService();
 const reviewService = new ReviewService();
 
 const ListingPage = () => {
-  const { data: session } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // Debounced search term
   const [listing, setListing] = useState<string>("");
@@ -224,8 +224,10 @@ const ListingPage = () => {
   const fetchReviewDrafts = useCallback(async () => {
     setLoadingDrafts(true);
     try {
-      if (!session?.accessToken) return;
-      const data = await reviewService.fetchReviewDrafts(session.accessToken);
+      if (!firebaseUser) return;
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      const data = await reviewService.fetchReviewDrafts(idToken);
       const transformedDrafts = transformReviewDrafts(data);
       setAllDrafts(transformedDrafts)
       setReviewDrafts(transformedDrafts.slice(0, 4));
@@ -234,18 +236,20 @@ const ListingPage = () => {
     } finally {
       setLoadingDrafts(false);
     }
-  }, [session?.accessToken, transformReviewDrafts]);
+  }, [firebaseUser, transformReviewDrafts]);
 
   useEffect(() => {
     if (!debouncedSearchTerm) {
       fetchReviewDrafts();
     }
-  }, [session?.accessToken, debouncedSearchTerm, fetchReviewDrafts]);
+  }, [firebaseUser, debouncedSearchTerm, fetchReviewDrafts]);
 
   const confirmDeleteDraft = async (draftId: number) => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
     try {
-      await reviewService.deleteReviewDraft(draftId, session.accessToken, true);
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      await reviewService.deleteReviewDraft(draftId, idToken, true);
       setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
       const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
       setAllDrafts(updatedAllDrafts);
@@ -271,11 +275,13 @@ const ListingPage = () => {
   }
 
   const fetchRecentlyVisited = useCallback(async () => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
 
     setLoadingVisited(true);
     try {
-      const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(session.accessToken);
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(idToken);
       const restaurantPromises = (visitedIds as unknown as (string | number)[]).map((id: string | number) =>
         restaurantService.fetchRestaurantById(String(id))
       );
@@ -287,13 +293,13 @@ const ListingPage = () => {
     } finally {
       setLoadingVisited(false);
     }
-  }, [session?.accessToken, transformNodes]);
+  }, [firebaseUser, transformNodes]);
 
   useEffect(() => {
-    if (session?.accessToken && !debouncedSearchTerm) {
+    if (firebaseUser && !debouncedSearchTerm) {
       fetchRecentlyVisited();
     }
-  }, [session?.accessToken, debouncedSearchTerm, fetchRecentlyVisited]);
+  }, [firebaseUser, debouncedSearchTerm, fetchRecentlyVisited]);
 
 
   return (

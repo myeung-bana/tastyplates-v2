@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import client from '@/app/graphql/client';
 import { SEARCH_REVIEWS_BY_HASHTAG } from '@/app/graphql/Reviews/reviewsQueries';
 import { GraphQLReview } from '@/types/graphql';
@@ -11,7 +11,7 @@ import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 const HashtagPage = () => {
   const params = useParams();
   const hashtag = (params?.hashtag as string) || '';
-  const { data: session } = useSession();
+  const { firebaseUser } = useFirebaseSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -29,12 +29,15 @@ const HashtagPage = () => {
 
     setLoading(true);
     try {
+      // Get Firebase ID token if user is authenticated
+      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
+      
       const { data } = await client.query({
         query: SEARCH_REVIEWS_BY_HASHTAG,
         variables: { hashtag, first: append ? 8 : 16, after: append ? endCursor : null },
         context: {
           headers: {
-            ...(session?.accessToken && { Authorization: `Bearer ${session.accessToken}` }),
+            ...(idToken && { Authorization: `Bearer ${idToken}` }),
           },
         },
         fetchPolicy: 'no-cache',

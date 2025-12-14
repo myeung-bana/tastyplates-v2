@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, PAGE, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -37,7 +37,7 @@ interface FollowersModalProps {
 const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, followers, onFollow, onUnfollow }) => {
   const [localFollowers, setLocalFollowers] = useState(followers);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   React.useEffect(() => {
     setLocalFollowers(followers);
@@ -76,7 +76,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               {follower.id ? (
-                <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
+                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
                   <FallbackImage
                     src={follower.image || DEFAULT_USER_ICON}
                     width={40}
@@ -98,7 +98,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
               )}
               <div className="flex-1 min-w-0">
                 {follower.id ? (
-                  <Link href={session?.user?.id && String(session.user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
+                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
                     <div className="font-semibold truncate cursor-pointer">{follower.name}</div>
                   </Link>
                 ) : (

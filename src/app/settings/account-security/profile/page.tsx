@@ -1,7 +1,7 @@
 "use client";
 import React, { FormEvent, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { toast } from 'react-hot-toast';
 import SettingsLayout from "@/components/Settings/SettingsLayout";
 import { UserService } from '@/services/user/userService';
@@ -23,7 +23,7 @@ const userService = new UserService();
 
 const ProfileSettingsPage = () => {
   const router = useRouter();
-  const { data: session, update } = useSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   
@@ -41,19 +41,19 @@ const ProfileSettingsPage = () => {
     gender: '',
   });
   
-  const isGoogleAuth = session?.user?.provider === provider.google;
+  const isGoogleAuth = user?.auth_method === 'google';
 
   // Initialize form with user data
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       setFormData({
-        email: session.user.email || '',
-        birthdate: session.user.birthdate || '',
-        gender: session.user.gender || '',
+        email: user.email || '',
+        birthdate: user.birthdate || '',
+        gender: user.gender || '',
       });
       setIsInitialized(true);
     }
-  }, [session?.user]);
+  }, [user]);
 
   const validateBirthdate = (birthdate: string) => {
     if (!birthdate) return birthdateRequired;
@@ -111,10 +111,13 @@ const ProfileSettingsPage = () => {
     }
 
     try {
-      if (!session?.user?.userId || !session?.accessToken) {
+      if (!user || !firebaseUser) {
         toast.error('Please log in to update your profile');
         return;
       }
+
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
 
       const updateData: Record<string, unknown> = {
         birthdate: formData.birthdate,
@@ -128,7 +131,7 @@ const ProfileSettingsPage = () => {
 
       const response = await userService.updateUserFields(
         updateData,
-        session.accessToken
+        idToken
       );
 
       if (response?.code === emailExistCode) {
@@ -138,17 +141,8 @@ const ProfileSettingsPage = () => {
       }
 
       if (response?.data?.status === 200 || response?.status === 200) {
-        // Update session
-        await update({
-          ...session,
-          user: {
-            ...session.user,
-            email: formData.email,
-            birthdate: formData.birthdate,
-            gender: formData.gender,
-          },
-        });
-
+        // Session will be automatically refreshed by useFirebaseSession hook
+        // Force a page reload to ensure fresh data
         toast.success('Profile updated successfully!');
         
         // Navigate back to settings after a short delay
@@ -168,11 +162,11 @@ const ProfileSettingsPage = () => {
 
   const handleCancel = () => {
     // Reset form to original values
-    if (session?.user) {
+    if (user) {
       setFormData({
-        email: session.user.email || '',
-        birthdate: session.user.birthdate || '',
-        gender: session.user.gender || '',
+        email: user.email || '',
+        birthdate: user.birthdate || '',
+        gender: user.gender || '',
       });
     }
     setErrors({ email: '', birthdate: '', gender: '' });

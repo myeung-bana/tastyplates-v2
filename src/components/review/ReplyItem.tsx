@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { GraphQLReview } from "@/types/graphql";
 import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
@@ -23,15 +23,15 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
   onProfileClick,
   isLoading
 }) => {
-  const { data: session } = useSession();
+  const { user } = useFirebaseSession();
 
   return (
     <div className="reply-item">
       <div className="reply-item__container">
         {reply.author?.node?.id ? (
-          session?.user ? (
+          user ? (
             <Link
-              href={String(session.user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id)}
+              href={String(user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id)}
               passHref
             >
               <FallbackImage

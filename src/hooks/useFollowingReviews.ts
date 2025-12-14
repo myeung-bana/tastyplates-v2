@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { FollowingReviewService } from '@/services/following/followingReviewService';
 import { FollowingReview, SuggestedUser } from '@/repositories/http/following/followingReviewRepository';
 
@@ -14,7 +14,7 @@ interface UseFollowingReviewsReturn {
 }
 
 export const useFollowingReviews = (): UseFollowingReviewsReturn => {
-  const { data: session } = useSession();
+  const { firebaseUser } = useFirebaseSession();
   const [reviews, setReviews] = useState<FollowingReview[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,10 @@ export const useFollowingReviews = (): UseFollowingReviewsReturn => {
   const isFirstLoad = useRef(true);
 
   const loadFollowingReviews = useCallback(async (pageNum: number = 1, append: boolean = false) => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
+    
+    // Get Firebase ID token for authentication
+    const idToken = await firebaseUser.getIdToken();
     
     if (pageNum === 1) {
       setInitialLoading(true);
@@ -35,7 +38,7 @@ export const useFollowingReviews = (): UseFollowingReviewsReturn => {
     }
     
     try {
-      const response = await serviceRef.current.getFollowingReviews(pageNum, session.accessToken);
+      const response = await serviceRef.current.getFollowingReviews(pageNum, idToken);
       
       if (append) {
         setReviews(prev => [...prev, ...response.reviews]);
@@ -56,26 +59,28 @@ export const useFollowingReviews = (): UseFollowingReviewsReturn => {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [session?.accessToken]);
+  }, [firebaseUser]);
 
   const loadSuggestedUsers = useCallback(async () => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
     
     try {
-      const response = await serviceRef.current.getSuggestedUsers(session.accessToken);
+      // Get Firebase ID token for authentication
+      const idToken = await firebaseUser.getIdToken();
+      const response = await serviceRef.current.getSuggestedUsers(idToken);
       setSuggestedUsers(response.suggested_users);
     } catch (error) {
       console.error('Error loading suggested users:', error);
       setSuggestedUsers([]);
     }
-  }, [session?.accessToken]);
+  }, [firebaseUser]);
 
   const loadMore = useCallback(() => {
-    if (!loading && hasMore && session?.accessToken) {
+    if (!loading && hasMore && firebaseUser) {
       const nextPage = page + 1;
       loadFollowingReviews(nextPage, true);
     }
-  }, [loading, hasMore, page, session?.accessToken, loadFollowingReviews]);
+  }, [loading, hasMore, page, firebaseUser, loadFollowingReviews]);
 
   const refreshFollowingReviews = useCallback(async () => {
     setPage(1);
@@ -84,16 +89,16 @@ export const useFollowingReviews = (): UseFollowingReviewsReturn => {
 
   // Initial load when session is available
   useEffect(() => {
-    if (session?.accessToken && isFirstLoad.current) {
+    if (firebaseUser && isFirstLoad.current) {
       isFirstLoad.current = false;
       loadFollowingReviews(1, false);
       loadSuggestedUsers();
     }
-  }, [session?.accessToken, loadFollowingReviews, loadSuggestedUsers]);
+  }, [firebaseUser, loadFollowingReviews, loadSuggestedUsers]);
 
   // Reset state when session changes
   useEffect(() => {
-    if (!session?.accessToken) {
+    if (!firebaseUser) {
       setReviews([]);
       setSuggestedUsers([]);
       setPage(1);
@@ -101,7 +106,7 @@ export const useFollowingReviews = (): UseFollowingReviewsReturn => {
       setInitialLoading(true);
       isFirstLoad.current = true;
     }
-  }, [session?.accessToken]);
+  }, [firebaseUser]);
 
   return {
     reviews,

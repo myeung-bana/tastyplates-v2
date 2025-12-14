@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { FollowService } from '@/services/follow/followService';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { responseStatusCode as code } from '@/constants/response';
@@ -24,7 +24,7 @@ const isUUID = (value: string | number | null): boolean => {
 };
 
 export const useFollowData = (targetUserId: string | number | null): UseFollowDataReturn => {
-  const { data: session } = useSession();
+  const { firebaseUser } = useFirebaseSession();
   const [followers, setFollowers] = useState<Record<string, unknown>[]>([]);
   const [following, setFollowing] = useState<Record<string, unknown>[]>([]);
   const [followersLoading, setFollowersLoading] = useState(true);
@@ -132,34 +132,40 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
   }, [loadFollowData]);
 
   const handleFollow = useCallback(async (id: string) => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
+    
+    // Get Firebase ID token for authentication
+    const idToken = await firebaseUser.getIdToken();
     
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
     
-    const response = await followService.followUser(userIdNum, session.accessToken);
+    const response = await followService.followUser(userIdNum, idToken);
     if (response.status === code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
       await refreshFollowData();
     }
-  }, [session?.accessToken, targetUserId, refreshFollowData]);
+  }, [firebaseUser, targetUserId, refreshFollowData]);
 
   const handleUnfollow = useCallback(async (id: string) => {
-    if (!session?.accessToken) return;
+    if (!firebaseUser) return;
+    
+    // Get Firebase ID token for authentication
+    const idToken = await firebaseUser.getIdToken();
     
     const userIdNum = Number(id);
     if (isNaN(userIdNum)) return;
     
-    const response = await followService.unfollowUser(userIdNum, session.accessToken);
+    const response = await followService.unfollowUser(userIdNum, idToken);
     if (response.status === code.success) {
       localStorage.removeItem(FOLLOWING_KEY(targetUserId));
       localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
       localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
       await refreshFollowData();
     }
-  }, [session?.accessToken, targetUserId, refreshFollowData]);
+  }, [firebaseUser, targetUserId, refreshFollowData]);
 
   // Load follow data when dependencies change
   // Public endpoints - no need to require session token
