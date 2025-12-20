@@ -11,6 +11,7 @@ import type { DraftReviewData } from "./DraftReviewCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
+import RecentlyVisitedRestaurants from "@/components/Restaurant/RecentlyVisitedRestaurants";
 import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 // Using DraftReviewData from DraftReviewCard instead
@@ -60,7 +61,6 @@ const ListingPage = () => {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // Debounced search term
   const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
-  const [loadingVisited, setLoadingVisited] = useState(true);
   const [loading, setLoading] = useState(false); // Changed initial state to false
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -68,7 +68,6 @@ const ListingPage = () => {
   const [allDrafts, setAllDrafts] = useState<DraftReviewData[]>([]);
   const [draftToDelete, setDraftToDelete] = useState<DraftReviewData | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
-  const [recentlyVisitedRestaurants, setRecentlyVisitedRestaurants] = useState<Restaurant[]>([]);
   // Map numeric IDs to UUIDs for deletion
   const [draftIdToUuidMap, setDraftIdToUuidMap] = useState<Map<number, string>>(new Map());
 
@@ -311,33 +310,6 @@ const ListingPage = () => {
     setIsShowDelete(true);
   }
 
-  const fetchRecentlyVisited = useCallback(async () => {
-    if (!firebaseUser) return;
-
-    setLoadingVisited(true);
-    try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
-      const visitedIds = await restaurantService.fetchRecentlyVisitedRestaurants(idToken);
-      const restaurantPromises = (visitedIds as unknown as (string | number)[]).map((id: string | number) =>
-        restaurantService.fetchRestaurantById(String(id))
-      );
-      const restaurants = await Promise.all(restaurantPromises);
-      const transformed = transformNodes(restaurants);
-      setRecentlyVisitedRestaurants(transformed);
-    } catch (error) {
-      console.error("Failed to fetch recently visited restaurants:", error);
-    } finally {
-      setLoadingVisited(false);
-    }
-  }, [firebaseUser, transformNodes]);
-
-  useEffect(() => {
-    if (firebaseUser && !debouncedSearchTerm) {
-      fetchRecentlyVisited();
-    }
-  }, [firebaseUser, debouncedSearchTerm, fetchRecentlyVisited]);
-
 
   return (
     <>
@@ -399,22 +371,7 @@ const ListingPage = () => {
 
           {/* Conditional rendering of "Recently Visited" */}
           {!debouncedSearchTerm && (
-            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
-              <div className="restaurants__content mt-6 md:mt-10">
-                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
-                {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
-                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
-                    You haven’t visited any restaurants yet.
-                  </p>
-                )}
-                <div className="restaurants__grid mt-6 md:mt-8">
-                  {recentlyVisitedRestaurants.map((rest) => (
-                    <RestaurantCard key={rest.id} restaurant={rest} />
-                  ))}
-                  {loadingVisited && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-                </div>
-              </div>
-            </div>
+            <RecentlyVisitedRestaurants />
           )}
 
           {/* Display Restaurants section only when there's an active search or it's loading search results */}

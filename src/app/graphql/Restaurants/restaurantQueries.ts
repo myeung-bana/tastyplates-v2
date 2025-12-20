@@ -195,3 +195,82 @@ export const GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE = `
     }
   }
 `;
+
+// MATCH RESTAURANT BY PLACE ID - Check if restaurant exists by Google Place ID
+export const MATCH_RESTAURANT_BY_PLACE_ID = `
+  query MatchRestaurantByPlaceId($placeId: String!) {
+    restaurants(
+      where: { 
+        address: { _contains: { place_id: $placeId } }
+      }
+      limit: 1
+    ) {
+      id
+      uuid
+      title
+      slug
+      status
+      listing_street
+      phone
+      menu_url
+      longitude
+      latitude
+      featured_image_url
+      average_rating
+      ratings_count
+      address
+    }
+  }
+`;
+
+// MATCH RESTAURANT BY NAME AND ADDRESS - Fuzzy matching
+export const MATCH_RESTAURANT_BY_NAME_ADDRESS = `
+  query MatchRestaurantByNameAndAddress($name: String!, $address: String!) {
+    restaurants(
+      where: {
+        _and: [
+          { title: { _ilike: $name } }
+          { listing_street: { _ilike: $address } }
+        ]
+      }
+      limit: 5
+    ) {
+      id
+      uuid
+      title
+      slug
+      status
+      listing_street
+      phone
+      menu_url
+      longitude
+      latitude
+      featured_image_url
+      average_rating
+      ratings_count
+      address
+    }
+  }
+`;
+
+// CREATE RESTAURANT - Create new restaurant from Google Places data
+export const CREATE_RESTAURANT = `
+  mutation CreateRestaurant($object: restaurants_insert_input!) {
+    insert_restaurants_one(object: $object) {
+      id
+      uuid
+      title
+      slug
+      status
+      listing_street
+      phone
+      menu_url
+      longitude
+      latitude
+      featured_image_url
+      address
+      created_at
+      updated_at
+    }
+  }
+`;

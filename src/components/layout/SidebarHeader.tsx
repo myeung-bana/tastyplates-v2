@@ -151,7 +151,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
   const sidebarSections = [
     // Section 1: Write a Review (only if authenticated)
     user ? [
-      { name: "Write a Review", href: LISTING, icon: FiEdit3 },
+      { name: "Write a Review", href: "/add-review", icon: FiEdit3 },
     ] : [],
     // Section 2: Explore & Following (Following only for authenticated users)
     [

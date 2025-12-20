@@ -1,8 +1,11 @@
 "use client";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState, useCallback } from "react";
 import Footer from "@/components/layout/Footer";
 import "@/styles/pages/_submit-restaurants.scss";
+import "@/styles/pages/_restaurants.scss";
 import Rating from "./Rating";
+import RestaurantCard from "@/components/Restaurant/RestaurantCard";
+import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,6 +28,12 @@ import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { getCityCountry } from "@/utils/addressUtils";
 import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
+import { RestaurantSelection } from "@/components/reviews/RestaurantSearch";
+import { GooglePlacesAutocomplete } from "@/components/ui/GooglePlacesAutocomplete";
+import { RestaurantMatchDialog } from "@/components/reviews/RestaurantMatchDialog";
+import { RestaurantPlaceData, formatAddressComponents, getPhotoUrl, fetchPlaceDetails } from "@/lib/google-places-utils";
+import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
+import RecentlyVisitedRestaurants from "@/components/Restaurant/RecentlyVisitedRestaurants";
 interface Restaurant {
   id: string;
   slug: string;
@@ -45,17 +54,17 @@ const restaurantService = new RestaurantService();
 const reviewService = new ReviewService();
 
 const ReviewSubmissionPage = () => {
-  const params = useParams() as { slug: string };
-  const restaurantSlug = params.slug;
+  const params = useParams() as { slug?: string };
+  const restaurantSlug = params.slug; // Optional - undefined for /add-review route
   const { user, firebaseUser } = useFirebaseSession();
-  const [restaurantName, setRestaurantName] = useState('Loading...');
+  const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
-  const [restaurantLocation, setRestaurantLocation] = useState('Loading...');
+  const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
   const [googleMapUrl, setGoogleMapUrl] = useState<GoogleMapUrl | null>(null);
   const [review_main_title, setReviewMainTitle] = useState('');
   const [content, setContent] = useState('');
   const [review_stars, setReviewStars] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!restaurantSlug); // Only load if slug provided
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingAsDraft, setIsSavingAsDraft] = useState(false);
   const [descriptionError, setDescriptionError] = useState('');
@@ -79,6 +88,15 @@ const ReviewSubmissionPage = () => {
     recognition: []
   });
   const [restaurantUuid, setRestaurantUuid] = useState<string | null>(null);
+  // Restaurant selection state (for /add-review route)
+  const [restaurantSelection, setRestaurantSelection] = useState<RestaurantSelection | null>(null);
+  const [isRestaurantSelected, setIsRestaurantSelected] = useState(!!restaurantSlug);
+  // Google Places Autocomplete and match dialog state
+  const [searchValue, setSearchValue] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<RestaurantPlaceData | null>(null);
+  const [existingRestaurant, setExistingRestaurant] = useState<RestaurantV2 | null>(null);
+  const [showMatchDialog, setShowMatchDialog] = useState(false);
+  const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
     const fetchRestaurantData = async () => {
@@ -168,6 +186,7 @@ const ReviewSubmissionPage = () => {
 
     fetchRestaurantData();
   }, [restaurantSlug, firebaseUser]);
+
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -304,8 +323,59 @@ const ReviewSubmissionPage = () => {
         return;
       }
 
-      // Get restaurant UUID if not already set
+      // Get restaurant UUID
       let uuid = restaurantUuid;
+
+      // If restaurant was selected via search (not slug), handle creation
+      if (!uuid && restaurantSelection) {
+        if (restaurantSelection.type === 'existing' && restaurantSelection.restaurantUuid) {
+          uuid = restaurantSelection.restaurantUuid;
+        } else if (restaurantSelection.type === 'new' && restaurantSelection.placeData) {
+          // Create restaurant from Google Places data
+          try {
+            const placeData = restaurantSelection.placeData;
+            const addressComponents = placeData.address_components || [];
+            const formattedAddress = placeData.formatted_address || '';
+            
+            const createResponse = await fetch('/api/v1/restaurants-v2/create-restaurant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: placeData.name,
+                place_id: placeData.place_id,
+                formatted_address: formattedAddress,
+                address_components: addressComponents,
+                latitude: placeData.geometry?.location?.lat(),
+                longitude: placeData.geometry?.location?.lng(),
+                phone: placeData.phone,
+                website: placeData.website,
+                status: 'draft', // User-created restaurants start as draft
+              }),
+            });
+
+            if (!createResponse.ok) {
+              const errorData = await createResponse.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Failed to create restaurant');
+            }
+
+            const createData = await createResponse.json();
+            
+            if (createData.success && createData.data?.uuid) {
+              uuid = createData.data.uuid;
+            } else {
+              throw new Error('Failed to create restaurant - no UUID returned');
+            }
+          } catch (createError: any) {
+            console.error('Error creating restaurant:', createError);
+            toast.error(createError.message || 'Failed to create restaurant. Please try again.');
+            setIsLoading(false);
+            setIsSavingAsDraft(false);
+            return;
+          }
+        }
+      }
+
+      // Fallback: Try to get UUID from slug if still not set
       if (!uuid && restaurantSlug) {
         uuid = await getRestaurantUuidFromSlug(restaurantSlug);
         if (!uuid) {
@@ -317,7 +387,7 @@ const ReviewSubmissionPage = () => {
       }
 
       if (!uuid) {
-        toast.error('Restaurant information is missing');
+        toast.error('Restaurant information is missing. Please select a restaurant.');
         setIsLoading(false);
         setIsSavingAsDraft(false);
         return;
@@ -400,18 +470,183 @@ const ReviewSubmissionPage = () => {
     setSelectedFiles(selectedFiles.filter((item: string) => item != index))
   }
 
+  // Handle place selection from GooglePlacesAutocomplete
+  const handlePlaceSelect = async (place: { place_id: string; description: string }) => {
+    if (!place.place_id) {
+      toast.error('Invalid place selection');
+      return;
+    }
+
+    setIsMatching(true);
+    setSearchValue(place.description);
+
+    try {
+      const placeData = await fetchPlaceDetails(place.place_id);
+      if (!placeData) {
+        toast.error('Failed to fetch restaurant details. Please try again.');
+        setIsMatching(false);
+        return;
+      }
+
+      setSelectedPlace(placeData);
+
+      try {
+        const matchResponse = await fetch('/api/v1/restaurants-v2/match-restaurant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            place_id: placeData.place_id,
+            name: placeData.name,
+            address: placeData.formatted_address,
+            latitude: placeData.geometry?.location?.lat(),
+            longitude: placeData.geometry?.location?.lng(),
+          }),
+        });
+
+        if (!matchResponse.ok) {
+          throw new Error('Failed to check for existing restaurant');
+        }
+
+        const matchData = await matchResponse.json();
+
+        if (matchData.match && matchData.restaurant) {
+          setExistingRestaurant(matchData.restaurant);
+        } else {
+          setExistingRestaurant(null);
+        }
+
+        setShowMatchDialog(true);
+      } catch (matchError) {
+        console.error('Error matching restaurant:', matchError);
+        toast.error('Failed to check for existing restaurant. Please try again.');
+        setExistingRestaurant(null);
+        setShowMatchDialog(true);
+      }
+    } catch (error) {
+      console.error('Error fetching place details:', error);
+      toast.error('Failed to fetch restaurant details. Please try again.');
+    } finally {
+      setIsMatching(false);
+    }
+  };
+
+  const handleSelectExisting = (restaurant: RestaurantV2) => {
+    handleRestaurantSelect({
+      type: 'existing',
+      restaurantUuid: restaurant.uuid,
+    });
+    setSearchValue(restaurant.title);
+    setSelectedPlace(null);
+    setExistingRestaurant(null);
+  };
+
+  const handleCreateNew = (placeData: RestaurantPlaceData) => {
+    handleRestaurantSelect({
+      type: 'new',
+      placeData: placeData,
+    });
+    setSearchValue(placeData.name);
+    setSelectedPlace(null);
+    setExistingRestaurant(null);
+  };
+
+  // Handle restaurant selection from search
+  const handleRestaurantSelect = (selection: RestaurantSelection) => {
+    setRestaurantSelection(selection);
+    
+    if (selection.type === 'existing' && selection.restaurantUuid) {
+      // Fetch restaurant details to display
+      restaurantV2Service.getRestaurantByUuid(selection.restaurantUuid)
+        .then((response: any) => {
+          if (response && response.data) {
+            const v2Data = response.data;
+            setRestaurantName(v2Data.title || 'Restaurant');
+            setRestaurantImage(v2Data.featured_image_url || '');
+            setRestaurantLocation(v2Data.listing_street || v2Data.address?.street_address || 'Location not available');
+            setGoogleMapUrl(v2Data.address as GoogleMapUrl || null);
+            setRestaurantUuid(v2Data.uuid);
+            
+            setRestaurant(prev => ({
+              ...prev,
+              name: v2Data.title || 'Restaurant',
+              image: v2Data.featured_image_url || '',
+              location: v2Data.listing_street || v2Data.address?.street_address || 'Location not available',
+              slug: v2Data.slug || '',
+              address: v2Data.listing_street || v2Data.address?.street_address || '',
+              phone: v2Data.phone || '',
+              priceRange: v2Data.restaurant_price_range?.display_name || '',
+              rating: v2Data.average_rating || 0,
+            }));
+          }
+        })
+        .catch((error: any) => {
+          console.error('Error fetching selected restaurant:', error);
+          toast.error('Failed to load restaurant details');
+        });
+    } else if (selection.type === 'new' && selection.placeData) {
+      // Use Google Places data to display
+      const placeData = selection.placeData;
+      const address = formatAddressComponents(placeData.address_components || []);
+      const firstPhoto = placeData.photos && placeData.photos.length > 0 ? placeData.photos[0] : null;
+      const photoUrl = firstPhoto ? getPhotoUrl(firstPhoto, 400) : null;
+      
+      setRestaurantName(placeData.name);
+      setRestaurantImage(photoUrl || '');
+      setRestaurantLocation(placeData.formatted_address || 'Location not available');
+      setGoogleMapUrl(address);
+      
+      setRestaurant(prev => ({
+        ...prev,
+        name: placeData.name,
+        image: photoUrl || '',
+        location: placeData.formatted_address || 'Location not available',
+        slug: '',
+        address: placeData.formatted_address || '',
+        phone: placeData.phone || '',
+        priceRange: '',
+        rating: placeData.rating || 0,
+      }));
+    }
+    
+    setIsRestaurantSelected(true);
+  };
+
   if (loading) return <ReviewSubmissionSkeleton />;
   return (
     <>
       <div className="submitRestaurants mt-16 md:mt-20 font-neusans">
         <div className="submitRestaurants__container">
           <div className="submitRestaurants__card">
-          <RestaurantReviewHeader 
-            restaurantName={restaurantName}
-            restaurantImage={restaurantImage}
-            restaurantLocation={restaurantLocation}
-            googleMapUrl={googleMapUrl}
-          />
+          {/* Show restaurant search if no slug and restaurant not selected */}
+          {!restaurantSlug && !isRestaurantSelected ? (
+            <div className="mb-6">
+              <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-neusans mb-6">Find a listing to review</h1>
+              <div className="flex justify-center">
+                <div className="w-full max-w-[525px]">
+                  <GooglePlacesAutocomplete
+                    value={searchValue}
+                    onChange={setSearchValue}
+                    onPlaceSelect={handlePlaceSelect}
+                    placeholder="Search by Listing Name"
+                    searchType="restaurant"
+                    disabled={isMatching}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <RestaurantReviewHeader 
+                restaurantName={restaurantName}
+                restaurantImage={restaurantImage}
+                restaurantLocation={restaurantLocation}
+                googleMapUrl={googleMapUrl}
+              />
+            </>
+          )}
+          
+          {/* Only show form if restaurant is selected */}
+          {isRestaurantSelected && (
           <form className="submitRestaurants__form">
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">How would you rate your experience?</label>
@@ -616,6 +851,7 @@ const ReviewSubmissionPage = () => {
                 </button>
               </div>
             </form>
+          )}
           </div>
         </div>
         <CustomModal
@@ -624,7 +860,19 @@ const ReviewSubmissionPage = () => {
           isOpen={isSubmitted}
           setIsOpen={() => setIsSubmitted(!isSubmitted)}
         />
+        {selectedPlace && (
+          <RestaurantMatchDialog
+            open={showMatchDialog}
+            onOpenChange={setShowMatchDialog}
+            googlePlaceData={selectedPlace}
+            existingRestaurant={existingRestaurant}
+            onSelectExisting={handleSelectExisting}
+            onCreateNew={handleCreateNew}
+          />
+        )}
       </div>
+      {/* Recently Visited Restaurants Section */}
+      <RecentlyVisitedRestaurants />
     </>
   );
 };
