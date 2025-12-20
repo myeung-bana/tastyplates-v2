@@ -48,10 +48,18 @@ export function useFirebaseSession(): FirebaseSession {
           // Get Firebase ID token for authentication
           const idToken = await fbUser.getIdToken();
           
+          // Use absolute URL for fetch to avoid issues with relative paths
+          const baseUrl = typeof window !== 'undefined' 
+            ? window.location.origin 
+            : (process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '');
+          
+          const apiUrl = `${baseUrl}/api/user/me`;
+          
           // Fetch Hasura user data by firebase_uuid
-          const response = await fetch('/api/user/me', {
+          const response = await fetch(apiUrl, {
             headers: {
               'Authorization': `Bearer ${idToken}`,
+              'Content-Type': 'application/json',
             },
           });
           
@@ -87,8 +95,14 @@ export function useFirebaseSession(): FirebaseSession {
             }
           }
         } catch (err) {
-          console.error('Error fetching user data:', err);
-          setError(err instanceof Error ? err.message : 'Failed to fetch user data');
+          // Handle network errors gracefully
+          if (err instanceof TypeError && err.message.includes('fetch')) {
+            console.error('Network error fetching user data:', err);
+            setError('Network error: Unable to connect to server');
+          } else {
+            console.error('Error fetching user data:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch user data');
+          }
           setUser(null);
         }
       } else {

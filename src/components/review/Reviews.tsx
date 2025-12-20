@@ -323,13 +323,25 @@ const Reviews = () => {
               )}
             </div>
           </>
-        ) : activeTab === 'foryou' && user ? (
+        ) : currentLoading || currentInitialLoading ? (
+          /* Show skeletons when loading and no reviews yet */
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+            {Array.from({ length: 10 }, (_, i) => (
+              <ReviewCardSkeleton key={`empty-loading-skeleton-${i}`} />
+            ))}
+          </div>
+        ) : activeTab === 'trending' ? (
+          /* Empty state for Trending tab */
           <div className="text-center py-12 mt-10">
             <p className="text-gray-500 font-neusans">
-              {forYouInitialLoading 
-                ? 'Loading...'
-                : 'No reviews yet from people you follow. Start following food lovers to see their reviews here!'
-              }
+              No reviews found. Be the first to share your dining experience!
+            </p>
+          </div>
+        ) : activeTab === 'foryou' && user ? (
+          /* Empty state for For You tab */
+          <div className="text-center py-12 mt-10">
+            <p className="text-gray-500 font-neusans">
+              No reviews yet from people you follow. Start following food lovers to see their reviews here!
             </p>
           </div>
         ) : null}

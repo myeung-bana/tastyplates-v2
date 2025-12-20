@@ -471,30 +471,6 @@ const RestaurantPage = () => {
 
   // Removed unused function
 
-  const handleRestaurantClick = async (restaurantId: number) => {
-    if (!user) return;
-    
-    try {
-      // Get Firebase ID token for API call
-      const { auth } = await import('@/lib/firebase');
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
-      // Non-blocking: recently visited is a non-critical feature
-      // Errors are handled gracefully in the service layer
-      await restaurantService.addRecentlyVisitedRestaurant(restaurantId, token);
-    } catch (error) {
-      // Silently handle error - this is a non-critical feature
-      // The error is already logged in the service layer
-      console.warn("Failed to add recently visited restaurant (non-critical):", error);
-    }
-  };
-
-  // Handler for suggested restaurants (takes Restaurant object)
-  const handleSuggestedRestaurantClick = async (restaurant: Restaurant) => {
-    await handleRestaurantClick(restaurant.databaseId);
-  };
-
   const fetchListingsName = useCallback(async (search: string = '', page = 1) => {
     try {
       const result = await restaurantService.fetchListingsName(
@@ -568,7 +544,6 @@ const RestaurantPage = () => {
                   <RestaurantCard
                     key={restaurant.id}
                     restaurant={restaurant}
-                    onClick={() => handleRestaurantClick(restaurant.databaseId)}
                   />
                 ))}
               </div>
@@ -576,7 +551,6 @@ const RestaurantPage = () => {
               {showSuggestions && (
                 <SuggestedRestaurants
                   selectedPalates={filters.palates || []}
-                  onRestaurantClick={handleSuggestedRestaurantClick}
                 />
               )}
               

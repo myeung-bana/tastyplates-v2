@@ -152,15 +152,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
     );
   }
 
-  if (!initialized) {
-    return (
-      <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans" disabled>
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        <span className="text-gray-400">Loading…</span>
-      </button>
-    );
-  }
-
+  // Show button immediately without loading spinner
   return (
     <button
       className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans ${

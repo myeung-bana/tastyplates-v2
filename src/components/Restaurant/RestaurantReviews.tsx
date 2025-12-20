@@ -346,10 +346,12 @@ export default function RestaurantReviews({ restaurantId, restaurantUuid, review
               />
             </>
           ) : (
-            <EmptyState 
-              heading="No Reviews Found"
-              message="No reviews have been made yet."
-            />
+            <div className="col-span-full">
+              <EmptyState 
+                heading="No Reviews Found"
+                message="No reviews have been made yet."
+              />
+            </div>
           )}
         </div>
       ),

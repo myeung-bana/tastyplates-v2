@@ -213,8 +213,9 @@ export class RestaurantRepository implements RestaurantRepo {
             });
             return !!data; // Return boolean as expected by interface
         } catch (error) {
-            console.error('Error adding recently visited restaurant:', error);
-            throw error;
+            // Silently handle error - return false instead of throwing
+            // This prevents errors when fetching restaurants for other users or when not logged in
+            return false;
         }
     }
 

@@ -255,7 +255,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                   className="review-block__user-image cursor-pointer"
                 />
               </a>
-              ) : session ? (
+              ) : user ? (
                 <a href={profileUrl}>
                   <Image
                     src={displayImage}
@@ -294,7 +294,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                     {displayName}
                   </h3>
                 </a>
-              ) : session ? (
+              ) : user ? (
                 <a href={profileUrl}>
                   <h3 className="review-block__username cursor-pointer">
                     {displayName}

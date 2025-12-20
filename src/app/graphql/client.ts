@@ -1,6 +1,7 @@
 // apollo-client.ts
-import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
+import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
+import { onError } from '@apollo/client/link/error';
 
 // Use proxy URL for local development to avoid CORS issues
 const graphqlUrl = process.env.NEXT_PUBLIC_WP_GRAPHQL_API_URL || 
@@ -66,9 +67,39 @@ const authLink = setContext(async (_, { headers }) => {
   };
 });
 
+// Error link to handle "Not logged in" errors gracefully
+const errorLink = onError(({ graphQLErrors, networkError }) => {
+  if (graphQLErrors) {
+    // Filter out "Not logged in" errors for fields that are optional when not authenticated
+    graphQLErrors.forEach(({ message, locations, path }) => {
+      const isNotLoggedInError = message?.toLowerCase().includes('not logged in');
+      
+      if (isNotLoggedInError) {
+        // Silently handle "Not logged in" errors - these are expected when user is not authenticated
+        // The query will still return data, just without the authenticated-only fields
+        console.debug('GraphQL: "Not logged in" error for optional authenticated field - ignoring');
+      } else {
+        // Log other GraphQL errors
+        console.error(
+          `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`
+        );
+      }
+    });
+  }
+
+  if (networkError) {
+    console.error(`Network error: ${networkError}`);
+  }
+});
+
 const client = new ApolloClient({
-  link: authLink.concat(httpLink),
+  link: from([authLink, errorLink, httpLink]),
   cache: new InMemoryCache(),
+  defaultOptions: {
+    query: {
+      errorPolicy: 'partial', // Return partial data even if there are errors
+    },
+  },
 });
 
 export default client;
