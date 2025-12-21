@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
     const following = followingList.map((user: any) => {
       return {
         id: user.id,
+        username: user.username, // Include username for profile URLs
         name: user.display_name || user.username,
         cuisines: getPalatesArray(user.palates),
         image: getProfileImageUrl(user.profile_image),

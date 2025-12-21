@@ -217,6 +217,17 @@ class RestaurantUserService {
     return response.json();
   }
 
+  async getUserByUsername(username: string): Promise<RestaurantUserResponse> {
+    const response = await fetch(`${this.baseUrl}/get-restaurant-user-by-username?username=${encodeURIComponent(username)}`);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to fetch user: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   async getUserByFirebaseUuid(firebase_uuid: string): Promise<RestaurantUserResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/get-restaurant-user-by-firebase-uuid?firebase_uuid=${firebase_uuid}`);

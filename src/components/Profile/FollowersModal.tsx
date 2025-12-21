@@ -20,6 +20,7 @@ const encodeRelayId = (type: string, id: string) => {
 
 export interface Follower {
   id: string;
+  username?: string; // Username for profile URLs
   name: string;
   cuisines: string[];
   image?: string;
@@ -76,7 +77,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
           {localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               {follower.id ? (
-                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
+                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id, follower.username)}>
                   <FallbackImage
                     src={follower.image || DEFAULT_USER_ICON}
                     width={40}
@@ -98,7 +99,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
               )}
               <div className="flex-1 min-w-0">
                 {follower.id ? (
-                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id)}>
+                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id, follower.username)}>
                     <div className="font-semibold truncate cursor-pointer">{follower.name}</div>
                   </Link>
                 ) : (

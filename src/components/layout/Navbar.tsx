@@ -364,7 +364,7 @@ export default function Navbar(props: Record<string, unknown>) {
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link 
-                          href={user?.id ? `/profile/${user.id}` : PROFILE} 
+                          href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.id ? `/profile/${user.id}` : PROFILE)} 
                           className='font-neusans text-left pl-3.5 pr-12 py-3.5'
                         >
                           My Profile

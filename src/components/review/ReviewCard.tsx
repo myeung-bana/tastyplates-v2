@@ -83,7 +83,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
               </Link>
             ) : session ? (
               <Link
-                href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
+                href={generateProfileUrl(data.author?.node?.databaseId || data.id, data.author?.node?.username)}
                 prefetch={false}
               >
                 <FallbackImage
@@ -130,7 +130,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                 </Link>
               ) : session ? (
                 <Link
-                  href={generateProfileUrl(data.author?.node?.databaseId || data.id)}
+                  href={generateProfileUrl(data.author?.node?.databaseId || data.id, data.author?.node?.username)}
                   prefetch={false}
                 >
                   <h3 className="review-card__username line-clamp-1 cursor-pointer font-neusans">

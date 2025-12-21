@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
     const followers = followersList.map((follower: any) => {
       return {
         id: follower.id,
+        username: follower.username, // Include username for profile URLs
         name: follower.display_name || follower.username,
         cuisines: getPalatesArray(follower.palates),
         image: getProfileImageUrl(follower.profile_image),

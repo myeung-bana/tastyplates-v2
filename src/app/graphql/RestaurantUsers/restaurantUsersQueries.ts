@@ -87,6 +87,41 @@ export const GET_RESTAURANT_USER_BY_ID = `
   }
 `;
 
+// GET BY USERNAME - Get single user by username
+export const GET_RESTAURANT_USER_BY_USERNAME = `
+  query GetRestaurantUserByUsername($username: String!) {
+    restaurant_users(where: { username: { _eq: $username }, deleted_at: { _is_null: true } }, limit: 1) {
+      id
+      firebase_uuid
+      username
+      email
+      display_name
+      user_nicename
+      password_hash
+      is_google_user
+      google_auth
+      google_token
+      auth_method
+      profile_image
+      about_me
+      birthdate
+      gender
+      custom_gender
+      pronoun
+      address
+      zip_code
+      latitude
+      longitude
+      palates
+      language_preference
+      onboarding_complete
+      created_at
+      updated_at
+      deleted_at
+    }
+  }
+`;
+
 // GET BY FIREBASE UUID - Get user by Firebase UUID
 export const GET_RESTAURANT_USER_BY_FIREBASE_UUID = `
   query GetRestaurantUserByFirebaseUuid($firebase_uuid: String!) {

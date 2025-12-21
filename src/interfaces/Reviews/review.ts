@@ -23,6 +23,7 @@ export interface ReviewedDataProps {
       id: string;
       databaseId: number
       name: string;
+      username?: string; // Username for profile URLs
       avatar: {
         url: string;
       }

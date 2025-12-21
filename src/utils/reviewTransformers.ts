@@ -283,6 +283,7 @@ export function transformReviewV2ToReviewedDataProps(review: ReviewV2): Reviewed
         id: review.author_id,
         databaseId: userId,
         name: authorName,
+        username: review.author?.username, // Include username for profile URLs
         avatar: {
           url: authorAvatar
         }
@@ -371,6 +372,7 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
         id: review.author_id,
         databaseId: userId,
         name: authorName,
+        username: review.author?.username, // Include username for profile URLs
         avatar: {
           url: authorAvatar
         }

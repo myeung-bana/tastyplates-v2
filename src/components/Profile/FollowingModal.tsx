@@ -20,6 +20,7 @@ const encodeRelayId = (type: string, id: string) => {
 
 interface FollowingUser {
   id: string;
+  username?: string; // Username for profile URLs
   name: string;
   cuisines: string[];
   image?: string;
@@ -49,12 +50,12 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
     setLoadingMap((prev) => ({ ...prev, [id]: true }));
     if (isFollowing) {
       setLocalFollowing((prev) =>
-        prev.map((user) => user.id === id ? { ...user, isFollowing: false } : user)
+        prev.map((followingUser) => followingUser.id === id ? { ...followingUser, isFollowing: false } : followingUser)
       );
       await onUnfollow(id);
     } else {
       setLocalFollowing((prev) =>
-        prev.map((user) => user.id === id ? { ...user, isFollowing: true } : user)
+        prev.map((followingUser) => followingUser.id === id ? { ...followingUser, isFollowing: true } : followingUser)
       );
       await onFollow(id);
     }
@@ -75,39 +76,39 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
         <h2 className="text-center text-xl font-semibold py-5">Following</h2>
         <div className="border-b border-[#E5E5E5] w-full" />
         <div>
-          {localFollowing.map((user) => (
-            <div key={user.id} className="flex items-center gap-3 px-6 py-3">
-              {user.id ? (
-                  <Link href={user?.id && String(user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
+          {localFollowing.map((followingUser) => (
+            <div key={followingUser.id} className="flex items-center gap-3 px-6 py-3">
+              {followingUser.id ? (
+                  <Link href={user?.id && String(user.id) === String(followingUser.id) ? PROFILE : generateProfileUrl(followingUser.id, followingUser.username)}>
                   <FallbackImage
-                    src={user.image || DEFAULT_USER_ICON}
+                    src={followingUser.image || DEFAULT_USER_ICON}
                     width={40}
                     height={40}
                     className="rounded-full bg-gray-200 cursor-pointer"
-                    alt={user.name}
+                    alt={followingUser.name}
                     type={FallbackImageType.Icon}
                   />
                 </Link>
               ) : (
                 <FallbackImage
-                  src={user.image || DEFAULT_USER_ICON}
+                  src={followingUser.image || DEFAULT_USER_ICON}
                   width={40}
                   height={40}
                   className="rounded-full bg-gray-200"
-                  alt={user.name}
+                  alt={followingUser.name}
                   type={FallbackImageType.Icon}
                 />
               )}
               <div className="flex-1 min-w-0">
-                {user.id ? (
-                  <Link href={user?.id && String(user.id) === String(user.id) ? PROFILE : generateProfileUrl(user.id)}>
-                    <div className="font-semibold truncate cursor-pointer">{user.name}</div>
+                {followingUser.id ? (
+                  <Link href={user?.id && String(user.id) === String(followingUser.id) ? PROFILE : generateProfileUrl(followingUser.id, followingUser.username)}>
+                    <div className="font-semibold truncate cursor-pointer">{followingUser.name}</div>
                   </Link>
                 ) : (
-                  <div className="font-semibold truncate">{user.name}</div>
+                  <div className="font-semibold truncate">{followingUser.name}</div>
                 )}
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {user.cuisines.map((cuisine) => {
+                  {followingUser.cuisines.map((cuisine) => {
                     const flagUrl = palateFlagMap[cuisine.toLowerCase()];
                     return (
                       <span
@@ -131,15 +132,15 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
               </div>
               <button
                 className={`border border-[#494D5D] rounded-[50px] px-4 py-1 text-sm font-semibold transition-all flex items-center gap-2`}
-                onClick={() => handleToggleFollow(user.id, user.isFollowing)}
-                disabled={loadingMap[user.id]}
+                onClick={() => handleToggleFollow(followingUser.id, followingUser.isFollowing)}
+                disabled={loadingMap[followingUser.id]}
               >
-                {loadingMap[user.id] ? (
+                {loadingMap[followingUser.id] ? (
                   <svg className="animate-spin h-4 w-4 mr-1 text-gray-500" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                ) : user.isFollowing ? 'Following' : 'Follow'}
+                ) : followingUser.isFollowing ? 'Following' : 'Follow'}
               </button>
             </div>
           ))}

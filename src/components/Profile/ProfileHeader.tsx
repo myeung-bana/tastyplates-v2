@@ -24,7 +24,8 @@ interface ProfileHeaderProps {
   onShowFollowing: () => void;
   onFollow: (id: string) => Promise<void>;
   onUnfollow: (id: string) => Promise<void>;
-  session: any;
+  session?: any; // Optional for backward compatibility
+  currentUser?: any; // Current user from useFirebaseSession
   targetUserId: string | number;
   isFollowing: boolean;
   followLoading: boolean;
@@ -99,6 +100,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onFollow,
   onUnfollow,
   session,
+  currentUser,
   targetUserId,
   isFollowing,
   followLoading
@@ -116,8 +118,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-shrink-0">
           <FallbackImage
             src={
-              // Priority order: profile_image from API > session.user.image > default
+              // Priority order: profile_image from API > currentUser.image > session.user.image > default
               profileImageUrl ||
+              (currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
               (session?.user?.image as string) ||
               DEFAULT_USER_ICON
             }
@@ -142,7 +145,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </h1>
             
             {/* Follow/Unfollow Button - Only show for other users */}
-            {!isViewingOwnProfile && session?.user && (
+            {!isViewingOwnProfile && (currentUser || session?.user) && (
               <button
                 onClick={() => {
                   if (isFollowing) {

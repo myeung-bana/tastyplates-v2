@@ -585,7 +585,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
               {data.author?.node?.id ? (
                 user ? (
                   <Link
-                    href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                    href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "", data.author.node.username)}
                     passHref
                   >
                     <FallbackImage
@@ -623,7 +623,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                 <div className="flex items-center space-x-2">
                   {user ? (
                     <Link
-                      href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                      href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "", data.author.node.username)}
                       passHref
                     >
                       <span className="font-normal text-xs cursor-pointer hover:underline">

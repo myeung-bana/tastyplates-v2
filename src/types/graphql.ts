@@ -74,6 +74,7 @@ export interface GraphQLAuthor {
     databaseId: number;
     name: string;
     nicename?: string;
+    username?: string; // Username for profile URLs
     avatar: {
       url: string;
     };

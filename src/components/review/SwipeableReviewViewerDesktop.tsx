@@ -692,7 +692,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                     />
                   </Link>
                 ) : user ? (
-                  <Link href={generateProfileUrl(currentReview.author?.node?.databaseId)} prefetch={false}>
+                  <Link href={generateProfileUrl(currentReview.author?.node?.databaseId, currentReview.author?.node?.username)} prefetch={false}>
                     <FallbackImage
                       src={currentReview.userAvatar || DEFAULT_USER_ICON}
                       alt={currentReview.author?.node?.name || "User"}

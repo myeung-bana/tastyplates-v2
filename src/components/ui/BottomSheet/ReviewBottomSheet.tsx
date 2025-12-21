@@ -438,7 +438,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
             {data.author?.node?.id ? (
               user ? (
                 <Link
-                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "", data.author.node.username)}
                   passHref
                 >
                   <FallbackImage
@@ -476,7 +476,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
                 <div className="flex items-center space-x-2">
                 {user ? (
                 <Link
-                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "")}
+                  href={String(user.id) === String(data.author.node.id) ? PROFILE : generateProfileUrl(data.author.node.id || "", data.author.node.username)}
                   passHref
                 >
                     <span className="font-semibold text-sm cursor-pointer hover:underline">

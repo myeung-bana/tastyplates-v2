@@ -14,8 +14,8 @@ interface UseProfileDataReturn {
   followingCount: number;
 }
 
-// Support both UUID (string) and legacy numeric IDs
-export const useProfileData = (targetUserId: string | number): UseProfileDataReturn => {
+// Support username, UUID (string), and legacy numeric IDs
+export const useProfileData = (targetUserIdentifier: string | number): UseProfileDataReturn => {
   const { user } = useFirebaseSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [nameLoading, setNameLoading] = useState(true);
@@ -27,13 +27,27 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
   const [followingCount, setFollowingCount] = useState(0);
 
   const isViewingOwnProfile = useMemo(() => {
-    // Compare as strings to handle both UUID and numeric IDs
-    return String(user?.id) === String(targetUserId);
-  }, [user?.id, targetUserId]);
+    if (!user || !targetUserIdentifier) return false;
+    
+    // Compare by ID (UUID) if available
+    if (user.id) {
+      const identifierStr = String(targetUserIdentifier);
+      const userIdStr = String(user.id);
+      
+      // Direct ID match
+      if (identifierStr === userIdStr) return true;
+      
+      // If identifier is username, check if it matches user's username
+      // We'll need to fetch user data first to compare usernames, so this is a fallback
+      // The actual comparison will happen after userData is loaded
+    }
+    
+    return false;
+  }, [user?.id, user?.username, targetUserIdentifier]);
 
   useEffect(() => {
     const fetchPublicUserData = async () => {
-      if (!targetUserId) {
+      if (!targetUserIdentifier) {
         setUserData(null);
         setLoading(false);
         setNameLoading(false);
@@ -50,17 +64,35 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
       setError(null);
       
       try {
-        // Convert targetUserId to string for API call
-        const userIdStr = String(targetUserId);
+        // Convert targetUserIdentifier to string for API call
+        const identifierStr = String(targetUserIdentifier);
         
-        // Validate ID format before making API call
-        // Hasura uses UUID format, but we also support numeric IDs for legacy compatibility
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdStr);
-        const isNumeric = /^\d+$/.test(userIdStr);
+        // Detect format: UUID, numeric ID, or username
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifierStr);
+        const isNumeric = /^\d+$/.test(identifierStr);
+        const isUsername = !isUUID && !isNumeric && /^[a-zA-Z0-9._-]+$/.test(identifierStr);
         
-        if (!isUUID && !isNumeric) {
-          console.error('useProfileData: Invalid user ID format:', userIdStr);
-          setError('Invalid user ID format');
+        // Log identifier format for debugging
+        console.log('[useProfileData] Fetching user data:', {
+          identifier: identifierStr,
+          isUUID: isUUID,
+          isNumeric: isNumeric,
+          isUsername: isUsername,
+          targetUserIdentifier: targetUserIdentifier,
+          targetUserIdentifierType: typeof targetUserIdentifier
+        });
+        
+        // Fetch user data based on identifier type
+        let response;
+        if (isUsername) {
+          // Fetch by username
+          response = await restaurantUserService.getUserByUsername(identifierStr);
+        } else if (isUUID || isNumeric) {
+          // Fetch by ID (UUID or numeric)
+          response = await restaurantUserService.getUserById(identifierStr);
+        } else {
+          console.error('useProfileData: Invalid user identifier format:', identifierStr);
+          setError('Invalid user identifier format');
           setUserData(null);
           setLoading(false);
           setNameLoading(false);
@@ -68,18 +100,6 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
           setPalatesLoading(false);
           return;
         }
-        
-        // Log ID format for debugging
-        console.log('[useProfileData] Fetching user data:', {
-          userId: userIdStr,
-          isUUID: isUUID,
-          isNumeric: isNumeric,
-          targetUserId: targetUserId,
-          targetUserIdType: typeof targetUserId
-        });
-        
-        // Fetch user data from Hasura using restaurant_users API
-        const response = await restaurantUserService.getUserById(userIdStr);
         
         if (response.success && response.data) {
           // Map Hasura user data to expected format
@@ -133,7 +153,24 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
     };
 
     fetchPublicUserData();
-  }, [targetUserId, isViewingOwnProfile, user]);
+  }, [targetUserIdentifier, user]);
+  
+  // Update isViewingOwnProfile after userData is loaded (for username comparison)
+  const actualIsViewingOwnProfile = useMemo(() => {
+    if (!user || !userData) return isViewingOwnProfile;
+    
+    // Compare by ID
+    if (user.id && userData.id && String(user.id) === String(userData.id)) {
+      return true;
+    }
+    
+    // Compare by username
+    if (user.username && userData.username && user.username === userData.username) {
+      return true;
+    }
+    
+    return false;
+  }, [user?.id, user?.username, userData?.id, userData?.username, isViewingOwnProfile]);
 
   return {
     userData,
@@ -141,7 +178,7 @@ export const useProfileData = (targetUserId: string | number): UseProfileDataRet
     aboutMeLoading,
     palatesLoading,
     loading,
-    isViewingOwnProfile,
+    isViewingOwnProfile: actualIsViewingOwnProfile,
     error,
     followersCount,
     followingCount

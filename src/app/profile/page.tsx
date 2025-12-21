@@ -17,10 +17,16 @@ const ProfilePage = () => {
       return;
     }
 
-    // Redirect to the user's profile with restaurant_users.id (UUID)
-    // Use the UUID directly from Hasura
-    const profileUrl = `/profile/${user.id}`;
-    router.replace(profileUrl);
+    // Redirect to the user's profile using username
+    // Fallback to UUID if username is not available (for backward compatibility)
+    if (user.username) {
+      const profileUrl = `/profile/${encodeURIComponent(user.username)}`;
+      router.replace(profileUrl);
+    } else {
+      // Fallback to UUID if username is not available
+      const profileUrl = `/profile/${user.id}`;
+      router.replace(profileUrl);
+    }
   }, [user, loading, router]);
 
   // Show skeleton loading while redirecting

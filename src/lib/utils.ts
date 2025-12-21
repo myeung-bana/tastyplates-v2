@@ -291,31 +291,59 @@ export const decodeUserId = (encodedId: string): string => {
   }
 };
 
-// Enhanced profile URL generation with encoding
-export const generateProfileUrl = (userId: string | number): string => {
-  const userIdStr = String(userId);
-  if (!userIdStr || userIdStr === "undefined" || userIdStr === "null") {
+// Enhanced profile URL generation - supports username or userId
+// If username is provided, use it directly. Otherwise, use userId (for backward compatibility)
+export const generateProfileUrl = (identifier: string | number, username?: string): string => {
+  // If username is explicitly provided, use it
+  if (username) {
+    return `/profile/${encodeURIComponent(username)}`;
+  }
+  
+  const identifierStr = String(identifier);
+  if (!identifierStr || identifierStr === "undefined" || identifierStr === "null") {
     return "";
   }
 
-  // Encode the user ID to obfuscate it
-  const encodedId = encodeUserId(userIdStr);
+  // Detect if identifier is a username (not UUID, not numeric)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifierStr);
+  const isNumeric = /^\d+$/.test(identifierStr);
+  const isUsername = !isUUID && !isNumeric && /^[a-zA-Z0-9._-]+$/.test(identifierStr);
+  
+  if (isUsername) {
+    // Use username directly (URL-encode for safety)
+    return `/profile/${encodeURIComponent(identifierStr)}`;
+  }
+  
+  // For UUID or numeric ID, encode it for backward compatibility
+  // Note: This maintains backward compatibility with old encoded URLs
+  const encodedId = encodeUserId(identifierStr);
   return `/profile/${encodedId}`;
 };
 
-// Enhanced profile URL parsing with decoding
-export const parseProfileUrl = (userIdParam: string): number | null => {
-  if (!userIdParam) return null;
+// Enhanced profile URL parsing - supports both username and encoded userId
+export const parseProfileUrl = (userParam: string): string | null => {
+  if (!userParam) return null;
   
+  const trimmed = userParam.trim();
+  
+  // If it looks like a username (not encoded, not UUID, not numeric), return as-is
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+  const isNumeric = /^\d+$/.test(trimmed);
+  const isUsername = !isUUID && !isNumeric && /^[a-zA-Z0-9._-]+$/.test(trimmed);
+  
+  if (isUsername) {
+    return trimmed; // Return username as-is
+  }
+  
+  // Try to decode as encoded ID (backward compatibility)
   try {
-    // First try to decode as an encoded ID
-    const decodedId = decodeUserId(userIdParam.trim());
+    const decodedId = decodeUserId(trimmed);
     const userId = parseInt(decodedId);
-    return !isNaN(userId) && userId > 0 ? userId : null;
+    return !isNaN(userId) && userId > 0 ? String(userId) : null;
   } catch (error) {
     // If decoding fails, try parsing as a direct number (backward compatibility)
     console.warn('Failed to decode profile URL, trying direct parse:', error);
-    const userId = parseInt(userIdParam.trim());
-    return !isNaN(userId) && userId > 0 ? userId : null;
+    const userId = parseInt(trimmed);
+    return !isNaN(userId) && userId > 0 ? String(userId) : null;
   }
 };

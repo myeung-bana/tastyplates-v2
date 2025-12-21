@@ -24,10 +24,13 @@ import { FollowService } from "@/services/follow/followService";
 import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 
 interface ProfileProps {
-  targetUserId: string | number; // Support both UUID (string) and legacy numeric IDs
+  targetUserId?: string | number; // Support both UUID (string) and legacy numeric IDs (deprecated, use targetUserIdentifier)
+  targetUserIdentifier?: string; // Support username or UUID
 }
 
-const Profile = ({ targetUserId }: ProfileProps) => {
+const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
+  // Use targetUserIdentifier if provided, otherwise fall back to targetUserId for backward compatibility
+  const identifier = targetUserIdentifier || (targetUserId ? String(targetUserId) : undefined);
   const { user, loading } = useFirebaseSession();
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
@@ -41,20 +44,22 @@ const Profile = ({ targetUserId }: ProfileProps) => {
 
   const followService = useRef(new FollowService()).current;
 
-  // Validate targetUserId - can be UUID (string) or numeric ID
-  if (!targetUserId || (typeof targetUserId === 'string' && targetUserId.trim() === '')) {
-    console.error('Profile: Invalid targetUserId', { 
-      targetUserId, 
-      type: typeof targetUserId
+  // Validate identifier - can be username, UUID (string), or numeric ID
+  if (!identifier || (typeof identifier === 'string' && identifier.trim() === '')) {
+    console.error('Profile: Invalid user identifier', { 
+      identifier,
+      targetUserId,
+      targetUserIdentifier,
+      type: typeof identifier
     });
     return (
       <div className="flex justify-center items-center h-screen">
-        <p className="text-lg text-gray-600">Invalid user profile ID.</p>
+        <p className="text-lg text-gray-600">Invalid user profile identifier.</p>
       </div>
     );
   }
 
-  // Use our custom hooks - now supports both UUID and numeric IDs
+  // Use our custom hooks - now supports username, UUID, and numeric IDs
   const {
     userData,
     nameLoading,
@@ -65,7 +70,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     error: profileError,
     followersCount: profileFollowersCount,
     followingCount: profileFollowingCount
-  } = useProfileData(targetUserId);
+  } = useProfileData(identifier);
 
   // Debug: Log userData for ReviewsTab
   useEffect(() => {
@@ -79,7 +84,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     });
   }, [userData, profileDataLoading]);
 
-  // Pass targetUserId directly to useFollowData - it now supports UUIDs
+  // Pass identifier to useFollowData - it now supports username, UUIDs, and numeric IDs
   const {
     followers,
     following,
@@ -87,7 +92,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
     followingLoading,
     handleFollow,
     handleUnfollow
-  } = useFollowData(targetUserId);
+  } = useFollowData(identifier || (targetUserId ? String(targetUserId) : ''));
 
   // Convert targetUserId to number for legacy endpoints that still need numeric IDs
   // (followService.isFollowingUser, restaurantService, etc.)
@@ -283,7 +288,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
       label: "Reviews",
       content: <ReviewsTab 
         targetUserId={userData?.id as string || ''} 
-        isAuthenticated={!loading && !!user} 
+        status="published"
         onReviewCountChange={setUserReviewCount}
       />
     },
@@ -349,7 +354,7 @@ const Profile = ({ targetUserId }: ProfileProps) => {
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
           currentUser={user}
-          targetUserId={targetUserId}
+          targetUserId={(identifier || (targetUserId ? String(targetUserId) : String(userData?.id || ''))) || ''}
           isFollowing={isFollowing}
           followLoading={followLoading}
         />

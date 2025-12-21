@@ -132,7 +132,7 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
                       />
                     </Link>
                   ) : session ? (
-                    <Link href={generateProfileUrl(review.author?.node?.databaseId)} prefetch={false}>
+                    <Link href={generateProfileUrl(review.author?.node?.databaseId, review.author?.node?.username)} prefetch={false}>
                       <FallbackImage
                         src={review.userAvatar || DEFAULT_USER_ICON}
                         alt={review.author?.node?.name || "User"}

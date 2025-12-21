@@ -31,7 +31,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         {reply.author?.node?.id ? (
           user ? (
             <Link
-              href={String(user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id)}
+              href={String(user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id, reply.author.node.username)}
               passHref
             >
               <FallbackImage
