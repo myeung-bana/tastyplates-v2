@@ -1,13 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { CHECK_FOLLOW_STATUS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
-import { auth } from '@/lib/firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Initialize Firebase Admin SDK
+ * Returns true if initialized successfully, false otherwise
+ */
+function initializeFirebaseAdmin(): boolean {
+  // Check if already initialized
+  if (getApps().length > 0) {
+    return true;
+  }
+
+  try {
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    
+    // Check for required environment variables
+    if (!process.env.FIREBASE_PROJECT_ID) {
+      console.error('Firebase Admin SDK: FIREBASE_PROJECT_ID is not set');
+      return false;
+    }
+    
+    if (!process.env.FIREBASE_CLIENT_EMAIL) {
+      console.error('Firebase Admin SDK: FIREBASE_CLIENT_EMAIL is not set');
+      return false;
+    }
+    
+    if (!privateKey) {
+      console.error('Firebase Admin SDK: FIREBASE_PRIVATE_KEY is not set or invalid');
+      return false;
+    }
+    
+    // Initialize Firebase Admin
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: privateKey,
+      }),
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin SDK:', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Try to initialize Firebase Admin if not already initialized
+    const isInitialized = initializeFirebaseAdmin();
+    
+    if (!isInitialized) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Get Firebase ID token from Authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -22,6 +78,7 @@ export async function POST(request: NextRequest) {
     // Verify Firebase token and get current user
     let decodedToken;
     try {
+      const auth = getAuth();
       decodedToken = await auth.verifyIdToken(idToken);
     } catch (error) {
       console.error('Token verification error:', error);
