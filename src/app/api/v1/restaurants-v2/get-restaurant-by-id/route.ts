@@ -37,63 +37,101 @@ export async function GET(request: NextRequest) {
       // Try with price range relationship
       result = await hasuraQuery(GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE, { uuid });
       
-      // If error is related to price_range relationship, fallback to basic query
+      // If error is related to price_range relationship or any field not found, fallback to basic query
       if (result.errors) {
         const hasRelationshipError = result.errors.some((err: any) => 
           err.message?.includes('restaurant_price_range') || 
           err.message?.includes('price_range_id') ||
-          err.message?.includes('field') && err.message?.includes('not found')
+          (err.message?.includes('field') && err.message?.includes('not found')) ||
+          err.message?.includes('Cannot query field')
         );
         
         if (hasRelationshipError) {
-          console.warn('Price range relationship not available, using basic query');
+          console.warn('Relationship or field not available, using basic query');
           result = await hasuraQuery(GET_RESTAURANT_BY_UUID, { uuid });
+          
+          // If basic query also has errors, check if it's a non-critical field error
+          if (result.errors) {
+            const hasCriticalError = result.errors.some((err: any) => 
+              !err.message?.includes('field') && !err.message?.includes('not found') &&
+              !err.message?.includes('Cannot query field')
+            );
+            
+            // Only fail if it's a critical error, not a missing field error
+            if (hasCriticalError) {
+              // Let it fall through to error handling below
+            } else {
+              // Clear non-critical field errors and continue
+              console.warn('Non-critical field errors detected, continuing with available data');
+              result.errors = [];
+            }
+          }
         }
       }
     } else if (slug) {
       // Try with price range relationship
       result = await hasuraQuery(GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE, { slug });
       
-      // If error is related to price_range relationship, fallback to basic query
+      // If error is related to price_range relationship or any field not found, fallback to basic query
       if (result.errors) {
         const hasRelationshipError = result.errors.some((err: any) => 
           err.message?.includes('restaurant_price_range') || 
           err.message?.includes('price_range_id') ||
-          err.message?.includes('field') && err.message?.includes('not found')
+          (err.message?.includes('field') && err.message?.includes('not found')) ||
+          err.message?.includes('Cannot query field')
         );
         
         if (hasRelationshipError) {
-          console.warn('Price range relationship not available, using basic query');
+          console.warn('Relationship or field not available, using basic query');
           result = await hasuraQuery(GET_RESTAURANT_BY_SLUG_HASURA, { slug });
+          
+          // If basic query also has errors, check if it's a non-critical field error
+          if (result.errors) {
+            const hasCriticalError = result.errors.some((err: any) => 
+              !err.message?.includes('field') && !err.message?.includes('not found') &&
+              !err.message?.includes('Cannot query field')
+            );
+            
+            // Only fail if it's a critical error, not a missing field error
+            if (hasCriticalError) {
+              // Let it fall through to error handling below
+            } else {
+              // Clear non-critical field errors and continue
+              console.warn('Non-critical field errors detected, continuing with available data');
+              result.errors = [];
+            }
+          }
         }
       }
     }
 
-    if (result.errors) {
-      console.error('GraphQL errors:', JSON.stringify(result.errors, null, 2));
-      // Check if error is related to restaurant_price_range relationship
-      const hasRelationshipError = result.errors.some((err: any) => 
-        err.message?.includes('restaurant_price_range') || 
-        err.message?.includes('price_range_id')
+    if (result.errors && result.errors.length > 0) {
+      // Filter out non-critical field errors
+      const criticalErrors = result.errors.filter((err: any) => 
+        !err.message?.includes('field') || 
+        !err.message?.includes('not found') ||
+        !err.message?.includes('Cannot query field')
       );
       
-      if (hasRelationshipError) {
-        console.warn('Warning: restaurant_price_range relationship may not be configured in Hasura');
+      // If there are only non-critical field errors, log warning but continue
+      if (criticalErrors.length === 0) {
+        console.warn('Non-critical GraphQL field errors detected, returning available data:', result.errors);
+        // Continue to return restaurant data even with field errors
+      } else {
+        // Only return error if there are critical errors
+        console.error('Critical GraphQL errors:', JSON.stringify(criticalErrors, null, 2));
+        return NextResponse.json(
+          {
+            error: 'Failed to fetch restaurant',
+            details: criticalErrors,
+            message: criticalErrors[0]?.message || 'Unknown GraphQL error'
+          },
+          { status: 500 }
+        );
       }
-      
-      return NextResponse.json(
-        {
-          error: 'Failed to fetch restaurant',
-          details: result.errors,
-          message: result.errors[0]?.message || 'Unknown GraphQL error'
-        },
-        { status: 500 }
-      );
     }
 
-    const restaurant = uuid 
-      ? result.data?.restaurants_by_pk
-      : result.data?.restaurants?.[0];
+    const restaurant = result.data?.restaurants?.[0];
 
     if (!restaurant) {
       return NextResponse.json(

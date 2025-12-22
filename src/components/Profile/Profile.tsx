@@ -288,7 +288,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
       label: "Reviews",
       content: <ReviewsTab 
         targetUserId={userData?.id as string || ''} 
-        status="published"
+        status="approved"
         onReviewCountChange={setUserReviewCount}
       />
     },

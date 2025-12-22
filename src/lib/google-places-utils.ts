@@ -58,7 +58,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<RestaurantPlac
           'photos',
           'rating',
           'user_ratings_total',
-          'opening_hours',
+          // Removed 'opening_hours' to eliminate deprecation warning about 'open_now'
         ],
       },
       (place: any, status: any) => {
@@ -74,7 +74,7 @@ export async function fetchPlaceDetails(placeId: string): Promise<RestaurantPlac
             photos: place.photos || [],
             rating: place.rating,
             user_ratings_total: place.user_ratings_total,
-            opening_hours: place.opening_hours,
+            // Removed opening_hours from response to eliminate deprecation warning
           });
         } else {
           console.error('Error fetching place details:', status);

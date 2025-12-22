@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { FiSearch } from 'react-icons/fi';
+import { LocationOption } from '@/constants/location';
+import { LOCATION_HIERARCHY } from '@/constants/location';
 
 export interface GooglePlacesAutocompleteProps {
   value: string;
@@ -11,6 +13,8 @@ export interface GooglePlacesAutocompleteProps {
   searchType?: 'restaurant' | 'address';
   className?: string;
   disabled?: boolean;
+  selectedLocation?: LocationOption;
+  showLocationHelper?: boolean;
 }
 
 /**
@@ -25,6 +29,8 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
   searchType = 'restaurant',
   className = '',
   disabled = false,
+  selectedLocation,
+  showLocationHelper = true,
 }) => {
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
@@ -42,46 +48,90 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
       return;
     }
 
+    // Check if Google Maps is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
       autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
       setIsGoogleLoaded(true);
       return;
     }
 
-    // Load Google Maps script if not already loaded
-    if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGooglePlaces`;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-
-      (window as any).initGooglePlaces = () => {
-        if (window.google && window.google.maps && window.google.maps.places) {
-          autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-          setIsGoogleLoaded(true);
-        }
-      };
-
-      return () => {
-        // Cleanup: remove the callback
-        if ((window as any).initGooglePlaces) {
-          delete (window as any).initGooglePlaces;
-        }
-      };
-    } else {
-      // Script already exists, wait for it to load
+    // Check if script is already in DOM (check both head and body)
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    
+    if (existingScript) {
+      // Script already exists (likely loaded by useLoadScript or another component)
+      // Wait for it to load instead of loading a new one
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds max wait (100 * 100ms)
+      
       const checkGoogle = setInterval(() => {
+        attempts++;
+        
         if (window.google && window.google.maps && window.google.maps.places) {
           autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
           setIsGoogleLoaded(true);
+          clearInterval(checkGoogle);
+        } else if (attempts >= maxAttempts) {
+          // Timeout after 10 seconds
+          console.warn('Google Maps script exists but did not load within timeout');
           clearInterval(checkGoogle);
         }
       }, 100);
 
       return () => clearInterval(checkGoogle);
     }
+
+    // No script exists, load it manually (fallback for pages that don't use useLoadScript)
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGooglePlaces`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    (window as any).initGooglePlaces = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+        setIsGoogleLoaded(true);
+      }
+    };
+
+    return () => {
+      // Cleanup: remove the callback
+      if ((window as any).initGooglePlaces) {
+        delete (window as any).initGooglePlaces;
+      }
+    };
   }, []);
+
+  // Helper function to get parent country code for cities
+  const getParentCountryCode = useCallback((cityKey: string): string => {
+    for (const country of LOCATION_HIERARCHY.countries) {
+      const city = country.cities.find(c => c.key === cityKey);
+      if (city) {
+        return country.shortLabel;
+      }
+    }
+    return '';
+  }, []);
+
+  // Helper function to format location display
+  const formatLocationDisplay = useCallback((location: LocationOption): string => {
+    // Special case: If Hong Kong city is selected, display as "Hong Kong, HK"
+    if (location.type === 'city' && 
+        (location.key === 'hong_kong_island' || 
+         location.key === 'kowloon' || 
+         location.key === 'new_territories')) {
+      return 'Hong Kong, HK';
+    }
+    
+    if (location.type === 'city') {
+      const countryCode = getParentCountryCode(location.key);
+      return `${location.label}, ${countryCode}`;
+    } else if (location.type === 'country') {
+      return `${location.label}, ${location.shortLabel}`;
+    }
+    return location.label;
+  }, [getParentCountryCode]);
 
   // Fetch predictions when input changes
   const fetchPredictions = useCallback(
@@ -94,11 +144,41 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
 
       setIsLoading(true);
 
-      // Configure request based on search type
+      // Configure request based on search type and location
       const request: google.maps.places.AutocompletionRequest = {
         input: inputValue,
         types: searchType === 'restaurant' ? ['establishment'] : ['address'],
       };
+
+      // Add location filtering if selectedLocation is provided
+      if (selectedLocation && window.google && window.google.maps) {
+        // For cities: use locationBias with coordinates (prioritizes nearby results)
+        if (selectedLocation.type === 'city' && selectedLocation.coordinates) {
+          try {
+            request.locationBias = new window.google.maps.Circle({
+              center: {
+                lat: selectedLocation.coordinates.lat,
+                lng: selectedLocation.coordinates.lng
+              },
+              radius: 50000 // 50km radius for city-level searches
+            });
+          } catch (error) {
+            // Fallback: use point-based bias if Circle fails
+            console.warn('Could not create location bias circle, using point bias:', error);
+            request.locationBias = new window.google.maps.LatLng(
+              selectedLocation.coordinates.lat,
+              selectedLocation.coordinates.lng
+            );
+          }
+        }
+        
+        // For countries: use componentRestrictions to restrict to country
+        if (selectedLocation.type === 'country' && selectedLocation.shortLabel) {
+          request.componentRestrictions = {
+            country: selectedLocation.shortLabel.toLowerCase()
+          };
+        }
+      }
 
       autocompleteServiceRef.current.getPlacePredictions(request, (predictions, status) => {
         setIsLoading(false);
@@ -124,7 +204,7 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
         }
       });
     },
-    [searchType]
+    [searchType, selectedLocation]
   );
 
   // Debounce predictions
@@ -215,6 +295,13 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
           </div>
         )}
       </div>
+
+      {/* Location helper text */}
+      {showLocationHelper && selectedLocation && (
+        <p className="text-xs text-gray-500 mt-2 px-1">
+          Searching in <span className="font-medium text-gray-700">{formatLocationDisplay(selectedLocation)}</span>
+        </p>
+      )}
 
       {/* Predictions dropdown */}
       {showPredictions && predictions.length > 0 && (

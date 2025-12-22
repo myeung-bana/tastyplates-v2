@@ -25,17 +25,6 @@ export const GET_REVIEW_BY_ID = `
       updated_at
       published_at
       deleted_at
-      author {
-        id
-        username
-        display_name
-        profile_image
-      }
-      restaurant {
-        uuid
-        title
-        slug
-      }
     }
   }
 `;
@@ -88,7 +77,7 @@ export const GET_REVIEWS_BY_RESTAURANT = `
   }
 `;
 
-// GET USER'S REVIEWS
+// GET USER'S REVIEWS (without status filter)
 export const GET_USER_REVIEWS = `
   query GetUserReviews(
     $authorId: uuid!
@@ -124,6 +113,54 @@ export const GET_USER_REVIEWS = `
         author_id: { _eq: $authorId }
         deleted_at: { _is_null: true }
         parent_review_id: { _is_null: true }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// GET USER'S REVIEWS WITH STATUS FILTER
+export const GET_USER_REVIEWS_BY_STATUS = `
+  query GetUserReviewsByStatus(
+    $authorId: uuid!
+    $limit: Int
+    $offset: Int
+    $status: String!
+  ) {
+    restaurant_reviews(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: $status }
+      }
+      order_by: { created_at: desc }
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      likes_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: $status }
       }
     ) {
       aggregate {
@@ -286,29 +323,29 @@ export const CHECK_REVIEW_LIKE = `
 
 // GET REVIEW WITH LIKE STATUS
 export const GET_REVIEW_WITH_LIKE_STATUS = `
-  query GetReviewWithLikeStatus($reviewId: uuid!, $userId: uuid!) {
+  query GetReviewWithLikeStatus($reviewId: uuid!) {
     restaurant_reviews_by_pk(id: $reviewId) {
       id
+      restaurant_uuid
+      author_id
+      parent_review_id
       title
       content
       rating
       images
+      palates
       hashtags
+      mentions
+      recognitions
       likes_count
+      replies_count
+      status
+      is_pinned
+      is_featured
       created_at
-      author {
-        id
-        username
-        display_name
-        profile_image
-      }
-      restaurant_review_likes(
-        where: { user_id: { _eq: $userId } }
-        limit: 1
-      ) {
-        id
-        created_at
-      }
+      updated_at
+      published_at
+      deleted_at
     }
   }
 `;

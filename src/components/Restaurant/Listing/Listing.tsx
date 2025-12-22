@@ -1,10 +1,9 @@
 // Listing.tsx
 "use client";
-import React, { FormEvent, useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import RestaurantCard from "@/components/Restaurant/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
-import { FiSearch } from "react-icons/fi";
 import ListingCard from "./ListingCard";
 import DraftReviewCard from "./DraftReviewCard";
 import type { DraftReviewData } from "./DraftReviewCard";
@@ -15,13 +14,15 @@ import RecentlyVisitedRestaurants from "@/components/Restaurant/RecentlyVisitedR
 import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 // Using DraftReviewData from DraftReviewCard instead
-import SkeletonListingCard from "@/components/ui/Skeleton/SkeletonListingCard";
+import ReviewCardSkeleton2 from "@/components/ui/Skeleton/ReviewCardSkeleton2";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import toast from 'react-hot-toast';
 import { useDebounce } from "use-debounce"; // Import useDebounce
 import Link from "next/link";
-import { LISTING_EXPLANATION } from "@/constants/pages";
+import { LISTING_EXPLANATION, HOME } from "@/constants/pages";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
+import { useAuthModal } from "@/components/auth/AuthModalWrapper";
+import { useRouter } from "next/navigation";
 
 interface Restaurant {
   id: string;
@@ -56,10 +57,11 @@ interface Restaurant {
 const restaurantService = new RestaurantService();
 
 const ListingPage = () => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
+  const router = useRouter();
+  const { showSignin } = useAuthModal();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // Debounced search term
-  const [listing, setListing] = useState<string>("");
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loading, setLoading] = useState(false); // Changed initial state to false
   const [loadingDrafts, setLoadingDrafts] = useState(true);
@@ -70,6 +72,22 @@ const ListingPage = () => {
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   // Map numeric IDs to UUIDs for deletion
   const [draftIdToUuidMap, setDraftIdToUuidMap] = useState<Map<number, string>>(new Map());
+
+  // Authentication check - redirect if not logged in
+  useEffect(() => {
+    // Wait for session to finish loading before checking authentication
+    if (sessionLoading) return;
+    
+    // If session has loaded and user is not authenticated, redirect
+    if (!firebaseUser) {
+      toast.error('You must be logged in to access this page');
+      router.push(HOME);
+      // Show login modal after a short delay to ensure redirect happens first
+      setTimeout(() => {
+        showSignin();
+      }, 100);
+    }
+  }, [firebaseUser, sessionLoading, router, showSignin]);
 
   // Helper: transform GraphQL node to Restaurant
   const transformNodes = useCallback((nodes: Record<string, unknown>[]): Restaurant[] => {
@@ -300,51 +318,21 @@ const ListingPage = () => {
     }
   };
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setSearchTerm(listing);
-  }
 
   const removeListing = (item: DraftReviewData) => {
     setDraftToDelete(item);
     setIsShowDelete(true);
   }
 
+  // Don't render content if session is loading or user is not authenticated
+  if (sessionLoading || !firebaseUser) {
+    return null;
+  }
 
   return (
     <>
-      <div className="max-w-7xl mx-auto mt-20">
+      <div className="max-w-[900px] mx-auto mt-20 px-4">
         <div className="py-6 md:py-8 flex flex-col justify-center items-center">
-          <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-neusans">Find a listing to review</h1>
-          <form onSubmit={handleSearch} className="my-6 md:my-10 max-w-[525px] w-full px-6 lg:px-0">
-            <div className="flex gap-2.5 items-center border border-[#E5E5E5] px-4 py-2 rounded-[50px] drop-shadow-[0_0_10px_#E5E5E5]">
-              <div className="flex items-center flex-1 gap-2">
-                <FiSearch className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search by Listing Name"
-                  className="font-neusans flex-1 border-none outline-none bg-transparent text-sm md:text-base text-[#31343F] placeholder-gray-400"
-                  value={listing}
-                  onChange={(e) => setListing(e.target.value)}
-                />
-              </div>
-              <button
-                type="submit"
-                className="font-neusans rounded-full text-sm md:text-base text-[#FCFCFC] h-9 md:h-11 w-fit px-4 md:px-6 py-2 md:py-3 text-center bg-[#E36B00] md:leading-none flex-shrink-0"
-              >
-                Search
-              </button>
-            </div>
-          </form>
-
-          {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
-            <div className="w-full text-center mb-6">
-              <h2 className="text-lg md:text-xl text-[#31343F] font-neusans">
-                {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
-              </h2>
-            </div>
-          )}
-
           {/* Conditional rendering of "My Review Drafts" */}
           {!debouncedSearchTerm && (
             <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
@@ -355,7 +343,7 @@ const ListingPage = () => {
                     You don't have any review drafts.
                   </p>
                 )}
-                <div className="restaurants__grid mt-6 md:mt-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6 md:mt-8">
                   {reviewDrafts.map((revDraft) => (
                     <DraftReviewCard
                       key={revDraft.id}
@@ -363,9 +351,17 @@ const ListingPage = () => {
                       onDelete={() => removeListing(revDraft)}
                     />
                   ))}
-                  {loadingDrafts && [...Array(4)].map((_, i) => <SkeletonListingCard key={i} />)}
+                  {loadingDrafts && [...Array(8)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
                 </div>
               </div>
+            </div>
+          )}
+
+          {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
+            <div className="w-full text-center mb-6">
+              <h2 className="text-lg md:text-xl text-[#31343F] font-neusans">
+                {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
+              </h2>
             </div>
           )}
 

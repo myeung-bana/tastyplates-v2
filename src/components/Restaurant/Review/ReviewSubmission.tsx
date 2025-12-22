@@ -19,6 +19,7 @@ import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from '@/hooks/useFirebaseSession'
 import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
+import { useLocation } from '@/contexts/LocationContext';
 import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
@@ -57,6 +58,7 @@ const ReviewSubmissionPage = () => {
   const params = useParams() as { slug?: string };
   const restaurantSlug = params.slug; // Optional - undefined for /add-review route
   const { user, firebaseUser } = useFirebaseSession();
+  const { selectedLocation } = useLocation();
   const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
@@ -615,26 +617,29 @@ const ReviewSubmissionPage = () => {
   return (
     <>
       <div className="submitRestaurants mt-16 md:mt-20 font-neusans">
-        <div className="submitRestaurants__container">
-          <div className="submitRestaurants__card">
-          {/* Show restaurant search if no slug and restaurant not selected */}
+        <div className="submitRestaurants__container max-w-[900px] mx-auto px-4">
+          {/* Show restaurant search if no slug and restaurant not selected - moved outside card */}
           {!restaurantSlug && !isRestaurantSelected ? (
-            <div className="mb-6">
-              <h1 className="text-lg md:text-2xl text-[#31343F] text text-center font-neusans mb-6">Find a listing to review</h1>
-              <div className="flex justify-center">
-                <div className="w-full max-w-[525px]">
-                  <GooglePlacesAutocomplete
-                    value={searchValue}
-                    onChange={setSearchValue}
-                    onPlaceSelect={handlePlaceSelect}
-                    placeholder="Search by Listing Name"
-                    searchType="restaurant"
-                    disabled={isMatching}
-                  />
-                </div>
+            <div className="mb-6 md:mb-8">
+              <h1 className="text-lg md:text-2xl text-[#31343F] font-neusans mb-6">Find a listing to review</h1>
+              <div className="w-full">
+                <GooglePlacesAutocomplete
+                  value={searchValue}
+                  onChange={setSearchValue}
+                  onPlaceSelect={handlePlaceSelect}
+                  placeholder="Search by Listing Name"
+                  searchType="restaurant"
+                  disabled={isMatching}
+                  selectedLocation={selectedLocation}
+                  showLocationHelper={true}
+                />
               </div>
             </div>
-          ) : (
+          ) : null}
+          
+          <div className="submitRestaurants__card">
+          {/* Show restaurant header if restaurant is selected */}
+          {restaurantSlug || isRestaurantSelected ? (
             <>
               <RestaurantReviewHeader 
                 restaurantName={restaurantName}
@@ -643,10 +648,10 @@ const ReviewSubmissionPage = () => {
                 googleMapUrl={googleMapUrl}
               />
             </>
-          )}
+          ) : null}
           
           {/* Only show form if restaurant is selected */}
-          {isRestaurantSelected && (
+          {(restaurantSlug || isRestaurantSelected) && (
           <form className="submitRestaurants__form">
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">How would you rate your experience?</label>

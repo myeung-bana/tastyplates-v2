@@ -95,10 +95,19 @@ export default class HttpMethods {
             if (error instanceof Error && error.name === 'AbortError') {
                 // Check if it was our timeout or the existing signal
                 if (controller && controller.signal.aborted) {
-                    throw new Error('Request timeout');
+                    const timeoutError = new Error(`Request timeout: ${endpoint}`) as any;
+                    timeoutError.endpoint = endpoint;
+                    timeoutError.isTimeout = true;
+                    console.error(`[HttpMethods] Request timeout: ${options.method} ${endpoint}`);
+                    throw timeoutError;
                 }
             }
-            throw error;
+            // Log network errors for debugging
+            console.error(`[HttpMethods] Network error: ${options.method} ${endpoint}`, error);
+            const networkError = error instanceof Error ? error : new Error('Network request failed');
+            (networkError as any).endpoint = endpoint;
+            (networkError as any).isNetworkError = true;
+            throw networkError;
         }
 
         // Handle error responses (401, 403)
@@ -138,18 +147,29 @@ export default class HttpMethods {
             } catch (parseError) {
                 // For authenticated requests, throw error even if JSON parsing fails
                 if (isAuthenticatedRequest) {
-                    const error = new Error(response.statusText || 'Request failed') as any;
+                    const errorMessage = response.statusText || `Request failed with status ${response.status}`;
+                    const error = new Error(errorMessage) as any;
                     error.status = response.status;
                     error.code = response.status === code.forbidden ? 'rest_forbidden' : 'rest_unauthorized';
+                    error.endpoint = endpoint;
+                    console.error(`[HttpMethods] Authenticated request failed: ${options.method} ${endpoint} - ${errorMessage}`, {
+                        status: response.status,
+                        parseError
+                    });
                     throw error;
                 }
 
-                // For public endpoints, return generic error object
-                console.warn('Failed to parse error response as JSON, returning generic error:', parseError);
+                // For public endpoints, return generic error object (don't throw)
+                console.warn(`[HttpMethods] Public request failed: ${options.method} ${endpoint} - Failed to parse error response as JSON`, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    parseError
+                });
                 return {
                     status: response.status,
-                    message: response.statusText || 'Request failed',
-                    code: response.status === code.forbidden ? 'rest_forbidden' : 'rest_unauthorized'
+                    message: response.statusText || `Request failed with status ${response.status}`,
+                    code: response.status === code.forbidden ? 'rest_forbidden' : 'rest_unauthorized',
+                    success: false
                 } as Record<string, unknown>;
             }
         }

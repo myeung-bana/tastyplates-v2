@@ -27,6 +27,8 @@ export interface Restaurant {
   image: string;
   rating: number;
   palatesNames?: string[];
+  listingCategories?: { id: number; name: string; slug: string }[];
+  categories?: { id: number; name: string; slug: string; parent_id?: number | null }[];
   streetAddress?: string;
   googleMapUrl?: {
     city?: string;
@@ -373,17 +375,38 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               </div>
             </div>
 
-            <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
-              {(() => {
-                const tags = [...cuisineNames];
-                if (restaurant.priceRange) tags.push(restaurant.priceRange);
+            {/* Cuisine Categories (shows first 3, then "+X" if more) */}
+            {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
+              <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+                <span className="restaurant-card__tag">
+                  {(() => {
+                    const cuisines = restaurant.listingCategories || [];
+                    if (cuisines.length <= 3) {
+                      return cuisines.map(c => c.name).join(' / ');
+                    } else {
+                      const firstThree = cuisines.slice(0, 3).map(c => c.name).join(' / ');
+                      const remaining = cuisines.length - 3;
+                      return `${firstThree} +${remaining}`;
+                    }
+                  })()}
+                </span>
+              </div>
+            )}
+            
+            {/* Establishment Categories (only parent categories) */}
+            {restaurant.categories && restaurant.categories.length > 0 && (() => {
+              const parentCategories = restaurant.categories.filter(cat => cat.parent_id === null || cat.parent_id === undefined);
+              if (parentCategories.length > 0) {
                 return (
-                  <span className="restaurant-card__tag">
-                    {tags.filter(Boolean).join(' · ')}
-                  </span>
+                  <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+                    <span className="restaurant-card__tag">
+                      {parentCategories.map(cat => cat.name).join(' / ')}
+                    </span>
+                  </div>
                 );
-              })()}
-            </div>
+              }
+              return null;
+            })()}
 
           </div>
         </a>

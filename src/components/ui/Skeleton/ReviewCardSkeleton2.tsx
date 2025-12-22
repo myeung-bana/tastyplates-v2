@@ -5,7 +5,7 @@ const ReviewCardSkeleton2: React.FC = () => {
   return (
     <div className="overflow-hidden animate-pulse">
       {/* Image Section - Standalone with rounded borders */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl mb-2">
+      <div className="relative aspect-[4.5/6] overflow-hidden rounded-2xl mb-2">
         <div className="w-full h-full bg-gray-300" />
       </div>
 

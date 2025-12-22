@@ -74,7 +74,23 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
   // Filter reviews where user palates match the search term
   const matchingReviews = reviews.filter(review => {
     const userPalates = review.palates || "";
-    const palateArray = userPalates.split("|").map(p => p.trim().toLowerCase());
+    
+    // Handle both string (pipe-separated) and array formats
+    let palateArray: string[] = [];
+    if (Array.isArray(userPalates)) {
+      // If it's an array, extract names (handle both string arrays and object arrays)
+      palateArray = userPalates.map(p => {
+        if (typeof p === 'string') return p.trim().toLowerCase();
+        if (typeof p === 'object' && p !== null && 'name' in p) {
+          return String(p.name).trim().toLowerCase();
+        }
+        return String(p).trim().toLowerCase();
+      }).filter(Boolean);
+    } else if (typeof userPalates === 'string') {
+      // If it's a string, split by pipe separator
+      palateArray = userPalates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
+    }
+    
     const searchTermLower = searchTerm.toLowerCase();
     
     // Check if any of the user's palates match the search term
@@ -112,10 +128,10 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
 /**
  * Calculate user preference rating based on reviews from users with matching palates
  * @param reviews - Array of all reviews for the restaurant
- * @param userPalates - Current user's palate string (pipe-separated)
+ * @param userPalates - Current user's palate string (pipe-separated) or array
  * @returns User preference rating and count
  */
-export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalates: string | null): { rating: number; count: number } {
+export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalates: string | string[] | any | null): { rating: number; count: number } {
   if (!reviews || reviews.length === 0 || !userPalates) {
     return { rating: 0, count: 0 };
   }
@@ -123,8 +139,25 @@ export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalate
   // Filter reviews where reviewer palates match the current user's palates
   const matchingReviews = reviews.filter(review => {
     const reviewerPalates = review.palates || "";
-    const reviewerPalateArray = reviewerPalates.split("|").map(p => p.trim().toLowerCase());
-    const userPalateArray = userPalates.split("|").map(p => p.trim().toLowerCase());
+    
+    // Helper function to convert palates to array of strings
+    const palatesToArray = (palates: any): string[] => {
+      if (Array.isArray(palates)) {
+        return palates.map(p => {
+          if (typeof p === 'string') return p.trim().toLowerCase();
+          if (typeof p === 'object' && p !== null && 'name' in p) {
+            return String(p.name).trim().toLowerCase();
+          }
+          return String(p).trim().toLowerCase();
+        }).filter(Boolean);
+      } else if (typeof palates === 'string') {
+        return palates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
+      }
+      return [];
+    };
+    
+    const reviewerPalateArray = palatesToArray(reviewerPalates);
+    const userPalateArray = palatesToArray(userPalates);
     
     // Check if any of the reviewer's palates match any of the user's palates
     return reviewerPalateArray.some(reviewerPalate => 
@@ -165,14 +198,14 @@ export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalate
  * @param restaurantReviews - Reviews for the specific restaurant
  * @param allReviews - All reviews in the system (for search rating calculation)
  * @param searchTerm - The search term from URL parameters
- * @param userPalates - Current user's palate string (pipe-separated)
+ * @param userPalates - Current user's palate string (pipe-separated) or array
  * @returns Combined rating metrics
  */
 export function calculateRatingMetrics(
   restaurantReviews: GraphQLReview[],
   allReviews: GraphQLReview[],
   searchTerm: string | null,
-  userPalates: string | null = null
+  userPalates: string | string[] | any | null = null
 ): RatingMetrics {
   const overall = calculateOverallRating(restaurantReviews);
   const search = searchTerm ? calculateSearchRating(allReviews, searchTerm) : { rating: 0, count: 0 };
@@ -216,10 +249,25 @@ export function getRatingDisplayText(rating: number, count: number): string {
  * @param searchTerm - The search term to match against
  * @returns True if there's a match
  */
-export function doesPalateMatchSearch(userPalates: string, searchTerm: string): boolean {
+export function doesPalateMatchSearch(userPalates: string | string[] | any, searchTerm: string): boolean {
   if (!userPalates || !searchTerm) return false;
   
-  const palateArray = userPalates.split("|").map(p => p.trim().toLowerCase());
+  // Handle both string (pipe-separated) and array formats
+  let palateArray: string[] = [];
+  if (Array.isArray(userPalates)) {
+    // If it's an array, extract names (handle both string arrays and object arrays)
+    palateArray = userPalates.map(p => {
+      if (typeof p === 'string') return p.trim().toLowerCase();
+      if (typeof p === 'object' && p !== null && 'name' in p) {
+        return String(p.name).trim().toLowerCase();
+      }
+      return String(p).trim().toLowerCase();
+    }).filter(Boolean);
+  } else if (typeof userPalates === 'string') {
+    // If it's a string, split by pipe separator
+    palateArray = userPalates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
+  }
+  
   const searchTermLower = searchTerm.toLowerCase();
   
   return palateArray.some(palate => 

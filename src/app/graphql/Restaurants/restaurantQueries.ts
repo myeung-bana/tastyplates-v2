@@ -57,7 +57,7 @@ export const GET_ALL_RESTAURANTS = `
 // GET BY UUID - Get single restaurant by UUID
 export const GET_RESTAURANT_BY_UUID = `
   query GetRestaurantByUuid($uuid: uuid!) {
-    restaurants_by_pk(uuid: $uuid) {
+    restaurants(where: { uuid: { _eq: $uuid } }, limit: 1) {
       id
       uuid
       title
@@ -89,7 +89,7 @@ export const GET_RESTAURANT_BY_UUID = `
 // GET BY UUID WITH PRICE RANGE - Includes price_range_id and relationship (if configured)
 export const GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE = `
   query GetRestaurantByUuid($uuid: uuid!) {
-    restaurants_by_pk(uuid: $uuid) {
+    restaurants(where: { uuid: { _eq: $uuid } }, limit: 1) {
       id
       uuid
       title

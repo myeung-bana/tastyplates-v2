@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_USER_REVIEWS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_USER_REVIEWS, GET_USER_REVIEWS_BY_STATUS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
 
@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const user_id = searchParams.get('user_id');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const status = searchParams.get('status'); // Optional status filter
 
     if (!user_id) {
       return NextResponse.json(
@@ -29,12 +30,20 @@ export async function GET(request: NextRequest) {
 
     // Map user_id to authorId for the GraphQL query
     // user_id (from restaurant_users) maps to author_id (in restaurant_reviews)
-    // Note: No status filter - fetching all non-deleted, top-level reviews
-    const result = await hasuraQuery(GET_USER_REVIEWS, {
+    // Use different query based on whether status filter is provided
+    const queryVariables: any = {
       authorId: user_id, // user_id maps to author_id in restaurant_reviews table
       limit: Math.min(limit, 100), // Cap at 100
       offset
-    });
+    };
+    
+    // Use status-filtered query if status is provided, otherwise use general query
+    const query = status ? GET_USER_REVIEWS_BY_STATUS : GET_USER_REVIEWS;
+    if (status) {
+      queryVariables.status = status;
+    }
+    
+    const result = await hasuraQuery(query, queryVariables);
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
@@ -84,8 +93,8 @@ export async function GET(request: NextRequest) {
           uuid: uuid
         });
 
-        if (!restaurantResult.errors && restaurantResult.data?.restaurants_by_pk) {
-          const restaurant = restaurantResult.data.restaurants_by_pk;
+        if (!restaurantResult.errors && restaurantResult.data?.restaurants?.[0]) {
+          const restaurant = restaurantResult.data.restaurants[0];
           return {
             uuid: restaurant.uuid,
             id: restaurant.id,

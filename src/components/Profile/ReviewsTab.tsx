@@ -42,7 +42,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
       userId,
       limit,
       currentOffset,
-      status: 'approved'
+      status: status || 'all'
     });
     
     setReviewsLoading(true);
@@ -50,8 +50,8 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
       const response = await restaurantUserService.getReviews({
         user_id: userId, // user_id maps to author_id in restaurant_reviews table
         limit,
-        offset: currentOffset
-        // No status filter - fetching all non-deleted, top-level reviews
+        offset: currentOffset,
+        status: status || undefined // Filter by status if provided (e.g., 'approved')
       });
 
       console.log('ReviewsTab - API Response:', {

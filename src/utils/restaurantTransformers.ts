@@ -17,6 +17,7 @@ export interface Restaurant {
   databaseId: number;
   palatesNames?: string[];
   listingCategories?: { id: number; name: string; slug: string }[];
+  categories?: { id: number; name: string; slug: string; parent_id?: number | null }[];
   initialSavedStatus?: boolean | null;
   recognitions?: string[];
   recognitionCount?: number;
@@ -156,6 +157,7 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
 
   const palates = parseJsonb(restaurant.palates);
   const cuisines = parseJsonb(restaurant.cuisines);
+  const categories = parseJsonb(restaurant.categories);
   const address = parseJsonb(restaurant.address);
 
   // Ensure palates is always an array
@@ -163,6 +165,9 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
   
   // Ensure cuisines is always an array
   const cuisinesArray = Array.isArray(cuisines) ? cuisines : [];
+  
+  // Ensure categories is always an array
+  const categoriesArray = Array.isArray(categories) ? categories : [];
 
   return {
     id: restaurant.uuid, // Use UUID as ID
@@ -178,6 +183,12 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
       id: typeof c === 'object' ? (c.id || 0) : 0,
       name: typeof c === 'string' ? c : (c.name || c.slug || String(c)),
       slug: typeof c === 'string' ? c.toLowerCase().replace(/\s+/g, '-') : (c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '')
+    })),
+    categories: categoriesArray.map((cat: any) => ({
+      id: typeof cat === 'object' ? (cat.id || 0) : 0,
+      name: typeof cat === 'string' ? cat : (cat.name || cat.slug || String(cat)),
+      slug: typeof cat === 'string' ? cat.toLowerCase().replace(/\s+/g, '-') : (cat.slug || cat.name?.toLowerCase().replace(/\s+/g, '-') || ''),
+      parent_id: typeof cat === 'object' ? (cat.parent_id ?? null) : null
     })),
     countries: address?.country || '',
     priceRange: restaurant.restaurant_price_range?.display_name || '',

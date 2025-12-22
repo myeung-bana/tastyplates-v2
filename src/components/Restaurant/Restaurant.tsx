@@ -34,6 +34,7 @@ export interface Restaurant {
   databaseId: number;
   palatesNames?: string[];
   listingCategories?: { id: number; name: string; slug: string }[];
+  categories?: { id: number; name: string; slug: string; parent_id?: number | null }[];
   initialSavedStatus?: boolean | null;
   recognitions?: string[];
   recognitionCount?: number;

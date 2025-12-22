@@ -69,7 +69,16 @@ const nextConfig: NextConfig = {
         hostname: "tastyplates-bucket.s3.ap-northeast-2.amazonaws.com",
         pathname: "/**",
       },
-
+      {
+        protocol: "https",
+        hostname: "maps.googleapis.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "maps.gstatic.com",
+        pathname: "/**",
+      },
     ],
   },
   env: {

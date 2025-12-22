@@ -1,16 +1,13 @@
 "use client";
-import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState, useRef } from "react";
 import "@/styles/pages/_submit-restaurants.scss";
 import Rating from "./Rating";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import Link from "next/link";
 import Image from "next/image";
-import CustomModal from "@/components/ui/Modal/Modal";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
-import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
@@ -19,9 +16,8 @@ import { transformWordPressImagesToReviewImages, transformReviewImagesToUrls } f
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
 import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
-import { responseStatusCode as code } from "@/constants/response";
+import { generateProfileUrl } from "@/lib/utils";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
-import { getCityCountry } from "@/utils/addressUtils";
 import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
 
@@ -40,14 +36,13 @@ interface Restaurant {
   recognition?: string[];
 }
 
-const restaurantService = new RestaurantService();
-const reviewService = new ReviewService();
-
 const EditReviewSubmissionPage = () => {
-  const params = useParams() as { slug: string; id: string };
-  const restaurantSlug = params.slug;
+  const params = useParams() as { slug?: string; id: string };
+  const restaurantSlug = params.slug; // Optional: may not exist in new route
   const reviewId = params.id; // UUID of the review
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
+  const hasAttemptedFetch = useRef(false);
+  const userDataLoadingTimeout = useRef<NodeJS.Timeout | null>(null);
   const [restaurantName, setRestaurantName] = useState('');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState('');
@@ -82,153 +77,224 @@ const EditReviewSubmissionPage = () => {
   const [reviewUuid, setReviewUuid] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!reviewId || !restaurantSlug) return;
-      if (!firebaseUser) {
+    // Reset fetch attempt flag when reviewId changes
+    hasAttemptedFetch.current = false;
+    
+    // Clear any existing timeout
+    if (userDataLoadingTimeout.current) {
+      clearTimeout(userDataLoadingTimeout.current);
+      userDataLoadingTimeout.current = null;
+    }
+
+    // Wait for session to finish loading
+    if (sessionLoading) {
+      return;
+    }
+
+    // If session has loaded and no firebaseUser, redirect (but only once)
+    if (!firebaseUser) {
+      if (!hasAttemptedFetch.current) {
         setLoading(false);
+        toast.error('Please log in to edit reviews');
+        router.push(LISTING);
+        hasAttemptedFetch.current = true;
+      }
+      return;
+    }
+
+    // If firebaseUser exists but Hasura user data is still loading, wait a bit
+    if (!user?.id) {
+      // Set a timeout to wait for Hasura user data (max 3 seconds)
+      userDataLoadingTimeout.current = setTimeout(() => {
+        if (!user?.id) {
+          console.error('User data loading timeout - Hasura user not available');
+          setLoading(false);
+          toast.error('User information not available. Please try again.');
+          router.push(LISTING);
+          hasAttemptedFetch.current = true;
+        }
+      }, 3000);
+      return;
+    }
+
+    // Clear timeout since we have user data
+    if (userDataLoadingTimeout.current) {
+      clearTimeout(userDataLoadingTimeout.current);
+      userDataLoadingTimeout.current = null;
+    }
+
+    // Prevent multiple fetch attempts
+    if (hasAttemptedFetch.current) {
+      return;
+    }
+
+    const fetchData = async () => {
+      if (!reviewId) {
+        setLoading(false);
+        hasAttemptedFetch.current = true;
+        return;
+      }
+
+      // Get user ID for validation
+      const userId = user?.id;
+      if (!userId) {
+        setLoading(false);
+        toast.error('User information not available');
+        router.push(LISTING);
+        hasAttemptedFetch.current = true;
         return;
       }
 
       try {
-        // Get user ID for fetching review with like status
-        const userId = user?.id;
-
-        // Fetch review using V2 API (UUID)
-        try {
-          const reviewData = await reviewV2Service.getReviewById(reviewId, userId);
-          setReviewUuid(reviewData.id);
-
-          // Pre-populate form with existing review data
-          setReviewMainTitle(reviewData.title || '');
-          setContent(reviewData.content || '');
-          setReviewStars(reviewData.rating || 0);
-
-          // Handle images - transform from ReviewImage[] to URL array
-          if (reviewData.images && Array.isArray(reviewData.images) && reviewData.images.length > 0) {
-            const imageUrls = transformReviewImagesToUrls(reviewData.images);
-            setSelectedFiles(imageUrls);
-            setIsDoneSelecting(true);
-          }
-
-          // Handle recognitions
-          if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
-            setRestaurant(prev => ({
-              ...prev,
-              recognition: reviewData.recognitions || [],
-            }));
-          }
-
-          // Get restaurant UUID from review
-          const restaurantUuidFromReview = reviewData.restaurant_uuid;
-          if (restaurantUuidFromReview) {
-            setRestaurantUuid(restaurantUuidFromReview);
-          }
-
-          // Fetch restaurant data using slug
-          try {
-            const restaurantResponse = await restaurantV2Service.getRestaurantBySlug(restaurantSlug);
-            const restaurantData = restaurantResponse.data;
-            setRestaurantName(restaurantData.title || '');
-            setRestaurantImage(restaurantData.featured_image_url || '');
-            setRestaurantLocation(restaurantData.listing_street || restaurantData.address?.street_address || '');
-            setGoogleMapUrl(restaurantData.address as GoogleMapUrl || null);
-            
-            setRestaurant(prev => ({
-              ...prev,
-              name: restaurantData.title || '',
-              image: restaurantData.featured_image_url || '',
-              location: restaurantData.listing_street || restaurantData.address?.street_address || '',
-              slug: restaurantData.slug || restaurantSlug,
-              address: restaurantData.listing_street || restaurantData.address?.street_address || '',
-              phone: restaurantData.phone || '',
-              priceRange: restaurantData.restaurant_price_range?.display_name || '',
-              rating: restaurantData.average_rating || 0,
-            }));
-          } catch (restaurantError) {
-            console.error('Failed to fetch restaurant from V2 API, trying WordPress fallback:', restaurantError);
-            // Fallback to WordPress API
-            if (firebaseUser) {
-              try {
-                // Get Firebase ID token for authentication
-                const idToken = await firebaseUser.getIdToken();
-                const wpData = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", idToken);
-                setRestaurantName((wpData.title as string) || '');
-                setRestaurantImage((wpData.featuredImage as any)?.node?.sourceUrl || '');
-                setRestaurantLocation((wpData.address as string) || '');
-                setGoogleMapUrl((wpData.googleMapUrl as GoogleMapUrl) || null);
-              } catch (wpError) {
-                console.error('WordPress fallback also failed:', wpError);
-                toast.error('Unable to load restaurant information');
-              }
-            }
-          }
-        } catch (reviewError) {
-          console.error('Failed to fetch review from V2 API, trying WordPress fallback:', reviewError);
-          // Fallback to WordPress API
-          if (firebaseUser) {
-            try {
-              // Get Firebase ID token for authentication
-              const idToken = await firebaseUser.getIdToken();
-              // Try to parse reviewId as number for WordPress
-              const numericReviewId = parseInt(reviewId);
-              if (!isNaN(numericReviewId)) {
-                const reviewData = await reviewService.getReviewById(numericReviewId, idToken);
-                
-                // Extract restaurant ID and fetch restaurant
-                const restaurantIdFromReview = reviewData.post || reviewData.restaurantId;
-                if (restaurantIdFromReview && !isNaN(Number(restaurantIdFromReview))) {
-                  const restaurantData = await restaurantService.fetchRestaurantById(
-                    restaurantIdFromReview.toString(),
-                    "DATABASE_ID",
-                    idToken
-                  );
-                  
-                  setRestaurantName((restaurantData.title as string) || '');
-                  setRestaurantImage((restaurantData.featuredImage as any)?.node?.sourceUrl || '');
-                  setRestaurantLocation((restaurantData.address as string) || '');
-                  
-                  // Pre-populate form
-                  setReviewMainTitle((reviewData.review_main_title as string) || '');
-                  const contentValue = (reviewData.content as any)?.raw || (reviewData.content as string) || '';
-        setContent(contentValue);
-        const starsValue = typeof reviewData.review_stars === 'string' 
-          ? parseFloat(reviewData.review_stars) 
-                    : (reviewData.review_stars as number) || 0;
-        setReviewStars(isNaN(starsValue) ? 0 : starsValue);
+        // Fetch review using V2 API (UUID) - no fallback to prevent logout
+        const reviewData = await reviewV2Service.getReviewById(reviewId, userId);
         
-                  // Handle images
-                  if (reviewData.review_images && Array.isArray(reviewData.review_images)) {
-                    const imageUrls = reviewData.review_images
-                      .map((img: any) => img?.sourceUrl || img?.url || (typeof img === 'string' ? img : null))
-                      .filter(Boolean);
-                    if (imageUrls.length > 0) {
-                      setSelectedFiles(imageUrls);
-                      setIsDoneSelecting(true);
-                    }
-                  }
-                }
-              }
-            } catch (wpError) {
-              console.error('WordPress fallback also failed:', wpError);
-              toast.error('Failed to load review');
-            }
-          }
+        // Validate author - ensure user can only edit their own reviews
+        if (!reviewData.author_id) {
+          console.error('Review author information is missing');
+          toast.error('Unable to verify review ownership. This review may not be editable.');
+          router.push(LISTING);
+          setLoading(false);
+          return;
         }
 
-      } catch (error) {
-        console.error(error);
-        toast.error('Failed to load review data');
+        if (reviewData.author_id !== userId) {
+          console.error('User is not the author of this review', {
+            reviewAuthorId: reviewData.author_id,
+            currentUserId: userId
+          });
+          toast.error('You can only edit your own reviews');
+          router.push(LISTING);
+          setLoading(false);
+          return;
+        }
+
+        setReviewUuid(reviewData.id);
+
+        // Pre-populate form with existing review data
+        setReviewMainTitle(reviewData.title || '');
+        setContent(reviewData.content || '');
+        setReviewStars(reviewData.rating || 0);
+
+        // Handle images - transform from ReviewImage[] to URL array
+        if (reviewData.images && Array.isArray(reviewData.images) && reviewData.images.length > 0) {
+          const imageUrls = transformReviewImagesToUrls(reviewData.images);
+          setSelectedFiles(imageUrls);
+          setIsDoneSelecting(true);
+        }
+
+        // Handle recognitions
+        if (reviewData.recognitions && Array.isArray(reviewData.recognitions)) {
+          setRestaurant(prev => ({
+            ...prev,
+            recognition: reviewData.recognitions || [],
+          }));
+        }
+
+        // Get restaurant UUID from review (optional - don't block editing if missing)
+        const restaurantUuidFromReview = reviewData.restaurant_uuid;
+        if (restaurantUuidFromReview) {
+          setRestaurantUuid(restaurantUuidFromReview);
+
+          // Fetch restaurant data using UUID (non-blocking - allow editing even if this fails)
+          try {
+            console.log('Fetching restaurant with UUID:', restaurantUuidFromReview);
+            const restaurantResponse = await restaurantV2Service.getRestaurantByUuid(restaurantUuidFromReview);
+            
+            if (restaurantResponse && restaurantResponse.data) {
+              const restaurantData = restaurantResponse.data;
+
+              setRestaurantName(restaurantData.title || '');
+              setRestaurantImage(restaurantData.featured_image_url || '');
+              setRestaurantLocation(restaurantData.listing_street || restaurantData.address?.street_address || '');
+              setGoogleMapUrl(restaurantData.address as GoogleMapUrl || null);
+              
+              setRestaurant(prev => ({
+                ...prev,
+                name: restaurantData.title || '',
+                image: restaurantData.featured_image_url || '',
+                location: restaurantData.listing_street || restaurantData.address?.street_address || '',
+                slug: restaurantData.slug || '',
+                address: restaurantData.listing_street || restaurantData.address?.street_address || '',
+                phone: restaurantData.phone || '',
+                priceRange: restaurantData.restaurant_price_range?.display_name || '',
+                rating: restaurantData.average_rating || 0,
+              }));
+            } else {
+              console.warn('Restaurant response is missing data, continuing with review edit');
+              toast.error('Restaurant information unavailable, but you can still edit your review');
+            }
+          } catch (restaurantError: any) {
+            console.error('Failed to fetch restaurant from V2 API:', restaurantError);
+            console.error('Restaurant UUID:', restaurantUuidFromReview);
+            console.error('Error details:', {
+              message: restaurantError?.message,
+              status: restaurantError?.status,
+              data: restaurantError?.data
+            });
+            
+            // Show warning but don't block editing - restaurant data is optional for editing
+            if (restaurantError?.status === 404) {
+              toast.error('Restaurant not found, but you can still edit your review');
+            } else if (restaurantError?.status === 400) {
+              toast.error('Invalid restaurant ID format, but you can still edit your review');
+            } else {
+              console.warn('Restaurant fetch failed, continuing with review edit:', restaurantError?.message || 'Unknown error');
+              toast.error('Restaurant information unavailable, but you can still edit your review');
+            }
+            
+            // Set default/empty values so the form can still be used
+            setRestaurantName('Restaurant information unavailable');
+            setRestaurantImage('');
+            setRestaurantLocation('');
+            setGoogleMapUrl(null);
+          }
+        } else {
+          console.warn('Restaurant UUID not found in review, continuing with review edit');
+          toast.error('Restaurant information not available, but you can still edit your review');
+          
+          // Set default values
+          setRestaurantName('Restaurant information unavailable');
+          setRestaurantImage('');
+          setRestaurantLocation('');
+          setGoogleMapUrl(null);
+        }
+
+      } catch (error: any) {
+        console.error('Failed to fetch review:', error);
+        hasAttemptedFetch.current = true;
+        
+        // Handle specific error cases without triggering logout
+        if (error.message?.includes('not found') || error.message?.includes('404')) {
+          toast.error('Review not found');
+          router.push(LISTING);
+        } else if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+          // Don't trigger logout - just show error and redirect
+          toast.error('You do not have permission to edit this review');
+          router.push(LISTING);
+        } else {
+          toast.error('Failed to load review. Please try again later.');
+          router.push(LISTING);
+        }
       } finally {
         setLoading(false);
+        hasAttemptedFetch.current = true;
       }
     };
 
     fetchData();
-  }, [reviewId, restaurantSlug, user, firebaseUser]);
+
+    // Cleanup function
+    return () => {
+      if (userDataLoadingTimeout.current) {
+        clearTimeout(userDataLoadingTimeout.current);
+        userDataLoadingTimeout.current = null;
+      }
+    };
+  }, [reviewId, user?.id, firebaseUser, sessionLoading, router]); // Added sessionLoading to dependencies
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const tags = [
     {
       id: 1,
@@ -333,17 +399,28 @@ const EditReviewSubmissionPage = () => {
           rating: review_stars,
           images: reviewImages.length > 0 ? reviewImages : null,
           recognitions: recognitions.length > 0 ? recognitions : null,
-          status: (mode === 'publish' ? 'pending' : 'draft') as 'draft' | 'pending' | 'approved', // 'pending' for publish, 'draft' for save
+          status: (mode === 'publish' ? 'approved' : 'draft') as 'draft' | 'pending' | 'approved', // 'approved' for publish, 'draft' for save
         };
 
         const updatedReview = await reviewV2Service.updateReview(currentReviewId, updateData);
         
         if (mode === 'publish') {
-            setIsSubmitted(true);
           toast.success('Review updated and submitted successfully!');
+          // Redirect to user's profile page (reviews tab)
+          if (user?.username) {
+            const profileUrl = generateProfileUrl(user.id, user.username);
+            router.push(profileUrl);
+          } else if (user?.id) {
+            // Fallback to UUID if username not available
+            const profileUrl = generateProfileUrl(user.id);
+            router.push(profileUrl);
+          } else {
+            // Final fallback to listing page
+            router.push(LISTING);
+          }
         } else if (mode === 'draft') {
           toast.success(savedAsDraft);
-            router.push(LISTING);
+          router.push(LISTING);
         }
       } catch (apiError: any) {
         // Handle specific error messages
@@ -613,7 +690,7 @@ const EditReviewSubmissionPage = () => {
                       />
                     </svg>
                   )}
-                  Update Review
+                  Submit Review
                 </button>
                 <button
                   className={`flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -645,12 +722,6 @@ const EditReviewSubmissionPage = () => {
             </form>
           </div>
         </div>
-        <CustomModal
-          header="Review Updated"
-          content={`Your review for ${restaurantName} has been successfully updated.`}
-          isOpen={isSubmitted}
-          setIsOpen={() => setIsSubmitted(!isSubmitted)}
-        />
       </div>
     </>
   );

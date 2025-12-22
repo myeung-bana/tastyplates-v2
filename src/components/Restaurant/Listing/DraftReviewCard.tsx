@@ -6,9 +6,8 @@ import { useRouter } from "next/navigation";
 import { stripTags, capitalizeWords } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "@/components/ui/Image/FallbackImage";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON, STAR_FILLED } from "@/constants/images";
-import { PAGE } from "@/lib/utils";
-import { EDIT_REVIEW } from "@/constants/pages";
 import HashtagDisplay from "@/components/ui/HashtagDisplay/HashtagDisplay";
+import toast from 'react-hot-toast';
 
 export interface DraftReviewData {
   author: number;
@@ -32,6 +31,8 @@ export interface DraftReviewData {
   reviewStars: string;
   status: string;
   type: string;
+  uuid?: string; // Review UUID for navigation
+  restaurantSlug?: string; // Restaurant slug (optional, for backward compatibility)
 }
 
 interface DraftReviewCardProps {
@@ -43,8 +44,14 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
   const router = useRouter();
 
   const handleEdit = () => {
-    // Navigate to edit-review page with restaurant slug and review UUID
-    router.push(PAGE(EDIT_REVIEW, [reviewDraft.restaurantSlug, reviewDraft.uuid]));
+    // Navigate to edit-review page with review UUID only
+    // The component will fetch restaurant data using restaurant_uuid from the review
+    if (reviewDraft.uuid) {
+      router.push(`/edit-review/${reviewDraft.uuid}`);
+    } else {
+      console.error('Review UUID not available');
+      toast.error('Unable to edit review: UUID not found');
+    }
   };
 
   // Extract first image URL with better error handling
