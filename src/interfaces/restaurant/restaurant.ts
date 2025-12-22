@@ -48,6 +48,14 @@ export interface Listing {
             slug: string;
         }[];
     };
+    categories?: {
+        nodes: {
+            id: number
+            name: string
+            slug: string;
+            parent_id?: number | null;
+        }[];
+    };
     countries: {
         nodes: { name: string }[];
     };

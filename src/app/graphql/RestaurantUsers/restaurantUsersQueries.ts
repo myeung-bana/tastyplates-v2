@@ -254,3 +254,18 @@ export const GET_FOLLOWING_LIST = `
   }
 `;
 
+// CHECK FOLLOW STATUS - Check if a user is following another user
+export const CHECK_FOLLOW_STATUS = `
+  query CheckFollowStatus($followerId: uuid!, $userId: uuid!) {
+    user_follows(
+      where: {
+        follower_id: { _eq: $followerId }
+        user_id: { _eq: $userId }
+      }
+      limit: 1
+    ) {
+      id
+    }
+  }
+`;
+

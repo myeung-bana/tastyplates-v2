@@ -64,6 +64,7 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
   const address = parseJsonb(restaurant.address);
   const openingHours = parseJsonb(restaurant.opening_hours);
   const cuisines = parseJsonb(restaurant.cuisines);
+  const categories = parseJsonb(restaurant.categories);
   const palates = parseJsonb(restaurant.palates);
   const uploadedImages = parseJsonb(restaurant.uploaded_images);
 
@@ -72,6 +73,9 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
   
   // Ensure cuisines is always an array
   const cuisinesArray = Array.isArray(cuisines) ? cuisines : [];
+  
+  // Ensure categories is always an array
+  const categoriesArray = Array.isArray(categories) ? categories : [];
 
   // Normalize address object: convert snake_case to camelCase
   const normalizeAddress = (addr: any): any => {
@@ -126,8 +130,17 @@ export const transformRestaurantV2ToListing = (restaurant: RestaurantV2): Listin
     imageGallery: uploadedImages || [],
     listingCategories: {
       nodes: cuisinesArray.map((c: any) => ({
+        id: typeof c === 'object' ? (c.id || 0) : 0,
         name: typeof c === 'string' ? c : (c.name || c.slug || String(c)),
         slug: typeof c === 'string' ? c.toLowerCase().replace(/\s+/g, '-') : (c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '')
+      }))
+    },
+    categories: {
+      nodes: categoriesArray.map((cat: any) => ({
+        id: typeof cat === 'object' ? (cat.id || 0) : 0,
+        name: typeof cat === 'string' ? cat : (cat.name || cat.slug || String(cat)),
+        slug: typeof cat === 'string' ? cat.toLowerCase().replace(/\s+/g, '-') : (cat.slug || cat.name?.toLowerCase().replace(/\s+/g, '-') || ''),
+        parent_id: typeof cat === 'object' ? (cat.parent_id ?? null) : null
       }))
     },
     countries: {

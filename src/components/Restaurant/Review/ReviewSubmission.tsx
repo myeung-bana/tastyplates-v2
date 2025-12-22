@@ -34,7 +34,6 @@ import { GooglePlacesAutocomplete } from "@/components/ui/GooglePlacesAutocomple
 import { RestaurantMatchDialog } from "@/components/reviews/RestaurantMatchDialog";
 import { RestaurantPlaceData, formatAddressComponents, getPhotoUrl, fetchPlaceDetails } from "@/lib/google-places-utils";
 import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
-import RecentlyVisitedRestaurants from "@/components/Restaurant/RecentlyVisitedRestaurants";
 interface Restaurant {
   id: string;
   slug: string;
@@ -876,8 +875,6 @@ const ReviewSubmissionPage = () => {
           />
         )}
       </div>
-      {/* Recently Visited Restaurants Section */}
-      <RecentlyVisitedRestaurants />
     </>
   );
 };

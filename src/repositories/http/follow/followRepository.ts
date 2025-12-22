@@ -52,13 +52,22 @@ export class FollowRepository {
   async isFollowingUser(userId: number, token: string): Promise<isFollowingUserResponse> {
     const headers: HeadersInit = {
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     };
 
     try {
-      const response = await request.POST('/wp-json/v1/is-following', {
+      // Use Hasura-based API instead of WordPress
+      const response = await request.POST('/api/v1/restaurant-users/check-follow-status', {
         body: JSON.stringify({ user_id: userId }),
         headers: headers,
       });
+      
+      // Handle response format from new API
+      if (response && typeof response === 'object' && 'is_following' in response) {
+        return { is_following: response.is_following as boolean };
+      }
+      
+      // Fallback for legacy format
       return response as unknown as isFollowingUserResponse;
     } catch (error) {
       console.error('Repository isFollowingUser error:', error);
