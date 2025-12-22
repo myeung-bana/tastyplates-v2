@@ -1,6 +1,5 @@
 // hasura-server-client.ts - Server-side Hasura GraphQL client for API routes
 const HASURA_URL = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_API_URL;
-const HASURA_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
 
 export interface GraphQLResponse<T = any> {
   data?: T;
@@ -14,6 +13,9 @@ export async function hasuraQuery<T = any>(
   query: string,
   variables?: Record<string, any>
 ): Promise<GraphQLResponse<T>> {
+  // Access env var at runtime for better Vercel compatibility
+  const HASURA_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
+
   if (!HASURA_URL) {
     const error = new Error('NEXT_PUBLIC_HASURA_GRAPHQL_API_URL is not configured');
     console.error('Hasura configuration error:', error.message);
@@ -21,7 +23,7 @@ export async function hasuraQuery<T = any>(
   }
 
   if (!HASURA_ADMIN_SECRET) {
-    console.warn('HASURA_ADMIN_SECRET is not configured - requests may fail if Hasura requires authentication');
+    console.warn('HASURA_GRAPHQL_ADMIN_SECRET is not configured - requests may fail if Hasura requires authentication');
   }
 
   try {

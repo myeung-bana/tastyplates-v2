@@ -146,7 +146,6 @@ Create `src/app/graphql/hasura-server-client.ts`:
 ```typescript
 // hasura-server-client.ts - Server-side Hasura GraphQL client for API routes
 const HASURA_URL = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_API_URL;
-const HASURA_ADMIN_SECRET = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET;
 
 export interface GraphQLResponse<T = any> {
   data?: T;
@@ -160,8 +159,15 @@ export async function hasuraQuery<T = any>(
   query: string,
   variables?: Record<string, any>
 ): Promise<GraphQLResponse<T>> {
+  // Access env var at runtime for better Vercel compatibility
+  const HASURA_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
+
   if (!HASURA_URL) {
     throw new Error('NEXT_PUBLIC_HASURA_GRAPHQL_API_URL is not configured');
+  }
+
+  if (!HASURA_ADMIN_SECRET) {
+    console.warn('HASURA_GRAPHQL_ADMIN_SECRET is not configured - requests may fail if Hasura requires authentication');
   }
 
   const response = await fetch(HASURA_URL, {
@@ -198,8 +204,10 @@ Required in `.env.local`:
 
 ```env
 NEXT_PUBLIC_HASURA_GRAPHQL_API_URL=https://your-hasura-instance.com/v1/graphql
-NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET=your-admin-secret-here
+HASURA_GRAPHQL_ADMIN_SECRET=your-admin-secret-here
 ```
+
+**Note:** `HASURA_GRAPHQL_ADMIN_SECRET` does not use the `NEXT_PUBLIC_` prefix because it's a server-only secret that should never be exposed to the client. This ensures the admin secret remains secure and is only accessible in API routes and server-side code.
 
 ---
 
