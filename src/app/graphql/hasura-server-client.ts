@@ -1,6 +1,6 @@
 // hasura-server-client.ts - Server-side Hasura GraphQL client for API routes
 const HASURA_URL = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_API_URL;
-const HASURA_ADMIN_SECRET = process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET;
+const HASURA_ADMIN_SECRET = process.env.HASURA_GRAPHQL_ADMIN_SECRET;
 
 export interface GraphQLResponse<T = any> {
   data?: T;

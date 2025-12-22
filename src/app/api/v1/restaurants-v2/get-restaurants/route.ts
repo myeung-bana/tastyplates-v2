@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: 'Failed to connect to Hasura',
           message: errorMessage,
-          hint: 'Check if NEXT_PUBLIC_HASURA_GRAPHQL_API_URL and NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET are configured correctly'
+          hint: 'Check if NEXT_PUBLIC_HASURA_GRAPHQL_API_URL and HASURA_GRAPHQL_ADMIN_SECRET are configured correctly'
         },
         { status: 500 }
       );
