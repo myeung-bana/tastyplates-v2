@@ -79,11 +79,11 @@ export default function CustomDatePicker({
                         id={id}
                         disabled={disabled}
                         className={clsx(
-                            'w-full flex items-center justify-between border rounded-[10px] px-4 py-3 text-left text-sm sm:text-base transition-all duration-300 bg-white',
+                            'w-full flex items-center justify-between border rounded-xl px-4 py-3 text-left text-sm sm:text-base transition-all duration-200 bg-white',
                             selectedDate
-                                ? 'border-gray-300 text-[#31343F]'
-                                : 'border-gray-300 text-[#797979]',
-                            'focus:outline-none focus:ring-1 focus:ring-gray-400',
+                                ? 'border-gray-200 text-[#31343F]'
+                                : 'border-gray-200 text-[#797979]',
+                            'focus:outline-none focus:ring-2',
                             disabled && 'cursor-not-allowed opacity-50',
                             buttonClassName
                         )}

@@ -10,8 +10,11 @@ interface HasuraUser {
   profile_image?: {
     url: string;
     alt_text?: string;
-  };
+  } | string | any; // Can be object, string, or JSONB
   firebase_uuid: string;
+  about_me?: string;
+  palates?: string | any[] | any; // Can be string, array, or JSONB
+  onboarding_complete?: boolean;
 }
 
 interface FirebaseSession {

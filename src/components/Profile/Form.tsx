@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { UserService } from "@/services/user/userService";
 import { useCuisines } from "@/hooks/useCuisines";
+import { CuisineOption } from "@/utils/cuisineUtils";
 import { checkImageType } from "@/constants/utils";
 import {
   imageMBLimit,
@@ -43,6 +44,24 @@ import { useProfileData } from "@/hooks/useProfileData";
 
 const userService = new UserService()
 
+// Helper to extract profile image URL from JSONB format
+const getProfileImageUrl = (profileImage: any): string | null => {
+  if (!profileImage) return null;
+  
+  // If it's a string, return it directly
+  if (typeof profileImage === 'string') {
+    return profileImage;
+  }
+  
+  // If it's an object, extract the URL
+  if (typeof profileImage === 'object') {
+    // Try different possible URL fields
+    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+  }
+  
+  return null;
+};
+
 interface FormContentProps {
   isSubmitted: boolean;
   setIsSubmitted: (value: boolean) => void;
@@ -66,6 +85,9 @@ interface FormContentProps {
   tempImageSrc: string;
   setProfilePreview: (value: string) => void;
   setProfile: (value: string | null) => void;
+  cuisineOptions: CuisineOption[];
+  cuisinesLoading: boolean;
+  cuisinesError: string | null;
 }
 
 const FormContent = memo(({
@@ -91,6 +113,9 @@ const FormContent = memo(({
   tempImageSrc,
   setProfilePreview,
   setProfile,
+  cuisineOptions,
+  cuisinesLoading,
+  cuisinesError,
 }: FormContentProps) => {
   return (
   <>
@@ -404,6 +429,38 @@ const Form = () => {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
+  // Helper function to normalize palates from string or array format
+  const normalizePalates = (palates: any): string[] => {
+    if (!palates) return [];
+    
+    // If it's already an array
+    if (Array.isArray(palates)) {
+      return palates.map((palate: any) => {
+        // If it's a string, return it capitalized
+        if (typeof palate === 'string') {
+          return capitalizeFirstLetter(palate.trim());
+        }
+        // If it's an object, extract the name
+        if (typeof palate === 'object' && palate !== null) {
+          const palateName = palate.name || palate.slug || String(palate);
+          return capitalizeFirstLetter(palateName.trim());
+        }
+        return capitalizeFirstLetter(String(palate).trim());
+      }).filter((p: string) => p.length > 0);
+    }
+    
+    // If it's a string, split by pipe or comma
+    if (typeof palates === 'string') {
+      return palates
+        .split(/[|,]/)
+        .map((p) => p.trim())
+        .map((p) => capitalizeFirstLetter(p))
+        .filter((p: string) => p.length > 0);
+    }
+    
+    return [];
+  };
+
   const submitReview = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -519,6 +576,9 @@ const Form = () => {
       tempImageSrc={tempImageSrc}
       setProfilePreview={setProfilePreview}
       setProfile={setProfile}
+      cuisineOptions={cuisineOptions}
+      cuisinesLoading={cuisinesLoading}
+      cuisinesError={cuisinesError}
     />
   );
 
@@ -547,70 +607,39 @@ const Form = () => {
       const userProfile = (userData.userProfile as any);
       const aboutMeValue = (userData.about_me as string) || 
                           (userProfile?.aboutMe as string) || "";
-      const profileImageValue = (userData.profile_image as string) || 
+      const profileImageValue = getProfileImageUrl(userData.profile_image) || 
                                (userProfile?.profileImage?.node?.mediaItemUrl as string) || 
                                DEFAULT_USER_ICON;
-      const palatesValue = (userData.palates as string) || 
-                          (userProfile?.palates as string) || "";
+      const palatesValue = userData.palates || userProfile?.palates || null;
 
       // Update form fields with data from hook
       setAboutMe(aboutMeValue);
       setProfilePreview(profileImageValue);
       
-      // Set palates
+      // Set palates (handle both string and array formats)
       if (palatesValue) {
-        const palates = palatesValue
-          .split(/[|,]/)
-          .map((p) => p.trim())
-          .map((p) => capitalizeFirstLetter(p));
-        setSelectedPalates(new Set(palates));
-      }
-      
-      // Update session with fresh data if needed (only once, don't retrigger)
-      // Capture current session values to avoid dependency issues
-      const currentSession = session;
-      if (currentSession?.user) {
-        const currentImage = currentSession.user.image || '';
-        const currentAboutMe = currentSession.user.about_me || '';
-        const currentPalates = currentSession.user.palates || '';
-        const currentName = (userData.display_name as string) || (userData.name as string) || currentSession.user.name || '';
-        
-        const needsUpdate = 
-          profileImageValue !== currentImage ||
-          aboutMeValue !== currentAboutMe ||
-          palatesValue !== currentPalates ||
-          currentName !== currentSession.user.name;
-        
-        if (needsUpdate) {
-          // Use setTimeout to avoid triggering useEffect again immediately
-          setTimeout(() => {
-            update({
-              user: {
-                ...currentSession.user,
-                image: profileImageValue,
-                about_me: aboutMeValue,
-                palates: palatesValue,
-                name: currentName,
-              },
-            }).catch(err => {
-              console.error('Error updating session:', err);
-            });
-          }, 0);
+        const palates = normalizePalates(palatesValue);
+        if (palates.length > 0) {
+          setSelectedPalates(new Set(palates));
         }
       }
+      
+      // Note: Session updates are handled automatically by useFirebaseSession hook
+      // when user data changes in Hasura, so no manual session update is needed
       
       hasInitialized.current = true; // Mark as initialized
     } else if (!isLoadingData && !userData && user && currentUserId && !hasInitialized.current) {
       // Fallback to user data if hook hasn't loaded yet or failed (only once)
-      setAboutMe(user?.about_me ?? "");
-      setProfilePreview(user?.profile_image?.url || DEFAULT_USER_ICON);
-    if (user?.palates) {
-      const palates = user.palates
-        .split(/[|,]/)
-        .map((p) => p.trim())
-        .map((p) => capitalizeFirstLetter(p));
-      setSelectedPalates(new Set(palates));
-    }
+      const userWithExtras = user as any; // Type assertion for optional properties
+      setAboutMe(userWithExtras?.about_me ?? "");
+      setProfilePreview(getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON);
+      // Set palates (handle both string and array formats)
+      if (userWithExtras?.palates) {
+        const palates = normalizePalates(userWithExtras.palates);
+        if (palates.length > 0) {
+          setSelectedPalates(new Set(palates));
+        }
+      }
       hasInitialized.current = true; // Mark as initialized even with fallback
     }
   }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user]); // Removed update from deps

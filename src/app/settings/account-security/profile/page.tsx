@@ -40,8 +40,6 @@ const ProfileSettingsPage = () => {
     birthdate: '',
     gender: '',
   });
-  
-  const isGoogleAuth = user?.auth_method === 'google';
 
   // Initialize form with user data
   useEffect(() => {
@@ -94,9 +92,9 @@ const ProfileSettingsPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate all fields
+    // Validate all fields (email is always disabled, so skip validation)
     const newErrors = {
-      email: isGoogleAuth ? '' : validateEmail(formData.email),
+      email: '',
       birthdate: validateBirthdate(formData.birthdate),
       gender: validateGender(formData.gender),
     };
@@ -119,15 +117,11 @@ const ProfileSettingsPage = () => {
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
 
+      // Email is always disabled, so we don't update it
       const updateData: Record<string, unknown> = {
         birthdate: formData.birthdate,
         gender: formData.gender,
       };
-
-      // Only update email if not Google auth
-      if (!isGoogleAuth) {
-        updateData.email = formData.email;
-      }
 
       const response = await userService.updateUserFields(
         updateData,
@@ -175,7 +169,7 @@ const ProfileSettingsPage = () => {
 
   if (!isInitialized) {
     return (
-      <SettingsLayout title="Profile Settings" subtitle="" showBackButton={true}>
+      <SettingsLayout title="Profile" subtitle="" showBackButton={true}>
         <div className="settings-page">
           <div className="settings-page-content">
             <div className="animate-pulse space-y-6">
@@ -193,7 +187,7 @@ const ProfileSettingsPage = () => {
   }
 
   return (
-    <SettingsLayout title="Profile Settings" subtitle="" showBackButton={true}>
+    <SettingsLayout title="Profile" subtitle="" showBackButton={true}>
       <div className="settings-page">
         <div className="settings-page-content">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -204,24 +198,16 @@ const ProfileSettingsPage = () => {
               </label>
               <input
                 type="email"
-                className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
-                  errors.email 
-                    ? "border-red-300 focus:border-red-400" 
-                    : "border-gray-200 focus:border-orange-300"
-                } ${isGoogleAuth ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-300 bg-gray-50 cursor-not-allowed"
                 placeholder="Enter your email address"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                disabled={isLoading || isGoogleAuth}
+                disabled={true}
+                readOnly
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-              )}
-              {isGoogleAuth && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Email is managed by your Google account
-                </p>
-              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Email is tied to your account authentication and cannot be changed here
+              </p>
             </div>
 
             {/* Birthdate Field */}
@@ -230,10 +216,10 @@ const ProfileSettingsPage = () => {
                 Date of Birth
               </label>
               <CustomDatePicker
-                className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
+                buttonClassName={`${
                   errors.birthdate 
-                    ? "border-red-300 focus:border-red-400" 
-                    : "border-gray-200 focus:border-orange-300"
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-100" 
+                    : "border-gray-200 focus:border-orange-300 focus:ring-orange-100"
                 }`}
                 value={formData.birthdate}
                 onChange={(val) => handleInputChange('birthdate', val)}
