@@ -328,7 +328,7 @@ const Settings = () => {
                       <circle cx="28" cy="28" r="28" fill="#FFF3E6" />
                       <path
                         d="M18 29.5L25 36.5L38 23.5"
-                        stroke="#E36B00"
+                        stroke="#ff7c0a"
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"

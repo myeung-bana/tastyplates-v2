@@ -110,7 +110,7 @@ export default function CustomModal(props: CustomModalProps) {
               <button
                 onClick={() => router.push(HOME)}
                 className={cn(
-                  "bg-[#E36B00] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6"
+                  "bg-[#ff7c0a] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6"
                 )}
               >
                 Done

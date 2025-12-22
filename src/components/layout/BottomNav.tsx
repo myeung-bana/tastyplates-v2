@@ -165,7 +165,7 @@ const BottomNav: React.FC = () => {
               onClick={item.requiresAuth ? (e) => handleAuthRequiredClick(e, item) : undefined}
               className={`flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors duration-200 ${
                 active 
-                  ? 'text-[#E36B00]' 
+                  ? 'text-[#ff7c0a]' 
                   : 'text-gray-600 hover:text-gray-700'
               }`}
             >
@@ -183,13 +183,13 @@ const BottomNav: React.FC = () => {
               ) : (
                 <Icon 
                   className={`w-6 h-6 mb-1 transition-colors duration-200 ${
-                    active ? 'text-[#E36B00]' : 'text-gray-600'
+                    active ? 'text-[#ff7c0a]' : 'text-gray-600'
                   }`} 
                 />
               )}
               {/* Active indicator */}
               {active && (
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-[#E36B00] rounded-full" />
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-[#ff7c0a] rounded-full" />
               )}
             </Link>
           );

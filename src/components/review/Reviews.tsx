@@ -223,26 +223,26 @@ const Reviews = () => {
               onClick={() => handleTabClick('trending')}
               className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
                 activeTab === 'trending'
-                  ? 'text-[#E36B00]'
+                  ? 'text-[#ff7c0a]'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Trending
               {activeTab === 'trending' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
               )}
             </button>
             <button
               onClick={() => handleTabClick('foryou')}
               className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
                 activeTab === 'foryou'
-                  ? 'text-[#E36B00]'
+                  ? 'text-[#ff7c0a]'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               For You
               {activeTab === 'foryou' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
               )}
             </button>
           </div>
@@ -267,26 +267,26 @@ const Reviews = () => {
             onClick={() => handleTabClick('trending')}
             className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
               activeTab === 'trending'
-                ? 'text-[#E36B00]'
+                ? 'text-[#ff7c0a]'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             Trending
             {activeTab === 'trending' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
             )}
           </button>
           <button
             onClick={() => handleTabClick('foryou')}
             className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
               activeTab === 'foryou'
-                ? 'text-[#E36B00]'
+                ? 'text-[#ff7c0a]'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             For You
             {activeTab === 'foryou' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E36B00]" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
             )}
           </button>
         </div>

@@ -154,13 +154,13 @@
     }
 
     &:focus-within {
-      border-color: #E36B00;
-      box-shadow: 0 0 0 4px rgba(227, 107, 0, 0.1);
+      border-color: #ff7c0a;
+      box-shadow: 0 0 0 4px rgba(255, 124, 10, 0.1);
     }
 
     &--focused {
-      border-color: #E36B00;
-      box-shadow: 0 0 0 4px rgba(227, 107, 0, 0.1);
+      border-color: #ff7c0a;
+      box-shadow: 0 0 0 4px rgba(255, 124, 10, 0.1);
     }
 
     @media (max-width: 767px) {
@@ -196,7 +196,7 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background-color: #E36B00;
+    background-color: #ff7c0a;
     border: none;
     border-radius: 50%;
     color: white;
@@ -387,7 +387,7 @@
   }
 
   &__palate-modal-selected-tag {
-    background: #E36B00;
+    background: #ff7c0a;
     color: white;
     padding: 4px 12px;
     border-radius: 16px;
@@ -442,13 +442,13 @@
     color: #31343F;
 
     &:hover {
-      border-color: #E36B00;
+      border-color: #ff7c0a;
       background: #fef7f0;
     }
 
     &--selected {
-      border-color: #E36B00;
-      background: #E36B00;
+      border-color: #ff7c0a;
+      background: #ff7c0a;
       color: white;
 
       &:hover {
@@ -520,9 +520,9 @@
   &__palate-modal-done {
     flex: 1;
     padding: 12px 24px;
-    border: 2px solid #E36B00;
+    border: 2px solid #ff7c0a;
     border-radius: 24px;
-    background: #E36B00;
+    background: #ff7c0a;
     color: white;
     font-size: 14px;
     font-weight: 600;

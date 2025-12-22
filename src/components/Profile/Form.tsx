@@ -6,6 +6,7 @@ import React, {
   useState,
   useRef,
   memo,
+  useMemo,
 } from "react";
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
@@ -13,6 +14,7 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { UserService } from "@/services/user/userService";
 import { useCuisines } from "@/hooks/useCuisines";
 import { CuisineOption } from "@/utils/cuisineUtils";
+import { Cuisine } from "@/app/api/v1/services/cuisineService";
 import { checkImageType } from "@/constants/utils";
 import {
   imageMBLimit,
@@ -137,7 +139,7 @@ const FormContent = memo(({
                   <circle cx="28" cy="28" r="28" fill="#FFF3E6" />
                   <path
                     d="M18 29.5L25 36.5L38 23.5"
-                    stroke="#E36B00"
+                    stroke="#ff7c0a"
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -292,7 +294,7 @@ const FormContent = memo(({
             <div className="flex flex-col gap-4 pt-6 border-t border-gray-100">
               <button
                 type="submit"
-                className="w-full bg-[#E36B00] hover:bg-[#c55a00] text-white font-semibold py-4 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-[#ff7c0a] hover:bg-[#e66d08] text-white font-semibold py-4 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -379,8 +381,8 @@ const Form = () => {
     isViewingOwnProfile
   } = useProfileData(currentUserId || '');
 
-  // Fetch cuisines from API for palate selection
-  const { cuisineOptions, loading: cuisinesLoading, error: cuisinesError } = useCuisines();
+  // Fetch cuisines from API for palate selection - get both formatted options and raw cuisines
+  const { cuisineOptions, cuisines, loading: cuisinesLoading, error: cuisinesError } = useCuisines();
 
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -461,6 +463,58 @@ const Form = () => {
     return [];
   };
 
+  // Helper function to map palate names to cuisine keys (for pre-selection in dropdown)
+  // Only matches child cuisines (has parent_id) as those are the actual palate options
+  const mapPalatesToCuisineKeys = useMemo(() => {
+    return (palateNames: string[]): Set<Key> => {
+      const keys = new Set<Key>();
+      if (!cuisines || cuisines.length === 0) return keys;
+      
+      palateNames.forEach(palateName => {
+        // Find cuisine by name (case-insensitive) - only match child cuisines (has parent_id)
+        const matchedCuisine = cuisines.find(c => {
+          const nameMatch = c.name.toLowerCase() === palateName.toLowerCase();
+          // Only match child cuisines (those with parent_id) as those are the palate options
+          return nameMatch && c.parent_id !== null && c.parent_id !== undefined;
+        });
+        
+        if (matchedCuisine) {
+          // Generate key from slug or name (same format as cuisineOptions)
+          const key = matchedCuisine.slug || matchedCuisine.name.toLowerCase().replace(/\s+/g, '-');
+          keys.add(key);
+        }
+      });
+      
+      return keys;
+    };
+  }, [cuisines]);
+
+  // Helper function to map cuisine keys to palate names (for saving to database)
+  // Only matches child cuisines (has parent_id) as those are the actual palate options
+  const mapCuisineKeysToPalates = useMemo(() => {
+    return (keys: Set<Key>): string[] => {
+      const palateNames: string[] = [];
+      if (!cuisines || cuisines.length === 0) return palateNames;
+      
+      keys.forEach(key => {
+        const cuisine = cuisines.find(c => {
+          // Generate key from slug or name (same format as cuisineOptions)
+          const cuisineKey = c.slug || c.name.toLowerCase().replace(/\s+/g, '-');
+          const keyMatch = cuisineKey === String(key);
+          // Only match child cuisines (those with parent_id) as those are the palate options
+          return keyMatch && c.parent_id !== null && c.parent_id !== undefined;
+        });
+        
+        if (cuisine) {
+          // Store as capitalized name (matching database format)
+          palateNames.push(cuisine.name);
+        }
+      });
+      
+      return palateNames;
+    };
+  }, [cuisines]);
+
   const submitReview = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -506,9 +560,9 @@ const Form = () => {
     }
 
     try {
-      const formattedPalates = Array.from(selectedPalates)
-        .map((p) => String(p).trim())
-        .join("|");
+      // Convert selected cuisine keys back to palate names for saving
+      const palateNames = mapCuisineKeysToPalates(selectedPalates);
+      const formattedPalates = palateNames.join("|");
 
       const updateData: Record<string, string> = {};
       if (profile) updateData.profile_image = profile;
@@ -601,6 +655,11 @@ const Form = () => {
       return;
     }
 
+    // Wait for cuisines to load before mapping palates
+    if (cuisinesLoading) {
+      return;
+    }
+
     if (userData && isViewingOwnProfile && !isLoadingData) {
       // Extract data from GraphQL structure (userProfile.aboutMe, userProfile.profileImage, etc.)
       // or use direct properties if already transformed
@@ -616,11 +675,13 @@ const Form = () => {
       setAboutMe(aboutMeValue);
       setProfilePreview(profileImageValue);
       
-      // Set palates (handle both string and array formats)
-      if (palatesValue) {
+      // Set palates - map palate names to cuisine keys for pre-selection
+      if (palatesValue && cuisines && cuisines.length > 0) {
         const palates = normalizePalates(palatesValue);
         if (palates.length > 0) {
-          setSelectedPalates(new Set(palates));
+          // Map palate names to cuisine keys (only child cuisines)
+          const cuisineKeys = mapPalatesToCuisineKeys(palates);
+          setSelectedPalates(cuisineKeys);
         }
       }
       
@@ -633,16 +694,18 @@ const Form = () => {
       const userWithExtras = user as any; // Type assertion for optional properties
       setAboutMe(userWithExtras?.about_me ?? "");
       setProfilePreview(getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON);
-      // Set palates (handle both string and array formats)
-      if (userWithExtras?.palates) {
+      // Set palates - map palate names to cuisine keys for pre-selection
+      if (userWithExtras?.palates && cuisines && cuisines.length > 0) {
         const palates = normalizePalates(userWithExtras.palates);
         if (palates.length > 0) {
-          setSelectedPalates(new Set(palates));
+          // Map palate names to cuisine keys (only child cuisines)
+          const cuisineKeys = mapPalatesToCuisineKeys(palates);
+          setSelectedPalates(cuisineKeys);
         }
       }
       hasInitialized.current = true; // Mark as initialized even with fallback
     }
-  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user]); // Removed update from deps
+  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user, cuisines, cuisinesLoading, mapPalatesToCuisineKeys]); // Added cuisines and cuisinesLoading to dependencies
 
   // Reset initialization flag when user changes
   useEffect(() => {
@@ -654,7 +717,7 @@ const Form = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E36B00] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff7c0a] mx-auto mb-4"></div>
           <p className="text-gray-600 font-neusans">Loading profile data...</p>
         </div>
       </div>

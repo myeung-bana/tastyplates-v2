@@ -85,7 +85,7 @@ export default function MobileMenu({
                   onClick={onClose}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-base transition-all duration-200 ${
                     isActive
-                      ? "bg-[#E36B00] text-white"
+                      ? "bg-[#ff7c0a] text-white"
                       : "bg-gray-50 text-[#494D5D] hover:bg-gray-100 active:bg-gray-200"
                   }`}
                 >
@@ -105,7 +105,7 @@ export default function MobileMenu({
                   onClick={onClose}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-base transition-all duration-200 ${
                     pathname === PROFILE || pathname?.startsWith("/profile/")
-                      ? "bg-[#E36B00] text-white"
+                      ? "bg-[#ff7c0a] text-white"
                       : "bg-gray-50 text-[#494D5D] hover:bg-gray-100 active:bg-gray-200"
                   }`}
                 >
@@ -123,7 +123,7 @@ export default function MobileMenu({
                   onClick={onClose}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-base transition-all duration-200 ${
                     pathname === SETTINGS
-                      ? "bg-[#E36B00] text-white"
+                      ? "bg-[#ff7c0a] text-white"
                       : "bg-gray-50 text-[#494D5D] hover:bg-gray-100 active:bg-gray-200"
                   }`}
                 >
@@ -154,7 +154,7 @@ export default function MobileMenu({
                     onClose();
                     onOpenSignup();
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-medium text-base bg-[#E36B00] text-white hover:bg-[#D55F00] active:bg-[#C45400] transition-all duration-200"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-medium text-base bg-[#ff7c0a] text-white hover:bg-[#e66d08] active:bg-[#cc5f07] transition-all duration-200"
                 >
                   Sign Up
                 </button>

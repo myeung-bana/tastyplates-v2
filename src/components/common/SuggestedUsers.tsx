@@ -89,7 +89,7 @@ const SuggestedUsers: React.FC<SuggestedUsersProps> = ({ users, onUserFollowed }
                 className={`w-full px-3 py-2 rounded-full text-xs font-semibold transition-all ${
                   isFollowed
                     ? 'bg-green-100 text-green-700 border border-green-200'
-                    : 'bg-[#E36B00] hover:bg-[#c55a00] text-white'
+                    : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white'
                 } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (

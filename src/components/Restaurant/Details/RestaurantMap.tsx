@@ -225,7 +225,7 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
                                 href={GOOGLE_MAPS(coordinates.lat, coordinates.lng)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-block bg-[#E36B00] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-xl"
+                                className="inline-block bg-[#ff7c0a] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-xl"
                             >
                                 Get Directions
                             </a>

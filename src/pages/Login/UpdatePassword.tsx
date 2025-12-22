@@ -187,7 +187,7 @@ const UpdatePassword = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="auth__button !bg-[#E36B00] m-auto !rounded-xl text-sm hover:bg-[#d36400] transition-all duration-200"
+              className="auth__button !bg-[#ff7c0a] m-auto !rounded-xl text-sm hover:bg-[#e66d08] transition-all duration-200"
             >
               {isLoading ? "Loading..." : "Update"}
             </button>

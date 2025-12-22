@@ -56,7 +56,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
                   href={item.href}
                   className={`text-sm font-neusans transition-colors ${
                     isActive 
-                      ? 'text-[#E36B00]' 
+                      ? 'text-[#ff7c0a]' 
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >

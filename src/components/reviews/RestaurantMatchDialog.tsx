@@ -100,7 +100,7 @@ export function RestaurantMatchDialog({
           <div className="space-y-2">
             <button
               onClick={handleUseExisting}
-              className="w-full bg-[#E36B00] text-white rounded-lg py-3 px-4 font-semibold hover:bg-[#d15a00] transition-colors"
+              className="w-full bg-[#ff7c0a] text-white rounded-lg py-3 px-4 font-semibold hover:bg-[#e66d08] transition-colors"
             >
               Use This Restaurant
             </button>
@@ -162,7 +162,7 @@ export function RestaurantMatchDialog({
           {/* Action Button */}
           <button
             onClick={handleCreateNew}
-            className="w-full bg-[#E36B00] text-white rounded-lg py-3 px-4 font-semibold hover:bg-[#d15a00] transition-colors"
+            className="w-full bg-[#ff7c0a] text-white rounded-lg py-3 px-4 font-semibold hover:bg-[#e66d08] transition-colors"
           >
             Create New Restaurant Listing
           </button>

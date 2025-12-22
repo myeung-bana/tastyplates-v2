@@ -215,7 +215,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button
                   onClick={() => router.push(ONBOARDING_ONE)}
-                  className="bg-[#E36B00] hover:bg-[#d36400] text-white px-6 py-2 rounded-xl text-sm font-neusans"
+                  className="bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-6 py-2 rounded-xl text-sm font-neusans"
                 >
                   Continue Registration
                 </button>
@@ -247,7 +247,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         <>
           {isLoading && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-              <Spinner size={48} className="text-[#E36B00]" />
+              <Spinner size={48} className="text-[#ff7c0a]" />
             </div>
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
@@ -349,7 +349,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                 <button
                   disabled={isLoading}
                   type="submit"
-                  className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200 font-neusans"
+                  className="auth__button !bg-[#ff7c0a] !mt-0 !rounded-xl hover:bg-[#e66d08] transition-all duration-200 font-neusans"
                 >
                   Continue
                 </button>

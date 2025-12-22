@@ -17,7 +17,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
         <div className="rating-column">
           <h3 className="font-neusans font-normal text-sm">Overall Rating</h3>
           <div className="rating-value">
-            <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
+            <span className="font-neusans text-[#ff7c0a] text-lg md:text-2xl font-normal">
               {ratingMetrics.overallRating.toFixed(1)}
             </span>
           </div>
@@ -33,7 +33,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
         <div className="rating-column font-neusans">
           <h3 className="font-neusans font-normal text-sm">Search Rating</h3>
           <div className="rating-value">
-            <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
+            <span className="font-neusans text-[#ff7c0a] text-lg md:text-2xl font-normal">
               {ratingMetrics.searchRating.toFixed(1)}
             </span>
           </div>
@@ -54,7 +54,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
             <div className="rating-column font-neusans">
               <h3 className="font-neusans font-normal text-sm">My Preference</h3>
               <div className="rating-value">
-                  <span className="font-neusans text-[#E36B00] text-lg md:text-2xl font-normal">
+                  <span className="font-neusans text-[#ff7c0a] text-lg md:text-2xl font-normal">
                     {ratingMetrics.myPreferenceRating.toFixed(1)}
                   </span>
               </div>

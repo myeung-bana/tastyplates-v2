@@ -29,7 +29,7 @@ export default function FollowingPage() {
       <div className="bg-gray-50 py-8 mt-16 md:mt-[88px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E36B00] mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff7c0a] mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function FollowingPage() {
             </p>
             <button 
               onClick={() => window.location.href = '/signin'}
-              className="bg-[#E36B00] hover:bg-[#c55a00] text-white px-8 py-3 rounded-full font-semibold transition-colors"
+              className="bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors"
             >
               Sign In
             </button>
@@ -99,7 +99,7 @@ export default function FollowingPage() {
                 </p>
                 <button 
                   onClick={() => window.location.href = '/explore'}
-                  className="bg-[#E36B00] hover:bg-[#c55a00] text-white px-8 py-3 rounded-full font-semibold transition-colors"
+                  className="bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors"
                 >
                   Discover Users
                 </button>

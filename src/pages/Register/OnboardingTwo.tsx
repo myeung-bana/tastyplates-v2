@@ -252,7 +252,7 @@ const OnboardingTwoPage = () => {
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button
                 type="submit"
-                className={`bg-[#E36B00] hover:bg-[#c75e00] text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center w-full sm:w-auto ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none' : ''}`}
+                className={`bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center w-full sm:w-auto ${(isLoading || isDoItLaterLoading) ? 'pointer-events-none' : ''}`}
                 disabled={isLoading || isDoItLaterLoading}
               >
                 {isLoading ? "Loading..." : "Done"}

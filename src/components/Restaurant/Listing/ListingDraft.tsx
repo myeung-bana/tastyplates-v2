@@ -66,7 +66,7 @@ const ListingDraftPage = () => {
         <div className="mt-20 mb-10 pt-10 px-3 md:px-6 xl:px-16">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-medium text-black">My Listing Draft</h1>
-                <Link href={LISTING_EXPLANATION} className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#E36B00] font-semibold rounded-[50px]">Add New Listing</Link>
+                <Link href={LISTING_EXPLANATION} className="px-6 py-3 text-center text-[#FCFCFC] cursor-pointer bg-[#ff7c0a] font-semibold rounded-[50px]">Add New Listing</Link>
             </div>
             <div className="restaurants__grid mt-8">
                 {loading && <p>Loading draft listings...</p>}

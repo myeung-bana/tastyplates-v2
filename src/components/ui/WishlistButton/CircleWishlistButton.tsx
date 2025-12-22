@@ -38,7 +38,7 @@ export const CircleWishlistButton: React.FC<CircleWishlistButtonProps> = ({
           {loading ? (
             <span className={`${sizeClasses[size]} rounded-full bg-gray-200 animate-pulse block`} />
           ) : saved ? (
-            <FaHeart className={`${sizeClasses[size]} text-[#E36B00]`} />
+            <FaHeart className={`${sizeClasses[size]} text-[#ff7c0a]`} />
           ) : (
             <FaRegHeart className={sizeClasses[size]} />
           )}

@@ -41,7 +41,7 @@ const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
                                     <p className="text-sm text-[#31343F] font-neusans">A link to reset your password has been sent to {email}</p>
                                     <button
                                         type="button"
-                                        className="auth__button !bg-[#E36B00] !mt-5 !rounded-xl hover:bg-[#d36400] transition-all duration-200 font-neusans"
+                                        className="auth__button !bg-[#ff7c0a] !mt-5 !rounded-xl hover:bg-[#e66d08] transition-all duration-200 font-neusans"
                                         onClick={onClose}
                                     >
                                         Done

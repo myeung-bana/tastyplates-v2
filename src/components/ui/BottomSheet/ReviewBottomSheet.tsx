@@ -511,7 +511,7 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
               className={`px-4 py-2 text-sm font-semibold rounded-full h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                 isFollowing 
                   ? 'bg-white text-black border border-black' 
-                  : 'bg-[#E36B00] text-[#FCFCFC]'
+                  : 'bg-[#ff7c0a] text-[#FCFCFC]'
               } disabled:opacity-50`}
               type="button"
             >

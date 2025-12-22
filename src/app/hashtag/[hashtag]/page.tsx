@@ -102,7 +102,7 @@ const HashtagPage = () => {
                 <button
                   onClick={loadMore}
                   disabled={loading}
-                  className="bg-[#E36B00] hover:bg-[#c55a00] text-white px-8 py-3 rounded-full font-semibold transition-colors disabled:opacity-50"
+                  className="bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Loading...' : 'Load More'}
                 </button>

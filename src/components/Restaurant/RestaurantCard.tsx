@@ -206,7 +206,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
         </button>
         <button
           onClick={handleConfirmDelete}
-          className="flex-1 py-3 px-6 bg-[#E36B00] text-[#FCFCFC] rounded-xl text-sm"
+          className="flex-1 py-3 px-6 bg-[#ff7c0a] text-[#FCFCFC] rounded-xl text-sm"
         >
           Confirm
         </button>
@@ -333,7 +333,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
                 {saved === null && loading ? (
                   <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
-                  <FaHeart className="size-3 md:size-4 text-[#E36B00]" />
+                  <FaHeart className="size-3 md:size-4 text-[#ff7c0a]" />
                 ) : (
                   <FaRegHeart className="size-3 md:size-4" />
                 )}

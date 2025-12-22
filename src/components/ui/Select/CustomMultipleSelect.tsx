@@ -367,7 +367,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                     {enableCheckboxHeader && (
                                         <input
                                             type="checkbox"
-                                            className="form-checkbox h-4 w-4 text-[#E36B00] checkbox-no-toggle"
+                                            className="form-checkbox h-4 w-4 text-[#ff7c0a] checkbox-no-toggle"
                                             checked={isHeaderSelected(item)} // Checks if header's own key is selected
                                             onChange={(e) => {
                                                 e.stopPropagation();
@@ -395,7 +395,7 @@ const CustomMultipleSelect = (props: CustomMultipleSelectProps) => {
                                             >
                                                 <input
                                                     type="checkbox"
-                                                    className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                                    className="form-checkbox h-4 w-4 text-[#ff7c0a]"
                                                     checked={isChildLogicallySelected(child.key, item)}
                                                     readOnly
                                                 />

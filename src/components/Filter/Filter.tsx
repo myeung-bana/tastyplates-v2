@@ -362,7 +362,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                             >
                               <input
                                 type="checkbox"
-                                className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                className="form-checkbox h-4 w-4 text-[#ff7c0a]"
                                 checked={selectedCuisines.has(item.slug || item.name)}
                                 readOnly
                               />
@@ -426,7 +426,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
-                              className="form-checkbox h-4 w-4 text-[#E36B00]"
+                              className="form-checkbox h-4 w-4 text-[#ff7c0a]"
                               checked={isAllSelected}
                               readOnly
                             />
@@ -471,7 +471,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                                 >
                                   <input
                                     type="checkbox"
-                                    className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                    className="form-checkbox h-4 w-4 text-[#ff7c0a]"
                                     checked={selectedPalates.has(item.key) && (!item.children || item.children.every(child => selectedPalates.has(child.key)))}
                                     readOnly
                                   />
@@ -507,7 +507,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
                                 >
                                   <input
                                     type="checkbox"
-                                    className="form-checkbox h-4 w-4 text-[#E36B00]"
+                                    className="form-checkbox h-4 w-4 text-[#ff7c0a]"
                                     checked={selectedPalates.has(child.key)}
                                     readOnly
                                   />
@@ -684,7 +684,7 @@ const Filter = ({ onFilterChange }: FilterProps) => {
             </button>
             <button
               onClick={applyFilters}
-              className="w-[163px] md:w-[212px] rounded-[8px] bg-[#E36B00] py-2 px-[62px] md:px-16 text-[#FCFCFC] text-sm md:text-lg font-semibold"
+              className="w-[163px] md:w-[212px] rounded-[8px] bg-[#ff7c0a] py-2 px-[62px] md:px-16 text-[#FCFCFC] text-sm md:text-lg font-semibold"
             >
               Apply
             </button>

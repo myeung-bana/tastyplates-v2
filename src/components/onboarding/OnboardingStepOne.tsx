@@ -599,7 +599,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
             })}
             <button
               type="submit"
-              className={`auth__button !bg-[#E36B00] mt-0 !rounded-[12px] w-fit text-base mx-auto font-neusans font-normal ${isLoading ? 'pointer-events-none' : ''}`}
+              className={`auth__button !bg-[#ff7c0a] mt-0 !rounded-[12px] w-fit text-base mx-auto font-neusans font-normal ${isLoading ? 'pointer-events-none' : ''}`}
               disabled={isLoading}
             >
               {isLoading ? "Loading..." : "Next"}

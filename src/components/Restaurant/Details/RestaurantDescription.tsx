@@ -44,7 +44,7 @@ const RestaurantDescription: React.FC<RestaurantDescriptionProps> = ({
               {/* Desktop: Inline expansion */}
               <button
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                className="text-sm hidden md:inline text-[#E36B00] hover:text-[#D15A00] font-medium ml-1 transition-colors"
+                className="text-sm hidden md:inline text-[#ff7c0a] hover:text-[#e66d08] font-medium ml-1 transition-colors"
               >
                 {isDescriptionExpanded ? "See Less" : "...See More"}
               </button>

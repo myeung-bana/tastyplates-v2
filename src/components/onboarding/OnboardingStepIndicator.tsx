@@ -31,9 +31,9 @@ const OnboardingStepIndicator: React.FC<OnboardingStepIndicatorProps> = ({
                 <div
                   className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 ${
                     isActive
-                      ? "bg-[#E36B00] border-[#E36B00]"
+                      ? "bg-[#ff7c0a] border-[#ff7c0a]"
                       : isCompleted
-                      ? "bg-[#E36B00] border-[#E36B00]"
+                      ? "bg-[#ff7c0a] border-[#ff7c0a]"
                       : "bg-white border-[#CACACA]"
                   }`}
                 >
@@ -67,9 +67,9 @@ const OnboardingStepIndicator: React.FC<OnboardingStepIndicatorProps> = ({
                 <span
                   className={`text-xs mt-2 text-center font-neusans ${
                     isActive
-                      ? "text-[#E36B00] font-normal"
+                      ? "text-[#ff7c0a] font-normal"
                       : isCompleted
-                      ? "text-[#E36B00] font-normal"
+                      ? "text-[#ff7c0a] font-normal"
                       : "text-[#797979] font-normal"
                   }`}
                 >
@@ -80,7 +80,7 @@ const OnboardingStepIndicator: React.FC<OnboardingStepIndicatorProps> = ({
               {stepNumber < totalSteps && (
                 <div
                   className={`h-0.5 w-12 transition-all duration-200 ${
-                    isCompleted ? "bg-[#E36B00]" : "bg-[#CACACA]"
+                    isCompleted ? "bg-[#ff7c0a]" : "bg-[#CACACA]"
                   }`}
                 />
               )}

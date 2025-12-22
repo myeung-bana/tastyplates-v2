@@ -152,9 +152,9 @@
     }
 
     &--primary {
-      background: #E36B00;
+      background: #ff7c0a;
       color: white;
-      border: 1.5px solid #E36B00;
+      border: 1.5px solid #ff7c0a;
 
       &:hover {
         background-color: #d55a00;
@@ -163,7 +163,7 @@
   }
 
   &__badge {
-    background: #E36B00;
+    background: #ff7c0a;
     color: white;
     border-radius: 50%;
     width: 20px;
@@ -223,12 +223,12 @@
     transition: all 0.2s ease;
 
     &:hover {
-      border-color: #E36B00;
+      border-color: #ff7c0a;
       background: #FFF8F5;
     }
 
     &--selected {
-      border-color: #E36B00;
+      border-color: #ff7c0a;
       background: #FFF8F5;
     }
   }
@@ -236,7 +236,7 @@
   &__checkbox {
     width: 18px;
     height: 18px;
-    accent-color: #E36B00;
+    accent-color: #ff7c0a;
     cursor: pointer;
   }
 
@@ -378,7 +378,7 @@
   &__checkbox {
     width: 16px;
     height: 16px;
-    accent-color: #E36B00;
+    accent-color: #ff7c0a;
     cursor: pointer;
   }
 
@@ -528,7 +528,7 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: #E36B00;
+      background: #ff7c0a;
       cursor: pointer;
       border: 2px solid white;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -538,7 +538,7 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: #E36B00;
+      background: #ff7c0a;
       cursor: pointer;
       border: 2px solid white;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

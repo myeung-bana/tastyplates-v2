@@ -650,7 +650,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                 className={`px-4 py-2 text-xs font-semibold rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                   isFollowing 
                     ? 'bg-white text-black border border-black' 
-                    : 'bg-[#E36B00] text-[#FCFCFC]'
+                    : 'bg-[#ff7c0a] text-[#FCFCFC]'
                 } disabled:opacity-50 disabled:pointer-events-none`}
               >
                 {followLoading ? (
@@ -764,7 +764,7 @@ const ReviewPopUpModal: React.FC<ReviewModalProps> = ({
                       </svg>
                       <Link 
                         href={`/restaurants/${data.commentedOn.node.slug}`}
-                        className="text-xs font-normal text-[#E36B00] hover:text-[#c55a00] hover:underline transition-colors"
+                        className="text-xs font-normal text-[#ff7c0a] hover:text-[#e66d08] hover:underline transition-colors"
                       >
                         {data.commentedOn.node.title}
                       </Link>

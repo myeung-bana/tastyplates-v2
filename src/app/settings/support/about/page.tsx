@@ -17,7 +17,7 @@ const AboutPage = () => {
         <div className="settings-page-content">
           {/* App Logo/Icon */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-[#E36B00] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-[#ff7c0a] rounded-2xl flex items-center justify-center mx-auto mb-4">
               <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
@@ -60,23 +60,23 @@ const AboutPage = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Features</h2>
             <div className="space-y-2">
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-[#E36B00] rounded-full"></div>
+                <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
                 <span className="text-gray-600">Restaurant reviews and ratings</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-[#E36B00] rounded-full"></div>
+                <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
                 <span className="text-gray-600">Photo sharing and food discovery</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-[#E36B00] rounded-full"></div>
+                <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
                 <span className="text-gray-600">Follow other food enthusiasts</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-[#E36B00] rounded-full"></div>
+                <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
                 <span className="text-gray-600">Personalized recommendations</span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-[#E36B00] rounded-full"></div>
+                <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
                 <span className="text-gray-600">Multi-language support</span>
               </div>
             </div>
@@ -88,13 +88,13 @@ const AboutPage = () => {
             <div className="space-y-3">
               <a 
                 href="/privacy-policy" 
-                className="block text-[#E36B00] hover:text-[#c55a00] transition-colors"
+                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
               >
                 Privacy Policy
               </a>
               <a 
                 href="/terms-of-service" 
-                className="block text-[#E36B00] hover:text-[#c55a00] transition-colors"
+                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
               >
                 Terms of Service
               </a>

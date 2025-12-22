@@ -67,7 +67,7 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
         <div className="auth !min-h-[auto]">
             {isLoading && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                    <Spinner size={48} className="text-[#E36B00]" />
+                    <Spinner size={48} className="text-[#ff7c0a]" />
                 </div>
             )}
             <div className="auth__container">
@@ -97,7 +97,7 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:bg-[#d36400] transition-all duration-200 font-neusans"
+                                className="auth__button !bg-[#ff7c0a] !mt-0 !rounded-xl hover:bg-[#e66d08] transition-all duration-200 font-neusans"
                             >
                                 Send Reset Link
                             </button>

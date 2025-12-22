@@ -278,7 +278,7 @@ const ProfileSettingsPage = () => {
                   className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 ${
                     isLoading
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#E36B00] hover:bg-[#c55a00] text-white active:bg-[#b85000]'
+                      : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'
                   }`}
                 >
                   {isLoading ? (

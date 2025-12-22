@@ -94,7 +94,7 @@ export default function CustomModal(props: ReviewModalProps) {
                   onClick={onConfirm}
                   disabled={loading}
                   className={cn(
-                    "bg-[#E36B00] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6",
+                    "bg-[#ff7c0a] text-white text-sm md:text-base rounded-xl text-center justify-center w-full py-3 px-6",
                     loading && "opacity-50 cursor-not-allowed"
                   )}
                 >

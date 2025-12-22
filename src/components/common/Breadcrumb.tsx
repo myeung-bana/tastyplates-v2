@@ -19,7 +19,7 @@ export default function Breadcrumb({ items, showHomeIcon = false }: BreadcrumbPr
           <li className="flex items-center">
             <Link
               href={HOME}
-              className="font-neusans text-gray-600 hover:text-[#E36B00] transition-colors font-normal flex items-center"
+              className="font-neusans text-gray-600 hover:text-[#ff7c0a] transition-colors font-normal flex items-center"
               aria-label="Home"
             >
               <FiHome className="w-4 h-4" />
@@ -44,7 +44,7 @@ export default function Breadcrumb({ items, showHomeIcon = false }: BreadcrumbPr
               ) : (
                 <Link
                   href={item.href}
-                  className="font-neusans text-gray-600 hover:text-[#E36B00] transition-colors font-normal"
+                  className="font-neusans text-gray-600 hover:text-[#ff7c0a] transition-colors font-normal"
                 >
                   {item.label}
                 </Link>

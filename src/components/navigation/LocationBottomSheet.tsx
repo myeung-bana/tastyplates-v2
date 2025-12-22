@@ -180,7 +180,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
                   onClick={() => handleCitySelect(city)}
                   className={`w-full flex items-center justify-between gap-4 p-4 rounded-xl transition-all duration-200 text-left ${
                     selectedLocation.key === city.key
-                      ? 'bg-[#E36B00] text-white'
+                      ? 'bg-[#ff7c0a] text-white'
                       : 'bg-gray-50 text-gray-900 hover:bg-gray-100 active:bg-gray-200'
                   }`}
                 >

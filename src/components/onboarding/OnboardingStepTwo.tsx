@@ -342,7 +342,7 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
               {/* Done Button (Primary) */}
               <button
                 type="submit"
-                className={`auth__button !bg-[#E36B00] !mt-0 !rounded-xl hover:!bg-[#d36400] transition-all duration-200 font-neusans font-normal w-full sm:w-auto ${isLoading ? 'pointer-events-none' : ''}`}
+                className={`auth__button !bg-[#ff7c0a] !mt-0 !rounded-xl hover:!bg-[#e66d08] transition-all duration-200 font-neusans font-normal w-full sm:w-auto ${isLoading ? 'pointer-events-none' : ''}`}
                 disabled={isLoading}
               >
                 {isLoading ? "Loading..." : "Done"}

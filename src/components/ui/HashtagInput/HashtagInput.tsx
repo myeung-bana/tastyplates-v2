@@ -80,7 +80,7 @@ const HashtagInput: React.FC<HashtagInputProps> = ({
         onClick={() => setCursorPosition(textareaRef.current?.selectionStart || 0)}
         placeholder={placeholder}
         rows={6}
-        className="w-full p-3 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-[#E36B00] focus:border-transparent"
+        className="w-full p-3 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-[#ff7c0a] focus:border-transparent"
       />
 
       {/* Hashtag chips and counter */}

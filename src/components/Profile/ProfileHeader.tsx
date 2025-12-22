@@ -158,7 +158,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 className={`px-4 py-2 text-xs font-neusans rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
                   isFollowing 
                     ? 'bg-white font-neusans text-black border border-black' 
-                    : 'bg-[#E36B00] text-[#FCFCFC]'
+                    : 'bg-[#ff7c0a] text-[#FCFCFC]'
                 } disabled:opacity-50 disabled:pointer-events-none`}
               >
                 {followLoading ? (

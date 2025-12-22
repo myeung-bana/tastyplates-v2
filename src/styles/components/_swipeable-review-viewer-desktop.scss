@@ -231,16 +231,16 @@
       background: transparent;
 
       &:hover:not(:disabled) {
-        border-color: #E36B00;
+        border-color: #ff7c0a;
         color: #ffffff;
-        background: #E36B00;
+        background: #ff7c0a;
       }
     }
 
     &--following {
-      border-color: #E36B00;
+      border-color: #ff7c0a;
       color: #ffffff;
-      background: #E36B00;
+      background: #ff7c0a;
 
       &:hover:not(:disabled) {
         border-color: #31343F;

@@ -104,7 +104,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
     const Icon = item.icon;
     const className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
       isActive
-        ? "bg-[#E36B00] text-white"
+        ? "bg-[#ff7c0a] text-white"
         : "bg-gray-50 text-[#494D5D] hover:bg-gray-100 active:bg-gray-200"
     }`;
 
