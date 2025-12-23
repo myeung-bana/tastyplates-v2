@@ -331,15 +331,15 @@ const ListingPage = () => {
 
   return (
     <>
-      <div className="max-w-[900px] mx-auto mt-20 px-4">
-        <div className="py-6 md:py-8 flex flex-col justify-center items-center">
+      <div className="max-w-[900px] mx-auto px-4 py-8 md:py-12">
+        <div className="flex flex-col justify-center items-center">
           {/* Conditional rendering of "My Review Drafts" */}
           {!debouncedSearchTerm && (
             <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
               <div className="restaurants__content">
                 <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">My Review Drafts</h1>
                 {reviewDrafts.length === 0 && !loadingDrafts && (
-                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm font-neusans">
                     You don't have any review drafts.
                   </p>
                 )}

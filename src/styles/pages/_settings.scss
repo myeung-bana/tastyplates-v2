@@ -93,9 +93,10 @@
 
 .settings-desktop-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 400;
   color: #31343F;
   margin: 0 0 8px 0;
+  font-family: 'Neusans', sans-serif;
   
   @media (min-width: 768px) {
     font-size: 28px;
@@ -104,6 +105,7 @@
 
 .settings-desktop-subtitle {
   font-size: 16px;
+  font-family: 'Neusans', sans-serif;
   color: #6b7280;
   margin: 0;
 }
@@ -111,6 +113,7 @@
 .settings-categories {
   display: flex;
   flex-direction: column;
+  font-family: 'Neusans', sans-serif;
   gap: 24px;
 }
 
@@ -133,6 +136,7 @@
   padding: 16px 20px;
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
+  font-family: 'Neusans', sans-serif;
 }
 
 .settings-category-icon {
@@ -143,8 +147,9 @@
 
 .settings-category-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 400;
   color: #31343F;
+  font-family: 'Neusans', sans-serif;
   margin: 0;
 }
 
@@ -190,9 +195,9 @@
 
 .settings-item-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 400;
   color: #31343F;
-  margin: 0 0 4px 0;
+  font-family: 'Neusans', sans-serif;
 }
 
 .settings-item-subtitle {

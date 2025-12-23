@@ -132,9 +132,9 @@ const RecentlyVisitedRestaurants: React.FC<RecentlyVisitedRestaurantsProps> = ({
   return (
     <div className={`restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full ${className}`}>
       <div className="restaurants__content mt-6 md:mt-10">
-        <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">Recently Visited</h1>
+        <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">Recently Visited</h1>
         {recentlyVisitedRestaurants.length === 0 && !loadingVisited && (
-          <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm">
+          <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm font-neusans">
             You haven't visited any restaurants yet.
           </p>
         )}

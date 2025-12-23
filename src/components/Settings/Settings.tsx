@@ -304,7 +304,7 @@ const Settings = () => {
 
   return (
     <>
-      <div className="font-inter w-full max-w-[39rem] mx-auto px-4 sm:px-0">
+      <div className="font-neusans w-full max-w-[39rem] mx-auto px-4 sm:px-0">
         {/* Overlay when modal is open */}
         {isSubmitted && (
           <>
@@ -335,14 +335,14 @@ const Settings = () => {
                       />
                     </svg>
                   </div>
-                  <h2 className="text-2xl font-bold text-orange-700 mb-2">
+                  <h2 className="text-2xl font-bold text-orange-700 mb-2 font-neusans">
                     Settings Saved!
                   </h2>
-                  <p className="mb-6 text-center text-gray-700">
+                  <p className="mb-6 text-center text-gray-700 font-neusans">
                     Your settings have been successfully saved.
                   </p>
                   <button
-                    className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold shadow transition"
+                    className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold shadow transition font-neusans"
                     onClick={() => setIsSubmitted(false)}
                   >
                     Continue
@@ -363,7 +363,7 @@ const Settings = () => {
           </>
         )}
         <div className="flex flex-col justify-center items-center py-6 sm:py-10 relative z-10">
-          <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium">
+          <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium font-neusans">
             Personal Info
           </h1>
           <form className="settings__form w-full pt-6 sm:pt-8" onSubmit={handleSave}>
@@ -410,13 +410,13 @@ const Settings = () => {
                 )}
               </div>
               {emailError && editable === Field.Email && (
-                <div className="text-xs text-red-600 mt-1">{emailError}</div>
+                <div className="text-xs text-red-600 mt-1 font-neusans">{emailError}</div>
               )}
               {!isGoogleAuth ? (
                 editable !== Field.Email ? (
                   <button
                     type="button"
-                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None ? "settings__input-group__disabled" : "!text-[#494D5D]"
+                    className={`absolute top-0 right-0 underline font-semibold leading-5 font-neusans ${editable != Field.None ? "settings__input-group__disabled" : "!text-[#494D5D]"
                       }`}
                     onClick={() => setEditable(Field.Email)}
                     disabled={editable !== Field.None}
@@ -427,7 +427,7 @@ const Settings = () => {
                   <>
                     <button
                       type="button"
-                      className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
+                      className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D] font-neusans"
                       onClick={() => setEditable(Field.None)}
                     >
                       Cancel
@@ -445,7 +445,7 @@ const Settings = () => {
                 editable !== Field.Email ? (
                   <button
                     type="button"
-                    className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None || isGoogleAuth
+                    className={`absolute top-0 right-0 underline font-semibold leading-5 font-neusans ${editable != Field.None || isGoogleAuth
                       ? "settings__input-group__disabled opacity-50"
                       : "!text-[#494D5D]"
                       }`}
@@ -488,12 +488,12 @@ const Settings = () => {
                 )}
               </div>
               {birthdateError && editable === Field.Birthdate && (
-                <div className="text-xs text-red-600 mt-1">{birthdateError}</div>
+                <div className="text-xs text-red-600 mt-1 font-neusans">{birthdateError}</div>
               )}
               {editable !== Field.Birthdate ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 font-neusans ${editable != Field.None
                     ? "settings__input-group__disabled"
                     : "!text-[#494D5D]"
                     }`}
@@ -506,14 +506,14 @@ const Settings = () => {
                 <>
                   <button
                     type="button"
-                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
+                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D] font-neusans"
                     onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="settings__button"
+                    className="settings__button font-neusans"
                     disabled={isLoading}
                   >
                     {isLoading ? "Saving..." : "Save and Continue"}
@@ -563,7 +563,7 @@ const Settings = () => {
               {editable !== Field.Language ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable != Field.None
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 font-neusans ${editable != Field.None
                     ? "settings__input-group__disabled"
                     : "!text-[#494D5D]"
                     }`}
@@ -576,14 +576,14 @@ const Settings = () => {
                 <>
                   <button
                     type="button"
-                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
+                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D] font-neusans"
                     onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="settings__button"
+                    className="settings__button font-neusans"
                     disabled={isLoading}
                   >
                     {isLoading ? "Saving..." : "Save and Continue"}
@@ -593,7 +593,7 @@ const Settings = () => {
             </div>
             <hr className="border-t border-[#CACACA] w-full mt-6 sm:mt-8" />
             
-            <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium text-center mt-6 sm:mt-8">
+            <h1 className="text-[#31343F] text-xl sm:text-2xl font-medium text-center mt-6 sm:mt-8 font-neusans">
               Security
             </h1>
 
@@ -619,7 +619,7 @@ const Settings = () => {
                 {editable == Field.Password ? (
                   <>
                     <div className="relative">
-                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm">Current Password</label>
+                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm font-neusans">Current Password</label>
                       <div className="auth__input-group relative">
                         <input
                           type={showCurrentPassword ? 'text' : 'password'}
@@ -639,12 +639,12 @@ const Settings = () => {
                         )}
                       </div>
                       {passwordErrors.current && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.current}</div>
+                        <div className="text-xs text-red-600 mt-1 font-neusans">{passwordErrors.current}</div>
                       )}
                     </div>
 
                     <div className="relative mt-4">
-                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm">New Password</label>
+                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm font-neusans">New Password</label>
                       <div className="auth__input-group relative">
                         <input
                           type={showNewPassword ? 'text' : 'password'}
@@ -664,12 +664,12 @@ const Settings = () => {
                         )}
                       </div>
                       {passwordErrors.new && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.new}</div>
+                        <div className="text-xs text-red-600 mt-1 font-neusans">{passwordErrors.new}</div>
                       )}
                     </div>
 
                     <div className="relative mt-4">
-                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm">Confirm Password</label>
+                      <label className="text-[#494D5D] mb-1 block font-semibold text-sm font-neusans">Confirm Password</label>
                       <div className="auth__input-group relative">
                         <input
                           type={showConfirmPassword ? 'text' : 'password'}
@@ -689,7 +689,7 @@ const Settings = () => {
                         )}
                       </div>
                       {passwordErrors.confirm && (
-                        <div className="text-xs text-red-600 mt-1">{passwordErrors.confirm}</div>
+                        <div className="text-xs text-red-600 mt-1 font-neusans">{passwordErrors.confirm}</div>
                       )}
                     </div>
                   </>
@@ -700,7 +700,7 @@ const Settings = () => {
               {editable !== Field.Password ? (
                 <button
                   type="button"
-                  className={`absolute top-0 right-0 underline font-semibold leading-5 ${editable !== Field.None || isGoogleAuth ? "settings__input-group__disabled" : "!text-[#494D5D]"}`}
+                  className={`absolute top-0 right-0 underline font-semibold leading-5 font-neusans ${editable !== Field.None || isGoogleAuth ? "settings__input-group__disabled" : "!text-[#494D5D]"}`}
                   onClick={() => setEditable(Field.Password)}
                   disabled={editable !== Field.None || isGoogleAuth}
                 >
@@ -710,14 +710,14 @@ const Settings = () => {
                 <>
                   <button
                     type="button"
-                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D]"
+                    className="absolute top-0 right-0 underline font-semibold leading-5 !text-[#494D5D] font-neusans"
                     onClick={() => setEditable(Field.None)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="settings__button"
+                    className="settings__button font-neusans"
                     disabled={isLoading}
                   >
                     {isLoading ? "Saving..." : "Save and Continue"}

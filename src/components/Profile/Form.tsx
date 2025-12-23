@@ -163,10 +163,10 @@ const FormContent = memo(({
       <div className="max-w-4xl mx-auto px-0 md:px-4 py-0 md:py-8">
         {/* Header Section - Desktop Only */}
         <div className="hidden md:block text-center mb-8">
-          <h1 className="text-3xl font-light text-gray-900 mb-2">
+          <h1 className="text-3xl font-light text-gray-900 mb-2 font-neusans">
             Edit Profile
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg font-neusans">
             Update your information to help others discover your taste preferences
           </p>
         </div>
@@ -209,7 +209,7 @@ const FormContent = memo(({
               </div>
               
               <div className="text-center">
-                <h3 className="text-lg font-medium text-gray-900 mb-1">Profile Photo</h3>
+                <h3 className="text-lg font-neusans text-gray-900 mb-1">Profile Photo</h3>
                 <p className="text-sm text-gray-500 max-w-md">
                   Click the edit icon to change your profile picture.
                 </p>
@@ -294,7 +294,7 @@ const FormContent = memo(({
             <div className="flex flex-col gap-4 pt-6 border-t border-gray-100">
               <button
                 type="submit"
-                className="w-full bg-[#ff7c0a] hover:bg-[#e66d08] text-white font-semibold py-4 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-[#ff7c0a] hover:bg-[#e66d08] text-white font-neusans py-4 px-6 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -737,7 +737,7 @@ const Form = () => {
             >
               <PiCaretLeftBold className="size-5 text-gray-900" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
+            <h1 className="text-lg font-neusans text-gray-900">Edit Profile</h1>
             <div className="w-9" /> {/* Spacer for centering */}
           </div>
           

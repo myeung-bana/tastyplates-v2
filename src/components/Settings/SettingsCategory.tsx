@@ -19,7 +19,7 @@ interface SettingsCategoryProps {
 
 const SettingsCategory: React.FC<SettingsCategoryProps> = ({ title, icon, items }) => {
   return (
-    <div className="settings-category">
+    <div className="settings-category font-neusans">
       <div className="settings-category-header">
         <h2 className="settings-category-title">{title}</h2>
       </div>

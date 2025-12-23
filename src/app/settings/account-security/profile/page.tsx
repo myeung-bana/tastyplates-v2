@@ -193,7 +193,7 @@ const ProfileSettingsPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Email Address
               </label>
               <input
@@ -205,14 +205,14 @@ const ProfileSettingsPage = () => {
                 disabled={true}
                 readOnly
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 font-neusans">
                 Email is tied to your account authentication and cannot be changed here
               </p>
             </div>
 
             {/* Birthdate Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Date of Birth
               </label>
               <CustomDatePicker
@@ -227,16 +227,16 @@ const ProfileSettingsPage = () => {
                 disabled={isLoading}
               />
               {errors.birthdate && (
-                <p className="mt-1 text-sm text-red-600">{errors.birthdate}</p>
+                <p className="mt-1 text-sm text-red-600 font-neusans">{errors.birthdate}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 font-neusans">
                 You must be at least {ageLimit} years old
               </p>
             </div>
 
             {/* Gender Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Gender
               </label>
               <select
@@ -257,7 +257,7 @@ const ProfileSettingsPage = () => {
                 ))}
               </select>
               {errors.gender && (
-                <p className="mt-1 text-sm text-red-600">{errors.gender}</p>
+                <p className="mt-1 text-sm text-red-600 font-neusans">{errors.gender}</p>
               )}
             </div>
 
@@ -268,14 +268,14 @@ const ProfileSettingsPage = () => {
                   type="button"
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50"
+                  className="flex-1 py-3 px-4 rounded-full text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 font-neusans"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 ${
+                  className={`flex-1 py-3 px-4 rounded-full transition-all duration-200 font-neusans ${
                     isLoading
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'

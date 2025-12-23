@@ -22,33 +22,33 @@ const AboutPage = () => {
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">TastyPlates</h1>
-            <p className="text-gray-600">Discover and share amazing food experiences</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2 font-neusans">TastyPlates</h1>
+            <p className="text-gray-600 font-neusans">Discover and share amazing food experiences</p>
           </div>
 
           {/* Version Information */}
           <div className="bg-gray-50 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Version Information</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 font-neusans">Version Information</h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">App Version</span>
-                <span className="font-medium text-gray-900">v{appVersion}</span>
+                <span className="text-gray-600 font-neusans">App Version</span>
+                <span className="font-medium text-gray-900 font-neusans">v{appVersion}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Build Date</span>
-                <span className="font-medium text-gray-900">{buildDate}</span>
+                <span className="text-gray-600 font-neusans">Build Date</span>
+                <span className="font-medium text-gray-900 font-neusans">{buildDate}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Platform</span>
-                <span className="font-medium text-gray-900">Web App</span>
+                <span className="text-gray-600 font-neusans">Platform</span>
+                <span className="font-medium text-gray-900 font-neusans">Web App</span>
               </div>
             </div>
           </div>
 
           {/* App Description */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">About TastyPlates</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3 font-neusans">About TastyPlates</h2>
+            <p className="text-gray-600 leading-relaxed font-neusans">
               TastyPlates is your go-to platform for discovering and sharing amazing food experiences. 
               Connect with fellow food enthusiasts, discover new restaurants, and share your culinary adventures 
               with a community that loves great food as much as you do.
@@ -57,44 +57,44 @@ const AboutPage = () => {
 
           {/* Features */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Features</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3 font-neusans">Features</h2>
             <div className="space-y-2">
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
-                <span className="text-gray-600">Restaurant reviews and ratings</span>
+                <span className="text-gray-600 font-neusans">Restaurant reviews and ratings</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
-                <span className="text-gray-600">Photo sharing and food discovery</span>
+                <span className="text-gray-600 font-neusans">Photo sharing and food discovery</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
-                <span className="text-gray-600">Follow other food enthusiasts</span>
+                <span className="text-gray-600 font-neusans">Follow other food enthusiasts</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
-                <span className="text-gray-600">Personalized recommendations</span>
+                <span className="text-gray-600 font-neusans">Personalized recommendations</span>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="w-2 h-2 bg-[#ff7c0a] rounded-full"></div>
-                <span className="text-gray-600">Multi-language support</span>
+                <span className="text-gray-600 font-neusans">Multi-language support</span>
               </div>
             </div>
           </div>
 
           {/* Legal Links */}
           <div className="border-t border-gray-200 pt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Legal</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3 font-neusans">Legal</h2>
             <div className="space-y-3">
               <a 
                 href="/privacy-policy" 
-                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
+                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors font-neusans"
               >
                 Privacy Policy
               </a>
               <a 
                 href="/terms-of-service" 
-                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
+                className="block text-[#ff7c0a] hover:text-[#e66d08] transition-colors font-neusans"
               >
                 Terms of Service
               </a>
@@ -103,7 +103,7 @@ const AboutPage = () => {
 
           {/* Copyright */}
           <div className="text-center mt-8 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 font-neusans">
               © {new Date().getFullYear()} TastyPlates. All rights reserved.
             </p>
           </div>

@@ -6,10 +6,10 @@ import SettingsCategory from "@/components/Settings/SettingsCategory";
 const SettingsPage = () => {
   return (
     <SettingsLayout title="Settings">
-      <div className="settings-container">
+      <div className="settings-container font-neusans">
         {/* Desktop Header */}
         <div className="settings-desktop-header">
-          <h1 className="settings-desktop-title">Settings</h1>
+          <h1 className="settings-desktop-title font-neusans">Settings</h1>
         </div>
         
         {/* Settings Categories */}

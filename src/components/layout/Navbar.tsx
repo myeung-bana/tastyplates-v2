@@ -323,7 +323,7 @@ export default function Navbar(props: Record<string, unknown>) {
                           className={`${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                             } text-center font-neusans`}
                         >
-                          Review
+                          Upload a Review
                         </span>
                         <PiCaretDown
                           className={`${isLandingPage && !navBg ? "fill-white" : "fill-[#494D5D]"
@@ -333,11 +333,11 @@ export default function Navbar(props: Record<string, unknown>) {
                     }
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href="/add-review" className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
-                          Write a Review
+                        <Link href="/tastystudio/add-review" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-gray-50 transition-colors'>
+                          Upload a Review
                         </Link>
-                        <Link href="/review-listing" className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
-                          Review Listing
+                        <Link href="/tastystudio/dashboard" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-gray-50 transition-colors'>
+                          Tasty Studio
                         </Link>
                       </div>
                     }

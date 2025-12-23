@@ -20,7 +20,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({
   const router = useRouter();
 
   return (
-    <div className="settings-layout">
+    <div className="settings-layout font-neusans">
       {/* Mobile Header */}
       <div className="settings-mobile-header">
         {showBackButton && (

@@ -1,6 +1,5 @@
 "use client";
 import React, { FormEvent, useEffect, useState, useCallback } from "react";
-import Footer from "@/components/layout/Footer";
 import "@/styles/pages/_submit-restaurants.scss";
 import "@/styles/pages/_restaurants.scss";
 import Rating from "./Rating";
@@ -31,7 +30,7 @@ import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
 import { RestaurantSelection } from "@/components/reviews/RestaurantSearch";
 import { GooglePlacesAutocomplete } from "@/components/ui/GooglePlacesAutocomplete";
-import { RestaurantMatchDialog } from "@/components/reviews/RestaurantMatchDialog";
+import { RestaurantMatchInline } from "@/components/reviews/RestaurantMatchInline";
 import { RestaurantPlaceData, formatAddressComponents, getPhotoUrl, fetchPlaceDetails } from "@/lib/google-places-utils";
 import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
 interface Restaurant {
@@ -96,7 +95,6 @@ const ReviewSubmissionPage = () => {
   const [searchValue, setSearchValue] = useState('');
   const [selectedPlace, setSelectedPlace] = useState<RestaurantPlaceData | null>(null);
   const [existingRestaurant, setExistingRestaurant] = useState<RestaurantV2 | null>(null);
-  const [showMatchDialog, setShowMatchDialog] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
@@ -516,12 +514,10 @@ const ReviewSubmissionPage = () => {
           setExistingRestaurant(null);
         }
 
-        setShowMatchDialog(true);
       } catch (matchError) {
         console.error('Error matching restaurant:', matchError);
         toast.error('Failed to check for existing restaurant. Please try again.');
         setExistingRestaurant(null);
-        setShowMatchDialog(true);
       }
     } catch (error) {
       console.error('Error fetching place details:', error);
@@ -615,8 +611,8 @@ const ReviewSubmissionPage = () => {
   if (loading) return <ReviewSubmissionSkeleton />;
   return (
     <>
-      <div className="submitRestaurants mt-16 md:mt-20 font-neusans">
-        <div className="submitRestaurants__container max-w-[900px] mx-auto px-4">
+      <div className="submitRestaurants font-neusans">
+        <div className="submitRestaurants__container max-w-[900px] mx-auto px-4 py-8 md:py-12">
           {/* Show restaurant search if no slug and restaurant not selected - moved outside card */}
           {!restaurantSlug && !isRestaurantSelected ? (
             <div className="mb-6 md:mb-8">
@@ -632,6 +628,21 @@ const ReviewSubmissionPage = () => {
                   selectedLocation={selectedLocation}
                   showLocationHelper={true}
                 />
+                
+                {/* Show inline match results instead of modal */}
+                {selectedPlace && (
+                  <RestaurantMatchInline
+                    googlePlaceData={selectedPlace}
+                    existingRestaurant={existingRestaurant}
+                    onSelectExisting={handleSelectExisting}
+                    onCreateNew={handleCreateNew}
+                    onClose={() => {
+                      setSelectedPlace(null);
+                      setExistingRestaurant(null);
+                      setSearchValue('');
+                    }}
+                  />
+                )}
               </div>
             </div>
           ) : null}
@@ -858,23 +869,13 @@ const ReviewSubmissionPage = () => {
           )}
           </div>
         </div>
-        <CustomModal
+      </div>
+      <CustomModal
           header="Review Posted"
           content={`Your review for ${restaurantName} is successfully posted.`}
           isOpen={isSubmitted}
           setIsOpen={() => setIsSubmitted(!isSubmitted)}
         />
-        {selectedPlace && (
-          <RestaurantMatchDialog
-            open={showMatchDialog}
-            onOpenChange={setShowMatchDialog}
-            googlePlaceData={selectedPlace}
-            existingRestaurant={existingRestaurant}
-            onSelectExisting={handleSelectExisting}
-            onCreateNew={handleCreateNew}
-          />
-        )}
-      </div>
     </>
   );
 };

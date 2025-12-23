@@ -288,7 +288,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               e.preventDefault();
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /review-listing page
-              if (pathname === "/review-listing" && clickedElement.dataset.role === "image") {
+              if ((pathname === "/review-listing" || pathname === "/tastystudio/review-listing") && clickedElement.dataset.role === "image") {
                 router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
                 return;
               }
@@ -351,7 +351,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
           onClick={async (e) => {
             e.preventDefault();
-            if (pathname === "/review-listing") {
+            if (pathname === "/review-listing" || pathname === "/tastystudio/review-listing") {
               router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
               return;
             }

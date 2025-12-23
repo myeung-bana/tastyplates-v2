@@ -1,12 +1,7 @@
-import ReviewSubmissionPage from "@/components/Restaurant/Review/ReviewSubmission";
+import { redirect } from 'next/navigation';
 
-const AddReviewPage = () => {
-  return (
-    <section>
-      <ReviewSubmissionPage />
-    </section>
-  );
+const AddReviewSlugRedirect = ({ params }: { params: { slug: string } }) => {
+  redirect(`/tastystudio/add-review/${params.slug}`);
 };
 
-export default AddReviewPage;
-
+export default AddReviewSlugRedirect;

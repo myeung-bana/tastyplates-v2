@@ -10,7 +10,7 @@ import OnboardingRedirect from "@/components/auth/OnboardingRedirect";
 import BottomNav from "@/components/layout/BottomNav";
 import MobileTopBar from "@/components/layout/MobileTopBar";
 import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
-import Footer from "@/components/layout/Footer";
+import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
 import Script from "next/script";
@@ -99,7 +99,7 @@ export default function RootLayout({
                     <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
                       {children}
                     </main>
-                    <Footer />
+                    <ConditionalFooter />
                     <BottomNav />
                   </div>
                 </AuthModalWrapper>

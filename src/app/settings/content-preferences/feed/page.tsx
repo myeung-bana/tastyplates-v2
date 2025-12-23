@@ -7,7 +7,7 @@ const FeedPreferencesPage = () => {
       subtitle="Customize your content feed"
       showBackButton={true}
     >
-      <div className="settings-page">
+      <div className="settings-page font-neusans">
         <div className="settings-page-content">
           <div className="settings-placeholder">
             <h2>Feed Customization</h2>

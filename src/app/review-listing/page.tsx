@@ -1,10 +1,7 @@
-import ListingPage from "@/components/Restaurant/Listing/Listing";
+import { redirect } from 'next/navigation';
 
-const ReviewListingPage = () => {
-  return (
-    <ListingPage />
-  );
+const ReviewListingRedirect = () => {
+  redirect('/tastystudio/review-listing');
 };
 
-export default ReviewListingPage;
-
+export default ReviewListingRedirect;

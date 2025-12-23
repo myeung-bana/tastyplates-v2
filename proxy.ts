@@ -208,7 +208,8 @@ export const config = {
     "/profile",
     "/profile/edit",
     "/dashboard/:path*",
-    "/add-review/:path*",
+    "/add-review/:path*", // Legacy route - redirects to /tastystudio/add-review
+    "/tastystudio/:path*",
     "/edit-review/:path*",
     "/onboarding/:path*",
     "/following/:path*",

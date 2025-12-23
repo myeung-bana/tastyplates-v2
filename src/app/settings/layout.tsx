@@ -7,7 +7,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <section>
+    <section className="font-neusans">
       <Suspense fallback={<div></div>}>
         <Navbar hasSearchBar />
         {children}

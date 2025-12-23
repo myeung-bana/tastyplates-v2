@@ -87,10 +87,10 @@ const LanguageSettingsPage = () => {
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">{language.flag}</span>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 font-neusans">
                         {language.label}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 font-neusans">
                         {language.labelEn} • {language.region}
                       </p>
                     </div>
@@ -113,14 +113,14 @@ const LanguageSettingsPage = () => {
               <button
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50"
+                className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 font-neusans"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving || tempSelectedLanguage.code === selectedLanguage.code}
-                className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 ${
+                className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 font-neusans ${
                   isSaving || tempSelectedLanguage.code === selectedLanguage.code
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'

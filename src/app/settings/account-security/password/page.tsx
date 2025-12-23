@@ -154,13 +154,13 @@ const PasswordSettingsPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Password Not Available</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2 font-neusans">Password Not Available</h2>
+              <p className="text-gray-600 mb-6 font-neusans">
                 You're signed in with Google. Password management is handled by your Google account.
               </p>
               <button
                 onClick={() => router.back()}
-                className="px-6 py-3 bg-[#ff7c0a] hover:bg-[#e66d08] text-white rounded-full font-semibold transition-colors"
+                className="px-6 py-3 bg-[#ff7c0a] hover:bg-[#e66d08] text-white rounded-full font-semibold transition-colors font-neusans"
               >
                 Go Back
               </button>
@@ -178,7 +178,7 @@ const PasswordSettingsPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Current Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-neusans">
                 Current Password
               </label>
               <div className="relative">
@@ -205,13 +205,13 @@ const PasswordSettingsPage = () => {
                 </button>
               </div>
               {passwordErrors.current && (
-                <p className="mt-1 text-sm text-red-600">{passwordErrors.current}</p>
+                <p className="mt-1 text-sm text-red-600 font-neusans">{passwordErrors.current}</p>
               )}
             </div>
 
             {/* New Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-neusans">
                 New Password
               </label>
               <div className="relative">
@@ -238,16 +238,16 @@ const PasswordSettingsPage = () => {
                 </button>
               </div>
               {passwordErrors.new && (
-                <p className="mt-1 text-sm text-red-600">{passwordErrors.new}</p>
+                <p className="mt-1 text-sm text-red-600 font-neusans">{passwordErrors.new}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 font-neusans">
                 Password must be at least {minimumPassword} characters long
               </p>
             </div>
 
             {/* Confirm New Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2 font-neusans">
                 Confirm New Password
               </label>
               <div className="relative">
@@ -274,7 +274,7 @@ const PasswordSettingsPage = () => {
                 </button>
               </div>
               {passwordErrors.confirm && (
-                <p className="mt-1 text-sm text-red-600">{passwordErrors.confirm}</p>
+                <p className="mt-1 text-sm text-red-600 font-neusans">{passwordErrors.confirm}</p>
               )}
             </div>
 
@@ -285,14 +285,14 @@ const PasswordSettingsPage = () => {
                   type="button"
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50"
+                  className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 font-neusans"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 ${
+                  className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 font-neusans ${
                     isLoading
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'
