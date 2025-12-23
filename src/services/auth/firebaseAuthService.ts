@@ -18,6 +18,75 @@ export interface FirebaseAuthResult {
 
 class FirebaseAuthService {
   /**
+   * Check if an error is an expected authentication error (user-facing)
+   * vs an unexpected system error
+   */
+  private isExpectedAuthError(error: any): boolean {
+    const errorCode = error?.code || '';
+    
+    // Expected authentication errors that users can fix
+    const expectedErrorCodes = [
+      'auth/user-not-found',
+      'auth/wrong-password',
+      'auth/invalid-credential',
+      'auth/invalid-email',
+      'auth/too-many-requests',
+      'auth/weak-password',
+      'auth/email-already-in-use',
+      'auth/popup-closed-by-user',
+      'auth/cancelled-popup-request',
+      'auth/popup-blocked',
+      'auth/account-exists-with-different-credential',
+    ];
+    
+    return expectedErrorCodes.includes(errorCode);
+  }
+
+  /**
+   * Map Firebase error codes to user-friendly messages
+   */
+  private getFirebaseErrorMessage(error: any): string {
+    const errorCode = error?.code || '';
+    const errorMessage = error?.message || '';
+
+    // Map Firebase Auth error codes to user-friendly messages
+    const errorMessages: Record<string, string> = {
+      // Authentication errors
+      'auth/user-not-found': 'No account found with this email address. Please check your email or sign up.',
+      'auth/wrong-password': 'Incorrect password. Please try again or reset your password.',
+      'auth/invalid-credential': 'Invalid email or password. Please check your credentials and try again.',
+      'auth/invalid-email': 'Invalid email address. Please enter a valid email.',
+      'auth/user-disabled': 'This account has been disabled. Please contact support for assistance.',
+      'auth/too-many-requests': 'Too many failed login attempts. Please try again later or reset your password.',
+      'auth/network-request-failed': 'Network error. Please check your internet connection and try again.',
+      'auth/operation-not-allowed': 'This sign-in method is not enabled. Please contact support.',
+      'auth/weak-password': 'Password is too weak. Please use a stronger password.',
+      'auth/email-already-in-use': 'An account with this email already exists. Please sign in instead.',
+      'auth/requires-recent-login': 'For security reasons, please sign out and sign in again.',
+      'auth/credential-already-in-use': 'This credential is already associated with another account.',
+      'auth/popup-closed-by-user': 'Sign-in popup was closed. Please try again.',
+      'auth/cancelled-popup-request': 'Sign-in was cancelled. Please try again.',
+      'auth/popup-blocked': 'Pop-up was blocked by your browser. Please allow pop-ups and try again.',
+      'auth/account-exists-with-different-credential': 'An account already exists with the same email but different sign-in method.',
+    };
+
+    // Check if we have a mapped message for this error code
+    if (errorCode && errorMessages[errorCode]) {
+      return errorMessages[errorCode];
+    }
+
+    // If no specific mapping, try to extract a meaningful message from the error
+    if (errorMessage) {
+      // Remove Firebase error prefix if present
+      const cleanMessage = errorMessage.replace(/^Firebase:?\s*/i, '');
+      return cleanMessage;
+    }
+
+    // Fallback to generic message
+    return 'An error occurred during sign in. Please try again.';
+  }
+
+  /**
    * Register new user with email/password
    */
   async registerWithEmail(email: string, password: string): Promise<FirebaseAuthResult> {
@@ -83,9 +152,12 @@ class FirebaseAuthService {
           error: hasuraError instanceof Error ? hasuraError.message : String(hasuraError),
           stack: hasuraError instanceof Error ? hasuraError.stack : undefined
         });
-        // If Hasura fails, we should still allow Firebase user creation
-        // But log the error for debugging
-        throw new Error(hasuraError instanceof Error ? hasuraError.message : 'Failed to create user account');
+        // If Hasura fails, return error directly instead of throwing
+        const errorMessage = hasuraError instanceof Error ? hasuraError.message : 'Failed to create user account';
+        return {
+          success: false,
+          error: errorMessage
+        };
       }
 
       return {
@@ -94,9 +166,20 @@ class FirebaseAuthService {
         firebase_uuid: firebaseUser.uid
       };
     } catch (error: any) {
+      // Use console.debug for expected errors, console.error for unexpected ones
+      const isExpected = this.isExpectedAuthError(error);
+      const logMethod = isExpected ? console.debug : console.error;
+      
+      logMethod('[FirebaseAuth] Registration error:', {
+        error: error.message,
+        code: error.code,
+        fullError: error
+      });
+      
+      const userFriendlyMessage = this.getFirebaseErrorMessage(error);
       return {
         success: false,
-        error: error.message || 'Registration failed'
+        error: userFriendlyMessage
       };
     }
   }
@@ -179,8 +262,12 @@ class FirebaseAuthService {
           error: hasuraError instanceof Error ? hasuraError.message : String(hasuraError),
           stack: hasuraError instanceof Error ? hasuraError.stack : undefined
         });
-        // If Hasura fails, we can't proceed with login
-        throw new Error(hasuraError instanceof Error ? hasuraError.message : 'Failed to access user account. Please try again.');
+        // If Hasura fails, we can't proceed with login - return error directly
+        const errorMessage = hasuraError instanceof Error ? hasuraError.message : 'Failed to access user account. Please try again.';
+        return {
+          success: false,
+          error: errorMessage
+        };
       }
 
       return {
@@ -189,13 +276,20 @@ class FirebaseAuthService {
         firebase_uuid: firebaseUser.uid
       };
     } catch (error: any) {
-      console.error('[FirebaseAuth] Sign in error:', {
+      // Use console.debug for expected errors, console.error for unexpected ones
+      const isExpected = this.isExpectedAuthError(error);
+      const logMethod = isExpected ? console.debug : console.error;
+      
+      logMethod('[FirebaseAuth] Sign in error:', {
         error: error.message,
-        code: error.code
+        code: error.code,
+        fullError: error
       });
+      
+      const userFriendlyMessage = this.getFirebaseErrorMessage(error);
       return {
         success: false,
-        error: error.message || 'Sign in failed'
+        error: userFriendlyMessage
       };
     }
   }
@@ -259,9 +353,20 @@ class FirebaseAuthService {
         firebase_uuid: firebaseUser.uid
       };
     } catch (error: any) {
+      // Use console.debug for expected errors, console.error for unexpected ones
+      const isExpected = this.isExpectedAuthError(error);
+      const logMethod = isExpected ? console.debug : console.error;
+      
+      logMethod('[FirebaseAuth] Google sign in error:', {
+        error: error.message,
+        code: error.code,
+        fullError: error
+      });
+      
+      const userFriendlyMessage = this.getFirebaseErrorMessage(error);
       return {
         success: false,
-        error: error.message || 'Google sign in failed'
+        error: userFriendlyMessage
       };
     }
   }
@@ -311,4 +416,3 @@ class FirebaseAuthService {
 }
 
 export const firebaseAuthService = new FirebaseAuthService();
-
