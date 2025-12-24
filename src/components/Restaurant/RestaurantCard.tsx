@@ -7,17 +7,15 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useState, useEffect } from "react";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
-import RestaurantReviewsModal from "./RestaurantReviewsModal";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
-import { ReviewService } from "@/services/Reviews/reviewService";
-import { GraphQLReview } from "@/types/graphql";
+import RestaurantCommentsQuickView from "./RestaurantCommentsQuickView";
+import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 import { PAGE } from "@/lib/utils";
 import { TASTYSTUDIO_ADD_REVIEW_CREATE, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "../ui/Image/FallbackImage";
-import { responseStatusCode as code } from "@/constants/response";
 import { getCityCountry } from "@/utils/addressUtils";
+import { useRestaurantOverallRating } from "@/hooks/useRestaurantOverallRating";
 
 export interface Restaurant {
   id: string;
@@ -61,8 +59,32 @@ export interface RestaurantCardProps {
   onClick?: () => void;
 }
 
-const restaurantService = new RestaurantService();
-const reviewService = new ReviewService();
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Helper to get user UUID from session
+const getUserUuid = async (sessionUserId: string | number | undefined): Promise<string | null> => {
+  if (!sessionUserId) return null;
+  
+  const userIdStr = String(sessionUserId);
+  
+  // Check if it's already a UUID
+  if (UUID_REGEX.test(userIdStr)) {
+    return userIdStr;
+  }
+  
+  // If not a UUID, assume it's firebase_uuid and fetch the user
+  try {
+    const response = await restaurantUserService.getUserByFirebaseUuid(userIdStr);
+    if (response.success && response.data) {
+      return response.data.id;
+    }
+  } catch (error) {
+    console.error("Error fetching user UUID:", error);
+  }
+  
+  return null;
+};
 
 const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick }: RestaurantCardProps) => {
   // Safety check for restaurant object
@@ -76,10 +98,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [restaurantReviews, setRestaurantReviews] = useState<GraphQLReview[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, firebaseUser } = useFirebaseSession();
@@ -94,8 +112,48 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setSaved(initialSavedStatus ?? false);
   }, [initialSavedStatus]);
 
-  const displayRating = typeof restaurant?.averageRating === 'number' ? restaurant.averageRating : (restaurant?.rating || 0);
-  const displayRatingsCount = typeof restaurant?.ratingsCount === 'number' ? restaurant.ratingsCount : 0;
+  // Check favorite status on mount if user is logged in and status is not provided
+  useEffect(() => {
+    if (!user || !restaurant.slug || initialSavedStatus !== null) return;
+    
+    const checkStatus = async () => {
+      try {
+        const userUuid = await getUserUuid(user.id);
+        if (!userUuid) return;
+        
+        const response = await restaurantUserService.checkFavoriteStatus({
+          user_id: userUuid,
+          restaurant_slug: restaurant.slug
+        });
+        
+        if (response.success) {
+          setSaved(response.data.status === "saved");
+        }
+      } catch (error) {
+        console.error("Error checking favorite status:", error);
+      }
+    };
+    
+    checkStatus();
+  }, [user, restaurant.slug, initialSavedStatus]);
+
+  // Fetch overall rating using the same calculation as restaurant detail page
+  // Only fetch if restaurant.id is a UUID (starts with valid UUID pattern)
+  const isUuid = Boolean(restaurant.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(restaurant.id));
+  const { rating: calculatedRating, count: calculatedCount, loading: ratingLoading } = useRestaurantOverallRating(
+    isUuid ? restaurant.id : undefined,
+    restaurant.databaseId,
+    isUuid // Only fetch if we have a valid UUID
+  );
+
+  // Use calculated rating if available, otherwise fall back to restaurant data
+  const displayRating = ratingLoading 
+    ? (typeof restaurant?.averageRating === 'number' ? restaurant.averageRating : (restaurant?.rating || 0))
+    : (calculatedRating > 0 ? calculatedRating : (typeof restaurant?.averageRating === 'number' ? restaurant.averageRating : (restaurant?.rating || 0)));
+  
+  const displayRatingsCount = ratingLoading
+    ? (typeof restaurant?.ratingsCount === 'number' ? restaurant.ratingsCount : 0)
+    : (calculatedCount > 0 ? calculatedCount : (typeof restaurant?.ratingsCount === 'number' ? restaurant.ratingsCount : 0));
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,36 +166,26 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     const prevSaved = saved;
     setSaved(!saved);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
-    const action = prevSaved ? "unsave" : "save";
+    
     try {
-      // Additional safety check before getting token
-      if (!firebaseUser) {
-        setShowSignin(true);
-        setSaved(prevSaved);
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-        setLoading(false);
-        return;
+      const userUuid = await getUserUuid(user.id);
+      if (!userUuid) {
+        throw new Error("Unable to get user ID");
       }
 
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
-      let res: Record<string, unknown>;
-      if (action === "save") {
-        res = await restaurantService.saveFavoriteListing(restaurant.slug, idToken);
+      const response = await restaurantUserService.toggleFavorite({
+        user_id: userUuid,
+        restaurant_slug: restaurant.slug
+      });
+
+      if (response.success) {
+        const isSaved = response.data.status === "saved";
+        setSaved(isSaved);
+        toast.success(isSaved ? savedToWishlistSuccess : removedFromWishlistSuccess);
+        onWishlistChange?.(restaurant, isSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: isSaved } }));
       } else {
-        res = await restaurantService.unsaveFavoriteListing(restaurant.slug, idToken);
-      }
-      
-      if (res.status === "saved" || res.status === "unsaved") {
-        toast.success(prevSaved ? removedFromWishlistSuccess : savedToWishlistSuccess);
-        setSaved((res.status as unknown as string) === "saved");
-        onWishlistChange?.(restaurant, (res.status as unknown as string) === "saved");
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: (res.status as unknown as string) === "saved" } }));
-      } else {
-        toast.error(favoriteStatusError);
-        setSaved(prevSaved);
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-        setError(favoriteStatusError);
+        throw new Error(response.error || favoriteStatusError);
       }
     } catch (error: any) {
       // Check if it's an authentication error or JSON parsing error
@@ -197,30 +245,51 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     setSaved(false);
     setIsDeleteModalOpen(false);
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: false } }));
+    
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
-      const res: Record<string, unknown> = await restaurantService.createFavoriteListing(
-        { restaurant_slug: restaurant.slug, action: "unsave" },
-        idToken
-      );
+      const userUuid = await getUserUuid(user.id);
+      if (!userUuid) {
+        throw new Error("Unable to get user ID");
+      }
 
-      if (res.status == code.success) {
-        toast.success(saved ? removedFromWishlistSuccess : savedToWishlistSuccess);
-        setSaved((res.status as unknown as string) === "saved");
-        onWishlistChange?.(restaurant, (res.status as unknown as string) === "saved");
-        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: (res.status as unknown as string) === "saved" } }));
+      const response = await restaurantUserService.toggleFavorite({
+        user_id: userUuid,
+        restaurant_slug: restaurant.slug
+      });
+
+      if (response.success) {
+        const isSaved = response.data.status === "saved";
+        setSaved(isSaved);
+        toast.success(isSaved ? savedToWishlistSuccess : removedFromWishlistSuccess);
+        onWishlistChange?.(restaurant, isSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: isSaved } }));
+      } else {
+        throw new Error(response.error || favoriteStatusError);
+      }
+    } catch (error: any) {
+      // Check if it's an authentication error
+      const errorMessage = error?.message || '';
+      const isAuthError = 
+        errorMessage.includes('auth') || 
+        errorMessage.includes('permission') || 
+        errorMessage.includes('unauthorized') ||
+        errorMessage.includes('token') ||
+        errorMessage.includes('forbidden') ||
+        error?.status === 401 ||
+        error?.status === 403 ||
+        !firebaseUser;
+
+      if (isAuthError) {
+        setShowSignin(true);
+        setSaved(prevSaved);
+        setError(null);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
       } else {
         toast.error(favoriteStatusError);
-        setSaved(prevSaved); // Revert on error
+        setSaved(prevSaved);
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
         setError(favoriteStatusError);
       }
-    } catch {
-      toast.error(favoriteStatusError);
-      setSaved(prevSaved); // Revert on error
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError(favoriteStatusError);
     } finally {
       setLoading(false);
     }
@@ -257,58 +326,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     handleToggle(e);
   };
 
-  const handleCommentButtonClick = async (e: React.MouseEvent) => {
+  const handleCommentButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsReviewModalOpen(true);
-    
-    // Fetch reviews for the restaurant
-    if (restaurant.databaseId) {
-      setLoadingReviews(true);
-      try {
-        // Get Firebase ID token for authentication
-        const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
-        const response = await reviewService.fetchRestaurantReviews(
-          restaurant.databaseId,
-          idToken,
-          10 // Initial load of 10 reviews
-        );
-        setRestaurantReviews(response.reviews);
-        setHasNextPage(response.pageInfo.hasNextPage);
-        setEndCursor(response.pageInfo.endCursor);
-      } catch (error) {
-        console.error('Error fetching restaurant reviews:', error);
-        setRestaurantReviews([]);
-        toast.error('Failed to load reviews');
-      } finally {
-        setLoadingReviews(false);
-      }
-    }
   };
 
-  const handleLoadMoreReviews = async (): Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }> => {
-    if (!restaurant.databaseId || !endCursor) {
-      return { reviews: [], hasNextPage: false };
-    }
-    
-    try {
-      // Get Firebase ID token for authentication
-      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
-      const response = await reviewService.fetchRestaurantReviews(
-        restaurant.databaseId,
-        idToken,
-        10,
-        endCursor
-      );
-      const newReviews = [...restaurantReviews, ...response.reviews];
-      setRestaurantReviews(newReviews);
-      setHasNextPage(response.pageInfo.hasNextPage);
-      setEndCursor(response.pageInfo.endCursor);
-      return { reviews: response.reviews, hasNextPage: response.pageInfo.hasNextPage };
-    } catch (error) {
-      console.error('Error loading more reviews:', error);
-      return { reviews: [], hasNextPage: false };
-    }
-  };
 
   const address = getCityCountry(restaurant.googleMapUrl, 'Location not available');
 
@@ -376,9 +398,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
                   <FiHeart className="size-3 md:size-4" />
                 )}
               </button>
-              {error && !showSignin && (
-                <span className="text-xs text-red-500 ml-2">{error}</span>
-              )}
               <button className="rounded-full p-2 bg-white" onClick={handleCommentButtonClick}>
                 <MdOutlineMessage className="size-3 md:size-4" />
               </button>
@@ -479,16 +498,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           setShowSignup(true);
         }}
       />
-      {isReviewModalOpen && (
-        <RestaurantReviewsModal
-          reviews={restaurantReviews}
-          isOpen={isReviewModalOpen}
-          onClose={() => setIsReviewModalOpen(false)}
-          restaurantId={restaurant.databaseId}
-          onLoadMore={handleLoadMoreReviews}
-          hasNextPage={hasNextPage}
-        />
-      )}
+      <RestaurantCommentsQuickView
+        restaurantId={restaurant.databaseId}
+        restaurantName={restaurant.name}
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+      />
     </>
   );
 };
