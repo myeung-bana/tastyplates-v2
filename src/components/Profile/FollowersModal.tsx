@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,6 +8,8 @@ import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import { FollowButton } from "@/components/ui/follow-button";
+import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
+import { UserListItemSkeleton } from "@/components/ui/Skeleton";
 
 export interface Follower {
   id: string;
@@ -21,19 +23,86 @@ export interface Follower {
 interface FollowersModalProps {
   open: boolean;
   onClose: () => void;
-  followers: Follower[];
+  userId: string; // UUID of the profile user
   onFollow: (id: string) => void;
   onUnfollow: (id: string) => void;
 }
 
-const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, followers, onFollow, onUnfollow }) => {
-  const [localFollowers, setLocalFollowers] = useState(followers);
+const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, userId, onFollow, onUnfollow }) => {
+  const [localFollowers, setLocalFollowers] = useState<Follower[]>([]);
+  const [loading, setLoading] = useState(false);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
-  const { user } = useFirebaseSession();
+  const { user, firebaseUser } = useFirebaseSession();
 
-  React.useEffect(() => {
-    setLocalFollowers(followers);
-  }, [followers]);
+  // Fetch followers when modal opens
+  useEffect(() => {
+    if (open && userId) {
+      const fetchFollowers = async () => {
+        setLoading(true);
+        try {
+          // Fetch followers list and current user's following list in parallel
+          const [followersResponse, followingResponse] = await Promise.all([
+            restaurantUserService.getFollowersList(userId),
+            // Fetch current user's following list to check if they're following each follower
+            user && firebaseUser 
+              ? (async () => {
+                  try {
+                    const token = await firebaseUser.getIdToken();
+                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+                    const currentUserResponse = await fetch(
+                      `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUser.uid)}`,
+                      {
+                        headers: {
+                          'Authorization': `Bearer ${token}`
+                        }
+                      }
+                    );
+                    const currentUserData = await currentUserResponse.json();
+                    if (currentUserData.success && currentUserData.data?.id) {
+                      return restaurantUserService.getFollowingList(currentUserData.data.id);
+                    }
+                    return { success: false, data: [] };
+                  } catch (error) {
+                    console.error('Error fetching current user following list:', error);
+                    return { success: false, data: [] };
+                  }
+                })()
+              : Promise.resolve({ success: false, data: [] })
+          ]);
+
+          if (followersResponse.success && followersResponse.data) {
+            const followers = followersResponse.data as Follower[];
+            const followingList = followingResponse.success && followingResponse.data 
+              ? (followingResponse.data as any[]).map((u: any) => u.id)
+              : [];
+
+            // Set isFollowing status based on current user's following list
+            const followersWithStatus = followers.map(follower => ({
+              ...follower,
+              isFollowing: user?.id && String(user.id) === String(follower.id) 
+                ? false // Can't follow yourself
+                : followingList.includes(follower.id)
+            }));
+
+            setLocalFollowers(followersWithStatus);
+          } else {
+            console.error('Failed to load followers:', followersResponse.error);
+            setLocalFollowers([]);
+          }
+        } catch (error) {
+          console.error('Error fetching followers:', error);
+          setLocalFollowers([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchFollowers();
+    } else if (!open) {
+      // Clear data when modal closes
+      setLocalFollowers([]);
+    }
+  }, [open, userId, user, firebaseUser]);
 
   const handleToggleFollow = async (id: string, isFollowing: boolean) => {
     setLoadingMap((prev) => ({ ...prev, [id]: true }));
@@ -66,7 +135,9 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
         <h2 className="text-center text-xl py-5 font-neusans">Followers</h2>
         <div className="border-b border-[#E5E5E5] w-full" />
         <div>
-          {localFollowers.length === 0 ? (
+          {loading ? (
+            <UserListItemSkeleton count={5} />
+          ) : localFollowers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6">
               <p className="text-gray-500 text-center font-neusans">
                 There are no users yet.
@@ -105,12 +176,12 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                         : generateProfileUrl(follower.id, follower.username)
                     }
                   >
-                    <div className="font-semibold truncate cursor-pointer font-neusans">
+                    <div className="font-normal truncate cursor-pointer font-neusans">
                       {follower.name}
                     </div>
                   </Link>
                 ) : (
-                  <div className="font-semibold truncate font-neusans">
+                  <div className="font-normal truncate font-neusans">
                     {follower.name}
                   </div>
                 )}
@@ -139,15 +210,17 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                   : null}
                 </div>
               </div>
-              <FollowButton
-                isFollowing={follower.isFollowing}
-                isLoading={loadingMap[follower.id]}
-                onToggle={async () => {
-                  await handleToggleFollow(follower.id, follower.isFollowing);
-                }}
-                size="sm"
-                className="border border-[#494D5D]"
-              />
+              {/* Hide follow button if follower is the current user */}
+              {user?.id && String(user.id) !== String(follower.id) && (
+                <FollowButton
+                  isFollowing={follower.isFollowing}
+                  isLoading={loadingMap[follower.id]}
+                  onToggle={async () => {
+                    await handleToggleFollow(follower.id, follower.isFollowing);
+                  }}
+                  size="sm"
+                />
+              )}
             </div>
             ))
           )}

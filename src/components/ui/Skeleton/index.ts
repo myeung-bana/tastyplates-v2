@@ -1,6 +1,7 @@
 // Centralized Skeleton Components
 export { default as ReviewBlockSkeleton } from './ReviewBlockSkeleton';
 export { default as RestaurantDetailSkeleton } from './RestaurantDetailSkeleton';
+export { default as UserListItemSkeleton } from './UserListItemSkeleton';
 export { default as SkeletonCard } from './SkeletonCard';
 export { default as RestaurantCardSkeleton } from './RestaurantCardSkeleton';
 export { default as ReplySkeleton } from './ReplySkeleton';

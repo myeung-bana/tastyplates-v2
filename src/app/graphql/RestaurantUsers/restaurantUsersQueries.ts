@@ -87,6 +87,19 @@ export const GET_RESTAURANT_USER_BY_ID = `
   }
 `;
 
+// GET USERS BY IDS - Get multiple users by their IDs
+export const GET_RESTAURANT_USERS_BY_IDS = `
+  query GetRestaurantUsersByIds($ids: [uuid!]!) {
+    restaurant_users(where: { id: { _in: $ids }, deleted_at: { _is_null: true } }) {
+      id
+      username
+      display_name
+      profile_image
+      palates
+    }
+  }
+`;
+
 // GET BY USERNAME - Get single user by username
 export const GET_RESTAURANT_USER_BY_USERNAME = `
   query GetRestaurantUserByUsername($username: String!) {
@@ -243,13 +256,8 @@ export const GET_FOLLOWERS_LIST = `
     ) {
       id
       created_at
-      follower {
-        id
-        username
-        display_name
-        profile_image
-        palates
-      }
+      follower_id
+      user_id
     }
     restaurant_user_follows_aggregate(where: { user_id: { _eq: $userId } }) {
       aggregate {
@@ -270,13 +278,8 @@ export const GET_FOLLOWING_LIST = `
     ) {
       id
       created_at
-      user {
-        id
-        username
-        display_name
-        profile_image
-        palates
-      }
+      follower_id
+      user_id
     }
     restaurant_user_follows_aggregate(where: { follower_id: { _eq: $userId } }) {
       aggregate {

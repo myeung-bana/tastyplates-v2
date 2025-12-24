@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
@@ -12,6 +12,7 @@ interface UseProfileDataReturn {
   error: string | null;
   followersCount: number;
   followingCount: number;
+  refreshCounts: () => Promise<void>;
 }
 
 // Support username, UUID (string), and legacy numeric IDs
@@ -211,6 +212,31 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     return false;
   }, [user?.id, user?.username, userData?.id, userData?.username, isViewingOwnProfile]);
 
+  // Function to refresh follower and following counts
+  const refreshCounts = useCallback(async () => {
+    if (!userData?.id) return;
+    
+    const userId = userData.id as string;
+    const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    
+    if (isUUIDFormat) {
+      const [followersCountResult, followingCountResult] = await Promise.allSettled([
+        restaurantUserService.getFollowersCount(userId),
+        restaurantUserService.getFollowingCount(userId)
+      ]);
+      
+      // Handle followers count
+      if (followersCountResult.status === 'fulfilled' && followersCountResult.value.success) {
+        setFollowersCount(followersCountResult.value.data.followersCount);
+      }
+      
+      // Handle following count
+      if (followingCountResult.status === 'fulfilled' && followingCountResult.value.success) {
+        setFollowingCount(followingCountResult.value.data.followingCount);
+      }
+    }
+  }, [userData?.id]);
+
   return {
     userData,
     nameLoading,
@@ -220,6 +246,7 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     isViewingOwnProfile: actualIsViewingOwnProfile,
     error,
     followersCount,
-    followingCount
+    followingCount,
+    refreshCounts
   };
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,6 +8,8 @@ import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import { FollowButton } from "@/components/ui/follow-button";
+import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
+import { UserListItemSkeleton } from "@/components/ui/Skeleton";
 
 interface FollowingUser {
   id: string;
@@ -21,21 +23,44 @@ interface FollowingUser {
 interface FollowingModalProps {
   open: boolean;
   onClose: () => void;
-  following: FollowingUser[];
+  userId: string; // UUID of the profile user
   onUnfollow: (id: string) => void;
   onFollow: (id: string) => void;
 }
 
-const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, following, onUnfollow, onFollow }) => {
-  const [localFollowing, setLocalFollowing] = useState(following);
+const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, userId, onUnfollow, onFollow }) => {
+  const [localFollowing, setLocalFollowing] = useState<FollowingUser[]>([]);
+  const [loading, setLoading] = useState(false);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
   const { user } = useFirebaseSession();
 
-  React.useEffect(() => {
-    if (open) {
-      setLocalFollowing(following);
+  // Fetch following when modal opens
+  useEffect(() => {
+    if (open && userId) {
+      const fetchFollowing = async () => {
+        setLoading(true);
+        try {
+          const response = await restaurantUserService.getFollowingList(userId);
+          if (response.success && response.data) {
+            setLocalFollowing(response.data as FollowingUser[]);
+          } else {
+            console.error('Failed to load following:', response.error);
+            setLocalFollowing([]);
+          }
+        } catch (error) {
+          console.error('Error fetching following:', error);
+          setLocalFollowing([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchFollowing();
+    } else if (!open) {
+      // Clear data when modal closes
+      setLocalFollowing([]);
     }
-  }, [open, following]);
+  }, [open, userId]);
 
   const handleToggleFollow = async (id: string, isFollowing: boolean) => {
     setLoadingMap((prev) => ({ ...prev, [id]: true }));
@@ -68,7 +93,9 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
         <h2 className="text-center text-xl py-5 font-neusans">Following</h2>
         <div className="border-b border-[#E5E5E5] w-full" />
         <div>
-          {localFollowing.length === 0 ? (
+          {loading ? (
+            <UserListItemSkeleton count={5} />
+          ) : localFollowing.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6">
               <p className="text-gray-500 text-center font-neusans">
                 There are no users yet.
@@ -113,12 +140,12 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                         : generateProfileUrl(followingUser.id, followingUser.username)
                     }
                   >
-                    <div className="font-semibold truncate cursor-pointer font-neusans">
+                    <div className="font-normal truncate cursor-pointer font-neusans">
                       {followingUser.name}
                     </div>
                   </Link>
                 ) : (
-                  <div className="font-semibold truncate font-neusans">
+                  <div className="font-normal truncate font-neusans">
                     {followingUser.name}
                   </div>
                 )}

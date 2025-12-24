@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_FOLLOWERS_LIST } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { GET_FOLLOWERS_LIST, GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -103,19 +103,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Transform to match Follower interface expected by modals
+    // Extract follower IDs from the follow records
     const followersList = result.data?.restaurant_user_follows || [];
-    const followers = followersList.map((follow: any) => {
-      const follower = follow.follower;
-      return {
-        id: follower.id,
-        username: follower.username, // Include username for profile URLs
-        name: follower.display_name || follower.username,
-        cuisines: getPalatesArray(follower.palates),
-        image: getProfileImageUrl(follower.profile_image),
-        isFollowing: false // Will be determined by checking current user's following list if needed
-      };
+    const followerIds = followersList.map((follow: any) => follow.follower_id).filter(Boolean);
+
+    // If no followers, return empty array
+    if (followerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Fetch user details for all follower IDs
+    const usersResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
+      ids: followerIds
     });
+
+    if (usersResult.errors) {
+      console.error('Error fetching user details:', usersResult.errors);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch user details',
+        details: usersResult.errors
+      }, { status: 500 });
+    }
+
+    // Create a map of user ID to user data for quick lookup
+    const usersMap = new Map(
+      (usersResult.data?.restaurant_users || []).map((user: any) => [user.id, user])
+    );
+
+    // Transform to match Follower interface expected by modals
+    const followers = followerIds
+      .map((followerId: string) => {
+        const user = usersMap.get(followerId) as any;
+        if (!user) return null; // Skip if user not found
+        
+        return {
+          id: user.id,
+          username: user.username, // Include username for profile URLs
+          name: user.display_name || user.username,
+          cuisines: getPalatesArray(user.palates),
+          image: getProfileImageUrl(user.profile_image),
+          isFollowing: false // Will be determined by checking current user's following list if needed
+        };
+      })
+      .filter((item: any) => item !== null); // Remove null entries
 
     return NextResponse.json({
       success: true,
