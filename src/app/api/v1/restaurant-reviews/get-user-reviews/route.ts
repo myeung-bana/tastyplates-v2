@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_USER_REVIEWS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_USER_REVIEWS, GET_USER_REVIEWS_BY_STATUS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const author_id = searchParams.get('author_id');
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const status = searchParams.get('status') || 'approved'; // Default to approved
+    const status = searchParams.get('status'); // Optional status filter
 
     if (!author_id) {
       return NextResponse.json(
@@ -27,12 +27,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await hasuraQuery(GET_USER_REVIEWS, {
+    // Use status-filtered query if status is provided, otherwise use general query
+    const query = status ? GET_USER_REVIEWS_BY_STATUS : GET_USER_REVIEWS;
+    const queryVariables: any = {
       authorId: author_id,
       limit: Math.min(limit, 100), // Cap at 100
-      offset,
-      status
-    });
+      offset
+    };
+    
+    // Only include status if using the status-filtered query
+    if (status) {
+      queryVariables.status = status;
+    }
+
+    const result = await hasuraQuery(query, queryVariables);
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);

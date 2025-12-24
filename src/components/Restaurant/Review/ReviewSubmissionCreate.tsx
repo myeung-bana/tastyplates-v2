@@ -334,7 +334,7 @@ const ReviewSubmissionCreatePage = () => {
           rating: review_stars,
           images: reviewImages.length > 0 ? reviewImages : undefined,
           recognitions: recognitions.length > 0 ? recognitions : undefined,
-          status: (mode === 'publish' ? 'pending' : 'draft') as 'draft' | 'pending', // 'pending' for publish, 'draft' for save
+          status: (mode === 'publish' ? 'approved' : 'draft') as 'draft' | 'pending' | 'approved', // 'approved' for publish, 'draft' for save
         };
 
         const createdReview = await reviewV2Service.createReview(reviewData);
