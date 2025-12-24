@@ -4,19 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { PROFILE } from "@/constants/pages";
-import { capitalizeWords, PAGE, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
-
-// Helper for relay global ID
-const encodeRelayId = (type: string, id: string) => {
-  if (typeof window !== 'undefined' && window.btoa) {
-    return window.btoa(`${type}:${id}`);
-  } else if (typeof Buffer !== 'undefined') {
-    return Buffer.from(`${type}:${id}`).toString('base64');
-  }
-  return `${type}:${id}`;
-};
+import { FollowButton } from "@/components/ui/follow-button";
 
 export interface Follower {
   id: string;
@@ -61,20 +52,28 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
   };
 
   if (!open) return null;
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto relative font-neusans">
         <button
-          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-600"
+          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-600 z-10"
           onClick={onClose}
           aria-label="Close"
         >
           ×
         </button>
-        <h2 className="text-center text-xl font-semibold py-5">Followers</h2>
+        <h2 className="text-center text-xl py-5 font-neusans">Followers</h2>
         <div className="border-b border-[#E5E5E5] w-full" />
         <div>
-          {localFollowers.map((follower) => (
+          {localFollowers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6">
+              <p className="text-gray-500 text-center font-neusans">
+                There are no users yet.
+              </p>
+            </div>
+          ) : (
+            localFollowers.map((follower) => (
             <div key={follower.id} className="flex items-center gap-3 px-6 py-3">
               {follower.id ? (
                   <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id, follower.username)}>
@@ -99,14 +98,25 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
               )}
               <div className="flex-1 min-w-0">
                 {follower.id ? (
-                  <Link href={user?.id && String(user.id) === String(follower.id) ? PROFILE : generateProfileUrl(follower.id, follower.username)}>
-                    <div className="font-semibold truncate cursor-pointer">{follower.name}</div>
+                  <Link 
+                    href={
+                      user?.id && String(user.id) === String(follower.id) 
+                        ? PROFILE 
+                        : generateProfileUrl(follower.id, follower.username)
+                    }
+                  >
+                    <div className="font-semibold truncate cursor-pointer font-neusans">
+                      {follower.name}
+                    </div>
                   </Link>
                 ) : (
-                  <div className="font-semibold truncate">{follower.name}</div>
+                  <div className="font-semibold truncate font-neusans">
+                    {follower.name}
+                  </div>
                 )}
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {follower.cuisines.map((cuisine) => {
+                  {follower.cuisines.length > 0 ? (
+                    follower.cuisines.map((cuisine) => {
                     const flagUrl = palateFlagMap[cuisine.toLowerCase()];
                     return (
                       <span
@@ -125,23 +135,22 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, follower
                         {capitalizeWords(cuisine)}
                       </span>
                     );
-                  })}
+                  }))
+                  : null}
                 </div>
               </div>
-              <button
-                className={`border border-[#494D5D] rounded-[50px] px-4 py-1 text-sm font-semibold transition-all flex items-center gap-2`}
-                onClick={() => handleToggleFollow(follower.id, follower.isFollowing)}
-                disabled={loadingMap[follower.id]}
-              >
-                {loadingMap[follower.id] ? (
-                  <svg className="animate-spin h-4 w-4 mr-1 text-gray-500" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : follower.isFollowing ? 'Following' : 'Follow'}
-              </button>
+              <FollowButton
+                isFollowing={follower.isFollowing}
+                isLoading={loadingMap[follower.id]}
+                onToggle={async () => {
+                  await handleToggleFollow(follower.id, follower.isFollowing);
+                }}
+                size="sm"
+                className="border border-[#494D5D]"
+              />
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

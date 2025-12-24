@@ -18,6 +18,7 @@ import { ageLimit } from '@/constants/validation';
 import { emailExistCode, sessionProvider as provider } from '@/constants/response';
 import { formatDateForInput, validEmail } from '@/lib/utils';
 import CustomDatePicker from '@/components/common/CustomDatepicker';
+import { Button } from '@/components/ui/button';
 
 const userService = new UserService();
 
@@ -264,22 +265,22 @@ const ProfileSettingsPage = () => {
             {/* Action Buttons */}
             <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4 -mb-4 mt-8">
               <div className="flex gap-3">
-                <button
+                <Button
                   type="button"
                   onClick={handleCancel}
                   disabled={isLoading}
-                  className="flex-1 py-3 px-4 rounded-full text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 font-neusans"
+                  variant="secondary"
+                  size="default"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={isLoading}
-                  className={`flex-1 py-3 px-4 rounded-full transition-all duration-200 font-neusans ${
-                    isLoading
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'
-                  }`}
+                  variant="primary"
+                  size="default"
+                  className="flex-1"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center">
@@ -289,7 +290,7 @@ const ProfileSettingsPage = () => {
                   ) : (
                     'Save Changes'
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </form>

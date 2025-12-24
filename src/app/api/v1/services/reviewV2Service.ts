@@ -132,8 +132,8 @@ class ReviewV2Service {
 
     const response = await fetch(`${this.baseUrl}/get-reviews-by-restaurant?${params}`);
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Failed to fetch reviews' }));
-      throw new Error(error.error || 'Failed to fetch reviews');
+      const errorData: { error?: string } = await response.json().catch(() => ({ error: 'Failed to fetch reviews' }));
+      throw new Error(errorData.error || 'Failed to fetch reviews');
     }
     const result = await response.json();
     if (!result.success) {

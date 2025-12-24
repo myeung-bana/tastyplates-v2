@@ -137,15 +137,58 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
     // Get Firebase ID token for authentication
     const idToken = await firebaseUser.getIdToken();
     
-    const userIdNum = Number(id);
-    if (isNaN(userIdNum)) return;
+    // Check if ID is UUID format
+    const isUUIDFormat = isUUID(id);
     
-    const response = await followService.followUser(userIdNum, idToken);
-    if (response.status === code.success) {
-      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
-      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
-      await refreshFollowData();
+    if (isUUIDFormat) {
+      // Use new Hasura API endpoint
+      try {
+        const response = await fetch('/api/v1/restaurant-users/follow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ user_id: id })
+        });
+        
+        // Check if response is OK before parsing JSON
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to follow user' }));
+          console.error('Failed to follow user:', errorData.error || `HTTP ${response.status}`);
+          throw new Error(errorData.error || 'Failed to follow user');
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+          localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+          localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+          localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+          // Add a small delay to ensure database is updated before refreshing
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await refreshFollowData();
+        } else {
+          console.error('Failed to follow user:', result.error);
+          throw new Error(result.error || 'Failed to follow user');
+        }
+      } catch (error) {
+        console.error('Error following user:', error);
+        throw error;
+      }
+    } else {
+      // Use legacy WordPress endpoint for numeric IDs
+      const userIdNum = Number(id);
+      if (isNaN(userIdNum)) return;
+      
+      const response = await followService.followUser(userIdNum, idToken);
+      if (response.status === code.success) {
+        localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+        localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+        localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+        // Add a small delay to ensure database is updated before refreshing
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await refreshFollowData();
+      }
     }
   }, [firebaseUser, targetUserId, refreshFollowData]);
 
@@ -155,17 +198,80 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
     // Get Firebase ID token for authentication
     const idToken = await firebaseUser.getIdToken();
     
-    const userIdNum = Number(id);
-    if (isNaN(userIdNum)) return;
+    // Check if ID is UUID format
+    const isUUIDFormat = isUUID(id);
     
-    const response = await followService.unfollowUser(userIdNum, idToken);
-    if (response.status === code.success) {
-      localStorage.removeItem(FOLLOWING_KEY(targetUserId));
-      localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
-      localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
-      await refreshFollowData();
+    if (isUUIDFormat) {
+      // Use new Hasura API endpoint
+      try {
+        const response = await fetch('/api/v1/restaurant-users/unfollow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ user_id: id })
+        });
+        
+        // Check if response is OK before parsing JSON
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to unfollow user' }));
+          console.error('Failed to unfollow user:', errorData.error || `HTTP ${response.status}`);
+          // Don't throw error for "Not following this user" - it's a valid state
+          if (errorData.error?.includes('Not following')) {
+            // User is already not following, just refresh the data
+            await refreshFollowData();
+            return;
+          }
+          throw new Error(errorData.error || 'Failed to unfollow user');
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+          localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+          localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+          localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+          // Add a small delay to ensure database is updated before refreshing
+          await new Promise(resolve => setTimeout(resolve, 300));
+          await refreshFollowData();
+        } else {
+          console.error('Failed to unfollow user:', result.error);
+          // Don't throw error for "Not following this user" - it's a valid state
+          if (result.error?.includes('Not following')) {
+            await refreshFollowData();
+            return;
+          }
+          throw new Error(result.error || 'Failed to unfollow user');
+        }
+      } catch (error) {
+        console.error('Error unfollowing user:', error);
+        throw error;
+      }
+    } else {
+      // Use legacy WordPress endpoint for numeric IDs
+      const userIdNum = Number(id);
+      if (isNaN(userIdNum)) return;
+      
+      const response = await followService.unfollowUser(userIdNum, idToken);
+      if (response.status === code.success) {
+        localStorage.removeItem(FOLLOWING_KEY(targetUserId));
+        localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
+        localStorage.setItem(FOLLOW_SYNC_KEY, Date.now().toString());
+        // Add a small delay to ensure database is updated before refreshing
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await refreshFollowData();
+      }
     }
   }, [firebaseUser, targetUserId, refreshFollowData]);
+
+  // Reset follow data when targetUserId changes
+  useEffect(() => {
+    hasLoadedFollowData.current = false;
+    setFollowers([]);
+    setFollowing([]);
+    setFollowingLoading(true);
+    setFollowersLoading(true);
+  }, [targetUserId]);
 
   // Load follow data when dependencies change
   // Public endpoints - no need to require session token
@@ -173,13 +279,6 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
     if (!targetUserId || hasLoadedFollowData.current) return;
     loadFollowData();
   }, [targetUserId, loadFollowData]);
-
-  // Reset follow data when targetUserId changes
-  useEffect(() => {
-    hasLoadedFollowData.current = false;
-    setFollowers([]);
-    setFollowing([]);
-  }, [targetUserId]);
 
   return {
     followers,

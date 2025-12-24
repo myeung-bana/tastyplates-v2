@@ -1,42 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { CHECK_FOLLOW_STATUS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
+import { FOLLOW_USER, CHECK_FOLLOW_STATUS, GET_FOLLOWERS_COUNT, GET_FOLLOWING_COUNT } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
-// UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Initialize Firebase Admin SDK
- * Returns true if initialized successfully, false otherwise
- */
 function initializeFirebaseAdmin(): boolean {
-  // Check if already initialized
-  if (getApps().length > 0) {
-    return true;
-  }
-
+  if (getApps().length > 0) return true;
+  
   try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    
-    // Check for required environment variables
-    if (!process.env.FIREBASE_PROJECT_ID) {
-      console.error('Firebase Admin SDK: FIREBASE_PROJECT_ID is not set');
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
       return false;
     }
     
-    if (!process.env.FIREBASE_CLIENT_EMAIL) {
-      console.error('Firebase Admin SDK: FIREBASE_CLIENT_EMAIL is not set');
-      return false;
-    }
-    
-    if (!privateKey) {
-      console.error('Firebase Admin SDK: FIREBASE_PRIVATE_KEY is not set or invalid');
-      return false;
-    }
-    
-    // Initialize Firebase Admin
     initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
@@ -44,7 +22,6 @@ function initializeFirebaseAdmin(): boolean {
         privateKey: privateKey,
       }),
     });
-    
     return true;
   } catch (error) {
     console.error('Failed to initialize Firebase Admin SDK:', error);
@@ -54,9 +31,7 @@ function initializeFirebaseAdmin(): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    // Try to initialize Firebase Admin if not already initialized
     const isInitialized = initializeFirebaseAdmin();
-    
     if (!isInitialized) {
       return NextResponse.json(
         { success: false, error: 'Server configuration error' },
@@ -64,7 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get Firebase ID token from Authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -74,14 +48,11 @@ export async function POST(request: NextRequest) {
     }
 
     const idToken = authHeader.replace('Bearer ', '');
-    
-    // Verify Firebase token and get current user
     let decodedToken;
     try {
       const auth = getAuth();
       decodedToken = await auth.verifyIdToken(idToken);
     } catch (error) {
-      console.error('Token verification error:', error);
       return NextResponse.json(
         { success: false, error: 'Invalid or expired token' },
         { status: 401 }
@@ -89,17 +60,9 @@ export async function POST(request: NextRequest) {
     }
 
     const firebaseUid = decodedToken.uid;
-
-    // Get current user from Hasura using firebase_uuid
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const userResponse = await fetch(
-      `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUid)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUid)}`
     );
 
     if (!userResponse.ok) {
@@ -117,9 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const followerId = userData.data.id; // Current user's UUID
-
-    // Get userId from request body
+    const followerId = userData.data.id;
     const body = await request.json();
     const userIdParam = body.user_id;
 
@@ -130,71 +91,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert userId to string and validate UUID format
     const userIdStr = String(userIdParam);
-    const isUUID = UUID_REGEX.test(userIdStr);
-    
-    if (!isUUID) {
-      // If it's a numeric ID (legacy WordPress format), return false
-      // The calling code should be updated to use UUIDs
-      console.warn(`check-follow-status: Received numeric ID instead of UUID: ${userIdParam}. Returning false.`);
-      return NextResponse.json({
-        success: true,
-        is_following: false
-      });
+    if (!UUID_REGEX.test(userIdStr)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user ID format. Expected UUID.' },
+        { status: 400 }
+      );
     }
-    
+
     const userId = userIdStr;
 
-    // Prevent self-checks
     if (followerId === userId) {
-      return NextResponse.json({
-        success: true,
-        is_following: false
-      });
+      return NextResponse.json(
+        { success: false, error: 'Cannot follow yourself' },
+        { status: 400 }
+      );
     }
 
-    // Check if follow relationship exists
-    const result = await hasuraQuery(CHECK_FOLLOW_STATUS, {
+    // Check if already following
+    const checkResult = await hasuraQuery(CHECK_FOLLOW_STATUS, {
+      followerId,
+      userId
+    });
+
+    if (checkResult.data?.restaurant_user_follows?.length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'Already following this user' },
+        { status: 400 }
+      );
+    }
+
+    // Create follow relationship
+    const result = await hasuraMutation(FOLLOW_USER, {
       followerId,
       userId
     });
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
-      // If table doesn't exist, return false (not following)
-      const hasTableError = result.errors.some((err: any) => 
-        err.message?.includes('restaurant_user_follows') || err.message?.includes('not found')
-      );
-      
-      if (hasTableError) {
-        return NextResponse.json({
-          success: true,
-          is_following: false
-        });
-      }
-      
       return NextResponse.json(
         {
           success: false,
-          error: result.errors[0]?.message || 'Operation failed',
+          error: result.errors[0]?.message || 'Failed to follow user',
           details: result.errors
         },
         { status: 500 }
       );
     }
 
-    // Check if any follow relationship was found
-    const follows = result.data?.restaurant_user_follows || [];
-    const isFollowing = follows.length > 0;
+    // Get updated counts
+    const [followersCountResult, followingCountResult] = await Promise.all([
+      hasuraQuery(GET_FOLLOWERS_COUNT, { userId }),
+      hasuraQuery(GET_FOLLOWING_COUNT, { userId: followerId })
+    ]);
+
+    const followersCount = followersCountResult.data?.restaurant_user_follows_aggregate?.aggregate?.count || 0;
+    const followingCount = followingCountResult.data?.restaurant_user_follows_aggregate?.aggregate?.count || 0;
 
     return NextResponse.json({
       success: true,
-      is_following: isFollowing
+      data: {
+        result: 'followed',
+        followers: followersCount,
+        following: followingCount
+      }
     });
 
   } catch (error) {
-    console.error('Check Follow Status API Error:', error);
+    console.error('Follow User API Error:', error);
     return NextResponse.json(
       {
         success: false,
@@ -204,3 +168,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

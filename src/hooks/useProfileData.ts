@@ -127,12 +127,51 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
             updated_at: response.data.updated_at,
           };
           
-          // Extract follower and following counts
-          setFollowersCount(response.data.followers_count ?? 0);
-          setFollowingCount(response.data.following_count ?? 0);
-          
           setUserData(mappedUser);
           setError(null);
+          
+          // Fetch follower and following counts separately using new endpoints
+          const userId = mappedUser.id as string;
+          if (userId) {
+            // Check if it's a UUID format
+            const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+            
+            if (isUUIDFormat) {
+              // Fetch counts from new API endpoints
+              const [followersCountResult, followingCountResult] = await Promise.allSettled([
+                restaurantUserService.getFollowersCount(userId),
+                restaurantUserService.getFollowingCount(userId)
+              ]);
+              
+              // Handle followers count
+              if (followersCountResult.status === 'fulfilled' && followersCountResult.value.success) {
+                setFollowersCount(followersCountResult.value.data.followersCount);
+              } else {
+                console.warn('Failed to load followers count:', 
+                  followersCountResult.status === 'rejected' 
+                    ? followersCountResult.reason 
+                    : followersCountResult.value.error
+                );
+                setFollowersCount(0);
+              }
+              
+              // Handle following count
+              if (followingCountResult.status === 'fulfilled' && followingCountResult.value.success) {
+                setFollowingCount(followingCountResult.value.data.followingCount);
+              } else {
+                console.warn('Failed to load following count:', 
+                  followingCountResult.status === 'rejected' 
+                    ? followingCountResult.reason 
+                    : followingCountResult.value.error
+                );
+                setFollowingCount(0);
+              }
+            } else {
+              // For non-UUID IDs, use legacy counts from user data or set to 0
+              setFollowersCount(response.data.followers_count ?? 0);
+              setFollowingCount(response.data.following_count ?? 0);
+            }
+          }
         } else {
           const errorMsg = response.error || 'User not found';
           setError(errorMsg);

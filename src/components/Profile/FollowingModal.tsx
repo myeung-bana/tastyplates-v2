@@ -4,19 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { PROFILE } from "@/constants/pages";
-import { capitalizeWords, PAGE, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
-
-// Helper for relay global ID
-const encodeRelayId = (type: string, id: string) => {
-  if (typeof window !== 'undefined' && window.btoa) {
-    return window.btoa(`${type}:${id}`);
-  } else if (typeof Buffer !== 'undefined') {
-    return Buffer.from(`${type}:${id}`).toString('base64');
-  }
-  return `${type}:${id}`;
-};
+import { FollowButton } from "@/components/ui/follow-button";
 
 interface FollowingUser {
   id: string;
@@ -63,23 +54,37 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
   };
 
   if (!open) return null;
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto relative font-neusans">
         <button
-          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-600"
+          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-gray-600 z-10"
           onClick={onClose}
           aria-label="Close"
         >
           ×
         </button>
-        <h2 className="text-center text-xl font-semibold py-5">Following</h2>
+        <h2 className="text-center text-xl py-5 font-neusans">Following</h2>
         <div className="border-b border-[#E5E5E5] w-full" />
         <div>
-          {localFollowing.map((followingUser) => (
+          {localFollowing.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-6">
+              <p className="text-gray-500 text-center font-neusans">
+                There are no users yet.
+              </p>
+            </div>
+          ) : (
+            localFollowing.map((followingUser) => (
             <div key={followingUser.id} className="flex items-center gap-3 px-6 py-3">
               {followingUser.id ? (
-                  <Link href={user?.id && String(user.id) === String(followingUser.id) ? PROFILE : generateProfileUrl(followingUser.id, followingUser.username)}>
+                <Link 
+                  href={
+                    user?.id && String(user.id) === String(followingUser.id) 
+                      ? PROFILE 
+                      : generateProfileUrl(followingUser.id, followingUser.username)
+                  }
+                >
                   <FallbackImage
                     src={followingUser.image || DEFAULT_USER_ICON}
                     width={40}
@@ -101,14 +106,25 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
               )}
               <div className="flex-1 min-w-0">
                 {followingUser.id ? (
-                  <Link href={user?.id && String(user.id) === String(followingUser.id) ? PROFILE : generateProfileUrl(followingUser.id, followingUser.username)}>
-                    <div className="font-semibold truncate cursor-pointer">{followingUser.name}</div>
+                  <Link 
+                    href={
+                      user?.id && String(user.id) === String(followingUser.id) 
+                        ? PROFILE 
+                        : generateProfileUrl(followingUser.id, followingUser.username)
+                    }
+                  >
+                    <div className="font-semibold truncate cursor-pointer font-neusans">
+                      {followingUser.name}
+                    </div>
                   </Link>
                 ) : (
-                  <div className="font-semibold truncate">{followingUser.name}</div>
+                  <div className="font-semibold truncate font-neusans">
+                    {followingUser.name}
+                  </div>
                 )}
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  {followingUser.cuisines.map((cuisine) => {
+                  {followingUser.cuisines.length > 0 ? (
+                    followingUser.cuisines.map((cuisine) => {
                     const flagUrl = palateFlagMap[cuisine.toLowerCase()];
                     return (
                       <span
@@ -127,23 +143,22 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, followin
                         {capitalizeWords(cuisine)}
                       </span>
                     );
-                  })}
+                  }))
+                  : null}
                 </div>
               </div>
-              <button
-                className={`border border-[#494D5D] rounded-[50px] px-4 py-1 text-sm font-semibold transition-all flex items-center gap-2`}
-                onClick={() => handleToggleFollow(followingUser.id, followingUser.isFollowing)}
-                disabled={loadingMap[followingUser.id]}
-              >
-                {loadingMap[followingUser.id] ? (
-                  <svg className="animate-spin h-4 w-4 mr-1 text-gray-500" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : followingUser.isFollowing ? 'Following' : 'Follow'}
-              </button>
+              <FollowButton
+                isFollowing={followingUser.isFollowing}
+                isLoading={loadingMap[followingUser.id]}
+                onToggle={async () => {
+                  await handleToggleFollow(followingUser.id, followingUser.isFollowing);
+                }}
+                size="sm"
+                className="border border-[#494D5D]"
+              />
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

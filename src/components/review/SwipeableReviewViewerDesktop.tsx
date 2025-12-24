@@ -208,8 +208,16 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
               [review.databaseId]: replies.length,
             }));
           })
-          .catch((error) => {
-            console.error("Error fetching comment count:", error);
+          .catch((error: any) => {
+            // Check if it's a JSON parsing error
+            const errorMessage = error?.message || '';
+            const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+            
+            if (isJsonError) {
+              console.error("Error fetching comment count: API returned non-JSON response (likely HTML error page)", error);
+            } else {
+              console.error("Error fetching comment count:", error);
+            }
             fetchedCommentCountsRef.current.delete(review.databaseId);
           });
       }
@@ -227,8 +235,16 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           setReplies(fetchedReplies);
           setIsLoadingReplies(false);
         })
-        .catch((error) => {
-          console.error("Error fetching replies:", error);
+        .catch((error: any) => {
+          // Check if it's a JSON parsing error
+          const errorMessage = error?.message || '';
+          const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+          
+          if (isJsonError) {
+            console.error("Error fetching replies: API returned non-JSON response (likely HTML error page)", error);
+          } else {
+            console.error("Error fetching replies:", error);
+          }
           setIsLoadingReplies(false);
         });
     }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import "@/styles/pages/_auth.scss";
+import { Button } from "@/components/ui/button";
 import CustomMultipleSelect from "@/components/ui/Select/CustomMultipleSelect";
 import {
   Modal,
@@ -597,13 +598,15 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
                 </div>
               );
             })}
-            <button
+            <Button
               type="submit"
-              className={`auth__button !bg-[#ff7c0a] mt-0 !rounded-[12px] w-fit text-base mx-auto font-neusans font-normal ${isLoading ? 'pointer-events-none' : ''}`}
+              variant="primary"
+              size="default"
               disabled={isLoading}
+              className="w-fit mx-auto"
             >
               {isLoading ? "Loading..." : "Next"}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

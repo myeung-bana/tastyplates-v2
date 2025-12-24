@@ -84,15 +84,30 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     });
   }, [userData, profileDataLoading]);
 
-  // Pass identifier to useFollowData - it now supports username, UUIDs, and numeric IDs
+  // Pass userData.id (UUID) to useFollowData once userData is loaded
+  // This ensures we use the correct UUID format for API calls
   const {
     followers,
     following,
     followersLoading,
     followingLoading,
     handleFollow,
-    handleUnfollow
-  } = useFollowData(identifier || (targetUserId ? String(targetUserId) : ''));
+    handleUnfollow,
+    refreshFollowData
+  } = useFollowData(userData?.id as string || identifier || (targetUserId ? String(targetUserId) : ''));
+
+  // Debug: Log follow data
+  useEffect(() => {
+    console.log('Profile - Follow data:', {
+      followersCount: followers.length,
+      followingCount: following.length,
+      followersLoading,
+      followingLoading,
+      followers: followers.slice(0, 2), // First 2 for debugging
+      following: following.slice(0, 2), // First 2 for debugging
+      userDataId: userData?.id
+    });
+  }, [followers, following, followersLoading, followingLoading, userData?.id]);
 
   // Convert targetUserId to number for legacy endpoints that still need numeric IDs
   // (followService.isFollowingUser, restaurantService, etc.)
@@ -133,16 +148,44 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     const token = await getFirebaseToken();
     if (!token) return;
     
+    // Use userData.id if available (UUID), otherwise fall back to id parameter
+    const userIdToFollow = (userData?.id as string) || id;
+    
     setFollowLoading(true);
     try {
-      const userIdNum = Number(id);
-      if (isNaN(userIdNum)) return;
+      // Check if ID is UUID format
+      const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdToFollow);
       
-      const response = await followService.followUser(userIdNum, token);
-      if (response.status === 200) {
-        setIsFollowing(true);
-        // Also update the followers count by refreshing follow data
-        await handleFollow(id);
+      if (isUUIDFormat) {
+        // Use new Hasura API endpoint
+        const response = await fetch('/api/v1/restaurant-users/follow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ user_id: userIdToFollow })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          setIsFollowing(true);
+          // Refresh follow data to update counts (don't call handleFollow as it would make duplicate API call)
+          await refreshFollowData();
+        } else {
+          toast.error(result.error || 'Failed to follow user');
+        }
+      } else {
+        // Use legacy endpoint for numeric IDs
+        const userIdNum = Number(userIdToFollow);
+        if (isNaN(userIdNum)) return;
+        
+        const response = await followService.followUser(userIdNum, token);
+        if (response.status === 200) {
+          setIsFollowing(true);
+          // Refresh follow data to update counts (don't call handleFollow as it would make duplicate API call)
+          await refreshFollowData();
+        }
       }
     } catch (error) {
       console.error("Error following user:", error);
@@ -150,22 +193,50 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [user, followService, handleFollow]);
+  }, [user, userData?.id, followService, refreshFollowData]);
 
   const handleProfileUnfollow = useCallback(async (id: string) => {
     const token = await getFirebaseToken();
     if (!token) return;
     
+    // Use userData.id if available (UUID), otherwise fall back to id parameter
+    const userIdToUnfollow = (userData?.id as string) || id;
+    
     setFollowLoading(true);
     try {
-      const userIdNum = Number(id);
-      if (isNaN(userIdNum)) return;
+      // Check if ID is UUID format
+      const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdToUnfollow);
       
-      const response = await followService.unfollowUser(userIdNum, token);
-      if (response.status === 200) {
-        setIsFollowing(false);
-        // Also update the followers count by refreshing follow data
-        await handleUnfollow(id);
+      if (isUUIDFormat) {
+        // Use new Hasura API endpoint
+        const response = await fetch('/api/v1/restaurant-users/unfollow', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ user_id: userIdToUnfollow })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+          setIsFollowing(false);
+          // Refresh follow data to update counts (don't call handleUnfollow as it would make duplicate API call)
+          await refreshFollowData();
+        } else {
+          toast.error(result.error || 'Failed to unfollow user');
+        }
+      } else {
+        // Use legacy endpoint for numeric IDs
+        const userIdNum = Number(userIdToUnfollow);
+        if (isNaN(userIdNum)) return;
+        
+        const response = await followService.unfollowUser(userIdNum, token);
+        if (response.status === 200) {
+          setIsFollowing(false);
+          // Refresh follow data to update counts (don't call handleUnfollow as it would make duplicate API call)
+          await refreshFollowData();
+        }
       }
     } catch (error) {
       console.error("Error unfollowing user:", error);
@@ -173,7 +244,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [user, followService, handleUnfollow]);
+  }, [user, userData?.id, followService, refreshFollowData]);
 
   // Welcome message effect
   useEffect(() => {
@@ -189,7 +260,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
   // Check if current user is following the target user
   useEffect(() => {
     const checkFollowingStatus = async () => {
-      if (!user || !validUserId || isViewingOwnProfile) {
+      if (!user || !userData?.id || isViewingOwnProfile) {
         setIsFollowing(false);
         return;
       }
@@ -200,8 +271,37 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
           setIsFollowing(false);
           return;
         }
-        const response = await followService.isFollowingUser(validUserId, token);
-        setIsFollowing(response.is_following || false);
+        
+        const userId = userData.id as string;
+        const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+        
+        if (isUUIDFormat) {
+          // Use new Hasura API endpoint
+          const response = await fetch('/api/v1/restaurant-users/check-follow-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ user_id: userId })
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            setIsFollowing(result.is_following || false);
+          } else {
+            setIsFollowing(false);
+          }
+        } else {
+          // Use legacy endpoint for numeric IDs
+          const numericUserId = Number(userId);
+          if (!isNaN(numericUserId) && numericUserId > 0) {
+            const response = await followService.isFollowingUser(numericUserId, token);
+            setIsFollowing(response.is_following || false);
+          } else {
+            setIsFollowing(false);
+          }
+        }
       } catch (error) {
         console.error("Error checking following status:", error);
         setIsFollowing(false);
@@ -209,7 +309,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     checkFollowingStatus();
-  }, [user, validUserId, isViewingOwnProfile, followService]);
+  }, [user, userData?.id, isViewingOwnProfile, followService]);
 
   // Fetch wishlist data - DELAYED LOADING (Priority 3 - after reviews)
   useEffect(() => {
@@ -300,7 +400,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     // },
     {
       id: "wishlists",
-      label: "Wishlists",
+      label: "To-Dine List",
       content: <WishlistsTab 
         wishlist={wishlist} 
         wishlistLoading={wishlistLoading} 
@@ -354,7 +454,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
           currentUser={user}
-          targetUserId={(identifier || (targetUserId ? String(targetUserId) : String(userData?.id || ''))) || ''}
+          targetUserId={userData?.id as string || ''}
           isFollowing={isFollowing}
           followLoading={followLoading}
         />

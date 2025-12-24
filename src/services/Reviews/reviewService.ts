@@ -37,10 +37,36 @@ export class ReviewService {
             if (UUID_REGEX.test(id)) {
                 // This is a Hasura UUID, use the new API endpoint
                 const response = await fetch(`/api/v1/restaurant-reviews/get-replies?parent_review_id=${id}`);
+                
+                // Check Content-Type before parsing JSON
+                const contentType = response.headers.get('content-type');
+                const isJson = contentType && contentType.includes('application/json');
+                
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Failed to fetch replies: ${response.statusText}`);
+                    // Try to parse error as JSON, but handle HTML responses
+                    let errorData = {};
+                    if (isJson) {
+                        try {
+                            errorData = await response.json();
+                        } catch {
+                            // If JSON parsing fails, read as text to get error message
+                            const text = await response.text();
+                            throw new Error(text || `Failed to fetch replies: ${response.statusText}`);
+                        }
+                    } else {
+                        const text = await response.text();
+                        throw new Error(text || `Failed to fetch replies: ${response.statusText}`);
+                    }
+                    throw new Error((errorData as any).error || `Failed to fetch replies: ${response.statusText}`);
                 }
+                
+                // Only parse as JSON if Content-Type indicates JSON
+                if (!isJson) {
+                    const text = await response.text();
+                    console.error('Expected JSON but received:', contentType, text.substring(0, 100));
+                    throw new Error('Invalid response format: expected JSON but received HTML or other format');
+                }
+                
                 const result = await response.json();
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to fetch replies');
@@ -68,7 +94,8 @@ export class ReviewService {
             }
         } catch (error) {
             console.error('Error fetching comment replies:', error);
-            throw new Error('Failed to fetch comment replies');
+            // Return empty array instead of throwing to prevent UI breakage
+            return [];
         }
     }
 

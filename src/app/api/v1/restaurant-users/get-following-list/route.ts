@@ -66,17 +66,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await hasuraQuery(GET_FOLLOWING_LIST, { userId });
+    // Get pagination parameters
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    const result = await hasuraQuery(GET_FOLLOWING_LIST, { 
+      userId,
+      limit,
+      offset
+    });
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
-      // Check if error is about missing relationship
-      const hasRelationshipError = result.errors.some((err: any) => 
-        err.message?.includes('following') || err.message?.includes('not found')
+      // Check if error is about missing table or relationship
+      const hasTableError = result.errors.some((err: any) => 
+        err.message?.includes('restaurant_user_follows') || 
+        err.message?.includes('not found') ||
+        err.message?.includes('relationship')
       );
       
-      if (hasRelationshipError) {
-        // Return empty array if relationship doesn't exist (table might not be set up yet)
+      if (hasTableError) {
+        // Return empty array if table doesn't exist (table might not be set up yet)
         return NextResponse.json({
           success: true,
           data: []
@@ -94,16 +104,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match FollowingUser interface expected by modals
-    const user = result.data?.restaurant_users_by_pk;
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const followingList = user.following || [];
-    const following = followingList.map((user: any) => {
+    const followingList = result.data?.restaurant_user_follows || [];
+    const following = followingList.map((follow: any) => {
+      const user = follow.user;
       return {
         id: user.id,
         username: user.username, // Include username for profile URLs

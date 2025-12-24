@@ -178,7 +178,7 @@ const Hero = () => {
                   onKeyPress={handleKeyPress}
                   onFocus={handleInputFocus}
                   onBlur={handleInputBlur}
-                  className="hero__search-input"
+                  className="hero__search-input font-neusans"
                   readOnly={searchMode === 'cuisine'}
                 />
                 <button

@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import SettingsLayout from "@/components/Settings/SettingsLayout";
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SUPPORTED_LANGUAGES } from '@/constants/languages';
+import { Button } from '@/components/ui/button';
 
 const LanguageSettingsPage = () => {
   const router = useRouter();
@@ -110,21 +111,21 @@ const LanguageSettingsPage = () => {
           {/* Action Buttons */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4 -mb-4 mt-8">
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="flex-1 py-3 px-4 rounded-full font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 font-neusans"
+                variant="secondary"
+                size="default"
+                className="flex-1"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSave}
                 disabled={isSaving || tempSelectedLanguage.code === selectedLanguage.code}
-                className={`flex-1 py-3 px-4 rounded-full font-semibold transition-all duration-200 font-neusans ${
-                  isSaving || tempSelectedLanguage.code === selectedLanguage.code
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#ff7c0a] hover:bg-[#e66d08] text-white active:bg-[#cc5f07]'
-                }`}
+                variant="primary"
+                size="default"
+                className="flex-1"
               >
                 {isSaving ? (
                   <div className="flex items-center justify-center">
@@ -134,7 +135,7 @@ const LanguageSettingsPage = () => {
                 ) : (
                   'Save Changes'
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

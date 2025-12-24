@@ -97,8 +97,18 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
           [databaseId]: replies.length,
         }));
       }
-    } catch (error) {
-      console.error(`Error fetching first comment for review ${reviewId}:`, error);
+    } catch (error: any) {
+      // Check if it's a JSON parsing error
+      const errorMessage = error?.message || '';
+      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+      
+      if (isJsonError) {
+        console.error(`Error fetching first comment for review ${reviewId}: API returned non-JSON response (likely HTML error page)`);
+      } else {
+        console.error(`Error fetching first comment for review ${reviewId}:`, error);
+      }
+      
+      // Set to null to indicate no comments (prevents retrying)
       setFirstComments((prev) => ({ ...prev, [reviewId]: null }));
     } finally {
       setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: false }));
@@ -262,15 +272,25 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         await reviewService.likeComment(review.databaseId, idToken);
         toast.success(commentLikedSuccess);
       }
-    } catch (error) {
+    } catch (error: any) {
       // Revert on error
       setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
       setLikesCount((prev) => ({
         ...prev,
         [review.databaseId]: currentLikes,
       }));
-      console.error("Error toggling like:", error);
-      toast.error("Failed to update like");
+      
+      // Check if it's a JSON parsing error
+      const errorMessage = error?.message || '';
+      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+      
+      if (isJsonError) {
+        console.error("Error toggling like: API returned non-JSON response (likely HTML error page)", error);
+        toast.error("Failed to update like. Please try again.");
+      } else {
+        console.error("Error toggling like:", error);
+        toast.error("Failed to update like");
+      }
     }
   }, [firebaseUser, userLiked, likesCount]);
 
@@ -380,7 +400,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                             type={FallbackImageType.Icon}
                           />
                         </Link>
-                      ) : session ? (
+                      ) : user ? (
                         <Link href={generateProfileUrl(review.author?.node?.databaseId, review.author?.node?.username)} prefetch={false}>
                           <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}
@@ -626,7 +646,17 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     }));
                   }
                 })
-                .catch(console.error);
+                .catch((error: any) => {
+                  // Check if it's a JSON parsing error
+                  const errorMessage = error?.message || '';
+                  const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+                  
+                  if (isJsonError) {
+                    console.error('Error refreshing first comment: API returned non-JSON response (likely HTML error page)', error);
+                  } else {
+                    console.error('Error refreshing first comment:', error);
+                  }
+                });
             }
           }}
         />

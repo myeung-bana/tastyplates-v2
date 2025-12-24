@@ -311,7 +311,7 @@ class RestaurantUserService {
       const response = await fetch(`${this.baseUrl}/get-followers-list?userId=${userId}`);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData: { error?: string } = await response.json().catch(() => ({}));
         return {
           success: false,
           data: [],
@@ -335,7 +335,7 @@ class RestaurantUserService {
       const response = await fetch(`${this.baseUrl}/get-following-list?userId=${userId}`);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData: { error?: string } = await response.json().catch(() => ({}));
         return {
           success: false,
           data: [],
@@ -350,6 +350,54 @@ class RestaurantUserService {
         success: false,
         data: [],
         error: error instanceof Error ? error.message : 'Failed to fetch following'
+      };
+    }
+  }
+
+  async getFollowersCount(userId: string): Promise<{ success: boolean; data: { userId: string; followersCount: number }; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/get-followers-count?userId=${userId}`);
+
+      if (!response.ok) {
+        const errorData: { error?: string } = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          data: { userId, followersCount: 0 },
+          error: errorData.error || `Failed to fetch followers count: ${response.statusText}`
+        };
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get followers count error:', error);
+      return {
+        success: false,
+        data: { userId, followersCount: 0 },
+        error: error instanceof Error ? error.message : 'Failed to fetch followers count'
+      };
+    }
+  }
+
+  async getFollowingCount(userId: string): Promise<{ success: boolean; data: { userId: string; followingCount: number }; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/get-following-count?userId=${userId}`);
+
+      if (!response.ok) {
+        const errorData: { error?: string } = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          data: { userId, followingCount: 0 },
+          error: errorData.error || `Failed to fetch following count: ${response.statusText}`
+        };
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error('Get following count error:', error);
+      return {
+        success: false,
+        data: { userId, followingCount: 0 },
+        error: error instanceof Error ? error.message : 'Failed to fetch following count'
       };
     }
   }

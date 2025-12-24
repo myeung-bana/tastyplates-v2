@@ -6,6 +6,7 @@ import FallbackImage, { FallbackImageType } from '../ui/Image/FallbackImage';
 import { DEFAULT_USER_ICON } from '@/constants/images';
 import { palateFlagMap } from '@/utils/palateFlags';
 import { PROFILE_EDIT } from '@/constants/pages';
+import { FollowButton } from '@/components/ui/follow-button';
 
 interface ProfileHeaderProps {
   userData: Record<string, unknown> | null;
@@ -146,55 +147,43 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             
             {/* Follow/Unfollow Button - Only show for other users */}
             {!isViewingOwnProfile && (currentUser || session?.user) && (
-              <button
-                onClick={() => {
+              <FollowButton
+                isFollowing={isFollowing}
+                isLoading={followLoading}
+                onToggle={async (isFollowing) => {
                   if (isFollowing) {
-                    onUnfollow(targetUserId.toString());
+                    await onUnfollow(targetUserId.toString());
                   } else {
-                    onFollow(targetUserId.toString());
+                    await onFollow(targetUserId.toString());
                   }
                 }}
-                disabled={followLoading}
-                className={`px-4 py-2 text-xs font-neusans rounded-[50px] h-fit min-w-[80px] flex items-center justify-center transition-colors ${
-                  isFollowing 
-                    ? 'bg-white font-neusans text-black border border-black' 
-                    : 'bg-[#ff7c0a] text-[#FCFCFC]'
-                } disabled:opacity-50 disabled:pointer-events-none`}
-              >
-                {followLoading ? (
-                  <span className="animate-pulse">
-                    {isFollowing ? "Unfollowing..." : "Following..."}
-                  </span>
-                ) : isFollowing ? (
-                  "Following"
-                ) : (
-                  "Follow"
-                )}
-              </button>
+                size="default"
+              />
             )}
           </div>
           
           {/* Stats Row - Compact Instagram style */}
-          <div className="flex gap-4 text-sm mb-3">
+          <div className="flex items-center gap-2 text-sm mb-3">
             {/* Reviews Count */}
             <span className="cursor-default">
-              <span className="font-semibold">
+              <span className="font-neusans font-medium">
                 {userReviewCount ?? 0}
               </span> Reviews
             </span>
             
+            {/* Separator */}
+            <span className="text-gray-400">·</span>
+            
             {/* Followers Count */}
             <button
               type="button"
-              className="focus:outline-none hover:underline"
+              className="font-semibold text-sm focus:outline-none hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
-                if (followersCount > 0) {
-                  onShowFollowers();
-                }
+                onShowFollowers();
               }}
-              disabled={followersLoading || followersCount === 0}
+              disabled={followersLoading}
             >
-              <span className="font-neusans font-normal">
+              <span className="font-neusans font-medium">
                 {followersLoading ? (
                   <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (
@@ -203,18 +192,19 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </span> Followers
             </button>
             
+            {/* Separator */}
+            <span className="text-gray-400">·</span>
+            
             {/* Following Count */}
             <button
               type="button"
-              className="focus:outline-none hover:underline"
+              className="focus:outline-none hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
-                if (followingCount > 0) {
-                  onShowFollowing();
-                }
+                onShowFollowing();
               }}
-              disabled={followingLoading || followingCount === 0}
+              disabled={followingLoading}
             >
-              <span className="font-semibold">
+              <span className="font-neusans font-medium">
                 {followingLoading ? (
                   <span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
                 ) : (

@@ -233,23 +233,55 @@ export const DELETE_RESTAURANT_USER = `
 `;
 
 // GET FOLLOWERS LIST - Get list of users following a specific user
-// NOTE: This requires a 'followers' relationship in Hasura which is not configured
 export const GET_FOLLOWERS_LIST = `
-  query GetFollowersList($userId: uuid!) {
-    restaurant_users_by_pk(id: $userId) {
+  query GetFollowersList($userId: uuid!, $limit: Int, $offset: Int) {
+    restaurant_user_follows(
+      where: { user_id: { _eq: $userId } }
+      limit: $limit
+      offset: $offset
+      order_by: { created_at: desc }
+    ) {
       id
-      # followers relationship not available - returns empty
+      created_at
+      follower {
+        id
+        username
+        display_name
+        profile_image
+        palates
+      }
+    }
+    restaurant_user_follows_aggregate(where: { user_id: { _eq: $userId } }) {
+      aggregate {
+        count
+      }
     }
   }
 `;
 
 // GET FOLLOWING LIST - Get list of users that a specific user is following
-// NOTE: This requires a 'following' relationship in Hasura which is not configured
 export const GET_FOLLOWING_LIST = `
-  query GetFollowingList($userId: uuid!) {
-    restaurant_users_by_pk(id: $userId) {
+  query GetFollowingList($userId: uuid!, $limit: Int, $offset: Int) {
+    restaurant_user_follows(
+      where: { follower_id: { _eq: $userId } }
+      limit: $limit
+      offset: $offset
+      order_by: { created_at: desc }
+    ) {
       id
-      # following relationship not available - returns empty
+      created_at
+      user {
+        id
+        username
+        display_name
+        profile_image
+        palates
+      }
+    }
+    restaurant_user_follows_aggregate(where: { follower_id: { _eq: $userId } }) {
+      aggregate {
+        count
+      }
     }
   }
 `;
@@ -257,7 +289,7 @@ export const GET_FOLLOWING_LIST = `
 // CHECK FOLLOW STATUS - Check if a user is following another user
 export const CHECK_FOLLOW_STATUS = `
   query CheckFollowStatus($followerId: uuid!, $userId: uuid!) {
-    user_follows(
+    restaurant_user_follows(
       where: {
         follower_id: { _eq: $followerId }
         user_id: { _eq: $userId }
@@ -265,6 +297,62 @@ export const CHECK_FOLLOW_STATUS = `
       limit: 1
     ) {
       id
+    }
+  }
+`;
+
+// GET FOLLOWERS COUNT - Get count of followers for a user
+export const GET_FOLLOWERS_COUNT = `
+  query GetFollowersCount($userId: uuid!) {
+    restaurant_user_follows_aggregate(where: { user_id: { _eq: $userId } }) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// GET FOLLOWING COUNT - Get count of users a user is following
+export const GET_FOLLOWING_COUNT = `
+  query GetFollowingCount($userId: uuid!) {
+    restaurant_user_follows_aggregate(where: { follower_id: { _eq: $userId } }) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// FOLLOW USER - Create a follow relationship
+export const FOLLOW_USER = `
+  mutation FollowUser($followerId: uuid!, $userId: uuid!) {
+    insert_restaurant_user_follows_one(
+      object: {
+        follower_id: $followerId
+        user_id: $userId
+      }
+    ) {
+      id
+      follower_id
+      user_id
+      created_at
+    }
+  }
+`;
+
+// UNFOLLOW USER - Delete a follow relationship
+export const UNFOLLOW_USER = `
+  mutation UnfollowUser($followerId: uuid!, $userId: uuid!) {
+    delete_restaurant_user_follows(
+      where: {
+        follower_id: { _eq: $followerId }
+        user_id: { _eq: $userId }
+      }
+    ) {
+      affected_rows
+      returning {
+        id
+      }
     }
   }
 `;

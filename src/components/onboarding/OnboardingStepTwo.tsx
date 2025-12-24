@@ -330,23 +330,27 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
             {/* Navigation Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               {/* Previous Button (Secondary) */}
-              <button
+              <Button
                 type="button"
                 onClick={onPrevious}
                 disabled={isLoading}
-                className="auth__button !bg-transparent !text-[#31343F] !border !border-[#494D5D] !mt-0 !rounded-xl hover:!bg-gray-50 hover:!border-gray-400 transition-all duration-200 font-neusans font-normal w-full sm:w-auto"
+                variant="secondary"
+                size="default"
+                className="w-full sm:w-auto"
               >
                 Previous
-              </button>
+              </Button>
               
               {/* Done Button (Primary) */}
-              <button
+              <Button
                 type="submit"
-                className={`auth__button !bg-[#ff7c0a] !mt-0 !rounded-xl hover:!bg-[#e66d08] transition-all duration-200 font-neusans font-normal w-full sm:w-auto ${isLoading ? 'pointer-events-none' : ''}`}
                 disabled={isLoading}
+                variant="primary"
+                size="default"
+                className="w-full sm:w-auto"
               >
                 {isLoading ? "Loading..." : "Done"}
-              </button>
+              </Button>
             </div>
             {/* Success/Error Message */}
             {message && (
