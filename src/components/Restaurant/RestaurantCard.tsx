@@ -1,5 +1,5 @@
 import { MdOutlineMessage } from "react-icons/md";
-import { FaRegHeart, FaStar, FaHeart } from "react-icons/fa"
+import { FiHeart, FiStar } from "react-icons/fi"
 import "@/styles/components/_restaurant-card.scss";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
@@ -12,7 +12,7 @@ import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { GraphQLReview } from "@/types/graphql";
 import { PAGE } from "@/lib/utils";
-import { ADD_REVIEW, RESTAURANTS } from "@/constants/pages";
+import { TASTYSTUDIO_ADD_REVIEW_CREATE, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "../ui/Image/FallbackImage";
@@ -110,6 +110,15 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: !saved } }));
     const action = prevSaved ? "unsave" : "save";
     try {
+      // Additional safety check before getting token
+      if (!firebaseUser) {
+        setShowSignin(true);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setLoading(false);
+        return;
+      }
+
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
       let res: Record<string, unknown>;
@@ -130,11 +139,36 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
         window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
         setError(favoriteStatusError);
       }
-    } catch {
-      toast.error(favoriteStatusError);
-      setSaved(prevSaved);
-      window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
-      setError(favoriteStatusError);
+    } catch (error: any) {
+      // Check if it's an authentication error or JSON parsing error
+      const errorMessage = error?.message || '';
+      const isAuthError = 
+        errorMessage.includes('auth') || 
+        errorMessage.includes('permission') || 
+        errorMessage.includes('unauthorized') ||
+        errorMessage.includes('token') ||
+        errorMessage.includes('forbidden') ||
+        errorMessage.includes('Invalid JSON') ||
+        errorMessage.includes('<!DOCTYPE') ||
+        error?.code === 'auth/requires-recent-login' ||
+        error?.code === 'rest_forbidden' ||
+        error?.code === 'rest_unauthorized' ||
+        error?.status === 401 ||
+        error?.status === 403 ||
+        !firebaseUser;
+
+      if (isAuthError) {
+        // Show signin modal instead of error toast and don't set error state
+        setShowSignin(true);
+        setSaved(prevSaved);
+        setError(null); // Clear error state so it doesn't display
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+      } else {
+        toast.error(favoriteStatusError);
+        setSaved(prevSaved);
+        window.dispatchEvent(new CustomEvent("restaurant-favorite-changed", { detail: { slug: restaurant.slug, status: prevSaved } }));
+        setError(favoriteStatusError);
+      }
     } finally {
       setLoading(false);
     }
@@ -289,7 +323,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /review-listing page
               if ((pathname === "/review-listing" || pathname === "/tastystudio/review-listing") && clickedElement.dataset.role === "image") {
-                router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
+                const slug = restaurant.slug || "";
+                if (slug) {
+                  const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
+                  router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
+                }
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
@@ -333,12 +371,12 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
                 {saved === null && loading ? (
                   <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
-                  <FaHeart className="size-3 md:size-4 text-[#ff7c0a]" />
+                  <FiHeart className="size-3 md:size-4 text-[#ff7c0a]" fill="currentColor" />
                 ) : (
-                  <FaRegHeart className="size-3 md:size-4" />
+                  <FiHeart className="size-3 md:size-4" />
                 )}
               </button>
-              {error && (
+              {error && !showSignin && (
                 <span className="text-xs text-red-500 ml-2">{error}</span>
               )}
               <button className="rounded-full p-2 bg-white" onClick={handleCommentButtonClick}>
@@ -352,7 +390,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
           onClick={async (e) => {
             e.preventDefault();
             if (pathname === "/review-listing" || pathname === "/tastystudio/review-listing") {
-              router.push(PAGE(ADD_REVIEW, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
+              const slug = restaurant.slug || "";
+              if (slug) {
+                const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
+                router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
+              }
               return;
             }
             if (onClick) await onClick(); // Wait for mutation to complete
@@ -363,7 +405,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             <div className="restaurant-card__header">
               <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
               <div className="restaurant-card__rating text-[1rem]">
-                <FaStar className="restaurant-card__icon -mt-1" />
+                <FiStar className="restaurant-card__icon -mt-1" />
                 {displayRating > 0 ? displayRating : 0}
                 <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
               </div>

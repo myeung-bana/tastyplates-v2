@@ -17,6 +17,7 @@ export const EDIT_REVIEW = "/edit-review";
 export const LISTING = "/review-listing"; // Deprecated: Use TASTYSTUDIO_REVIEW_LISTING
 export const TASTYSTUDIO_DASHBOARD = "/tastystudio/dashboard";
 export const TASTYSTUDIO_ADD_REVIEW = "/tastystudio/add-review";
+export const TASTYSTUDIO_ADD_REVIEW_CREATE = "/tastystudio/add-review/create";
 export const TASTYSTUDIO_REVIEW_LISTING = "/tastystudio/review-listing";
 export const LISTING_DRAFT = "/listing/draft";
 export const LISTING_STEP_ONE = "/listing/step-1";

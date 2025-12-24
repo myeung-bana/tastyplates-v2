@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { FaPen } from "react-icons/fa";
+import { FiEdit3 } from "react-icons/fi";
 
 interface RestaurantQuickActionsProps {
   onAddReview: () => void;
@@ -17,7 +17,7 @@ const RestaurantQuickActions: React.FC<RestaurantQuickActionsProps> = ({
           onClick={onAddReview}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-neusans font-normal"
         >
-          <FaPen className="w-4 h-4" />
+          <FiEdit3 className="w-4 h-4" />
           <span className="font-neusans font-normal text-white">
             Write a Review
           </span>

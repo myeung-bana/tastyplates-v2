@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { FaPen, FaRegHeart, FaHeart } from "react-icons/fa";
+import { FiEdit3 } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantButton";
 import SaveRestaurantButton from "./SaveRestaurantButton";
@@ -119,7 +119,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 onClick={onAddReview}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
               >
-                <FaPen className="w-4 h-4 text-gray-500" />
+                <FiEdit3 className="w-4 h-4 text-gray-500" />
                 <span>Write a Review</span>
               </button>
               <SaveRestaurantButton

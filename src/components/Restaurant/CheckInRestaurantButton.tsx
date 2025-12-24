@@ -1,6 +1,6 @@
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useEffect, useState, useCallback } from "react";
-import { FaMapMarkerAlt } from "react-icons/fa";
+import { FiMapPin } from "react-icons/fi";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
 import toast from "react-hot-toast";
@@ -129,7 +129,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
           onClick={() => setShowSignin(true)}
         >
-          <FaMapMarkerAlt />
+          <FiMapPin className="w-4 h-4" />
           <span>Check-In</span>
         </button>
         <SignupModal
@@ -162,7 +162,7 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
       disabled={loading}
       aria-pressed={checkedIn}
     >
-      <FaMapMarkerAlt className={checkedIn ? "text-primary" : "text-gray-500"} />
+      <FiMapPin className={`w-4 h-4 ${checkedIn ? "text-primary" : "text-gray-500"}`} />
       <span className="font-normal">
         {checkedIn ? "Checked-in" : "Check-In"}
       </span>

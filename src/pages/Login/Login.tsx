@@ -217,7 +217,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                   <div className="text-red-600 text-xs font-neusans">{passwordError}</div>
                 )}
               </div>
-              <p className="auth__terms font-neusans">By logging in, you agree to TastyPlate's <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
+              <p className="auth__terms font-neusans text-sm">By logging in, you agree to TastyPlate's <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
               <button
                 type="submit"
                 disabled={isLoading}
@@ -245,7 +245,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
           {/* </div> */}
           {message && (
             <div
-              className={`mt-4 mx-10 text-center px-4 py-2 rounded-xl font-normal font-neusans ${messageType == responseStatus.success
+              className={`mt-4 text-center px-4 py-2 rounded-xl font-normal text-sm font-neusans ${messageType == responseStatus.success
                 ? "bg-green-100 text-green-700"
                 : "bg-red-100 text-red-700"
                 }`}

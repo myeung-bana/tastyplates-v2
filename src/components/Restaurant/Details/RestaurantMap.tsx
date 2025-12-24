@@ -26,10 +26,22 @@ const mapContainerStyle = {
 };
 
 const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props) => {
-    const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    // Use useLoadScript hook directly in component for proper context
+    const { isLoaded: scriptLoaded, loadError: scriptLoadError } = useLoadScript({
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
         libraries: ['places', 'geocoding'],
     });
+    
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    // Sync isLoaded with scriptLoaded from useLoadScript
+    useEffect(() => {
+        if (scriptLoaded) {
+            setIsLoaded(true);
+            setLoadError(null);
+        }
+    }, [scriptLoaded]);
 
     const [isOpen, setIsOpen] = useState(false);
     const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -38,7 +50,7 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
 
     // Geocoding function to convert address to coordinates
     const geocodeAddress = async (addressString: string): Promise<{ lat: number; lng: number } | null> => {
-        if (!window.google || !window.google.maps) return null;
+        if (typeof window === 'undefined' || !window.google || !window.google.maps) return null;
         
         const geocoder = new window.google.maps.Geocoder();
         
@@ -74,7 +86,10 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
 
     // Function to get coordinates from place_id (most accurate)
     const getCoordinatesFromPlaceId = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
-        if (!window.google || !window.google.maps || !window.google.maps.places) return null;
+        if (typeof window === 'undefined' || 
+            !window.google || 
+            !window.google.maps || 
+            !window.google.maps.places) return null;
         
         const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
         
@@ -82,7 +97,11 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
             placesService.getDetails(
                 { placeId, fields: ['geometry'] },
                 (place: any, status: any) => {
-                    if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+                    // Add safety check for window.google in callback
+                    if (typeof window !== 'undefined' && 
+                        window.google?.maps?.places?.PlacesServiceStatus &&
+                        status === window.google.maps.places.PlacesServiceStatus.OK && 
+                        place?.geometry?.location) {
                         resolve({
                             lat: place.geometry.location.lat(),
                             lng: place.geometry.location.lng()
@@ -158,11 +177,15 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
             setGeocodingError('No location data available');
         };
 
-        if (isLoaded) {
+        if (isLoaded && scriptLoaded) {
             getCoordinates();
         }
-    }, [isLoaded, lat, lng, address, googleMapUrl]);
+    }, [isLoaded, scriptLoaded, lat, lng, address, googleMapUrl]);
 
+    // Check useLoadScript status first
+    if (scriptLoadError) return <div>Error loading maps</div>;
+    if (!scriptLoaded) return <div>Loading Maps...</div>;
+    
     if (loadError) return <div>Error loading maps</div>;
     if (!isLoaded) return <div>Loading Maps...</div>;
     if (isGeocoding) return <div>Finding location...</div>;

@@ -18,8 +18,7 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
-import { ADD_REVIEW } from "@/constants/pages";
-import { PAGE } from "@/lib/utils";
+import { TASTYSTUDIO_ADD_REVIEW_CREATE } from "@/constants/pages";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { 
   calculateRatingMetrics, 
@@ -57,6 +56,57 @@ function getRestaurantImages(restaurant: Listing): string[] {
   return images;
 }
 
+// Helper function to transform WordPress GraphQL data to Listing format
+function transformWordPressToListing(restaurantData: any): Listing {
+  return {
+            id: restaurantData.id,
+            slug: restaurantData.slug,
+            title: restaurantData.title,
+            content: restaurantData.content || "",
+            averageRating: restaurantData.averageRating || 0,
+            status: "published",
+            listingStreet: restaurantData.listingStreet || "",
+            priceRange: restaurantData.priceRange || "$$",
+            palates: {
+              nodes: restaurantData.palates?.nodes || []
+            },
+            databaseId: restaurantData.databaseId,
+            listingDetails: {
+              googleMapUrl: {
+                streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
+                streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
+                streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
+                city: restaurantData.listingDetails?.googleMapUrl?.city || "",
+                state: restaurantData.listingDetails?.googleMapUrl?.state || "",
+                stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
+                country: restaurantData.listingDetails?.googleMapUrl?.country || "",
+                countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
+                postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
+                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+                placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
+                zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
+              },
+              latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
+              longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
+              menuUrl: restaurantData.listingDetails?.menuUrl || "",
+              openingHours: restaurantData.listingDetails?.openingHours || "",
+              phone: restaurantData.listingDetails?.phone || "",
+            },
+            featuredImage: restaurantData.featuredImage,
+            imageGallery: restaurantData.imageGallery || [],
+            listingCategories: {
+              nodes: restaurantData.listingCategories?.nodes || []
+            },
+            countries: {
+              nodes: restaurantData.countries?.nodes || []
+            },
+            cuisines: restaurantData.cuisines || [],
+            isFavorite: restaurantData.isFavorite || false,
+            ratingsCount: restaurantData.ratingsCount || 0,
+          } as Listing;
+}
+
 
 // Main Component
 const restaurantService = new RestaurantService();
@@ -67,8 +117,7 @@ export default function RestaurantDetail() {
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [restaurant, setRestaurant] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
-  const [restaurantReviews, setRestaurantReviews] = useState<GraphQLReview[]>([]);
-  const [allReviews, setAllReviews] = useState<GraphQLReview[]>([]);
+  const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const [ratingMetrics, setRatingMetrics] = useState<RatingMetrics>({
     overallRating: 0,
     overallCount: 0,
@@ -118,163 +167,13 @@ export default function RestaurantDetail() {
             // Fallback to V1 API if V2 fails
             const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
             if (!data) return notFound();
-            
-            const restaurantData = data as Record<string, unknown> & {
-              palates?: { nodes?: Array<{ name: string }> };
-              listingDetails?: {
-                googleMapUrl?: {
-                  streetAddress?: string;
-                  streetNumber?: string;
-                  streetName?: string;
-                  city?: string;
-                  state?: string;
-                  stateShort?: string;
-                  country?: string;
-                  countryShort?: string;
-                  postCode?: string;
-                  latitude?: string;
-                  longitude?: string;
-                  placeId?: string;
-                  zoom?: number;
-                };
-                phone?: string;
-                openingHours?: string;
-                menuUrl?: string;
-              };
-              listingCategories?: { nodes?: Array<{ name: string }> };
-              countries?: { nodes?: Array<{ name: string }> };
-              featuredImage?: { node?: { sourceUrl?: string } };
-              imageGallery?: string[];
-            };
-            
-            transformed = {
-              id: restaurantData.id,
-              slug: restaurantData.slug,
-              title: restaurantData.title,
-              content: restaurantData.content || "",
-              averageRating: restaurantData.averageRating || 0,
-              status: "published",
-              listingStreet: restaurantData.listingStreet || "",
-              priceRange: restaurantData.priceRange || "$$",
-              palates: {
-                nodes: restaurantData.palates?.nodes || []
-              },
-              databaseId: restaurantData.databaseId,
-              listingDetails: {
-                googleMapUrl: {
-                  streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
-                  streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
-                  streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
-                  city: restaurantData.listingDetails?.googleMapUrl?.city || "",
-                  state: restaurantData.listingDetails?.googleMapUrl?.state || "",
-                  stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
-                  country: restaurantData.listingDetails?.googleMapUrl?.country || "",
-                  countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
-                  postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
-                  latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-                  longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-                  placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
-                  zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
-                },
-                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-                menuUrl: restaurantData.listingDetails?.menuUrl || "",
-                openingHours: restaurantData.listingDetails?.openingHours || "",
-                phone: restaurantData.listingDetails?.phone || "",
-              },
-              featuredImage: restaurantData.featuredImage,
-              imageGallery: restaurantData.imageGallery || [],
-              listingCategories: {
-                nodes: restaurantData.listingCategories?.nodes || []
-              },
-              countries: {
-                nodes: restaurantData.countries?.nodes || []
-              },
-              cuisines: restaurantData.cuisines || [],
-              isFavorite: restaurantData.isFavorite || false,
-              ratingsCount: restaurantData.ratingsCount || 0,
-            } as Listing;
+            transformed = transformWordPressToListing(data);
           }
         } else {
           // Use existing WordPress GraphQL API
           const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
           if (!data) return notFound();
-          
-          const restaurantData = data as Record<string, unknown> & {
-            palates?: { nodes?: Array<{ name: string }> };
-            listingDetails?: {
-              googleMapUrl?: {
-                streetAddress?: string;
-                streetNumber?: string;
-                streetName?: string;
-                city?: string;
-                state?: string;
-                stateShort?: string;
-                country?: string;
-                countryShort?: string;
-                postCode?: string;
-                latitude?: string;
-                longitude?: string;
-                placeId?: string;
-                zoom?: number;
-              };
-              phone?: string;
-              openingHours?: string;
-              menuUrl?: string;
-            };
-            listingCategories?: { nodes?: Array<{ name: string }> };
-            countries?: { nodes?: Array<{ name: string }> };
-            featuredImage?: { node?: { sourceUrl?: string } };
-            imageGallery?: string[];
-          };
-          
-          transformed = {
-            id: restaurantData.id,
-            slug: restaurantData.slug,
-            title: restaurantData.title,
-            content: restaurantData.content || "",
-            averageRating: restaurantData.averageRating || 0,
-            status: "published",
-            listingStreet: restaurantData.listingStreet || "",
-            priceRange: restaurantData.priceRange || "$$",
-            palates: {
-              nodes: restaurantData.palates?.nodes || []
-            },
-            databaseId: restaurantData.databaseId,
-            listingDetails: {
-              googleMapUrl: {
-                streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
-                streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
-                streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
-                city: restaurantData.listingDetails?.googleMapUrl?.city || "",
-                state: restaurantData.listingDetails?.googleMapUrl?.state || "",
-                stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
-                country: restaurantData.listingDetails?.googleMapUrl?.country || "",
-                countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
-                postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
-                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-                placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
-                zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
-              },
-              latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-              longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-              menuUrl: restaurantData.listingDetails?.menuUrl || "",
-              openingHours: restaurantData.listingDetails?.openingHours || "",
-              phone: restaurantData.listingDetails?.phone || "",
-            },
-            featuredImage: restaurantData.featuredImage,
-            imageGallery: restaurantData.imageGallery || [],
-            listingCategories: {
-              nodes: restaurantData.listingCategories?.nodes || []
-            },
-            countries: {
-              nodes: restaurantData.countries?.nodes || []
-            },
-            cuisines: restaurantData.cuisines || [],
-            isFavorite: restaurantData.isFavorite || false,
-            ratingsCount: restaurantData.ratingsCount || 0,
-          } as Listing;
+          transformed = transformWordPressToListing(data);
         }
 
         if (transformed) {
@@ -292,21 +191,21 @@ export default function RestaurantDetail() {
 
   // Calculate rating metrics when data changes
   useEffect(() => {
-    if (restaurant && restaurantReviews.length > 0) {
+    if (restaurant && reviews.length > 0) {
       const userPalates = user?.palates || null;
       const metrics = calculateRatingMetrics(
-        restaurantReviews,
-        allReviews,
+        reviews,
+        reviews,
         palatesParam,
         userPalates
       );
       setRatingMetrics(metrics);
 
       // Calculate community recognition metrics
-      const recognitionMetrics = calculateCommunityRecognitionMetrics(restaurantReviews);
+      const recognitionMetrics = calculateCommunityRecognitionMetrics(reviews);
       setCommunityRecognitionMetrics(recognitionMetrics);
     }
-  }, [restaurant, restaurantReviews, allReviews, palatesParam, user?.palates]);
+  }, [restaurant, reviews, palatesParam, user?.palates]);
 
   // Fetch restaurant reviews from new V2 API
   useEffect(() => {
@@ -339,12 +238,10 @@ export default function RestaurantDetail() {
           if (transformed.length === 0) break;
         }
 
-        setRestaurantReviews(allFetched);
-        setAllReviews(allFetched);
+        setReviews(allFetched);
       } catch (error) {
         console.error('Error fetching restaurant reviews:', error);
-        setRestaurantReviews([]);
-        setAllReviews([]);
+        setReviews([]);
       }
     };
 
@@ -356,25 +253,24 @@ export default function RestaurantDetail() {
       setIsShowSignin(true);
       return;
     }
-    router.push(
-      PAGE(ADD_REVIEW, [restaurant?.slug || ""])
-    );
+    const slug = restaurant?.slug || "";
+    if (slug) {
+      router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}?slug=${encodeURIComponent(slug)}`);
+    } else {
+      // Fallback to search page if no slug
+      router.push('/tastystudio/add-review');
+    }
   };
 
-  // Unified reviews data source - prioritize allReviews, fallback to restaurantReviews
-  // This ensures both desktop and mobile see the same reviews
-  const unifiedReviews = useMemo(() => {
-    return allReviews.length > 0 ? allReviews : restaurantReviews;
-  }, [allReviews, restaurantReviews]);
-
   const reviewCount = useMemo(() => {
-    return calculateOverallRating(unifiedReviews).count;
-  }, [unifiedReviews]);
+    return calculateOverallRating(reviews).count;
+  }, [reviews]);
 
   if (loading) return <RestaurantDetailSkeleton />;
   if (!restaurant) return notFound();
 
   return (
+    <>
     <div className="restaurant-detail mt-4 md:mt-20 font-neusans">
       <div className="restaurant-detail__container !pt-0">
         {/* Breadcrumb */}
@@ -477,23 +373,19 @@ export default function RestaurantDetail() {
               <RestaurantReviews 
                 restaurantId={restaurant.databaseId || 0}
                 restaurantUuid={restaurant.id}
-                reviews={unifiedReviews}
+                reviews={reviews}
                 reviewCount={reviewCount}
-                onReviewsUpdate={(reviews) => {
-                  setRestaurantReviews(reviews);
-                  setAllReviews(reviews);
-                }}
+                onReviewsUpdate={setReviews}
               />
             </div>
             {/* Mobile view */}
             {isMobile && (
               <RestaurantReviewsMobile
-                reviews={unifiedReviews}
+                reviews={reviews}
                 restaurantId={restaurant.databaseId || 0}
                 onOpenModal={() => setShowReviewsModal(true)}
               />
             )}
-          </div>
         </div>
       </div>
 
@@ -518,13 +410,15 @@ export default function RestaurantDetail() {
       {/* Restaurant Reviews Modal */}
       {isMobile && (
         <RestaurantReviewsViewerModal
-          reviews={unifiedReviews}
+          reviews={reviews}
           isOpen={showReviewsModal}
           onClose={() => setShowReviewsModal(false)}
           initialIndex={0}
           restaurantId={restaurant.databaseId || 0}
         />
       )}
+      </div>
     </div>
+    </>
   );
 }
