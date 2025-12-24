@@ -460,7 +460,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               if (parentCategories.length > 0) {
                 return (
                   <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
-                    <span className="restaurant-card__tag">
+                    <span className="restaurant-card__tag truncate">
                       {parentCategories.map(cat => cat.name).join(' / ')}
                     </span>
                   </div>
