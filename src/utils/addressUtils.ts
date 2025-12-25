@@ -232,3 +232,89 @@ export function getCityCountry(
   // Final fallback
   return fallbackText;
 }
+
+/**
+ * Get street name and city for restaurant cards
+ * Format: "Street Name, City" (e.g., "123 Street, Calgary")
+ * This function is display-only and does not affect search functionality.
+ * @param googleMapUrl - GoogleMapUrl object
+ * @param listingStreet - Fallback street address
+ * @param fallbackText - Default text if no address available
+ * @returns Street Name, City format or fallback text
+ */
+export function getStreetCity(
+  googleMapUrl?: GoogleMapUrl | null,
+  listingStreet?: string | null,
+  fallbackText: string = 'Location not available'
+): string {
+  if (!googleMapUrl && !listingStreet) return fallbackText;
+  
+  // Get street address - prefer individual components (streetNumber + streetName)
+  // as they contain only the street without postal code, state, etc.
+  let street = '';
+  if (googleMapUrl?.streetNumber || googleMapUrl?.streetName) {
+    // Use individual components - these are clean and don't include postal code/state
+    street = [googleMapUrl.streetNumber, googleMapUrl.streetName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+  } else if (googleMapUrl?.streetAddress?.trim()) {
+    // If only streetAddress is available, try to extract just the street portion
+    // Remove common address suffixes (postal codes, states, countries)
+    const fullAddress = googleMapUrl.streetAddress.trim();
+    
+    // Try to extract street by removing everything after common separators
+    // This handles formats like "123 Street, City, State, Postal Code"
+    // We'll take the first part before the first comma (if it looks like a street)
+    const parts = fullAddress.split(',').map(p => p.trim());
+    
+    // If the first part contains a number and looks like a street, use it
+    // Otherwise, use the first part anyway
+    if (parts.length > 0) {
+      const firstPart = parts[0];
+      // Check if it looks like a street (contains number or common street words)
+      if (/\d/.test(firstPart) || /\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd|way|lane|ln)\b/i.test(firstPart)) {
+        street = firstPart;
+      } else {
+        // If it doesn't look like a street, try to find the street part
+        // Look for parts that contain numbers
+        const streetPart = parts.find(p => /\d/.test(p));
+        street = streetPart || firstPart;
+      }
+    } else {
+      street = fullAddress;
+    }
+  } else if (listingStreet?.trim()) {
+    // Fallback to listingStreet, but try to clean it
+    const cleaned = listingStreet.trim();
+    // Remove postal codes (common formats: "T2P 1J1", "90210", etc.)
+    street = cleaned.replace(/\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b|\b\d{5}(-\d{4})?\b/gi, '').trim();
+    // Remove trailing commas and extra spaces
+    street = street.replace(/,\s*$/, '').trim();
+    // If it still contains commas, take only the first part (street)
+    if (street.includes(',')) {
+      street = street.split(',')[0].trim();
+    }
+  }
+  
+  // Get city
+  const city = googleMapUrl?.city?.trim();
+  
+  // Format: "Street, City"
+  if (street && city) {
+    return `${street}, ${city}`;
+  }
+  
+  // Fallback: If only street is available
+  if (street) {
+    return street;
+  }
+  
+  // Fallback: If only city is available
+  if (city) {
+    return city;
+  }
+  
+  // Final fallback
+  return fallbackText;
+}

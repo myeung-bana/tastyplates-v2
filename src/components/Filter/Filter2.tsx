@@ -94,7 +94,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
             className="filter2__button font-neusans"
           >
             <span className="filter2__button-text text-sm font-neusans">
-              Filter
+              Price & Rating
               {activeFiltersCount > 0 && (
                 <span className="filter2__badge font-neusans">{activeFiltersCount}</span>
               )}

@@ -1,6 +1,6 @@
 // pages/RestaurantPage.tsx
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import RestaurantCard from "@/components/Restaurant/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 import Filter2 from "@/components/Filter/Filter2";
@@ -22,6 +22,15 @@ import { applyLocationFilter, sortByLocationRelevance } from '@/utils/locationUt
 import { LOCATION_HIERARCHY } from '@/constants/location';
 import '@/styles/components/suggested-restaurants.scss';
 import Breadcrumb from '@/components/common/Breadcrumb';
+
+// Dev-only logging helper
+const isDev = process.env.NODE_ENV === 'development';
+const devLog = (...args: any[]) => {
+  if (isDev) console.log(...args);
+};
+const devError = (...args: any[]) => {
+  if (isDev) console.error(...args);
+};
 
 export interface Restaurant {
   id: string;
@@ -144,13 +153,6 @@ const RestaurantPage = () => {
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const initialPalates = getInitialPalatesFromUrl();
-  
-  // Log initial palates for debugging
-  useEffect(() => {
-    if (initialPalates.length > 0) {
-      console.log('🎯 Initial palates from URL:', initialPalates);
-    }
-  }, []);
 
   const [filters, setFilters] = useState({
     cuisine: null as string[] | null,
@@ -205,7 +207,8 @@ const RestaurantPage = () => {
   }, [initialListingFromUrl, router]);
 
   // Client-side sorting function for both palate-based and regular sorting
-  const sortRestaurants = (
+  // Memoized to prevent unnecessary re-computations
+  const sortRestaurants = useCallback((
     restaurants: Restaurant[], 
     selectedPalates: string[], 
     sortOption: string | null, 
@@ -293,22 +296,12 @@ const RestaurantPage = () => {
         return (b.recognitionCount || 0) - (a.recognitionCount || 0);
       }
     });
-  };
+  }, []);
 
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
       const firstValue = firstOverride ?? (reset && isFirstLoad.current ? RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS : RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE);
-      
-      console.log('📊 Fetch restaurants params:', {
-        reset,
-        after,
-        firstOverride,
-        isFirstLoad: isFirstLoad.current,
-        INITIAL_LOAD_RESULTS: RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS,
-        DEFAULT_RESULTS_PER_PAGE: RESTAURANT_CONSTANTS.DEFAULT_RESULTS_PER_PAGE,
-        finalFirstValue: firstValue,
-      });
 
       let transformed: Restaurant[] = [];
       let endCursor: string | null = null;
@@ -329,8 +322,8 @@ const RestaurantPage = () => {
 
         // Check for success field (new format per API guidelines)
         if (!response.success || response.error) {
-          console.error('❌ V2 API error:', response.error || response.message || 'Unknown error');
-          console.error('Response details:', response);
+          devError('❌ V2 API error:', response.error || response.message || 'Unknown error');
+          devError('Response details:', response);
           throw new Error(response.error || response.message || 'Failed to fetch restaurants');
         }
 
@@ -341,12 +334,10 @@ const RestaurantPage = () => {
         const nextOffset = offset + firstValue;
         endCursor = response.meta.hasMore ? nextOffset.toString() : null;
         hasNextPage = response.meta.hasMore;
-
-        console.log('✅ V2 API: Fetched', transformed.length, 'restaurants');
       } catch (v2Error) {
-        console.error('V2 API failed:', v2Error);
+        devError('V2 API failed:', v2Error);
         // Show error to user - restaurants array will remain empty
-        console.error('Failed to load restaurants from V2 API:', v2Error);
+        devError('Failed to load restaurants from V2 API:', v2Error);
         setLoading(false);
         // Don't return - let the rest of the function handle empty array
         transformed = [];
@@ -367,32 +358,15 @@ const RestaurantPage = () => {
       
       // Then apply enhanced selected location filtering (city/country)
       if (selectedLocation && selectedLocation.type) {
-        console.log('🎯 Applying enhanced location filter for:', selectedLocation.label, selectedLocation.type);
         filteredRestaurants = applyLocationFilter(filteredRestaurants, selectedLocation, 100); // 100km radius
         
         // Sort by location relevance for better results
         filteredRestaurants = sortByLocationRelevance(filteredRestaurants, selectedLocation);
-        
-        console.log('📍 Filtered restaurants count:', filteredRestaurants.length);
       }
       
       // Apply client-side sorting (location-based, palate-based, or regular)
       const sortedRestaurants = sortRestaurants(filteredRestaurants, filters.palates, filters.sortOption, searchAddress);
-      
-      // Log tier separation for debugging
-      if (filters.palates && filters.palates.length > 0) {
-        const tier1Count = sortedRestaurants.filter(r => r.searchPalateStats?.count && r.searchPalateStats.count > 0).length;
-        const tier2Count = sortedRestaurants.length - tier1Count;
-        console.log('🎯 Search Results by Tier:');
-        console.log(`  Tier 1 (WITH palate reviews): ${tier1Count} restaurants`);
-        console.log(`  Tier 2 (WITHOUT palate reviews): ${tier2Count} restaurants`);
-        if (tier1Count > 0) {
-          const topTier1 = sortedRestaurants.filter(r => r.searchPalateStats?.count && r.searchPalateStats.count > 0).slice(0, 3);
-          console.log('  Top 3 Tier 1:', topTier1.map(r => `${r.name}: ${r.searchPalateStats?.avg}★ (${r.searchPalateStats?.count} reviews)`));
-        }
-      } else {
-        console.log('📊 Showing all restaurants sorted by overall quality');
-      }
+
       
       setRestaurants((prev: Restaurant[]) => {
         if (reset || !after) return sortedRestaurants;
@@ -409,25 +383,23 @@ const RestaurantPage = () => {
       setEndCursor(endCursor);
       setHasNextPage(hasNextPage);
     } catch (error) {
-      console.error("Failed to fetch restaurants:", error);
+      devError("Failed to fetch restaurants:", error);
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm, filters.cuisine, filters.palates, filters.price, filters.badges, filters.sortOption, filters.rating, searchAddress, searchEthnic, selectedLocation]);
+  }, [debouncedSearchTerm, filters.palates, filters.sortOption, searchAddress, selectedLocation, sortRestaurants]);
 
-  const handleFilterChange = useCallback((
-    newFilters:
-      {
-        cuisine?: string[] | null;
-        price?: string | null;
-        rating?: number | null;
-        badges?: string | null;
-        sortOption?: string | null;
-        palates?: string[] | null;
-      }
-  ) => {
-    console.log('🔄 Restaurant handleFilterChange called with:', newFilters);
-    
+  // Debounced filter change handler
+  type FilterChangeType = {
+    cuisine?: string[] | null;
+    price?: string | null;
+    rating?: number | null;
+    badges?: string | null;
+    sortOption?: string | null;
+    palates?: string[] | null;
+  };
+
+  const filterUpdateFn = useCallback((newFilters: FilterChangeType) => {
     // Update searchEthnic when palates are selected
     if (newFilters.palates && newFilters.palates.length > 0) {
       setSearchEthnic(newFilters.palates.join(','));
@@ -444,6 +416,25 @@ const RestaurantPage = () => {
       }));
   }, []);
 
+  const [debouncedFilterUpdate] = useMemo(
+    () => debounce(filterUpdateFn as (...args: unknown[]) => void, 300),
+    [filterUpdateFn]
+  ) as [(newFilters: FilterChangeType) => void, () => void];
+
+  const handleFilterChange = useCallback((
+    newFilters:
+      {
+        cuisine?: string[] | null;
+        price?: string | null;
+        rating?: number | null;
+        badges?: string | null;
+        sortOption?: string | null;
+        palates?: string[] | null;
+      }
+  ) => {
+    debouncedFilterUpdate(newFilters);
+  }, [debouncedFilterUpdate]);
+
 
   useEffect(() => {
     setRestaurants([]);
@@ -452,7 +443,7 @@ const RestaurantPage = () => {
     isFirstLoad.current = true;
     fetchRestaurants(true, null, RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, filters, searchAddress, searchEthnic, selectedLocation, user, fetchRestaurants]);
+  }, [debouncedSearchTerm, filters.palates, filters.sortOption, searchAddress, selectedLocation, fetchRestaurants]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -488,7 +479,7 @@ const RestaurantPage = () => {
       setListingEndCursor(result.pageInfo.endCursor as string | null);
       setListingHasNextPage(result.pageInfo.hasNextPage as boolean);
     } catch (err) {
-      console.error("Error loading listing options", err);
+      devError("Error loading listing options", err);
       setListingOptions([]);
     }
   }, [listingEndCursor]);
@@ -541,10 +532,11 @@ const RestaurantPage = () => {
           ) : (
             <>
               <div className="restaurants__grid">
-                {restaurants.map((restaurant) => (
+                {restaurants.map((restaurant, index) => (
                   <RestaurantCard
                     key={restaurant.id}
                     restaurant={restaurant}
+                    priority={index < 8}
                   />
                 ))}
               </div>

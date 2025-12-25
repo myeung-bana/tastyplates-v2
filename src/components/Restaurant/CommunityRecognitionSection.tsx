@@ -29,7 +29,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="Flag icon"
             />
-            <span className="font-neusans text-2xl md:text-4xl font-normal">
+            <span className="font-neusans text-lg md:text-2xl font-normal">
               {recognitionMetrics.mustRevisit}
             </span>
           </div>
@@ -44,7 +44,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="phone icon"
             />
-            <span className="font-neusans text-2xl md:text-4xl font-normal">
+            <span className="font-neusans text-lg md:text-2xl font-normal">
               {recognitionMetrics.instaWorthy}
             </span>
           </div>
@@ -59,7 +59,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="cash icon"
             />
-            <span className="font-neusans text-2xl md:text-4xl font-normal">
+            <span className="font-neusans text-lg md:text-2xl font-normal">
               {recognitionMetrics.valueForMoney}
             </span>
           </div>
@@ -74,7 +74,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
               className="size-6 md:size-10"
               alt="helmet icon"
             />
-            <span className="font-neusans text-2xl md:text-4xl font-normal">
+            <span className="font-neusans text-lg md:text-2xl font-normal">
               {recognitionMetrics.bestService}
             </span>
           </div>

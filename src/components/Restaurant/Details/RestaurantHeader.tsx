@@ -51,12 +51,17 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                {/* Cuisine Categories - Above Title with "/" divider */}
+                {/* Cuisine Categories - Above Title as pill-shaped tags */}
                 {restaurant.listingCategories?.nodes && restaurant.listingCategories.nodes.length > 0 && (
-                  <div className="mb-2">
-                    <span className="text-sm text-gray-700 font-neusans font-normal">
-                      {restaurant.listingCategories.nodes.map((category: { name: string; slug: string }) => category.name).join(' / ')}
-                    </span>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {restaurant.listingCategories.nodes.map((category: { name: string; slug: string }, index: number) => (
+                      <span 
+                        key={`category-${index}`}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans inline-block"
+                      >
+                        {category.name}
+                      </span>
+                    ))}
                   </div>
                 )}
 
@@ -78,34 +83,38 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 <div className="restaurant-detail__meta mb-2">
                   <div className="restaurant-detail__cuisine">
                     {hasPalates ? (
-                      restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
-                        <div className="flex items-center gap-2" key={`palate-${index}`}>
-                          {index > 0 && <span>&#8226;</span>}
-                          <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal">
+                      <div className="flex flex-wrap gap-2">
+                        {restaurant.palates.nodes.map((palate: { name: string }, index: number) => (
+                          <span 
+                            key={`palate-${index}`}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans inline-block"
+                          >
                             {palate.name}
                           </span>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       (() => {
-                        // Show Establishment Categories (parent categories only) with "/" divider
-                        const parentCategories = restaurant.categories?.nodes?.filter(
+                        // Show Establishment Categories (from restaurant.categories) with "/" separator
+                        // Prefer parent categories, but show all if no parent categories exist
+                        const allCategories = restaurant.categories?.nodes || [];
+                        const parentCategories = allCategories.filter(
                           (cat: { parent_id?: number | null }) => cat.parent_id === null || cat.parent_id === undefined
-                        ) || [];
+                        );
                         
-                        if (parentCategories.length > 0) {
+                        // Use parent categories if available, otherwise use all categories
+                        const categoriesToShow = parentCategories.length > 0 ? parentCategories : allCategories;
+                        
+                        if (categoriesToShow.length > 0) {
                           return (
                             <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal text-gray-700">
-                              {parentCategories.map((cat: { name: string }) => cat.name).join(' / ')}
+                              {categoriesToShow.map((cat: { name: string }) => cat.name).join(' / ')}
                             </span>
                           );
                         }
                         
-                        return (
-                          <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal text-gray-500">
-                            No Palate Defined
-                          </span>
-                        );
+                        // If no establishment categories exist, show nothing
+                        return null;
                       })()
                     )}
                   </div>

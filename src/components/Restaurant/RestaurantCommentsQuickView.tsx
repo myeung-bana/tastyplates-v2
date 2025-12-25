@@ -219,7 +219,7 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
 
           {/* Header */}
           <div className="restaurant-comments-quick-view__header">
-            <h2 className="restaurant-comments-quick-view__title">
+            <h2 className="restaurant-comments-quick-view__title font-neusans">
               Reviews & Comments
             </h2>
             <button

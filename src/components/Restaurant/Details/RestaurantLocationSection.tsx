@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { FiMapPin } from "react-icons/fi";
+import { FiMapPin, FiExternalLink } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import RestaurantMap from "./RestaurantMap";
 import { formatAddressMultiLine, formatAddressSingleLine } from "@/utils/addressUtils";
@@ -27,10 +27,24 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
                           googleMapUrl?.streetAddress ||
                           restaurant?.listingStreet;
 
-  // Format address for display
-  const multiLineAddress = formatAddressMultiLine(googleMapUrl || null);
-  const singleLineAddress = formatAddressSingleLine(googleMapUrl || null);
-  const displayAddress = multiLineAddress || singleLineAddress || restaurant?.listingStreet || null;
+  // Format address for display (single line)
+  const singleLineAddress = formatAddressSingleLine(googleMapUrl || null) || restaurant?.listingStreet || null;
+
+  // Generate Google Maps URL
+  const getGoogleMapsUrl = (): string | null => {
+    if (googleMapUrl?.placeId) {
+      return `https://www.google.com/maps/place/?q=place_id:${googleMapUrl.placeId}`;
+    }
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    if (singleLineAddress) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(singleLineAddress)}`;
+    }
+    return null;
+  };
+
+  const googleMapsUrl = getGoogleMapsUrl();
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
@@ -52,20 +66,23 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
           </div>
         )}
 
-        {displayAddress && (
-          <div className="flex items-start gap-3 pt-2">
-            <FiMapPin className="text-gray-500 mt-1 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              {multiLineAddress ? (
-                <div className="text-gray-700 font-neusans text-sm font-normal whitespace-pre-line">
-                  {multiLineAddress}
-                </div>
-              ) : (
-                <span className="text-gray-700 font-neusans text-sm font-normal">
-                  {displayAddress}
-                </span>
-              )}
-            </div>
+        {singleLineAddress && (
+          <div className="flex items-center gap-3 pt-2">
+            <FiMapPin className="text-gray-500 flex-shrink-0" />
+            <span className="text-gray-700 font-neusans text-sm font-normal flex-1 min-w-0">
+              {singleLineAddress}
+            </span>
+            {googleMapsUrl && (
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
+                aria-label="Open in Google Maps"
+              >
+                <FiExternalLink className="w-4 h-4" />
+              </a>
+            )}
           </div>
         )}
       </div>

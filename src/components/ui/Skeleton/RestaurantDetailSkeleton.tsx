@@ -20,16 +20,17 @@ const RestaurantDetailSkeleton = () => {
                                         <div className="w-[150px] h-[150px] rounded-full bg-gray-300"></div>
                                     </div>
                                     <div className="flex-1 min-w-0 space-y-3">
-                                        <div className="h-7 md:h-8 w-48 md:w-64 bg-gray-300 rounded"></div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            <div className="h-5 w-20 bg-gray-300 rounded"></div>
-                                            <div className="h-5 w-16 bg-gray-300 rounded"></div>
-                                            <div className="h-5 w-16 bg-gray-300 rounded"></div>
-                                        </div>
+                                        {/* Cuisine Categories (pill-shaped) */}
                                         <div className="flex gap-2 flex-wrap">
                                             <div className="h-6 w-20 bg-gray-300 rounded-full"></div>
                                             <div className="h-6 w-24 bg-gray-300 rounded-full"></div>
                                         </div>
+                                        {/* Restaurant Title */}
+                                        <div className="h-7 md:h-8 w-48 md:w-64 bg-gray-300 rounded"></div>
+                                        {/* Price Range (pill-shaped) */}
+                                        <div className="h-6 w-16 bg-gray-300 rounded-full"></div>
+                                        {/* Establishment Categories (single line with "/") */}
+                                        <div className="h-4 w-40 bg-gray-300 rounded"></div>
                                     </div>
                                 </div>
                                 {/* Right Section: Action Buttons */}
@@ -71,13 +72,15 @@ const RestaurantDetailSkeleton = () => {
 
                             {/* Community Recognition Skeleton */}
                             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                                <div className="h-6 w-48 bg-gray-300 rounded mx-auto mb-4"></div>
-                                <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
+                                <div className="h-6 w-48 bg-gray-300 rounded mb-4"></div>
+                                <div className="community-recognition w-full flex flex-row items-center justify-center gap-0">
                                     {[...Array(4)].map((_, i) => (
-                                        <div key={i} className="flex flex-col items-center w-full lg:w-auto space-y-2">
-                                            <div className="h-10 w-10 bg-gray-300 rounded-full"></div>
-                                            <div className="h-6 w-12 bg-gray-300 rounded"></div>
-                                            <div className="h-4 w-20 bg-gray-300 rounded"></div>
+                                        <div key={i} className="rating-column w-full border-r border-[#CACACA] last:border-r-0">
+                                            <div className="rating-value flex flex-col items-center space-y-2">
+                                                <div className="h-6 md:h-10 w-6 md:w-10 bg-gray-300 rounded-full"></div>
+                                                <div className="h-6 md:h-8 w-12 bg-gray-300 rounded"></div>
+                                                <div className="h-3 md:h-4 w-20 bg-gray-300 rounded"></div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -88,7 +91,12 @@ const RestaurantDetailSkeleton = () => {
                                 <div className="h-6 w-20 bg-gray-300 rounded mb-4"></div>
                                 <div className="space-y-4">
                                     <div className="h-96 bg-gray-300 rounded-xl"></div>
-                                    <div className="h-4 w-full bg-gray-300 rounded"></div>
+                                    {/* Address - Single line with icon */}
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <div className="h-4 w-4 bg-gray-300 rounded"></div>
+                                        <div className="h-4 w-64 bg-gray-300 rounded flex-1"></div>
+                                        <div className="h-4 w-4 bg-gray-300 rounded"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

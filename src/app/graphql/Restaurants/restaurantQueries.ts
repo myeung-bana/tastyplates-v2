@@ -82,6 +82,7 @@ export const GET_RESTAURANT_BY_UUID = `
       published_at
       cuisines
       palates
+      categories
     }
   }
 `;
@@ -114,6 +115,7 @@ export const GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE = `
       published_at
       cuisines
       palates
+      categories
       restaurant_price_range {
         id
         display_name
@@ -153,6 +155,7 @@ export const GET_RESTAURANT_BY_SLUG_HASURA = `
       published_at
       cuisines
       palates
+      categories
     }
   }
 `;
@@ -185,6 +188,7 @@ export const GET_RESTAURANT_BY_SLUG_HASURA_WITH_PRICE_RANGE = `
       published_at
       cuisines
       palates
+      categories
       restaurant_price_range {
         id
         display_name

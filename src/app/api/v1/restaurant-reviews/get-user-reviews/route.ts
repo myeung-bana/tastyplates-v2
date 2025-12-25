@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_USER_REVIEWS, GET_USER_REVIEWS_BY_STATUS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,10 +58,39 @@ export async function GET(request: NextRequest) {
     const reviews = result.data?.restaurant_reviews || [];
     const total = result.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
 
+    // Fetch author data separately (all reviews have the same author_id)
+    let authorData = null;
+    if (reviews.length > 0) {
+      try {
+        const authorResult = await hasuraQuery(GET_RESTAURANT_USER_BY_ID, {
+          id: author_id
+        });
+
+        if (!authorResult.errors && authorResult.data?.restaurant_users_by_pk) {
+          const user = authorResult.data.restaurant_users_by_pk;
+          authorData = {
+            id: user.id,
+            username: user.username || '',
+            display_name: user.display_name || user.username || '',
+            profile_image: user.profile_image
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to fetch author data:', error);
+        // Continue without author data - will use defaults in transformer
+      }
+    }
+
+    // Attach author data to all reviews
+    const reviewsWithAuthor = reviews.map((review: any) => ({
+      ...review,
+      author: authorData
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
-        reviews,
+        reviews: reviewsWithAuthor,
         total,
         limit,
         offset

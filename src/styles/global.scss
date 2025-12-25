@@ -35,7 +35,10 @@ h5,
 h6,
 span {
   color: $color-gray-800;
-  font-family: $font-inter;
+  font-family: $font-neusans;
+  font-weight: 400 !important;
+  font-style: normal;
+  font-display: swap;
 }
 
 a {

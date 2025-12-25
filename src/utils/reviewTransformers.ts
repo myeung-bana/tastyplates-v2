@@ -323,8 +323,11 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
     sourceUrl: typeof img === 'string' ? img : (img.url || img.sourceUrl || '')
   }));
 
-  // Get author info
+  // Get author info - ensure we have all required fields
+  // Use author_id from review as primary source, fallback to author.id
+  const authorId = review.author_id || review.author?.id || '';
   const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+  const authorUsername = review.author?.username || '';
   const authorAvatar = review.author?.profile_image 
     ? (getProfileImageUrl(review.author.profile_image) || DEFAULT_USER_ICON)
     : DEFAULT_USER_ICON;
@@ -332,9 +335,9 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
   // Generate databaseId from UUID (for compatibility)
   const databaseId = parseInt(review.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
 
-  // Generate userId from author_id UUID
-  const userId = review.author?.id 
-    ? parseInt(review.author.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+  // Generate userId from author_id UUID - ensure we use the actual author_id
+  const userId = authorId 
+    ? parseInt(authorId.replace(/-/g, '').substring(0, 8), 16) % 2147483647
     : 0;
 
   // Get restaurant info
@@ -365,14 +368,14 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
     content: review.content,
     reviewImages,
     palates: palatesString,
-    userAvatar: authorAvatar,
+    userAvatar: authorAvatar, // Ensure this is set
     author: {
       name: authorName,
       node: {
-        id: review.author_id,
-        databaseId: userId,
+        id: authorId, // Use author_id from review, fallback to author.id
+        databaseId: userId, // Numeric conversion for compatibility
         name: authorName,
-        username: review.author?.username, // Include username for profile URLs
+        username: authorUsername, // CRITICAL: Ensure username is included
         avatar: {
           url: authorAvatar
         }
@@ -396,7 +399,7 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
       }
     },
     recognitions: review.recognitions || [],
-    userId: review.author_id,
+    userId: authorId, // Use the actual UUID
     hashtags: review.hashtags || []
   };
 }

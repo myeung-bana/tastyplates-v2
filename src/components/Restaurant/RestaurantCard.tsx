@@ -14,7 +14,7 @@ import { TASTYSTUDIO_ADD_REVIEW_CREATE, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
 import FallbackImage from "../ui/Image/FallbackImage";
-import { getCityCountry } from "@/utils/addressUtils";
+import { getStreetCity } from "@/utils/addressUtils";
 import { useRestaurantOverallRating } from "@/hooks/useRestaurantOverallRating";
 
 export interface Restaurant {
@@ -57,6 +57,7 @@ export interface RestaurantCardProps {
   ratingsCount?: number;
   onWishlistChange?: (restaurant: Restaurant, isSaved: boolean) => void;
   onClick?: () => void;
+  priority?: boolean;
 }
 
 // UUID validation regex
@@ -86,7 +87,7 @@ const getUserUuid = async (sessionUserId: string | number | undefined): Promise<
   return null;
 };
 
-const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick }: RestaurantCardProps) => {
+const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWishlistChange, onClick, priority = false }: RestaurantCardProps) => {
   // Safety check for restaurant object
   if (!restaurant) {
     console.warn('RestaurantCard: restaurant object is undefined or null');
@@ -332,7 +333,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   };
 
 
-  const address = getCityCountry(restaurant.googleMapUrl, 'Location not available');
+  const address = getStreetCity(restaurant.googleMapUrl, restaurant.streetAddress, 'Location not available');
 
   return (
     <>
@@ -368,6 +369,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               height={228}
               className="restaurant-card__img cursor-pointer"
               style={{ cursor: "pointer" }}
+              priority={priority}
+              loading={priority ? "eager" : "lazy"}
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             />
           </a>
           {profileTablist !== 'listings' && (

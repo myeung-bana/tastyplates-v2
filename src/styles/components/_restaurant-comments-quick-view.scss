@@ -122,7 +122,7 @@
     font-weight: 400;
     color: #111827;
     margin: 0;
-    font-family: 'Neue Sans', sans-serif;
+    font-family: 'Neue Sans', sans-serif !important;
   }
 
   &__close {
@@ -218,6 +218,7 @@
     color: #111827;
     margin: 4px 0;
     font-family: 'Neue Sans', sans-serif;
+    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
   }
 
   &__text {

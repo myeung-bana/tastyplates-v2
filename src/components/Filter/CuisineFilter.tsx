@@ -24,10 +24,8 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
 
   // Sync with homepage filter selections
   useEffect(() => {
-    console.log('🔄 CuisineFilter syncing with:', { selectedCuisines, selectedPalates });
     setSelectedCuisinesSet(new Set(selectedCuisines));
     setSelectedPalatesSet(new Set(selectedPalates));
-    
   }, [selectedCuisines, selectedPalates]);
 
   // Helper function to get all palates in a region
@@ -80,11 +78,6 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
   const applyFilters = () => {
     const cuisinesArray = Array.from(selectedCuisinesSet);
     const palatesArray = Array.from(selectedPalatesSet);
-    
-    // Log when palate-based sorting is activated
-    if (palatesArray.length > 0) {
-      console.log('🎯 Palate-based sorting activated for:', palatesArray);
-    }
     
     // Update the filter state
     onFilterChange(cuisinesArray, palatesArray);

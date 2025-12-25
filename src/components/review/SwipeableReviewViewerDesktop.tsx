@@ -52,6 +52,12 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   const { user, firebaseUser } = useFirebaseSession();
   const { setFollowState } = useFollowContext();
   
+  // Cache user UUID to avoid repeated fetches (performance optimization)
+  const userUuidRef = useRef<string | null>(null);
+  
+  // Cache UUID regex (performance optimization)
+  const UUID_REGEX = useMemo(() => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, []);
+  
   // Helper to get Firebase ID token for API calls
   const getFirebaseToken = useCallback(async () => {
     // Use firebaseUser directly for more reliable authentication
@@ -63,6 +69,43 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     }
     return null;
   }, [firebaseUser]);
+  
+  // Helper to get user UUID once and cache it (performance optimization for likes)
+  const getUserUuid = useCallback(async (): Promise<string | null> => {
+    // Return cached UUID if available
+    if (userUuidRef.current) {
+      return userUuidRef.current;
+    }
+
+    if (!user?.id || !firebaseUser) return null;
+
+    const userIdStr = String(user.id);
+    
+    if (UUID_REGEX.test(userIdStr)) {
+      userUuidRef.current = userIdStr;
+      return userIdStr;
+    }
+
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        if (userData.success && userData.data?.id) {
+          userUuidRef.current = userData.data.id;
+          return userData.data.id;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user UUID:", error);
+    }
+
+    return null;
+  }, [user?.id, firebaseUser, UUID_REGEX]);
+  
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
@@ -93,26 +136,30 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     return Array.from(indices).sort((a, b) => a - b);
   }, [currentIndex, reviews.length]);
 
-  // Preload images for current and next reviews
+  // Preload images for current and next reviews (debounced for performance)
   useEffect(() => {
     if (!isOpen) return;
+    
+    const timer = setTimeout(() => {
+      const imagesToPreload = [
+        reviews[currentIndex],
+        reviews[currentIndex + 1],
+        reviews[currentIndex + 2],
+      ].filter(Boolean);
 
-    const imagesToPreload = [
-      reviews[currentIndex],
-      reviews[currentIndex + 1],
-      reviews[currentIndex + 2],
-    ].filter(Boolean);
-
-    imagesToPreload.forEach((review) => {
-      if (!review) return;
-      review.reviewImages?.forEach((img) => {
-        if (img?.sourceUrl && !preloadedImagesRef.current.has(img.sourceUrl)) {
-          const image = new Image();
-          image.src = img.sourceUrl;
-          preloadedImagesRef.current.add(img.sourceUrl);
-        }
+      imagesToPreload.forEach((review) => {
+        if (!review) return;
+        review.reviewImages?.forEach((img) => {
+          if (img?.sourceUrl && !preloadedImagesRef.current.has(img.sourceUrl)) {
+            const image = new Image();
+            image.src = img.sourceUrl;
+            preloadedImagesRef.current.add(img.sourceUrl);
+          }
+        });
       });
-    });
+    }, 100); // Debounce by 100ms
+    
+    return () => clearTimeout(timer);
   }, [currentIndex, isOpen, reviews]);
 
   // Initialize like states
@@ -133,32 +180,26 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     }
   }, [reviews]);
 
-  // Reset states when modal opens
+  // Combined effect: Reset states and handle navbar when modal opens/closes (performance optimization)
   useEffect(() => {
     if (isOpen) {
+      // Initialize states
       setCurrentIndex(initialIndex);
       setCurrentImageIndex(0);
-      setShowComments(true); // Changed to true to show by default
+      setShowComments(true);
       setReplies([]);
-      setIsTextExpanded(false); // Reset text expansion
-    }
-  }, [isOpen, initialIndex]);
-
-  // Hide/show navbar when viewer opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      // Add class to body to hide navbar
+      setIsTextExpanded(false);
+      
+      // Hide navbar
       document.body.classList.add('swipeable-review-viewer-open');
     } else {
-      // Remove class when viewer closes
       document.body.classList.remove('swipeable-review-viewer-open');
     }
 
-    // Cleanup on unmount
     return () => {
       document.body.classList.remove('swipeable-review-viewer-open');
     };
-  }, [isOpen]);
+  }, [isOpen, initialIndex]);
 
   // Check follow state when review changes
   useEffect(() => {
@@ -309,7 +350,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     },
   }));
 
-  // Handle like/unlike - Updated to use new API v1 endpoint
+  // Handle like/unlike - Optimized with cached user UUID
   const handleLike = useCallback(
     async (review: GraphQLReview) => {
       if (!user || !firebaseUser) {
@@ -319,7 +360,6 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
       // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
       const reviewId = review.id || String(review.databaseId);
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
 
       if (!isReviewUUID) {
@@ -327,41 +367,8 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
         return;
       }
 
-      // Get current user's UUID - check if user.id is already a UUID first
-      let userId: string | null = null;
-      const userIdStr = user.id ? String(user.id) : '';
-      
-      if (UUID_REGEX.test(userIdStr)) {
-        // user.id is already a UUID, use it directly
-        userId = userIdStr;
-      } else {
-        // user.id is not a UUID, fetch it from API
-        try {
-          const idToken = await firebaseUser.getIdToken();
-          const userUuidResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            }
-          });
-
-          if (!userUuidResponse.ok) {
-            const errorText = await userUuidResponse.text().catch(() => 'Unknown error');
-            throw new Error(`Failed to get user information: ${userUuidResponse.status} ${errorText}`);
-          }
-
-          const userData = await userUuidResponse.json();
-          if (!userData.success || !userData.data?.id) {
-            throw new Error('User not found in response');
-          }
-
-          userId = userData.data.id;
-        } catch (error) {
-          console.error("Error fetching user UUID:", error);
-          toast.error("Failed to get user information. Please try again.");
-          return;
-        }
-      }
-
+      // Get user UUID (cached for performance)
+      const userId = await getUserUuid();
       if (!userId) {
         toast.error("Unable to get user ID. Please try again.");
         return;
@@ -372,31 +379,33 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       const currentLikes = likesCount[reviewDatabaseId] ?? 0;
 
       // Optimistic update
-      setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: !currentLiked }));
-      setLikesCount((prev) => ({
-        ...prev,
-        [reviewDatabaseId]: currentLiked ? currentLikes - 1 : currentLikes + 1,
-      }));
+      const newLiked = !currentLiked;
+      const newCount = currentLiked ? currentLikes - 1 : currentLikes + 1;
+      
+      setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: newLiked }));
+      setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: newCount }));
 
       try {
         // Call new API v1 endpoint
         const result = await reviewV2Service.toggleLike(reviewId, userId);
-
-        // Update state based on API response
+        
+        // Confirm the liked status from API
         setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: result.liked }));
+        
+        // If the result doesn't match our optimistic update, revert the count
+        if (result.liked !== newLiked) {
+          setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: currentLikes }));
+        }
       } catch (error) {
-        // Revert optimistic update on error
+        // Revert both on error
         setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: currentLiked }));
-        setLikesCount((prev) => ({
-          ...prev,
-          [reviewDatabaseId]: currentLikes,
-        }));
+        setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: currentLikes }));
         
         console.error("Like error:", error);
         toast.error("Failed to update like. Please try again.");
       }
     },
-    [user, firebaseUser, userLiked, likesCount]
+    [user, firebaseUser, userLiked, likesCount, getUserUuid, UUID_REGEX]
   );
 
   // Navigate between images in current review
@@ -732,26 +741,102 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     return undefined;
   }, [isOpen]);
 
-  if (!isOpen || reviews.length === 0) return null;
+  // Memoize current review data to avoid recalculations on every render (performance optimization)
+  const currentReviewData = useMemo(() => {
+    if (!isOpen || reviews.length === 0 || !reviews[currentIndex]) {
+      return null;
+    }
 
-  const currentReview = reviews[currentIndex];
-  if (!currentReview) return null;
+    const review = reviews[currentIndex];
+    const reviewImages = review.reviewImages || [];
+    const currentImage = reviewImages[currentImageIndex]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
+    const isLiked = userLiked[review.databaseId] ?? false;
+    const likes = Math.max(0, Math.floor(Number(likesCount[review.databaseId] ?? 0)));
+    const commentCount = Math.max(0, Math.floor(Number(commentCounts[review.databaseId] ?? 0)));
+    
+    // Text truncation
+    const MAX_CHARS = 300;
+    const reviewContent = stripTags(review.content || "");
+    const shouldTruncate = reviewContent.length > MAX_CHARS;
+    const displayText = isTextExpanded || !shouldTruncate 
+      ? reviewContent 
+      : reviewContent.slice(0, MAX_CHARS) + "...";
 
-  const reviewImages = currentReview.reviewImages || [];
-  const hasMultipleImages = reviewImages.length > 1;
-  const currentImage = reviewImages[currentImageIndex]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
-  const isLiked = userLiked[currentReview.databaseId] ?? false;
-  // Ensure likes is always an integer (not "01" but 1)
-  const likes = Math.max(0, Math.floor(Number(likesCount[currentReview.databaseId] ?? 0)));
-  const commentCount = Math.max(0, Math.floor(Number(commentCounts[currentReview.databaseId] ?? 0)));
-  
-  // Text truncation logic
-  const MAX_CHARS = 300;
-  const reviewContent = stripTags(currentReview.content || "");
-  const shouldTruncate = reviewContent.length > MAX_CHARS;
-  const displayText = isTextExpanded || !shouldTruncate 
-    ? reviewContent 
-    : reviewContent.slice(0, MAX_CHARS) + "...";
+    return {
+      review,
+      reviewImages,
+      hasMultipleImages: reviewImages.length > 1,
+      currentImage,
+      isLiked,
+      likes,
+      commentCount,
+      reviewContent,
+      shouldTruncate,
+      displayText
+    };
+  }, [
+    isOpen, 
+    reviews, 
+    currentIndex, 
+    currentImageIndex, 
+    userLiked, 
+    likesCount, 
+    commentCounts, 
+    isTextExpanded
+  ]);
+
+  // Memoize follow button visibility (performance optimization)
+  const shouldShowFollowButton = useMemo(() => {
+    if (!currentReviewData || !user?.id || !currentReviewData.review.author?.node) return false;
+    
+    const authorId = currentReviewData.review.author.node.id;
+    const authorDatabaseId = currentReviewData.review.author.node.databaseId;
+    const userId = String(user.id);
+    const isOwnPost = userId === String(authorId) || userId === String(authorDatabaseId);
+    
+    return !isOwnPost;
+  }, [currentReviewData, user?.id]);
+
+  // Memoize restaurant location data (performance optimization)
+  const restaurantLocationData = useMemo(() => {
+    if (!currentReviewData) return null;
+    
+    const review = currentReviewData.review;
+    const restaurantTitle = 
+      review.commentedOn?.node?.title ||
+      (review as any).restaurant?.title ||
+      '';
+    const restaurantSlug = 
+      review.commentedOn?.node?.slug ||
+      (review as any).restaurant?.slug ||
+      '';
+    
+    // Debug logging for missing restaurant data (can be removed after verification)
+    if (!restaurantTitle && !restaurantSlug) {
+      console.log('Restaurant data missing for review:', {
+        reviewId: review.id,
+        commentedOn: review.commentedOn,
+        restaurant: (review as any).restaurant
+      });
+    }
+    
+    return restaurantTitle && restaurantSlug ? { title: restaurantTitle, slug: restaurantSlug } : null;
+  }, [currentReviewData]);
+
+  // Early return if no data
+  if (!currentReviewData) return null;
+
+  const { 
+    review: currentReview, 
+    reviewImages,
+    hasMultipleImages,
+    currentImage,
+    isLiked,
+    likes,
+    commentCount,
+    shouldTruncate,
+    displayText
+  } = currentReviewData;
 
   return (
     <div className="swipeable-review-viewer-desktop" onClick={onClose}>
@@ -875,27 +960,14 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                     {currentReview.author?.node?.name || currentReview.author?.name || "Unknown User"}
                   </h3>
                   {/* Follow/Unfollow Button - Hide if viewing your own post */}
-                  {(() => {
-                    if (!user?.id || !currentReview.author?.node) return null;
-                    
-                    // Check if current user is the author (compare both UUID and databaseId)
-                    const authorId = currentReview.author.node.id; // UUID
-                    const authorDatabaseId = currentReview.author.node.databaseId; // Numeric ID
-                    const userId = String(user.id);
-                    const isOwnPost = userId === String(authorId) || userId === String(authorDatabaseId);
-                    
-                    // Only show follow button if not viewing own post
-                    if (isOwnPost) return null;
-                    
-                    return (
-                      <FollowButton
-                        isFollowing={isFollowing[authorDatabaseId] ?? false}
-                        isLoading={followLoading[authorDatabaseId] ?? false}
-                        onToggle={handleFollowToggle}
-                        size="sm"
-                      />
-                    );
-                  })()}
+                  {shouldShowFollowButton && currentReview.author?.node?.databaseId && (
+                    <FollowButton
+                      isFollowing={isFollowing[currentReview.author.node.databaseId] ?? false}
+                      isLoading={followLoading[currentReview.author.node.databaseId] ?? false}
+                      onToggle={handleFollowToggle}
+                      size="sm"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -935,30 +1007,15 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                   {currentReview.reviewStars}/5
                 </div>
               )}
-              {(() => {
-                // Try multiple paths for restaurant data to handle different data structures
-                const restaurantTitle = 
-                  currentReview.commentedOn?.node?.title ||
-                  (currentReview as any).restaurant?.title ||
-                  '';
-                const restaurantSlug = 
-                  currentReview.commentedOn?.node?.slug ||
-                  (currentReview as any).restaurant?.slug ||
-                  '';
-                
-                if (restaurantTitle && restaurantSlug) {
-                  return (
-                    <Link 
-                      href={`/restaurants/${restaurantSlug}`}
-                      className="swipeable-review-viewer-desktop__restaurant"
-                    >
-                      <FiMapPin className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                      <span className="hover:underline">{restaurantTitle}</span>
-                    </Link>
-                  );
-                }
-                return null;
-              })()}
+              {restaurantLocationData && (
+                <Link 
+                  href={`/restaurants/${restaurantLocationData.slug}`}
+                  className="swipeable-review-viewer-desktop__restaurant"
+                >
+                  <FiMapPin className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                  <span className="hover:underline">{restaurantLocationData.title}</span>
+                </Link>
+              )}
             </div>
 
             {/* Action buttons */}
