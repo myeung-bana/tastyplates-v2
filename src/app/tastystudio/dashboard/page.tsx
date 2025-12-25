@@ -6,6 +6,7 @@ import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import Link from 'next/link';
 import { FiEdit3, FiList, FiTrendingUp, FiClock } from 'react-icons/fi';
 import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
+import ProfileSummary from '@/components/tastystudio/ProfileSummary';
 
 const TastyStudioDashboard = () => {
   const { user, loading } = useFirebaseSession();
@@ -36,7 +37,7 @@ const TastyStudioDashboard = () => {
 
   return (
     <div className="min-h-screen bg-white font-neusans">
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-8 py-8 md:py-12">
         {/* Header */}
         <div className="mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl text-[#31343F] mb-2 font-neusans">
@@ -46,6 +47,9 @@ const TastyStudioDashboard = () => {
             Overview of your reviews and activity
           </p>
         </div>
+
+        {/* Profile Summary */}
+        <ProfileSummary />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-12">

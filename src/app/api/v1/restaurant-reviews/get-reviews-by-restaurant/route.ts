@@ -93,7 +93,8 @@ export async function GET(request: NextRequest) {
               id: user.id,
               username: user.username || '',
               display_name: user.display_name || user.username || '',
-              profile_image: user.profile_image
+              profile_image: user.profile_image,
+              palates: user.palates || null
             }
           };
         }

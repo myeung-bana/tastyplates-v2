@@ -351,7 +351,7 @@ const ListingPage = () => {
                       onDelete={() => removeListing(revDraft)}
                     />
                   ))}
-                  {loadingDrafts && [...Array(8)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
+                  {loadingDrafts && [...Array(4)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
                 </div>
               </div>
             </div>

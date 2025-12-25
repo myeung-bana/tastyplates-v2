@@ -349,8 +349,15 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
     || parseInt(review.restaurant?.uuid?.replace(/-/g, '').substring(0, 8) || '0', 16) % 2147483647 
     || 0;
 
-  // Parse palates
-  const palatesArray = Array.isArray(review.palates) ? review.palates : [];
+  // Parse palates - use author's palates if available (for My Preference rating)
+  // Otherwise fall back to review's palates (for display)
+  // For "My Preference" rating, we need author palates, not review palates
+  const authorPalatesArray = Array.isArray(review.author?.palates) 
+    ? review.author.palates 
+    : [];
+  const reviewPalatesArray = Array.isArray(review.palates) ? review.palates : [];
+  // Prefer author palates for matching, but fall back to review palates for display
+  const palatesArray = authorPalatesArray.length > 0 ? authorPalatesArray : reviewPalatesArray;
   const palatesString = palatesArray.join('|');
 
   // Format date

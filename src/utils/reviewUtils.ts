@@ -1,5 +1,6 @@
 import { Review, reviewlist } from "@/data/dummyReviews";
 import { GraphQLReview } from "@/types/graphql";
+import { hasMatchingPalates, normalizePalates } from "@/utils/palateUtils";
 
 export const getRestaurantReviews = (restaurantId: string): Review[] => {
   return reviewlist[0]?.reviews?.filter(
@@ -72,26 +73,11 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
   }
 
   // Filter reviews where user palates match the search term
+  // Use the new utility function for consistent palate normalization
+  const searchTermLower = searchTerm.toLowerCase();
   const matchingReviews = reviews.filter(review => {
-    const userPalates = review.palates || "";
-    
-    // Handle both string (pipe-separated) and array formats
-    let palateArray: string[] = [];
-    if (Array.isArray(userPalates)) {
-      // If it's an array, extract names (handle both string arrays and object arrays)
-      palateArray = userPalates.map(p => {
-        if (typeof p === 'string') return p.trim().toLowerCase();
-        if (typeof p === 'object' && p !== null && 'name' in p) {
-          return String(p.name).trim().toLowerCase();
-        }
-        return String(p).trim().toLowerCase();
-      }).filter(Boolean);
-    } else if (typeof userPalates === 'string') {
-      // If it's a string, split by pipe separator
-      palateArray = userPalates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
-    }
-    
-    const searchTermLower = searchTerm.toLowerCase();
+    const userPalates = review.palates || null;
+    const palateArray = normalizePalates(userPalates);
     
     // Check if any of the user's palates match the search term
     return palateArray.some(palate => 
@@ -137,36 +123,10 @@ export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalate
   }
 
   // Filter reviews where reviewer palates match the current user's palates
-  const matchingReviews = reviews.filter(review => {
-    const reviewerPalates = review.palates || "";
-    
-    // Helper function to convert palates to array of strings
-    const palatesToArray = (palates: any): string[] => {
-      if (Array.isArray(palates)) {
-        return palates.map(p => {
-          if (typeof p === 'string') return p.trim().toLowerCase();
-          if (typeof p === 'object' && p !== null && 'name' in p) {
-            return String(p.name).trim().toLowerCase();
-          }
-          return String(p).trim().toLowerCase();
-        }).filter(Boolean);
-      } else if (typeof palates === 'string') {
-        return palates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
-      }
-      return [];
-    };
-    
-    const reviewerPalateArray = palatesToArray(reviewerPalates);
-    const userPalateArray = palatesToArray(userPalates);
-    
-    // Check if any of the reviewer's palates match any of the user's palates
-    return reviewerPalateArray.some(reviewerPalate => 
-      userPalateArray.some(userPalate => 
-        reviewerPalate.includes(userPalate) || 
-        userPalate.includes(reviewerPalate)
-      )
-    );
-  });
+  // Use the new utility function for consistent palate matching
+  const matchingReviews = reviews.filter(review => 
+    hasMatchingPalates(userPalates, review.palates || null)
+  );
 
   if (matchingReviews.length === 0) {
     return { rating: 0, count: 0 };
@@ -252,22 +212,8 @@ export function getRatingDisplayText(rating: number, count: number): string {
 export function doesPalateMatchSearch(userPalates: string | string[] | any, searchTerm: string): boolean {
   if (!userPalates || !searchTerm) return false;
   
-  // Handle both string (pipe-separated) and array formats
-  let palateArray: string[] = [];
-  if (Array.isArray(userPalates)) {
-    // If it's an array, extract names (handle both string arrays and object arrays)
-    palateArray = userPalates.map(p => {
-      if (typeof p === 'string') return p.trim().toLowerCase();
-      if (typeof p === 'object' && p !== null && 'name' in p) {
-        return String(p.name).trim().toLowerCase();
-      }
-      return String(p).trim().toLowerCase();
-    }).filter(Boolean);
-  } else if (typeof userPalates === 'string') {
-    // If it's a string, split by pipe separator
-    palateArray = userPalates.split("|").map(p => p.trim().toLowerCase()).filter(Boolean);
-  }
-  
+  // Use the new utility function for consistent palate normalization
+  const palateArray = normalizePalates(userPalates);
   const searchTermLower = searchTerm.toLowerCase();
   
   return palateArray.some(palate => 

@@ -8,7 +8,6 @@ import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import Link from "next/link";
 import Image from "next/image";
-import CustomModal from "@/components/ui/Modal/Modal";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
@@ -189,7 +188,6 @@ const ReviewSubmissionPage = () => {
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const tags = [
     {
       id: 1,
@@ -348,7 +346,7 @@ const ReviewSubmissionPage = () => {
                 longitude: placeData.geometry?.location?.lng(),
                 phone: placeData.phone,
                 website: placeData.website,
-                status: 'draft', // User-created restaurants start as draft
+                status: 'publish', // Auto-publish new restaurants created by users
               }),
             });
 
@@ -400,7 +398,16 @@ const ReviewSubmissionPage = () => {
 
       // Create review using V2 API
       try {
-        const reviewData = {
+        const reviewData: {
+          restaurant_uuid: string;
+          author_id: string;
+          title?: string;
+          content: string;
+          rating: number;
+          images?: typeof reviewImages;
+          recognitions?: string[];
+          status: 'draft' | 'approved';
+        } = {
           restaurant_uuid: uuid,
           author_id: userIdString,
           title: review_main_title || undefined,
@@ -408,14 +415,14 @@ const ReviewSubmissionPage = () => {
           rating: review_stars,
           images: reviewImages.length > 0 ? reviewImages : undefined,
           recognitions: recognitions.length > 0 ? recognitions : undefined,
-          status: (mode === 'publish' ? 'pending' : 'draft') as 'draft' | 'pending', // 'pending' for publish, 'draft' for save
+          status: mode === 'publish' ? 'approved' : 'draft', // 'approved' for publish, 'draft' for save
         };
 
         const createdReview = await reviewV2Service.createReview(reviewData);
 
         if (mode === 'publish') {
-          setIsSubmitted(true);
-          toast.success('Review submitted successfully!');
+          // Redirect to success page with restaurant name
+          router.push(`/tastystudio/add-review/success?restaurant=${encodeURIComponent(restaurantName)}`);
         } else if (mode === 'draft') {
           toast.success(savedAsDraft);
           router.push(LISTING);
@@ -628,7 +635,7 @@ const ReviewSubmissionPage = () => {
                   selectedLocation={selectedLocation}
                   showLocationHelper={true}
                 />
-                
+          
                 {/* Show inline match results instead of modal */}
                 {selectedPlace && (
                   <RestaurantMatchInline
@@ -644,6 +651,18 @@ const ReviewSubmissionPage = () => {
                   />
                 )}
               </div>
+                {/* Helper text */}
+                <p className="mt-4 text-sm text-gray-600 font-neusans">
+                  Still cannot find your listing? Reach out to the{' '}
+                  <a
+                    href="mailto:support@tastyplates.co"
+                    className="text-[#ff7c0a] hover:underline"
+                  >
+                    Tastyplates Team
+                  </a>
+                  {' '}and we can help put up the listing.
+                </p>
+                
             </div>
           ) : null}
           
@@ -870,12 +889,6 @@ const ReviewSubmissionPage = () => {
           </div>
         </div>
       </div>
-      <CustomModal
-          header="Review Posted"
-          content={`Your review for ${restaurantName} is successfully posted.`}
-          isOpen={isSubmitted}
-          setIsOpen={() => setIsSubmitted(!isSubmitted)}
-        />
     </>
   );
 };

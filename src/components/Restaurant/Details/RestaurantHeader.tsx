@@ -52,7 +52,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
               )}
               <div className="flex-1 min-w-0">
                 {/* Cuisine Categories - Above Title as pill-shaped tags */}
-                {restaurant.listingCategories?.nodes && restaurant.listingCategories.nodes.length > 0 && (
+                {restaurant.listingCategories?.nodes && restaurant.listingCategories.nodes.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-2">
                     {restaurant.listingCategories.nodes.map((category: { name: string; slug: string }, index: number) => (
                       <span 
@@ -62,6 +62,12 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                         {category.name}
                       </span>
                     ))}
+                  </div>
+                ) : (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans inline-block">
+                      Cuisine Pending
+                    </span>
                   </div>
                 )}
 
@@ -113,8 +119,12 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                           );
                         }
                         
-                        // If no establishment categories exist, show nothing
-                        return null;
+                        // If no establishment categories exist, show fallback
+                        return (
+                          <span className="cuisine-tag hover:!bg-transparent font-neusans font-normal text-gray-700">
+                            General Restaurant
+                          </span>
+                        );
                       })()
                     )}
                   </div>

@@ -24,6 +24,7 @@ export interface ReviewAuthor {
   username: string;
   display_name?: string;
   profile_image?: any;
+  palates?: string[] | null;
 }
 
 export interface ReviewRestaurant {
@@ -72,7 +73,7 @@ export interface CreateReviewInput {
   hashtags?: string[];
   mentions?: ReviewMention[];
   recognitions?: string[];
-  status?: 'draft' | 'pending';
+  status?: 'draft' | 'pending' | 'approved';
   parent_review_id?: string;
 }
 

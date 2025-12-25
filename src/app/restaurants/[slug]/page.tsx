@@ -302,7 +302,7 @@ export default function RestaurantDetail() {
             </div>
           ) : (
             <div className="h-64 rounded-2xl mx-2 mb-6 bg-gray-100 flex items-center justify-center">
-              <span className="text-gray-500 text-lg font-medium">No Photos Available</span>
+              <span className="text-gray-500 text-lg font-medium text-center">No Photos Available</span>
             </div>
           )}
         </div>
@@ -335,7 +335,7 @@ export default function RestaurantDetail() {
                 </div>
               ) : (
                 <div className="hidden md:block h-64 md:h-80 rounded-2xl bg-gray-100 flex items-center justify-center">
-                  <span className="text-gray-500 text-xl font-neusans">No Photos Available</span>
+                  <span className="text-gray-500 text-xl font-neusans text-center">No Photos Available</span>
                 </div>
               )}
 
@@ -373,6 +373,8 @@ export default function RestaurantDetail() {
               <RestaurantReviews 
                 restaurantId={restaurant.databaseId || 0}
                 restaurantUuid={restaurant.id}
+                restaurantTitle={restaurant.title || ""}
+                restaurantSlug={restaurant.slug || ""}
                 reviews={reviews}
                 reviewCount={reviewCount}
                 onReviewsUpdate={setReviews}

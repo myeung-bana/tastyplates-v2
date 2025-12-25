@@ -116,8 +116,8 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
     commentedOn: {
       node: {
         databaseId: parseInt(review.restaurantId),
-        title: "",
-        slug: "",
+        title: review.restaurantTitle || "",
+        slug: review.restaurantSlug || "",
         fieldMultiCheck90: "",
         featuredImage: {
           node: {
@@ -173,18 +173,23 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     try {
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
+      
+      // Use review.id (UUID) if available, otherwise fall back to databaseId
+      // ReviewService handles both UUID and numeric IDs
+      const reviewId = review.id || String(review.databaseId);
+      
       let response: { userLiked: boolean; likesCount: number };
       if (userLiked) {
         // Already liked, so unlike
         response = await reviewService.unlikeComment(
-          review.databaseId,
+          reviewId,
           idToken
         );
         toast.success(commentUnlikedSuccess);
       } else {
         // Not liked yet, so like
         response = await reviewService.likeComment(
-          review.databaseId,
+          reviewId,
           idToken
         );
         toast.success("Liked comment successfully!");
@@ -314,6 +319,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
                 {displayName}
               </h3>
             )}
+            {/* Palate tags below username */}
+            {review.palateNames && review.palateNames.length > 0 && (
+              <div className="mt-1">
+                <PalateTags palateNames={review.palateNames} maxTags={2} />
+              </div>
+            )}
           </div>
         </div>
         <div className="review-block__rating">
@@ -352,8 +363,6 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             capitalizeWords(stripTags(review?.comment || ""))
           )}
         </p>
-        {/* Reviewer's palate tags */}
-        <PalateTags palateNames={review.palateNames || []} maxTags={2} />
       </div>
       {/* Show only first 2 images */}
       <div className="review-block__image-container">

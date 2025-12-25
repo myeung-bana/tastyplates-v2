@@ -23,19 +23,16 @@ const TastyStudioSidebar = () => {
     {
       icon: FiHome,
       label: 'Dashboard',
-      description: 'Overview & stats',
       href: TASTYSTUDIO_DASHBOARD,
     },
     {
       icon: FiEdit3,
       label: 'Upload a Review',
-      description: 'Create new review',
       href: TASTYSTUDIO_ADD_REVIEW,
     },
     {
       icon: FiList,
       label: 'Edit Reviews',
-      description: 'Manage your reviews',
       href: TASTYSTUDIO_REVIEW_LISTING,
     },
   ];
@@ -77,13 +74,7 @@ const TastyStudioSidebar = () => {
                 `} 
               />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">{item.label}</div>
-                <div className={`
-                  text-xs mt-0.5
-                  ${active ? 'text-white/90' : 'text-gray-500'}
-                `}>
-                  {item.description}
-                </div>
+                <div className="font-normal text-sm font-neusans">{item.label}</div>
               </div>
             </Link>
           );

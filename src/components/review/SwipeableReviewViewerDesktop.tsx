@@ -975,6 +975,19 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
           {/* Review content */}
           <div className="swipeable-review-viewer-desktop__content-area">
+            {/* Restaurant Name - Show at top of content */}
+            {restaurantLocationData && (
+              <div className="mb-4">
+                <Link 
+                  href={`/restaurants/${restaurantLocationData.slug}`}
+                  className="text-[#ff7c0a] hover:underline font-medium flex items-center gap-2"
+                >
+                  <FiMapPin className="w-4 h-4" />
+                  <span>{restaurantLocationData.title}</span>
+                </Link>
+              </div>
+            )}
+            
             {/* Title */}
             {currentReview.reviewMainTitle && (
               <h2 className="swipeable-review-viewer-desktop__title">

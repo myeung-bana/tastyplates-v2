@@ -16,7 +16,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
     return (
       <div className="relative h-[400px] md:h-[500px] lg:h-[600px] rounded-t-2xl overflow-hidden bg-gray-200">
         <div className="flex items-center justify-center h-full text-gray-500">
-          <span>No images available</span>
+          <span className="text-center">No images available</span>
         </div>
       </div>
     );
