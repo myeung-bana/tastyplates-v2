@@ -7,17 +7,13 @@ import { restaurantUserService } from '@/app/api/v1/services/restaurantUserServi
 import { transformReviewV2ToReviewedDataProps } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { GraphQLReview } from '@/types/graphql';
 
 interface ReviewsTabProps {
   targetUserId: string; // Only UUID string (from userData?.id)
   status: string;
   onReviewCountChange?: (count: number) => void;
 }
-
-// Wrapper component to adapt ReviewCard2 for TabContentGrid
-const ReviewCardWrapper = ({ restaurant, ...props }: { restaurant: ReviewedDataProps; [key: string]: any }) => {
-  return <ReviewCard2 data={restaurant} {...props} />;
-};
 
 const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewCountChange }) => {
   const [reviews, setReviews] = useState<ReviewedDataProps[]>([]);
@@ -198,12 +194,25 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
     };
   }, [targetUserId, fetchReviews]);
 
+  // Convert reviews to GraphQLReview format for SwipeableViewers
+  const reviewsAsGraphQL = reviews.map(r => r as unknown as GraphQLReview);
+
   return (
     <>
       <TabContentGrid
         items={reviews}
         loading={reviewsLoading}
-        ItemComponent={ReviewCardWrapper}
+        ItemComponent={({ restaurant, ...props }: { restaurant: ReviewedDataProps; [key: string]: any }) => {
+          const index = reviews.findIndex(r => r.id === restaurant.id);
+          return (
+            <ReviewCard2 
+              data={restaurant}
+              reviews={reviewsAsGraphQL}
+              reviewIndex={index >= 0 ? index : 0}
+              {...props}
+            />
+          );
+        }}
         SkeletonComponent={ReviewCardSkeleton2}
         emptyHeading="No Reviews Found"
         emptyMessage="No reviews have been made yet."

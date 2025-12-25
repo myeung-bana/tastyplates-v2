@@ -230,9 +230,6 @@ const ProfileSettingsPage = () => {
               {errors.birthdate && (
                 <p className="mt-1 text-sm text-red-600 font-neusans">{errors.birthdate}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500 font-neusans">
-                You must be at least {ageLimit} years old
-              </p>
             </div>
 
             {/* Gender Field */}

@@ -1,7 +1,8 @@
 // ReviewCard.tsx
 import Image from "next/image";
-import ReviewPopUpModal from "./ReviewPopUpModal";
-import { capitalizeWords, PAGE, stripTags } from "../lib/utils";
+import SwipeableReviewViewer from "./SwipeableReviewViewer";
+import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
+import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
 import {
   ReviewCardProps,
 } from "@/interfaces/Reviews/review";
@@ -15,6 +16,7 @@ import { PROFILE } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
 import "@/styles/pages/_reviews.scss";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { useIsMobile } from "@/utils/deviceUtils";
 import {
   DEFAULT_REVIEW_IMAGE,
   DEFAULT_USER_ICON,
@@ -24,16 +26,30 @@ import {
 const ReviewCard = ({ data, width }: ReviewCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
+  const isMobile = useIsMobile();
 
   const { user } = useFirebaseSession();
 
+  // Create single-item reviews array
+  const reviewsArray = [data as unknown as GraphQLReview];
+
   return (
     <div className="review-card !border-none font-neusans" style={{ width: `${width || 300}px` }}>
-      <ReviewPopUpModal
-        data={data as unknown as GraphQLReview}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {isMobile ? (
+        <SwipeableReviewViewer
+          reviews={reviewsArray}
+          initialIndex={0}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      ) : (
+        <SwipeableReviewViewerDesktop
+          reviews={reviewsArray}
+          initialIndex={0}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
       {/* Auth modals */}
       {showAuthModal === "signup" && (
         <SignupModal
@@ -81,7 +97,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                   type={FallbackImageType.Icon}
                 />
               </Link>
-            ) : session ? (
+            ) : user ? (
               <Link
                 href={generateProfileUrl(data.author?.node?.databaseId || data.id, data.author?.node?.username)}
                 prefetch={false}
@@ -128,7 +144,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
                     {data.author?.name || data.author?.node?.name || "Unknown User"}
                   </h3>
                 </Link>
-              ) : session ? (
+              ) : user ? (
                 <Link
                   href={generateProfileUrl(data.author?.node?.databaseId || data.id, data.author?.node?.username)}
                   prefetch={false}

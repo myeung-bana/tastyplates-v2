@@ -14,7 +14,8 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
-import ReviewPopUpModal from "./ReviewPopUpModal";
+import SwipeableReviewViewer from "./SwipeableReviewViewer";
+import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
@@ -406,24 +407,33 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       </div>
 
       {/* Modal for full review */}
-      {isModalOpen && (
-        <ReviewPopUpModal
-          key={`modal-${selectedPhotoIndex}`}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedPhotoIndex(0);
-          }}
-          data={mapToReviewedDataProps(review) as unknown as GraphQLReview}
-          initialPhotoIndex={selectedPhotoIndex}
-          userLiked={userLiked}
-          likesCount={likesCount}
-          onLikeChange={(liked, count) => {
-            setUserLiked(liked);
-            setLikesCount(count);
-          }}
-        />
-      )}
+      {isModalOpen && (() => {
+        const reviewData = mapToReviewedDataProps(review) as unknown as GraphQLReview;
+        const reviewsArray = [reviewData];
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        
+        return isMobile ? (
+          <SwipeableReviewViewer
+            reviews={reviewsArray}
+            initialIndex={0}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedPhotoIndex(0);
+            }}
+          />
+        ) : (
+          <SwipeableReviewViewerDesktop
+            reviews={reviewsArray}
+            initialIndex={0}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedPhotoIndex(0);
+            }}
+          />
+        );
+      })()}
 
       <SignupModal
         isOpen={isShowSignup}

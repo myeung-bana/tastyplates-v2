@@ -11,7 +11,6 @@ import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
-import { commentLikedSuccess, commentUnlikedSuccess } from "@/constants/messages";
 import toast from "react-hot-toast";
 import CommentsBottomSheet from "@/components/review/CommentsBottomSheet";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
@@ -265,12 +264,13 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }));
 
     try {
+      // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
+      const reviewId = review.id || String(review.databaseId);
+      
       if (isLiked) {
-        await reviewService.unlikeComment(review.databaseId, idToken);
-        toast.success(commentUnlikedSuccess);
+        await reviewService.unlikeComment(reviewId, idToken);
       } else {
-        await reviewService.likeComment(review.databaseId, idToken);
-        toast.success(commentLikedSuccess);
+        await reviewService.likeComment(reviewId, idToken);
       }
     } catch (error: any) {
       // Revert on error

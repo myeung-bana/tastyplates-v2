@@ -8,13 +8,13 @@ import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
-import { UserService } from "@/services/user/userService";
-import { FollowService } from "@/services/follow/followService";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFollowContext } from "../FollowContext";
 import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
+import { FollowButton } from "@/components/ui/follow-button";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -25,10 +25,11 @@ const getProfileImageUrl = (profileImage: any): string | null => {
   }
   return null;
 };
-import { commentLikedSuccess, commentUnlikedSuccess, authorIdMissing, errorOccurred } from "@/constants/messages";
+import { authorIdMissing, errorOccurred } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import toast from "react-hot-toast";
 import ReplyItem from "./ReplyItem";
+import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import SigninModal from "../auth/SigninModal";
 import SignupModal from "../auth/SignupModal";
 import "@/styles/components/_swipeable-review-viewer-desktop.scss";
@@ -41,8 +42,6 @@ interface SwipeableReviewViewerDesktopProps {
 }
 
 const reviewService = new ReviewService();
-const userService = new UserService();
-const followService = new FollowService();
 
 const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> = ({
   reviews,
@@ -50,23 +49,20 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   isOpen,
   onClose,
 }) => {
-  const { user } = useFirebaseSession();
+  const { user, firebaseUser } = useFirebaseSession();
   const { setFollowState } = useFollowContext();
   
   // Helper to get Firebase ID token for API calls
   const getFirebaseToken = useCallback(async () => {
-    if (!user?.firebase_uuid) return null;
+    // Use firebaseUser directly for more reliable authentication
+    if (!firebaseUser) return null;
     try {
-      const { auth } = await import('@/lib/firebase');
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        return await currentUser.getIdToken();
-      }
+      return await firebaseUser.getIdToken();
     } catch (error) {
       console.error('Error getting Firebase token:', error);
     }
     return null;
-  }, [user]);
+  }, [firebaseUser]);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
@@ -126,7 +122,11 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       const initialCounts: Record<number, number> = {};
       reviews.forEach((review) => {
         initialLiked[review.databaseId] = review.userLiked ?? false;
-        initialCounts[review.databaseId] = review.commentLikes ?? 0;
+        // Ensure commentLikes is always an integer
+        const commentLikes = review.commentLikes ?? 0;
+        initialCounts[review.databaseId] = typeof commentLikes === 'string' 
+          ? parseInt(commentLikes, 10) || 0 
+          : Number(commentLikes) || 0;
       });
       setUserLiked(initialLiked);
       setLikesCount(initialCounts);
@@ -167,30 +167,54 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     const review = reviews[currentIndex];
     if (!review?.author?.node?.databaseId) return;
 
-    const authorUserId = review.author.node.databaseId;
-    const currentUserId = user?.id ? parseInt(String(user.id)) : null;
+    // Try to get UUID from review.userId first, then fall back to databaseId
+    const authorUserId = review.userId || review.author?.node?.databaseId;
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = typeof authorUserId === 'string' && UUID_REGEX.test(authorUserId);
+    
+    // Skip follow check if we don't have a UUID (legacy numeric IDs)
+    if (!isUUID) {
+      setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+      return;
+    }
+    
+    const currentUserId = user?.id;
+    const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
 
     // Don't check follow state for own profile
-    if (currentUserId && authorUserId === currentUserId) {
-      setIsFollowing((prev) => ({ ...prev, [authorUserId]: false }));
+    if (currentUserIdString && authorUserId === currentUserIdString) {
+      setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
       return;
     }
 
-    // Fetch follow state for current review
-    getFirebaseToken().then((token) => {
+    // Fetch follow state for current review using new API v1 endpoint
+    getFirebaseToken().then(async (token) => {
       if (!token) return;
-      userService
-        .isFollowingUser(authorUserId, token)
-        .then((result) => {
-          setIsFollowing((prev) => ({ ...prev, [authorUserId]: !!result.is_following }));
-          setFollowState(authorUserId, !!result.is_following);
-        })
-        .catch((err) => {
-          console.error("Error fetching follow state:", err);
-          setIsFollowing((prev) => ({ ...prev, [authorUserId]: false }));
+      
+      try {
+        // Use new Hasura API endpoint for UUIDs
+        const response = await fetch('/api/v1/restaurant-users/check-follow-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ user_id: authorUserId })
         });
+        
+        const result = await response.json();
+        if (result.success) {
+          setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: !!result.is_following }));
+          setFollowState(review.author.node.databaseId, !!result.is_following);
+        } else {
+          setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+        }
+      } catch (err) {
+        console.error("Error fetching follow state:", err);
+        setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+      }
     });
-  }, [currentIndex, isOpen, user, reviews, setFollowState]);
+  }, [currentIndex, isOpen, user, reviews, setFollowState, getFirebaseToken]);
 
   // Fetch comment counts only for visible reviews
   useEffect(() => {
@@ -211,10 +235,17 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           .catch((error: any) => {
             // Check if it's a JSON parsing error
             const errorMessage = error?.message || '';
-            const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+            const isJsonError = errorMessage.includes('JSON') || 
+                               errorMessage.includes('<!DOCTYPE') || 
+                               errorMessage.includes('Unexpected token');
             
             if (isJsonError) {
               console.error("Error fetching comment count: API returned non-JSON response (likely HTML error page)", error);
+              // Set count to 0 on error instead of leaving it undefined
+              setCommentCounts((prev) => ({
+                ...prev,
+                [review.databaseId]: 0,
+              }));
             } else {
               console.error("Error fetching comment count:", error);
             }
@@ -224,31 +255,41 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     });
   }, [isOpen, visibleIndices, reviews]);
 
-  // Fetch replies when comments are toggled
+  // Fetch replies automatically when component opens or review changes
   useEffect(() => {
     const review = reviews[currentIndex];
-    if (showComments && review?.id) {
+    // Load comments automatically when component is open and comments section is visible
+    if (isOpen && showComments && review?.id) {
       setIsLoadingReplies(true);
       reviewService
         .fetchCommentReplies(review.id)
         .then((fetchedReplies) => {
-          setReplies(fetchedReplies);
+          // Limit to top 5 initially for better performance
+          const topReplies = fetchedReplies.slice(0, 5);
+          setReplies(topReplies);
           setIsLoadingReplies(false);
         })
         .catch((error: any) => {
           // Check if it's a JSON parsing error
           const errorMessage = error?.message || '';
-          const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
+          const isJsonError = errorMessage.includes('JSON') || 
+                             errorMessage.includes('<!DOCTYPE') || 
+                             errorMessage.includes('Unexpected token');
           
           if (isJsonError) {
             console.error("Error fetching replies: API returned non-JSON response (likely HTML error page)", error);
           } else {
             console.error("Error fetching replies:", error);
           }
+          // Set empty array on error to prevent UI breakage
+          setReplies([]);
           setIsLoadingReplies(false);
         });
+    } else if (!isOpen) {
+      // Clear replies when component closes
+      setReplies([]);
     }
-  }, [showComments, currentIndex, reviews]);
+  }, [isOpen, showComments, currentIndex, reviews]);
 
   // Cooldown timer
   useEffect(() => {
@@ -268,36 +309,94 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     },
   }));
 
-  // Handle like/unlike
+  // Handle like/unlike - Updated to use new API v1 endpoint
   const handleLike = useCallback(
     async (review: GraphQLReview) => {
-      if (!user) {
+      if (!user || !firebaseUser) {
         toast.error("Please sign in to like reviews");
         return;
       }
 
-      const reviewId = review.databaseId;
-      const currentLiked = userLiked[reviewId] ?? false;
-      const newLikedState = !currentLiked;
+      // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
+      const reviewId = review.id || String(review.databaseId);
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
 
-      setUserLiked((prev) => ({ ...prev, [reviewId]: newLikedState }));
+      if (!isReviewUUID) {
+        toast.error("Like functionality requires review UUID. Please refresh the page.");
+        return;
+      }
+
+      // Get current user's UUID - check if user.id is already a UUID first
+      let userId: string | null = null;
+      const userIdStr = user.id ? String(user.id) : '';
+      
+      if (UUID_REGEX.test(userIdStr)) {
+        // user.id is already a UUID, use it directly
+        userId = userIdStr;
+      } else {
+        // user.id is not a UUID, fetch it from API
+        try {
+          const idToken = await firebaseUser.getIdToken();
+          const userUuidResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
+            headers: {
+              'Authorization': `Bearer ${idToken}`
+            }
+          });
+
+          if (!userUuidResponse.ok) {
+            const errorText = await userUuidResponse.text().catch(() => 'Unknown error');
+            throw new Error(`Failed to get user information: ${userUuidResponse.status} ${errorText}`);
+          }
+
+          const userData = await userUuidResponse.json();
+          if (!userData.success || !userData.data?.id) {
+            throw new Error('User not found in response');
+          }
+
+          userId = userData.data.id;
+        } catch (error) {
+          console.error("Error fetching user UUID:", error);
+          toast.error("Failed to get user information. Please try again.");
+          return;
+        }
+      }
+
+      if (!userId) {
+        toast.error("Unable to get user ID. Please try again.");
+        return;
+      }
+
+      const reviewDatabaseId = review.databaseId;
+      const currentLiked = userLiked[reviewDatabaseId] ?? false;
+      const currentLikes = likesCount[reviewDatabaseId] ?? 0;
+
+      // Optimistic update
+      setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: !currentLiked }));
       setLikesCount((prev) => ({
         ...prev,
-        [reviewId]: (prev[reviewId] ?? 0) + (newLikedState ? 1 : -1),
+        [reviewDatabaseId]: currentLiked ? currentLikes - 1 : currentLikes + 1,
       }));
 
       try {
-        toast.success(newLikedState ? commentLikedSuccess : commentUnlikedSuccess);
+        // Call new API v1 endpoint
+        const result = await reviewV2Service.toggleLike(reviewId, userId);
+
+        // Update state based on API response
+        setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: result.liked }));
       } catch (error) {
-        setUserLiked((prev) => ({ ...prev, [reviewId]: currentLiked }));
+        // Revert optimistic update on error
+        setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: currentLiked }));
         setLikesCount((prev) => ({
           ...prev,
-          [reviewId]: (prev[reviewId] ?? 0) + (newLikedState ? -1 : 1),
+          [reviewDatabaseId]: currentLikes,
         }));
+        
         console.error("Like error:", error);
+        toast.error("Failed to update like. Please try again.");
       }
     },
-    [user, userLiked]
+    [user, firebaseUser, userLiked, likesCount]
   );
 
   // Navigate between images in current review
@@ -320,8 +419,8 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     [reviews, currentIndex]
   );
 
-  // Handle follow/unfollow
-  const handleFollowClick = useCallback(async () => {
+  // Handle follow/unfollow - Updated to work with FollowButton
+  const handleFollowToggle = useCallback(async (isFollowingState: boolean) => {
     if (!user) {
       setIsShowSignin(true);
       return;
@@ -333,45 +432,70 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       return;
     }
 
-    const authorUserId = review.author.node.databaseId;
-    const currentUserId = user?.id ? parseInt(String(user.id)) : null;
+    // Try to get UUID from review.userId first, then fall back to databaseId
+    const authorUserId = review.userId || review.author?.node?.databaseId;
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = typeof authorUserId === 'string' && UUID_REGEX.test(authorUserId);
+    
+    // Skip follow/unfollow if we don't have a UUID (legacy numeric IDs)
+    if (!isUUID) {
+      toast.error("Follow functionality requires user UUID. Please refresh the page.");
+      return;
+    }
+    
+    const currentUserId = user?.id;
+    const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
 
     // Don't allow following yourself
-    if (currentUserId && authorUserId === currentUserId) {
+    if (currentUserIdString && authorUserId === currentUserIdString) {
       return;
     }
 
-    setFollowLoading((prev) => ({ ...prev, [authorUserId]: true }));
+    setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: true }));
     try {
       const token = await getFirebaseToken();
       if (!token) {
         toast.error("Authentication required");
-        setFollowLoading((prev) => ({ ...prev, [authorUserId]: false }));
+        setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
         return;
       }
       
-      let response;
-      if (isFollowing[authorUserId]) {
-        response = await followService.unfollowUser(authorUserId, token);
-      } else {
-        response = await followService.followUser(authorUserId, token);
+      // Use new Hasura API endpoints for UUIDs
+      const endpoint = isFollowingState
+        ? '/api/v1/restaurant-users/unfollow'
+        : '/api/v1/restaurant-users/follow';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ user_id: authorUserId })
+      });
+      
+      if (!response.ok) {
+        const errorData: { error?: string } = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to ${isFollowingState ? 'unfollow' : 'follow'} user`);
       }
-
-      if (response.status === code.success) {
-        const newFollowState = !isFollowing[authorUserId];
-        setIsFollowing((prev) => ({ ...prev, [authorUserId]: newFollowState }));
-        setFollowState(authorUserId, newFollowState);
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const newFollowState = !isFollowingState;
+        setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: newFollowState }));
+        setFollowState(review.author.node.databaseId, newFollowState);
         toast.success(newFollowState ? "Following user!" : "Unfollowed user!");
       } else {
-        toast.error(response.message || errorOccurred);
+        toast.error(result.error || errorOccurred);
       }
     } catch (error) {
       console.error("Follow/unfollow error:", error);
       toast.error(errorOccurred);
     } finally {
-      setFollowLoading((prev) => ({ ...prev, [authorUserId]: false }));
+      setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
     }
-  }, [user, currentIndex, reviews, isFollowing, setFollowState, getFirebaseToken]);
+  }, [user, currentIndex, reviews, setFollowState, getFirebaseToken]);
 
   // Navigate between reviews
   const navigateReview = useCallback((direction: "up" | "down") => {
@@ -472,49 +596,54 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
         return;
       }
       
-      const payload = {
-        content: commentText,
-        restaurantId: review.commentedOn?.node?.databaseId,
-        parent: review.databaseId,
-        authorId: user?.id ? parseInt(String(user.id)) : null,
-      };
-      
-      const response = await reviewService.postReview(payload, token);
+      // Get author UUID - user.id should already be a UUID
+      const authorId = user?.id;
+      if (!authorId) {
+        toast.error('User not authenticated or invalid user ID');
+        setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
+        setIsSubmittingComment(false);
+        return;
+      }
 
-      // Check for success status codes - HANDLE BOTH NUMERIC AND STRING STATUSES
-      const isSuccess = (status: number | string) => {
-        // Handle numeric status codes (200-299)
-        if (typeof status === 'number') {
-          return status >= 200 && status < 300;
-        }
-        // Handle string statuses (approved, success, etc.)
-        if (typeof status === 'string') {
-          const successStatuses = ['approved', 'success', 'created', 'ok'];
-          return successStatuses.includes(status.toLowerCase());
-        }
-        return false;
-      };
+      // Get parent review ID - review.id should be the UUID
+      const parentReviewId = review.id;
+      if (!parentReviewId) {
+        toast.error('Invalid review ID');
+        setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
+        setIsSubmittingComment(false);
+        return;
+      }
 
-      if (response.status && isSuccess(response.status)) {
-        // Replace optimistic reply with actual reply
-        const newReply = response.data || response;
-        
-        // Remove optimistic reply and add the actual reply with a unique key
-        setReplies((prev) => {
-          const filtered = prev.filter((r) => r.id !== optimisticReply.id);
-          return [newReply, ...filtered];
-        });
-        
+      // Validate parent review ID is a UUID
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(parentReviewId)) {
+        console.error('Parent review ID is not a valid UUID:', parentReviewId);
+        toast.error('Invalid review ID format');
+        setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
+        setIsSubmittingComment(false);
+        return;
+      }
+
+      // Use new createComment endpoint
+      const res = await reviewService.createComment({
+        parent_review_id: parentReviewId,
+        author_id: authorId,
+        content: optimisticReply.content,
+        restaurant_uuid: undefined, // Let API fetch from parent review
+      }, token);
+
+      if (res.success) {
+        // Refetch replies to get the actual reply with proper ID
+        const updatedReplies = await reviewService.fetchCommentReplies(review.id);
+        setReplies(updatedReplies);
         setCommentCounts((prev) => ({
           ...prev,
           [review.databaseId]: (prev[review.databaseId] || 0) + 1,
         }));
-        toast.success("Comment posted successfully!");
         setCooldown(3);
       } else {
-        // Handle failure
         setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
-        toast.error("Failed to post comment. Please try again.");
+        toast.error(res.error || "Failed to post comment. Please try again.");
       }
     } catch (error) {
       setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
@@ -612,8 +741,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   const hasMultipleImages = reviewImages.length > 1;
   const currentImage = reviewImages[currentImageIndex]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
   const isLiked = userLiked[currentReview.databaseId] ?? false;
-  const likes = likesCount[currentReview.databaseId] ?? 0;
-  const commentCount = commentCounts[currentReview.databaseId] ?? 0;
+  // Ensure likes is always an integer (not "01" but 1)
+  const likes = Math.max(0, Math.floor(Number(likesCount[currentReview.databaseId] ?? 0)));
+  const commentCount = Math.max(0, Math.floor(Number(commentCounts[currentReview.databaseId] ?? 0)));
   
   // Text truncation logic
   const MAX_CHARS = 300;
@@ -744,30 +874,28 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                   <h3 className="swipeable-review-viewer-desktop__username">
                     {currentReview.author?.node?.name || currentReview.author?.name || "Unknown User"}
                   </h3>
-                  {/* Follow/Unfollow Button */}
-                  {currentReview.author?.node?.databaseId && 
-                   (!user?.id || 
-                    parseInt(String(user.id)) !== currentReview.author.node.databaseId) && (
-                    <button
-                      onClick={handleFollowClick}
-                      disabled={followLoading[currentReview.author.node.databaseId] || !currentReview.author.node.databaseId}
-                      className={`swipeable-review-viewer-desktop__follow-btn ${
-                        isFollowing[currentReview.author.node.databaseId]
-                          ? 'swipeable-review-viewer-desktop__follow-btn--following'
-                          : 'swipeable-review-viewer-desktop__follow-btn--follow'
-                      }`}
-                    >
-                      {followLoading[currentReview.author.node.databaseId] ? (
-                        <span className="animate-pulse">
-                          {isFollowing[currentReview.author.node.databaseId] ? "Unfollowing..." : "Following..."}
-                        </span>
-                      ) : isFollowing[currentReview.author.node.databaseId] ? (
-                        "Following"
-                      ) : (
-                        "Follow"
-                      )}
-                    </button>
-                  )}
+                  {/* Follow/Unfollow Button - Hide if viewing your own post */}
+                  {(() => {
+                    if (!user?.id || !currentReview.author?.node) return null;
+                    
+                    // Check if current user is the author (compare both UUID and databaseId)
+                    const authorId = currentReview.author.node.id; // UUID
+                    const authorDatabaseId = currentReview.author.node.databaseId; // Numeric ID
+                    const userId = String(user.id);
+                    const isOwnPost = userId === String(authorId) || userId === String(authorDatabaseId);
+                    
+                    // Only show follow button if not viewing own post
+                    if (isOwnPost) return null;
+                    
+                    return (
+                      <FollowButton
+                        isFollowing={isFollowing[authorDatabaseId] ?? false}
+                        isLoading={followLoading[authorDatabaseId] ?? false}
+                        onToggle={handleFollowToggle}
+                        size="sm"
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -807,15 +935,30 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                   {currentReview.reviewStars}/5
                 </div>
               )}
-              {currentReview.commentedOn?.node?.title && currentReview.commentedOn?.node?.slug && (
-                <Link 
-                  href={`/restaurants/${currentReview.commentedOn.node.slug}`}
-                  className="swipeable-review-viewer-desktop__restaurant"
-                >
-                  <FiMapPin className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                  <span className="hover:underline">{currentReview.commentedOn.node.title}</span>
-                </Link>
-              )}
+              {(() => {
+                // Try multiple paths for restaurant data to handle different data structures
+                const restaurantTitle = 
+                  currentReview.commentedOn?.node?.title ||
+                  (currentReview as any).restaurant?.title ||
+                  '';
+                const restaurantSlug = 
+                  currentReview.commentedOn?.node?.slug ||
+                  (currentReview as any).restaurant?.slug ||
+                  '';
+                
+                if (restaurantTitle && restaurantSlug) {
+                  return (
+                    <Link 
+                      href={`/restaurants/${restaurantSlug}`}
+                      className="swipeable-review-viewer-desktop__restaurant"
+                    >
+                      <FiMapPin className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                      <span className="hover:underline">{restaurantTitle}</span>
+                    </Link>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             {/* Action buttons */}
@@ -901,16 +1044,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
               
               {isLoadingReplies ? (
                 <div className="swipeable-review-viewer-desktop__comments-skeleton">
-                  {Array.from({ length: 3 }, (_, i) => (
-                    <div key={i} className="swipeable-review-viewer-desktop__skeleton-item">
-                      <div className="swipeable-review-viewer-desktop__skeleton-avatar" />
-                      <div className="swipeable-review-viewer-desktop__skeleton-content">
-                        <div className="swipeable-review-viewer-desktop__skeleton-line swipeable-review-viewer-desktop__skeleton-line--short" />
-                        <div className="swipeable-review-viewer-desktop__skeleton-line swipeable-review-viewer-desktop__skeleton-line--long" />
-                        <div className="swipeable-review-viewer-desktop__skeleton-line swipeable-review-viewer-desktop__skeleton-line--medium" />
-                      </div>
-                    </div>
-                  ))}
+                  <ReplySkeleton count={3} />
                 </div>
               ) : replies.length > 0 ? (
                   <div className="swipeable-review-viewer-desktop__comments-list">

@@ -1,6 +1,5 @@
 // ReviewCard2.tsx - Optimized for Grid Layout
 import Image from "next/image";
-import ReviewPopUpModal from "./ReviewPopUpModal";
 import SwipeableReviewViewer from "./SwipeableReviewViewer";
 import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
 import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
@@ -34,6 +33,10 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
 
   const { user } = useFirebaseSession();
 
+  // Create reviews array if not provided (fallback to single review)
+  const reviewsArray = reviews && reviews.length > 0 ? reviews : [data as unknown as GraphQLReview];
+  const currentIndex = typeof reviewIndex === 'number' ? reviewIndex : 0;
+
   const handleCardClick = () => {
     setIsModalOpen(true);
   };
@@ -41,23 +44,17 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
   return (
     <div className="overflow-hidden font-neusans">
       {/* Mobile: SwipeableReviewViewer, Desktop: SwipeableReviewViewerDesktop */}
-      {isMobile && reviews && typeof reviewIndex === 'number' ? (
+      {isMobile ? (
         <SwipeableReviewViewer
-          reviews={reviews}
-          initialIndex={reviewIndex}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
-      ) : reviews && typeof reviewIndex === 'number' ? (
-        <SwipeableReviewViewerDesktop
-          reviews={reviews}
-          initialIndex={reviewIndex}
+          reviews={reviewsArray}
+          initialIndex={currentIndex}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
       ) : (
-        <ReviewPopUpModal
-          data={data as unknown as GraphQLReview}
+        <SwipeableReviewViewerDesktop
+          reviews={reviewsArray}
+          initialIndex={currentIndex}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
@@ -208,7 +205,7 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
         {/* Review Content with Hashtags */}
         <HashtagDisplay 
           content={stripTags(data.content || "")}
-          hashtags={data.hashtags as unknown as string[]}
+          hashtags={(data as any).hashtags as unknown as string[]}
           className="text-[12px] md:text-sm font-normal text-[#494D5D] line-clamp-2 break-words leading-[1.4] md:leading-[1.5]"
         />
       </div>
