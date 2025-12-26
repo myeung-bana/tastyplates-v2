@@ -15,11 +15,13 @@ import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, transformReviewImagesToUrls } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, reviewTitleMaxLimit, reviewDescriptionMaxLimit } from "@/constants/validation";
-import { LISTING, WRITING_GUIDELINES } from "@/constants/pages";
+import { TASTYSTUDIO_REVIEW_LISTING, WRITING_GUIDELINES } from "@/constants/pages";
 import { generateProfileUrl } from "@/lib/utils";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
+import { Button } from "@/components/ui/button";
+import { GridLoader } from 'react-spinners';
 
 interface Restaurant {
   id: string;
@@ -96,7 +98,7 @@ const EditReviewSubmissionPage = () => {
       if (!hasAttemptedFetch.current) {
         setLoading(false);
         toast.error('Please log in to edit reviews');
-        router.push(LISTING);
+        router.push(TASTYSTUDIO_REVIEW_LISTING);
         hasAttemptedFetch.current = true;
       }
       return;
@@ -110,7 +112,7 @@ const EditReviewSubmissionPage = () => {
           console.error('User data loading timeout - Hasura user not available');
           setLoading(false);
           toast.error('User information not available. Please try again.');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
           hasAttemptedFetch.current = true;
         }
       }, 3000);
@@ -140,7 +142,7 @@ const EditReviewSubmissionPage = () => {
       if (!userId) {
         setLoading(false);
         toast.error('User information not available');
-        router.push(LISTING);
+        router.push(TASTYSTUDIO_REVIEW_LISTING);
         hasAttemptedFetch.current = true;
         return;
       }
@@ -153,7 +155,7 @@ const EditReviewSubmissionPage = () => {
         if (!reviewData.author_id) {
           console.error('Review author information is missing');
           toast.error('Unable to verify review ownership. This review may not be editable.');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
           setLoading(false);
           return;
         }
@@ -164,7 +166,7 @@ const EditReviewSubmissionPage = () => {
             currentUserId: userId
           });
           toast.error('You can only edit your own reviews');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
           setLoading(false);
           return;
         }
@@ -267,14 +269,14 @@ const EditReviewSubmissionPage = () => {
         // Handle specific error cases without triggering logout
         if (error.message?.includes('not found') || error.message?.includes('404')) {
           toast.error('Review not found');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
         } else if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
           // Don't trigger logout - just show error and redirect
           toast.error('You do not have permission to edit this review');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
         } else {
           toast.error('Failed to load review. Please try again later.');
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
         }
       } finally {
         setLoading(false);
@@ -416,11 +418,11 @@ const EditReviewSubmissionPage = () => {
             router.push(profileUrl);
           } else {
             // Final fallback to listing page
-            router.push(LISTING);
+            router.push(TASTYSTUDIO_REVIEW_LISTING);
           }
         } else if (mode === 'draft') {
           toast.success(savedAsDraft);
-          router.push(LISTING);
+          router.push(TASTYSTUDIO_REVIEW_LISTING);
         }
       } catch (apiError: any) {
         // Handle specific error messages
@@ -666,58 +668,27 @@ const EditReviewSubmissionPage = () => {
                 </Link>
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
-                <button
-                  className={`submitRestaurants__button flex items-center gap-2 ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
+                <Button
+                  variant="primary"
                   type="submit"
                   onClick={(e) => submitReview(e, 'publish')}
                   disabled={isLoading || isSavingAsDraft}
+                  className="flex items-center gap-2"
                 >
                   {isLoading && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-white"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
+                    <GridLoader color="#ffffff" size={5} />
                   )}
-                  Submit Review
-                </button>
-                <button
-                  className={`flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  type="submit"
-                  onClick={(e) => submitReview(e, 'draft')}
+                  Update
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => router.push(TASTYSTUDIO_REVIEW_LISTING)}
                   disabled={isLoading || isSavingAsDraft}
+                  className="flex items-center gap-2"
                 >
-                  {isSavingAsDraft && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-[#494D5D]"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
-                  )}
-                  Save and exit
-                </button>
+                  Cancel
+                </Button>
               </div>
             </form>
           </div>

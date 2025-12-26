@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { FiEdit3, FiList, FiTrendingUp, FiClock } from 'react-icons/fi';
 import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
 import ProfileSummary from '@/components/tastystudio/ProfileSummary';
+import { GridLoader } from 'react-spinners';
 
 const TastyStudioDashboard = () => {
   const { user, loading } = useFirebaseSession();
@@ -103,7 +104,7 @@ const TastyStudioDashboard = () => {
   if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center font-neusans text-sm">Loading...</div>
+        <GridLoader color="#ff7c0a" size={15} />
       </div>
     );
   }

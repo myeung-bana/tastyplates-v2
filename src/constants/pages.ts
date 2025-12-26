@@ -20,6 +20,7 @@ export const TASTYSTUDIO_ADD_REVIEW = "/tastystudio/add-review";
 export const TASTYSTUDIO_ADD_REVIEW_CREATE = "/tastystudio/add-review/create";
 export const TASTYSTUDIO_ADD_REVIEW_SUCCESS = "/tastystudio/add-review/success";
 export const TASTYSTUDIO_REVIEW_LISTING = "/tastystudio/review-listing";
+export const TASTYSTUDIO_EDIT_REVIEW = "/tastystudio/edit-review";
 export const LISTING_DRAFT = "/listing/draft";
 export const LISTING_STEP_ONE = "/listing/step-1";
 export const LISTING_EXPLANATION = "/listing/explanation";

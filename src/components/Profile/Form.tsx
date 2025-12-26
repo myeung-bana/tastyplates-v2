@@ -11,7 +11,7 @@ import React, {
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
-import { UserService } from "@/services/user/userService";
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { useCuisines } from "@/hooks/useCuisines";
 import { CuisineOption } from "@/utils/cuisineUtils";
 import { Cuisine } from "@/app/api/v1/services/cuisineService";
@@ -38,13 +38,10 @@ import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { IUserUpdate } from "@/interfaces/user/user";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import PhotoCropModal from "../common/PhotoCropModal";
 import { useProfileData } from "@/hooks/useProfileData";
-
-const userService = new UserService()
 
 // Helper to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -560,33 +557,45 @@ const Form = () => {
     }
 
     try {
+      // Get user UUID from Firebase session
+      if (!user?.id) {
+        toast.error('User ID not found. Please sign in again.');
+        setIsLoading(false);
+        return;
+      }
+
+      const userId = user.id as string;
+
       // Convert selected cuisine keys back to palate names for saving
       const palateNames = mapCuisineKeysToPalates(selectedPalates);
-      const formattedPalates = palateNames.join("|");
+      // Convert to array format for JSONB storage (instead of pipe-separated string)
+      const palatesArray = palateNames.length > 0 ? palateNames : undefined;
 
-      const updateData: Record<string, string> = {};
+      // Build update data object
+      const updateData: Record<string, any> = {};
       if (profile) updateData.profile_image = profile;
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
-      if (formattedPalates) updateData.palates = formattedPalates;
+      if (palatesArray) updateData.palates = palatesArray; // Send as array for JSONB
 
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
 
-      const res = await userService.updateUserFields(
-        updateData as Partial<IUserUpdate>,
-        idToken
-      );
+      // Use new API v1 endpoint
+      const response = await restaurantUserService.updateUser(userId, updateData, idToken);
+
+      if (!response.success) {
+        const errorMessage = (response as any).error || 'Failed to update profile';
+        throw new Error(errorMessage);
+      }
 
       // Session will be automatically refreshed by useFirebaseSession hook
-      // Force a page reload to ensure fresh data
-
       // Refresh router to update server components with new session data
       router.refresh();
 
       console.log('✅ Profile Form - Update successful:', {
-        responseStatus: res?.status,
-        hasProfileImage: !!res?.profile_image,
-        responseKeys: Object.keys(res || {})
+        success: response.success,
+        hasData: !!response.data,
+        responseKeys: Object.keys(response.data || {})
       });
 
       setIsSubmitted(true);
@@ -594,13 +603,11 @@ const Form = () => {
     } catch (error: any) {
       console.error('❌ Profile Form - Update failed:', {
         errorMessage: error?.message,
-        errorStatus: error?.status,
-        errorCode: error?.code,
-        errorData: error?.data,
+        errorType: error?.constructor?.name || typeof error,
         hasUser: !!user,
-        errorType: error?.constructor?.name || typeof error
+        userId: user?.id
       });
-      toast.error(profileUpdateFailed);
+      toast.error(error?.message || profileUpdateFailed);
     } finally {
       setIsLoading(false);
     }

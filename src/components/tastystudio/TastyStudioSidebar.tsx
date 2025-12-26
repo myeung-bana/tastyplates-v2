@@ -7,7 +7,7 @@ import {
   TASTYSTUDIO_ADD_REVIEW,
   TASTYSTUDIO_REVIEW_LISTING 
 } from '@/constants/pages';
-import { FiHome, FiEdit3, FiList } from 'react-icons/fi';
+import { FiHome, FiEdit3, FiFileText } from 'react-icons/fi';
 
 const TastyStudioSidebar = () => {
   const pathname = usePathname();
@@ -31,8 +31,8 @@ const TastyStudioSidebar = () => {
       href: TASTYSTUDIO_ADD_REVIEW,
     },
     {
-      icon: FiList,
-      label: 'Edit Reviews',
+      icon: FiFileText,
+      label: 'Reviews',
       href: TASTYSTUDIO_REVIEW_LISTING,
     },
   ];

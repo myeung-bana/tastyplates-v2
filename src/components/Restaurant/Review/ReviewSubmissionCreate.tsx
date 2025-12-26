@@ -21,6 +21,8 @@ import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING, WRITING_GUIDELINES 
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
+import { Button } from "@/components/ui/button";
+import { GridLoader } from 'react-spinners';
 
 interface Restaurant {
   id: string;
@@ -570,58 +572,30 @@ const ReviewSubmissionCreatePage = () => {
                 </Link>
               </p>
               <div className="flex gap-3 md:gap-4 items-center justify-center">
-                <button
-                  className={`submitRestaurants__button flex items-center gap-2 ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
+                <Button
+                  variant="primary"
                   type="submit"
                   onClick={(e) => submitReview(e, 'publish')}
                   disabled={isLoading || isSavingAsDraft}
+                  className="flex items-center gap-2"
                 >
                   {isLoading && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-white"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
+                    <GridLoader color="#ffffff" size={5} />
                   )}
-                  Post Review
-                </button>
-                <button
-                  className={`flex items-center gap-2 underline h-5 md:h-10 text-sm md:text-base !text-[#494D5D] !bg-transparent font-semibold text-center ${isLoading || isSavingAsDraft ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  Create Review
+                </Button>
+                <Button
+                  variant="secondary"
                   type="submit"
                   onClick={(e) => submitReview(e, 'draft')}
                   disabled={isLoading || isSavingAsDraft}
+                  className="flex items-center gap-2"
                 >
                   {isSavingAsDraft && (
-                    <svg
-                      className="animate-spin w-5 h-5 text-[#494D5D]"
-                      viewBox="0 0 100 100"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="currentColor"
-                        strokeWidth="10"
-                        strokeDasharray="164"
-                        strokeDashoffset="40"
-                      />
-                    </svg>
+                    <GridLoader color="#494D5D" size={5} />
                   )}
-                  Save and exit
-                </button>
+                  Save as Draft
+                </Button>
               </div>
             </form>
             )}

@@ -979,10 +979,13 @@
     text-decoration: none;
     padding: 6px 10px; // Reduced from 8px 12px
     border-radius: 6px; // Reduced from 8px
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
 
     &:hover {
-      background-color: #f3f4f6;
+      color: #ff7c0a;
+    }
+
+    &--active {
       color: #ff7c0a;
     }
   }

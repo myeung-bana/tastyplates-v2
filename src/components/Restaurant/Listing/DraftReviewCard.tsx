@@ -47,7 +47,7 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
     // Navigate to edit-review page with review UUID only
     // The component will fetch restaurant data using restaurant_uuid from the review
     if (reviewDraft.uuid) {
-      router.push(`/edit-review/${reviewDraft.uuid}`);
+      router.push(`/tastystudio/edit-review/${reviewDraft.uuid}`);
     } else {
       console.error('Review UUID not available');
       toast.error('Unable to edit review: UUID not found');

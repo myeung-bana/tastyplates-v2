@@ -177,7 +177,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {/* Followers Count */}
             <button
               type="button"
-              className="font-semibold text-sm focus:outline-none hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans"
               onClick={() => {
                 onShowFollowers();
               }}
@@ -198,7 +198,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {/* Following Count */}
             <button
               type="button"
-              className="focus:outline-none hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans"
               onClick={() => {
                 onShowFollowing();
               }}

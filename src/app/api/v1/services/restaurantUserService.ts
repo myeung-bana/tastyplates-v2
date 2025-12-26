@@ -267,19 +267,30 @@ class RestaurantUserService {
     return response.json();
   }
 
-  async updateUser(id: string, data: Omit<UpdateRestaurantUserRequest, 'id'>): Promise<RestaurantUserResponse> {
+  async updateUser(id: string, data: Omit<UpdateRestaurantUserRequest, 'id'>, token?: string): Promise<RestaurantUserResponse> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add authentication token if provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${this.baseUrl}/update-restaurant-user`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ id, ...data }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to update user: ${response.statusText}`);
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.success) {
+      const errorMessage = result.error || `Failed to update user: ${response.statusText}`;
+      throw new Error(errorMessage);
     }
 
-    return response.json();
+    return result;
   }
 
   async deleteUser(id: string, hardDelete: boolean = false): Promise<RestaurantUserResponse> {

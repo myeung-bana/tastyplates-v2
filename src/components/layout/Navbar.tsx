@@ -252,11 +252,13 @@ export default function Navbar(props: Record<string, unknown>) {
                   const isAuthenticated = !loading && !!user;
                   if (!isAuthenticated && item.name !== "Explore") return null;
                   
+                  const isActive = pathname === item.href || (item.href !== RESTAURANTS && pathname?.startsWith(item.href));
+                  
                   return (
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`navbar__nav-item ${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
+                      className={`navbar__nav-item ${isActive ? 'navbar__nav-item--active' : ''} ${isLandingPage && !navBg ? "!text-white" : "text-[#494D5D]"
                         }`}
                     >
                       {item.name}
@@ -332,11 +334,11 @@ export default function Navbar(props: Record<string, unknown>) {
                       </button>
                     }
                     content={
-                      <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
-                        <Link href="/tastystudio/dashboard" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-gray-50 transition-colors'>
+                      <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] overflow-hidden ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
+                        <Link href="/tastystudio/dashboard" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors first:rounded-t-2xl'>
                           Tasty Studio
                         </Link>
-                        <Link href="/tastystudio/add-review" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-gray-50 transition-colors'>
+                        <Link href="/tastystudio/add-review" className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors last:rounded-b-2xl'>
                           Write a Review
                         </Link>
                       </div>
@@ -362,20 +364,20 @@ export default function Navbar(props: Record<string, unknown>) {
                       </div>
                     }
                     content={
-                      <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
+                      <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] overflow-hidden ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link 
                           href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.id ? `/profile/${user.id}` : PROFILE)} 
-                          className='font-neusans text-left pl-3.5 pr-12 py-3.5'
+                          className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors first:rounded-t-2xl'
                         >
                           My Profile
                         </Link>
-                        <Link href={SETTINGS} className='font-neusans text-left pl-3.5 pr-12 py-3.5'>
+                        <Link href={SETTINGS} className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors'>
                           Settings
                         </Link>
                         <div className={`border-t ${!isLandingPage || navBg ? 'border-[#CACACA]' : 'border-gray-200'} w-full`} />
                         <button
                           onClick={handleLogout}
-                          className='font-neusans text-left pl-3.5 pr-12 py-3.5'
+                          className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors last:rounded-b-2xl'
                         >
                           Log Out
                         </button>

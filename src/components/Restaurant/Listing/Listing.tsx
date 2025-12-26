@@ -7,10 +7,10 @@ import "@/styles/pages/_restaurants.scss";
 import ListingCard from "./ListingCard";
 import DraftReviewCard from "./DraftReviewCard";
 import type { DraftReviewData } from "./DraftReviewCard";
+import PublishedReviewCard from "./PublishedReviewCard";
 import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
-import RecentlyVisitedRestaurants from "@/components/Restaurant/RecentlyVisitedRestaurants";
 import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 // Using DraftReviewData from DraftReviewCard instead
@@ -65,9 +65,11 @@ const ListingPage = () => {
   const [isShowDelete, setIsShowDelete] = useState<boolean>(false)
   const [loading, setLoading] = useState(false); // Changed initial state to false
   const [loadingDrafts, setLoadingDrafts] = useState(true);
+  const [loadingPublished, setLoadingPublished] = useState(true);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<DraftReviewData[]>([]);
   const [allDrafts, setAllDrafts] = useState<DraftReviewData[]>([]);
+  const [publishedReviews, setPublishedReviews] = useState<ReviewV2[]>([]);
   const [draftToDelete, setDraftToDelete] = useState<DraftReviewData | null>(null);
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   // Map numeric IDs to UUIDs for deletion
@@ -282,6 +284,36 @@ const ListingPage = () => {
     }
   }, [firebaseUser, debouncedSearchTerm, fetchReviewDrafts]);
 
+  const fetchPublishedReviews = useCallback(async () => {
+    setLoadingPublished(true);
+    try {
+      if (!user?.id) {
+        setLoadingPublished(false);
+        return;
+      }
+      
+      // Fetch published reviews with status 'approved'
+      const response = await reviewV2Service.getUserReviews(user.id, {
+        status: 'approved',
+        limit: 20,
+        offset: 0
+      });
+      
+      setPublishedReviews(response.reviews);
+    } catch (error) {
+      console.error("Error fetching published reviews:", error);
+      setPublishedReviews([]);
+    } finally {
+      setLoadingPublished(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!debouncedSearchTerm && user?.id) {
+      fetchPublishedReviews();
+    }
+  }, [user?.id, debouncedSearchTerm, fetchPublishedReviews]);
+
   const confirmDeleteDraft = async (draftId: number) => {
     if (!firebaseUser) return false;
     
@@ -365,9 +397,24 @@ const ListingPage = () => {
             </div>
           )}
 
-          {/* Conditional rendering of "Recently Visited" */}
+          {/* Conditional rendering of "Published Reviews" */}
           {!debouncedSearchTerm && (
-            <RecentlyVisitedRestaurants />
+            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
+              <div className="restaurants__content">
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">Published Reviews</h1>
+                {publishedReviews.length === 0 && !loadingPublished && (
+                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm font-neusans">
+                    You haven't published any reviews yet.
+                  </p>
+                )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6 md:mt-8">
+                  {publishedReviews.map((review) => (
+                    <PublishedReviewCard key={review.id} review={review} />
+                  ))}
+                  {loadingPublished && [...Array(4)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Display Restaurants section only when there's an active search or it's loading search results */}
