@@ -31,13 +31,22 @@ const ReviewSubmissionSkeleton = () => {
             <div className="h-24 bg-gray-200 rounded w-full"></div>
           </div>
 
-          {/* Upload Photos */}
-          <div className="space-y-2">
+          {/* Upload Photos - Drag and Drop */}
+          <div className="space-y-4">
             <div className="h-4 w-40 bg-gray-300 rounded"></div>
-            <div className="h-10 w-32 bg-gray-200 rounded"></div>
-            <div className="flex gap-2">
+            {/* Drag and drop area skeleton */}
+            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 md:p-12 bg-gray-50">
+              <div className="flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full"></div>
+                <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                <div className="h-3 w-64 bg-gray-200 rounded"></div>
+                <div className="h-3 w-32 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+            {/* Image preview grid skeleton */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="w-[140px] h-[100px] bg-gray-200 rounded-xl"></div>
+                <div key={i} className="aspect-[4/3] bg-gray-200 rounded-2xl"></div>
               ))}
             </div>
           </div>

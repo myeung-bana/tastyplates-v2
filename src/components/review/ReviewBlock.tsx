@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { BiLike } from "react-icons/bi";
+import { FiHeart } from "react-icons/fi";
+import { AiFillHeart } from "react-icons/ai";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
 import PhotoSlider from "../Restaurant/Details/PhotoSlider";
@@ -17,7 +18,7 @@ import { palateFlagMap } from "@/utils/palateFlags";
 import SwipeableReviewViewer from "./SwipeableReviewViewer";
 import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
-import { commentUnlikedSuccess, updateLikeFailed } from "@/constants/messages";
+import { updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
@@ -25,6 +26,8 @@ import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/consta
 import { PROFILE } from "@/constants/pages";
 import PalateTags from "../ui/PalateTags/PalateTags";
 import { useUserData } from '@/hooks/useUserData';
+import { useRef, useCallback } from "react";
+import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -135,6 +138,9 @@ const mapToReviewedDataProps = (review: ReviewBlockProps["review"]): ReviewedDat
 
 const reviewService = new ReviewService();
 
+// UUID regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const { user, firebaseUser } = useFirebaseSession();
   const [loading, setLoading] = useState(false);
@@ -146,6 +152,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [expandedTitle, setExpandedTitle] = useState(false);
   const [expandedComment, setExpandedComment] = useState(false);
+  
+  // Cache user UUID to avoid redundant API calls
+  const userUuidRef = useRef<string | null>(null);
+  const fetchedLikeStatusRef = useRef<Set<string>>(new Set());
 
   const tags = [
     { id: 1, name: "Must Revisit", icon: FLAG },
@@ -154,14 +164,124 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     { id: 4, name: "Best Service", icon: HELMET },
   ];
 
+  // Helper to get user UUID (cached)
+  const getUserUuid = useCallback(async (): Promise<string | null> => {
+    if (!user?.id || !firebaseUser) return null;
+    
+    // Check if user.id is already a UUID
+    if (UUID_REGEX.test(user.id)) {
+      userUuidRef.current = user.id;
+      return user.id;
+    }
+    
+    // Return cached value if available
+    if (userUuidRef.current) {
+      return userUuidRef.current;
+    }
+    
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      // Prefer the dedicated endpoint (faster + consistent with other components)
+      const response = await fetch(`/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid`, {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        if (userData.success && userData.data?.id) {
+          userUuidRef.current = userData.data.id;
+          return userData.data.id;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user UUID:", error);
+    }
+
+    return null;
+  }, [user?.id, firebaseUser]);
+
+  // Log initial review data
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:158',message:'ReviewBlock mounted with initial data',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,initialUserLiked:review.userLiked,initialCommentLikes:review.commentLikes,hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+  }, []);
+
+  // Update state when review prop changes
   useEffect(() => {
     if (review) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:165',message:'Review prop changed',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,newUserLiked:review.userLiked,newCommentLikes:review.commentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setUserLiked(review.userLiked ?? false);
       setLikesCount(review.commentLikes ?? 0);
     }
   }, [review]);
 
+  // Fetch actual like status from API when component mounts (for UUID reviews)
+  useEffect(() => {
+    if (!user || !firebaseUser || !review?.id) return;
+    
+    const reviewId = review.id;
+    const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
+    if (!isReviewUUID) return;
+    
+    const fetchLikeStatus = async () => {
+      try {
+        const userId = await getUserUuid();
+        if (!userId) return;
+
+        const key = `${reviewId}_${userId}`;
+        if (fetchedLikeStatusRef.current.has(key)) return;
+        fetchedLikeStatusRef.current.add(key);
+        
+        // #region agent log
+        const fetchStartTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:185',message:'Fetching like status on mount',data:{reviewId,userId,reviewDatabaseId:review.databaseId,initialUserLiked:userLiked,initialLikesCount:likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
+        const idToken = await firebaseUser.getIdToken();
+        const statusResponse = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        
+        const fetchDuration = Date.now() - fetchStartTime;
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.success && statusData.data) {
+            const isLiked = statusData.data.liked ?? false;
+            const currentCount = statusData.data.likesCount ?? 0;
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:200',message:'Like status fetched on mount',data:{reviewId,userId,isLiked,currentCount,reviewDatabaseId:review.databaseId,fetchDuration,previousUserLiked:userLiked,previousLikesCount:likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B,C'})}).catch(()=>{});
+            // #endregion
+            
+            // Only update if different from initial state
+            if (isLiked !== userLiked || currentCount !== likesCount) {
+              setUserLiked(isLiked);
+              setLikesCount(currentCount);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:207',message:'State updated from API on mount',data:{reviewId,isLiked,currentCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+              // #endregion
+            }
+          }
+        }
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:213',message:'Error fetching like status on mount',data:{reviewId:review.id,errorMessage:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        console.error('Error fetching like status on mount:', error);
+      }
+    };
+    
+    fetchLikeStatus();
+  }, [user, firebaseUser, review?.id, getUserUuid]); // Run when auth becomes available / review changes
+
   const toggleLike = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:165',message:'toggleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,loading,hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+    // #endregion
     if (loading) return;
 
     if (!user || !firebaseUser) {
@@ -170,34 +290,61 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     }
 
     setLoading(true);
+    
+    const currentLiked = userLiked;
+    const currentCount = likesCount;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:175',message:'Current state before optimistic update',data:{currentLiked,currentCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
+    // Optimistic update
+    setUserLiked(!currentLiked);
+    setLikesCount(currentLiked ? currentCount - 1 : currentCount + 1);
+
     try {
       // Get Firebase ID token for authentication
       const idToken = await firebaseUser.getIdToken();
       
       // Use review.id (UUID) if available, otherwise fall back to databaseId
-      // ReviewService handles both UUID and numeric IDs
       const reviewId = review.id || String(review.databaseId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:187',message:'Before API call',data:{reviewId,currentLiked,hasIdToken:!!idToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       let response: { userLiked: boolean; likesCount: number };
-      if (userLiked) {
+      const apiStartTime = Date.now();
+      if (currentLiked) {
         // Already liked, so unlike
         response = await reviewService.unlikeComment(
           reviewId,
           idToken
         );
-        toast.success(commentUnlikedSuccess);
       } else {
         // Not liked yet, so like
         response = await reviewService.likeComment(
           reviewId,
           idToken
         );
-        toast.success("Liked comment successfully!");
       }
+      const apiDuration = Date.now() - apiStartTime;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:202',message:'API call success',data:{reviewId,response,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+      // #endregion
 
       setUserLiked(response.userLiked);
       setLikesCount(response.likesCount);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:204',message:'State updated from API',data:{responseUserLiked:response.userLiked,responseLikesCount:response.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+      // #endregion
+      
+      // NO SUCCESS TOAST - smooth like modern social media
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:208',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error instanceof Error?error.message:String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
+      // Revert on error
+      setUserLiked(currentLiked);
+      setLikesCount(currentCount);
       console.error(error);
       toast.error(updateLikeFailed);
     } finally {
@@ -397,13 +544,15 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           onClick={toggleLike}
           disabled={loading}
           aria-pressed={userLiked}
-          aria-label={userLiked ? "Unlike comment" : "Like comment"}
+          aria-label={userLiked ? "Unlike review" : "Like review"}
           className="review-block__action-btn"
         >
           {loading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-[2px] border-blue-400 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-[2px] border-red-400 border-t-transparent"></div>
+          ) : userLiked ? (
+            <AiFillHeart className="w-5 h-5 text-red-500" />
           ) : (
-            <BiLike className={`w-5 h-5 transition-colors duration-200 ${userLiked ? 'text-blue-600 fill-blue-600' : 'fill-gray-500'}`} />
+            <FiHeart className="w-5 h-5" />
           )}
           <span>{likesCount}</span>
         </button>

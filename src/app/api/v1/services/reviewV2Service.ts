@@ -100,6 +100,7 @@ export interface ReviewsResponse {
 export interface ToggleLikeResponse {
   liked: boolean;
   action: 'liked' | 'unliked';
+  likesCount: number;
 }
 
 class ReviewV2Service {
@@ -248,16 +249,30 @@ class ReviewV2Service {
   }
 
   async toggleLike(reviewId: string, userId: string): Promise<ToggleLikeResponse> {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reviewV2Service.ts:250',message:'toggleLike called',data:{reviewId,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    const apiStartTime = Date.now();
     const response = await fetch(`${this.baseUrl}/toggle-like`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ review_id: reviewId, user_id: userId }),
     });
+    const fetchDuration = Date.now() - apiStartTime;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reviewV2Service.ts:256',message:'Fetch response received',data:{reviewId,userId,responseOk:response.ok,responseStatus:response.status,fetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to toggle like' }));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reviewV2Service.ts:260',message:'Fetch error',data:{reviewId,userId,error,responseStatus:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       throw new Error(error.error || 'Failed to toggle like');
     }
     const result = await response.json();
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reviewV2Service.ts:265',message:'Response parsed',data:{reviewId,userId,result,hasSuccess:result.success,data:result.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (!result.success) {
       throw new Error(result.error || 'Failed to toggle like');
     }

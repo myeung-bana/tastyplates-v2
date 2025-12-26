@@ -1,5 +1,7 @@
+import React from "react";
 import { MdOutlineMessage } from "react-icons/md";
-import { FiHeart, FiStar } from "react-icons/fi"
+import { FiHeart } from "react-icons/fi"
+import Image from "next/image";
 import "@/styles/components/_restaurant-card.scss";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CustomModal from "@/components/ui/Modal/Modal";
@@ -16,6 +18,8 @@ import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess
 import FallbackImage from "../ui/Image/FallbackImage";
 import { getStreetCity } from "@/utils/addressUtils";
 import { useRestaurantOverallRating } from "@/hooks/useRestaurantOverallRating";
+import { STAR_FILLED } from "@/constants/images";
+import Link from "next/link";
 
 export interface Restaurant {
   id: string;
@@ -339,10 +343,15 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
     <>
       <div className="restaurant-card font-neusans">
         <div className="restaurant-card__image relative">
-          <a
-            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: palateParam } : {})}
+          {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
+            <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
+              Pending for Approval
+            </div>
+          )}
+          <Link
+            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
             onClick={async (e) => {
-              e.preventDefault();
+              e.stopPropagation();
               const clickedElement = e.target as HTMLElement;
               // Detect if the image was clicked and you're on the /review-listing page
               if ((pathname === "/review-listing" || pathname === "/tastystudio/review-listing") && clickedElement.dataset.role === "image") {
@@ -354,13 +363,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: palateParam } : {}));
-            }}>
-            {restaurant.status === 'draft' && ( // Added condition for "Pending for Approval"
-              <div className="absolute top-2 left-2 z-10 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-700 shadow">
-                Pending for Approval
-              </div>
-            )}
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
+            }}
+          >
             <FallbackImage
               data-role="image"
               src={restaurant.image}
@@ -373,7 +378,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               loading={priority ? "eager" : "lazy"}
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             />
-          </a>
+          </Link>
           {profileTablist !== 'listings' && (
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
               <button
@@ -408,73 +413,90 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             </div>
           )}
         </div>
-        <a
-          href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
-          onClick={async (e) => {
-            e.preventDefault();
-            if (pathname === "/review-listing" || pathname === "/tastystudio/review-listing") {
-              const slug = restaurant.slug || "";
-              if (slug) {
-                const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
-                router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
-              }
-              return;
-            }
-            if (onClick) await onClick(); // Wait for mutation to complete
-            router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
-          }}
-        >
-          <div className="restaurant-card__content">
-            <div className="restaurant-card__header">
-              <h2 className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis">{restaurant.name}</h2>
-              <div className="restaurant-card__rating text-[1rem]">
-                <FiStar className="restaurant-card__icon -mt-1" />
-                {displayRating > 0 ? displayRating : 0}
-                <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
-              </div>
+        <div className="restaurant-card__content">
+          <div className="restaurant-card__header">
+            <Link
+              href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
+              className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis hover:text-[#ff7c0a] transition-colors"
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (pathname === "/review-listing" || pathname === "/tastystudio/review-listing") {
+                  const slug = restaurant.slug || "";
+                  if (slug) {
+                    const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
+                    router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
+                  }
+                  return;
+                }
+                if (onClick) await onClick(); // Wait for mutation to complete
+                router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
+              }}
+            >
+              {restaurant.name}
+            </Link>
+            <div className="restaurant-card__rating text-[1rem] flex items-center gap-1">
+              <Image
+                src={STAR_FILLED}
+                width={16}
+                height={16}
+                className="w-4 h-4"
+                alt="star icon"
+              />
+              {displayRating > 0 ? displayRating : 0}
+              <span className="restaurant-card__rating-count">({displayRatingsCount})</span>
             </div>
-
-            <div className="restaurant-card__info w-full">
-              <div className="restaurant-card__location">
-                <span className="block w-full text-[11px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden leading-[1.4]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
-              </div>
-            </div>
-
-            {/* Cuisine Categories (shows first 3, then "+X" if more) */}
-            {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
-              <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
-                <span className="restaurant-card__tag">
-                  {(() => {
-                    const cuisines = restaurant.listingCategories || [];
-                    if (cuisines.length <= 3) {
-                      return cuisines.map(c => c.name).join(' / ');
-                    } else {
-                      const firstThree = cuisines.slice(0, 3).map(c => c.name).join(' / ');
-                      const remaining = cuisines.length - 3;
-                      return `${firstThree} +${remaining}`;
-                    }
-                  })()}
-                </span>
-              </div>
-            )}
-            
-            {/* Establishment Categories (only parent categories) */}
-            {restaurant.categories && restaurant.categories.length > 0 && (() => {
-              const parentCategories = restaurant.categories.filter(cat => cat.parent_id === null || cat.parent_id === undefined);
-              if (parentCategories.length > 0) {
-                return (
-                  <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
-                    <span className="restaurant-card__tag truncate">
-                      {parentCategories.map(cat => cat.name).join(' / ')}
-                    </span>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-
           </div>
-        </a>
+
+          <div className="restaurant-card__info w-full">
+            <div className="restaurant-card__location">
+              <span className="block w-full text-[11px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden leading-[1.4]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
+            </div>
+          </div>
+
+          {/* Cuisine Categories (shows first 3, then "+X" if more) - Make tags clickable */}
+          {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
+            <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+              {restaurant.listingCategories.slice(0, 3).map((cuisine, index) => {
+                const isLast = index === Math.min((restaurant.listingCategories?.length || 0), 3) - 1;
+                return (
+                  <React.Fragment key={cuisine.id}>
+                    <Link
+                      href={`/restaurants/cuisines/${cuisine.slug}`}
+                      className="restaurant-card__tag hover:text-[#ff7c0a] transition-colors cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {cuisine.name}
+                    </Link>
+                    {!isLast && (
+                      <span className="restaurant-card__tag"> / </span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {restaurant.listingCategories.length > 3 && (
+                <span className="restaurant-card__tag">
+                  {' +' + (restaurant.listingCategories.length - 3)}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Establishment Categories (only parent categories) */}
+          {restaurant.categories && restaurant.categories.length > 0 && (() => {
+            const parentCategories = restaurant.categories.filter(cat => cat.parent_id === null || cat.parent_id === undefined);
+            if (parentCategories.length > 0) {
+              return (
+                <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+                  <span className="restaurant-card__tag truncate">
+                    {parentCategories.map(cat => cat.name).join(' / ')}
+                  </span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+        </div>
       </div>
 
       <CustomModal
@@ -503,7 +525,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
         }}
       />
       <RestaurantCommentsQuickView
-        restaurantId={restaurant.databaseId}
+        restaurantUuid={restaurant.id}
+        restaurantDatabaseId={restaurant.databaseId}
         restaurantName={restaurant.name}
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}

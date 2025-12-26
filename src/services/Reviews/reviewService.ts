@@ -25,7 +25,7 @@ export class ReviewService {
         }
     }
 
-    async fetchCommentReplies(id: string) {
+    async fetchCommentReplies(id: string, userId?: string) {
         try {
             if (!id) {
                 throw new Error('Invalid comment id');
@@ -36,7 +36,11 @@ export class ReviewService {
             
             if (UUID_REGEX.test(id)) {
                 // This is a Hasura UUID, use the new API endpoint
-                const response = await fetch(`/api/v1/restaurant-reviews/get-replies?parent_review_id=${id}`);
+                const params = new URLSearchParams({ parent_review_id: id });
+                if (userId && UUID_REGEX.test(String(userId))) {
+                    params.append('user_id', String(userId));
+                }
+                const response = await fetch(`/api/v1/restaurant-reviews/get-replies?${params.toString()}`);
                 
                 // Check Content-Type before parsing JSON
                 const contentType = response.headers.get('content-type');
@@ -117,7 +121,7 @@ export class ReviewService {
             
             if (isUUID) {
                 // Use new API v1 endpoint - need to get user ID from token
-                // First, get current user's UUID
+                // The endpoint will extract Firebase UUID from the Authorization token
                 const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
@@ -125,12 +129,13 @@ export class ReviewService {
                 });
                 
                 if (!userResponse.ok) {
-                    throw new Error('Failed to get user information');
+                    const errorData = await userResponse.json().catch(() => ({ error: 'Failed to get user information' }));
+                    throw new Error(errorData.error || `Failed to get user information: ${userResponse.statusText}`);
                 }
                 
                 const userData = await userResponse.json();
                 if (!userData.success || !userData.data?.id) {
-                    throw new Error('User not found');
+                    throw new Error(userData.error || 'User not found');
                 }
                 
                 const userId = userData.data.id;
@@ -161,7 +166,7 @@ export class ReviewService {
                 // Return in the expected format
                 return {
                     userLiked: result.data.liked ?? false,
-                    likesCount: 0 // The API doesn't return count, frontend should refetch if needed
+                    likesCount: result.data.likesCount ?? 0 // Use the count from API
                 };
             } else {
                 // Legacy numeric ID - use old endpoint (for backward compatibility)
@@ -182,7 +187,7 @@ export class ReviewService {
             
             if (isUUID) {
                 // Use new API v1 endpoint - need to get user ID from token
-                // First, get current user's UUID
+                // The endpoint will extract Firebase UUID from the Authorization token
                 const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`
@@ -190,12 +195,13 @@ export class ReviewService {
                 });
                 
                 if (!userResponse.ok) {
-                    throw new Error('Failed to get user information');
+                    const errorData = await userResponse.json().catch(() => ({ error: 'Failed to get user information' }));
+                    throw new Error(errorData.error || `Failed to get user information: ${userResponse.statusText}`);
                 }
                 
                 const userData = await userResponse.json();
                 if (!userData.success || !userData.data?.id) {
-                    throw new Error('User not found');
+                    throw new Error(userData.error || 'User not found');
                 }
                 
                 const userId = userData.data.id;
@@ -226,7 +232,7 @@ export class ReviewService {
                 // Return in the expected format
                 return {
                     userLiked: result.data.liked ?? false,
-                    likesCount: 0 // The API doesn't return count, frontend should refetch if needed
+                    likesCount: result.data.likesCount ?? 0 // Use the count from API
                 };
             } else {
                 // Legacy numeric ID - use old endpoint (for backward compatibility)

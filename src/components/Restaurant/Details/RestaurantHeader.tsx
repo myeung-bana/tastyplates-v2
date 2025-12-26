@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { FiEdit3 } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantButton";
@@ -55,12 +56,13 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 {restaurant.listingCategories?.nodes && restaurant.listingCategories.nodes.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-2">
                     {restaurant.listingCategories.nodes.map((category: { name: string; slug: string }, index: number) => (
-                      <span 
+                      <Link
                         key={`category-${index}`}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 transition-colors font-neusans inline-block"
+                        href={`/restaurants/cuisines/${category.slug}`}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-normal hover:bg-gray-200 hover:text-[#ff7c0a] transition-colors font-neusans inline-block cursor-pointer"
                       >
                         {category.name}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 ) : (

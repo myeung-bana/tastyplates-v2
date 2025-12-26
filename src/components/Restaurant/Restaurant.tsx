@@ -72,7 +72,13 @@ export interface Restaurant {
 
 const restaurantService = new RestaurantService();
 
-const RestaurantPage = () => {
+interface RestaurantPageProps {
+  cuisineSlug?: string;
+  cuisineName?: string | null;
+  hideCuisineFilter?: boolean;
+}
+
+const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }: RestaurantPageProps = {}) => {
   const { user } = useFirebaseSession();
   const { selectedLocation } = useLocation();
 
@@ -155,7 +161,7 @@ const RestaurantPage = () => {
   const initialPalates = getInitialPalatesFromUrl();
 
   const [filters, setFilters] = useState({
-    cuisine: null as string[] | null,
+    cuisine: cuisineSlug ? [cuisineSlug] : null as string[] | null,
     palates: initialPalates,
     price: null as string | null,
     rating: null as number | null,
@@ -345,12 +351,25 @@ const RestaurantPage = () => {
         hasNextPage = false;
       }
       
-      // Apply location filtering using the enhanced location system
+      // Apply cuisine filtering if cuisineSlug is provided
       let filteredRestaurants = transformed;
       
+      if (cuisineSlug && filters.cuisine && filters.cuisine.length > 0) {
+        filteredRestaurants = transformed.filter(restaurant => {
+          // Check if restaurant has the matching cuisine slug in listingCategories
+          if (!restaurant.listingCategories || restaurant.listingCategories.length === 0) {
+            return false;
+          }
+          return restaurant.listingCategories.some(category => 
+            category.slug === cuisineSlug || filters.cuisine?.includes(category.slug)
+          );
+        });
+      }
+      
+      // Apply location filtering using the enhanced location system
       // First apply URL-based address filtering if provided
       if (searchAddress && searchAddress.trim()) {
-        filteredRestaurants = transformed.filter(restaurant => {
+        filteredRestaurants = filteredRestaurants.filter(restaurant => {
           const relevance = restaurantService.calculateLocationRelevance(restaurant, searchAddress);
           return relevance > 0; // Only include restaurants with location relevance
         });
@@ -387,7 +406,7 @@ const RestaurantPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm, filters.palates, filters.sortOption, searchAddress, selectedLocation, sortRestaurants]);
+  }, [debouncedSearchTerm, filters.palates, filters.cuisine, filters.sortOption, searchAddress, selectedLocation, sortRestaurants, cuisineSlug]);
 
   // Debounced filter change handler
   type FilterChangeType = {
@@ -443,7 +462,7 @@ const RestaurantPage = () => {
     isFirstLoad.current = true;
     fetchRestaurants(true, null, RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, filters.palates, filters.sortOption, searchAddress, selectedLocation, fetchRestaurants]);
+  }, [debouncedSearchTerm, filters.palates, filters.cuisine, filters.sortOption, searchAddress, selectedLocation, fetchRestaurants]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -502,17 +521,20 @@ const RestaurantPage = () => {
           <div className="px-2 mb-4 md:mb-6">
             <Breadcrumb 
               items={[
-                { label: "Restaurants" }
+                { label: "Restaurants", href: "/restaurants" },
+                ...(cuisineName ? [{ label: `Cuisine: ${cuisineName}` }] : [])
               ]}
               showHomeIcon={true}
             />
           </div>
           
-          <Filter2 
-            onFilterChange={handleFilterChange}
-            initialCuisines={filters.cuisine || []}
-            initialPalates={filters.palates || []}
-          />
+          {!hideCuisineFilter && (
+            <Filter2 
+              onFilterChange={handleFilterChange}
+              initialCuisines={filters.cuisine || []}
+              initialPalates={filters.palates || []}
+            />
+          )}
 
           {loading && restaurants.length === 0 ? (
             <div className="restaurants__grid restaurants__grid--skeleton">

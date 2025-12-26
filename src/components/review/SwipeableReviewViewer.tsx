@@ -6,6 +6,7 @@ import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { capitalizeWords, stripTags, generateProfileUrl, formatDate } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { PROFILE } from "@/constants/pages";
@@ -28,6 +29,7 @@ interface SwipeableReviewViewerProps {
 }
 
 const reviewService = new ReviewService();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   reviews: initialReviews,
@@ -50,6 +52,38 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const [isTextExpanded, setIsTextExpanded] = useState<Record<number, boolean>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const postRefs = useRef<Record<number, HTMLDivElement>>({});
+  const userUuidRef = useRef<string | null>(null);
+  const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
+  const CACHE_TTL = 30000; // 30s
+
+  const getUserUuid = useCallback(async (): Promise<string | null> => {
+    if (!user?.id || !firebaseUser) return null;
+
+    const userIdStr = String(user.id);
+    if (UUID_REGEX.test(userIdStr)) {
+      userUuidRef.current = userIdStr;
+      return userIdStr;
+    }
+
+    if (userUuidRef.current) return userUuidRef.current;
+
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.success && data?.data?.id) {
+          userUuidRef.current = data.data.id;
+          return data.data.id;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }, [user?.id, firebaseUser]);
 
   // Update reviews when initialReviews changes
   useEffect(() => {
@@ -77,6 +111,53 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       });
     }
   }, [reviews]);
+
+  // On open: sync like status + count from API for initial + adjacent posts (so heart/count reflect DB)
+  useEffect(() => {
+    if (!isOpen || !user || !firebaseUser || reviews.length === 0) return;
+
+    const syncOne = async (review: GraphQLReview) => {
+      const reviewId = review.id || String(review.databaseId);
+      if (!UUID_REGEX.test(String(reviewId))) return;
+
+      const userId = await getUserUuid();
+      if (!userId) return;
+
+      const cacheKey = `${reviewId}_${userId}`;
+      const cached = likeStatusCacheRef.current[cacheKey];
+      const now = Date.now();
+
+      if (cached && (now - cached.timestamp) < CACHE_TTL) {
+        setUserLiked((prev) => ({ ...prev, [review.databaseId]: cached.isLiked }));
+        setLikesCount((prev) => ({ ...prev, [review.databaseId]: cached.count }));
+        return;
+      }
+
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json?.success || !json?.data) return;
+
+      const isLiked = json.data.liked ?? false;
+      const count = json.data.likesCount ?? 0;
+      likeStatusCacheRef.current[cacheKey] = { isLiked, count, timestamp: Date.now() };
+
+      setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
+      setLikesCount((prev) => ({ ...prev, [review.databaseId]: count }));
+    };
+
+    const indices = [initialIndex, initialIndex - 1, initialIndex + 1].filter(
+      (i) => i >= 0 && i < reviews.length
+    );
+
+    indices.forEach((i) => {
+      const r = reviews[i];
+      if (r) void syncOne(r);
+    });
+  }, [isOpen, initialIndex, reviews, user, firebaseUser, getUserUuid]);
 
   // Helper function to fetch first comment for a review
   const fetchFirstCommentForReview = useCallback(async (reviewId: string, databaseId: number) => {
@@ -245,16 +326,20 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
   // Handle like
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:247',message:'handleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+    // #endregion
     if (!firebaseUser) {
       toast.error("Please sign in to like reviews");
       return;
     }
 
-    // Get Firebase ID token for authentication
-    const idToken = await firebaseUser.getIdToken();
-
     const isLiked = userLiked[review.databaseId] ?? false;
     const currentLikes = likesCount[review.databaseId] ?? 0;
+    const reviewDatabaseId = review.databaseId;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:256',message:'Current state before optimistic update',data:{reviewDatabaseId,isLiked,currentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     // Optimistic update
     setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
@@ -264,15 +349,63 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }));
 
     try {
-      // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
       const reviewId = review.id || String(review.databaseId);
-      
-      if (isLiked) {
-        await reviewService.unlikeComment(reviewId, idToken);
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:268',message:'Review ID validation',data:{reviewId,isUUID},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+
+      if (isUUID) {
+        // Use new API v1 endpoint
+        const idToken = await firebaseUser.getIdToken();
+        const userFetchStartTime = Date.now();
+        const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const userFetchDuration = Date.now() - userFetchStartTime;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:273',message:'User UUID fetch response',data:{userResponseOk:userResponse.ok,userResponseStatus:userResponse.status,userFetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:277',message:'User UUID parsed',data:{userDataSuccess:userData.success,hasUserId:!!userData.data?.id,userId:userData.data?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          if (userData.success && userData.data?.id) {
+            const apiStartTime = Date.now();
+            const result = await reviewV2Service.toggleLike(reviewId, userData.data.id);
+            const apiDuration = Date.now() - apiStartTime;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:280',message:'API call success',data:{reviewId,userId:userData.data.id,result,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+            // #endregion
+            // Update with actual values from API
+            setUserLiked((prev) => ({ ...prev, [review.databaseId]: result.liked }));
+            setLikesCount((prev) => ({ ...prev, [review.databaseId]: result.likesCount }));
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:283',message:'State updated from API',data:{reviewDatabaseId,resultLiked:result.liked,resultLikesCount:result.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+            // #endregion
+          }
+        }
       } else {
-        await reviewService.likeComment(reviewId, idToken);
+        // Legacy numeric ID
+        const idToken = await firebaseUser.getIdToken();
+        const apiStartTime = Date.now();
+        if (isLiked) {
+          await reviewService.unlikeComment(reviewId, idToken);
+        } else {
+          await reviewService.likeComment(reviewId, idToken);
+        }
+        const apiDuration = Date.now() - apiStartTime;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:291',message:'Legacy API call completed',data:{reviewId,isLiked,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       }
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:294',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error?.message||String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       // Revert on error
       setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
       setLikesCount((prev) => ({
@@ -280,7 +413,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         [review.databaseId]: currentLikes,
       }));
       
-      // Check if it's a JSON parsing error
       const errorMessage = error?.message || '';
       const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
       

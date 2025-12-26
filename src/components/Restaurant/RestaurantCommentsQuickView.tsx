@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle } from "react-icons/fi";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
-import { ReviewService } from "@/services/Reviews/reviewService";
 import CommentsBottomSheet from "../review/CommentsBottomSheet";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import { DEFAULT_USER_ICON } from "@/constants/images";
@@ -12,19 +11,21 @@ import { formatDistanceToNow } from "date-fns";
 import { formatDate } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { useIsMobile } from "@/utils/deviceUtils";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
+import { transformReviewV2ToGraphQLReview } from "@/utils/reviewTransformers";
 import "@/styles/components/_restaurant-comments-quick-view.scss";
 
 interface RestaurantCommentsQuickViewProps {
-  restaurantId: number;
+  restaurantUuid: string;
+  restaurantDatabaseId?: number;
   restaurantName: string;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const reviewService = new ReviewService();
-
 const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = ({
-  restaurantId,
+  restaurantUuid,
+  restaurantDatabaseId,
   restaurantName,
   isOpen,
   onClose,
@@ -35,7 +36,7 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [selectedReview, setSelectedReview] = useState<GraphQLReview | null>(null);
   const [sheetPosition, setSheetPosition] = useState(0);
@@ -47,24 +48,25 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
 
   // Load reviews when opened
   useEffect(() => {
-    if (isOpen && restaurantId && reviews.length === 0) {
+    if (isOpen && restaurantUuid && reviews.length === 0) {
       loadReviews();
     }
-  }, [isOpen, restaurantId]);
+  }, [isOpen, restaurantUuid]);
 
   const loadReviews = async () => {
-    if (!restaurantId) return;
+    if (!restaurantUuid) return;
     setLoading(true);
     try {
-      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
-      const response = await reviewService.fetchRestaurantReviews(
-        restaurantId,
-        idToken,
-        10
+      const response = await reviewV2Service.getReviewsByRestaurant(restaurantUuid, {
+        limit: 10,
+        offset: 0,
+      });
+      const transformed = (response.reviews || []).map((r) =>
+        transformReviewV2ToGraphQLReview(r, restaurantDatabaseId)
       );
-      setReviews(response.reviews);
-      setHasNextPage(response.pageInfo.hasNextPage);
-      setEndCursor(response.pageInfo.endCursor);
+      setReviews(transformed);
+      setOffset(10);
+      setHasNextPage(!!response.hasMore);
     } catch (error) {
       console.error('Error loading reviews:', error);
     } finally {
@@ -73,29 +75,29 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
   };
 
   const handleLoadMore = useCallback(async () => {
-    if (loadingMore || !hasNextPage || !endCursor || !restaurantId) return;
+    if (loadingMore || !hasNextPage || !restaurantUuid) return;
     setLoadingMore(true);
     try {
-      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
-      const response = await reviewService.fetchRestaurantReviews(
-        restaurantId,
-        idToken,
-        10,
-        endCursor
+      const response = await reviewV2Service.getReviewsByRestaurant(restaurantUuid, {
+        limit: 10,
+        offset,
+      });
+      const transformed = (response.reviews || []).map((r) =>
+        transformReviewV2ToGraphQLReview(r, restaurantDatabaseId)
       );
       setReviews((prev) => {
         const existingIds = new Set(prev.map((r) => r.id));
-        const uniqueNew = response.reviews.filter((r) => !existingIds.has(r.id));
+        const uniqueNew = transformed.filter((r) => !existingIds.has(r.id));
         return [...prev, ...uniqueNew];
       });
-      setHasNextPage(response.pageInfo.hasNextPage);
-      setEndCursor(response.pageInfo.endCursor);
+      setOffset((prev) => prev + 10);
+      setHasNextPage(!!response.hasMore);
     } catch (error) {
       console.error("Error loading more reviews:", error);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasNextPage, endCursor, restaurantId, firebaseUser]);
+  }, [loadingMore, hasNextPage, restaurantUuid, offset, restaurantDatabaseId]);
 
   const handleCommentClick = useCallback((review: GraphQLReview) => {
     setSelectedReview(review);
@@ -126,6 +128,8 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
       setShowComments(false);
       setSelectedReview(null);
       setSheetPosition(0);
+      setOffset(0);
+      setHasNextPage(false);
     }, 300); // Match CSS transition duration
   }, [onClose, isClosing]);
 
@@ -133,12 +137,12 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobile || isClosing) return;
     setIsDragging(true);
-    setStartY(e.touches[0].clientY);
+    setStartY(e.touches[0]?.clientY ?? 0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isMobile || !isDragging || isClosing) return;
-    const currentY = e.touches[0].clientY;
+    const currentY = e.touches[0]?.clientY ?? 0;
     const diff = currentY - startY;
     if (diff > 0) {
       setSheetPosition(diff);
@@ -174,6 +178,7 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
     } else {
       setIsAnimatingIn(false);
     }
+    return undefined;
   }, [isOpen, isClosing]);
 
   // Prevent body scroll when open
@@ -184,6 +189,7 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
         document.body.style.overflow = "unset";
       };
     }
+    return undefined;
   }, [isOpen, isClosing]);
 
   if (!isOpen && !isClosing) return null;
@@ -289,7 +295,7 @@ const RestaurantCommentsQuickView: React.FC<RestaurantCommentsQuickViewProps> = 
                     </div>
                   </div>
                 ))}
-                {hasNextPage && onLoadMore && (
+                {hasNextPage && (
                   <button
                     className="restaurant-comments-quick-view__load-more"
                     onClick={handleLoadMore}

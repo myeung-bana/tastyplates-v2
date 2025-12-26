@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { ReviewService } from "@/services/Reviews/reviewService";
@@ -12,8 +12,6 @@ import {
   commentedSuccess,
   errorOccurred,
   maximumCommentReplies,
-  commentLikedSuccess,
-  commentUnlikedSuccess,
 } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import toast from "react-hot-toast";
@@ -27,6 +25,7 @@ interface CommentsBottomSheetProps {
 }
 
 const reviewService = new ReviewService();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   review,
@@ -43,12 +42,42 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   const [sheetPosition, setSheetPosition] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
-  const [replyLikes, setReplyLikes] = useState<Record<number, number>>({});
-  const [replyUserLiked, setReplyUserLiked] = useState<Record<number, boolean>>({});
-  const [replyLoading, setReplyLoading] = useState<Record<number, boolean>>({});
+  const [replyLikes, setReplyLikes] = useState<Record<string, number>>({});
+  const [replyUserLiked, setReplyUserLiked] = useState<Record<string, boolean>>({});
+  const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const fetchedReviewIdRef = React.useRef<string | null>(null);
   const onCommentCountChangeRef = React.useRef(onCommentCountChange);
+  const userUuidRef = useRef<string | null>(null);
+
+  const getUserUuid = useCallback(async (): Promise<string | null> => {
+    if (!user?.id || !firebaseUser) return null;
+
+    const userIdStr = String(user.id);
+    if (UUID_REGEX.test(userIdStr)) {
+      userUuidRef.current = userIdStr;
+      return userIdStr;
+    }
+
+    if (userUuidRef.current) return userUuidRef.current;
+
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.success && data?.data?.id) {
+          userUuidRef.current = data.data.id;
+          return data.data.id;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }, [user?.id, firebaseUser]);
 
   // Keep ref updated
   useEffect(() => {
@@ -65,23 +94,25 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         setIsLoadingReplies(true);
         fetchedReviewIdRef.current = review.id;
         
-        reviewService
-          .fetchCommentReplies(review.id)
-          .then((fetchedReplies) => {
+        (async () => {
+          const userUuid = await getUserUuid();
+          const fetchedReplies = await reviewService.fetchCommentReplies(review.id, userUuid ?? undefined);
+
             setReplies(fetchedReplies);
             // Initialize likes state for replies
-            const initialLikes: Record<number, number> = {};
-            const initialUserLiked: Record<number, boolean> = {};
-            fetchedReplies.forEach((reply) => {
-              initialLikes[reply.databaseId] = reply.commentLikes || 0;
-              initialUserLiked[reply.databaseId] = reply.userLiked || false;
-            });
-            setReplyLikes(initialLikes);
-            setReplyUserLiked(initialUserLiked);
-            if (onCommentCountChangeRef.current) {
-              onCommentCountChangeRef.current(fetchedReplies.length);
-            }
-          })
+          const initialLikes: Record<string, number> = {};
+          const initialUserLiked: Record<string, boolean> = {};
+          fetchedReplies.forEach((reply) => {
+            const key = reply.id || String(reply.databaseId);
+            initialLikes[key] = reply.commentLikes || 0;
+            initialUserLiked[key] = reply.userLiked || false;
+          });
+          setReplyLikes(initialLikes);
+          setReplyUserLiked(initialUserLiked);
+          if (onCommentCountChangeRef.current) {
+            onCommentCountChangeRef.current(fetchedReplies.length);
+          }
+        })()
           .catch((error) => {
             console.error("Error fetching replies:", error);
             setReplies([]); // Ensure empty array on error
@@ -97,10 +128,10 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       setReplyUserLiked({});
       fetchedReviewIdRef.current = null;
     }
-  }, [isOpen, review?.id]);
+  }, [isOpen, review?.id, getUserUuid]);
 
   // Handle reply like
-  const handleReplyLike = useCallback(async (replyId: number) => {
+  const handleReplyLike = useCallback(async (reply: GraphQLReview) => {
     if (!firebaseUser) {
       toast.error("Please sign in to like comments");
       return;
@@ -108,6 +139,13 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
     // Get Firebase ID token for authentication
     const idToken = await firebaseUser.getIdToken();
+
+    const replyId = reply.id || String(reply.databaseId);
+    if (!UUID_REGEX.test(String(reply.id || ''))) {
+      // Only UUID replies are supported in the new system
+      toast.error("Unable to like this comment");
+      return;
+    }
 
     const isLiked = replyUserLiked[replyId] ?? false;
     const currentLikes = replyLikes[replyId] ?? 0;
@@ -122,12 +160,16 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
     try {
       if (isLiked) {
-        await reviewService.unlikeComment(replyId, idToken);
-        toast.success(commentUnlikedSuccess);
+        const resp = await reviewService.unlikeComment(reply.id, idToken);
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: resp.userLiked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: resp.likesCount }));
       } else {
-        await reviewService.likeComment(replyId, idToken);
-        toast.success(commentLikedSuccess);
+        const resp = await reviewService.likeComment(reply.id, idToken);
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: resp.userLiked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: resp.likesCount }));
       }
+      
+      // NO SUCCESS TOAST - smooth like modern social media
     } catch (error) {
       // Revert on error
       setReplyUserLiked((prev) => ({ ...prev, [replyId]: isLiked }));
@@ -430,12 +472,12 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
                 key={reply.id || `reply-${index}-${reply.databaseId}`}
                 reply={{
                   ...reply,
-                  commentLikes: replyLikes[reply.databaseId] ?? reply.commentLikes ?? 0,
-                  userLiked: replyUserLiked[reply.databaseId] ?? reply.userLiked ?? false,
+                  commentLikes: replyLikes[reply.id || String(reply.databaseId)] ?? reply.commentLikes ?? 0,
+                  userLiked: replyUserLiked[reply.id || String(reply.databaseId)] ?? reply.userLiked ?? false,
                 }}
                 onLike={handleReplyLike}
                 onProfileClick={() => {}}
-                isLoading={replyLoading[reply.databaseId] ?? false}
+                isLoading={replyLoading[reply.id || String(reply.databaseId)] ?? false}
               />
             ))
           ) : (

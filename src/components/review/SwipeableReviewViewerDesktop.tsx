@@ -72,6 +72,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   
   // Helper to get user UUID once and cache it (performance optimization for likes)
   const getUserUuid = useCallback(async (): Promise<string | null> => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:74',message:'getUserUuid called',data:{hasCached:!!userUuidRef.current,cachedValue:userUuidRef.current,hasUser:!!user?.id,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Return cached UUID if available
     if (userUuidRef.current) {
       return userUuidRef.current;
@@ -83,23 +86,37 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     
     if (UUID_REGEX.test(userIdStr)) {
       userUuidRef.current = userIdStr;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:85',message:'User ID is UUID, cached',data:{userIdStr},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       return userIdStr;
     }
 
     try {
+      const fetchStartTime = Date.now();
       const idToken = await firebaseUser.getIdToken();
       const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
+      const fetchDuration = Date.now() - fetchStartTime;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:91',message:'User UUID fetch response',data:{responseOk:response.ok,responseStatus:response.status,fetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
 
       if (response.ok) {
         const userData = await response.json();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:96',message:'User UUID parsed',data:{userDataSuccess:userData.success,hasUserId:!!userData.data?.id,userId:userData.data?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         if (userData.success && userData.data?.id) {
           userUuidRef.current = userData.data.id;
           return userData.data.id;
         }
       }
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:102',message:'User UUID fetch error',data:{errorMessage:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.error("Error fetching user UUID:", error);
     }
 
@@ -175,10 +192,93 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           ? parseInt(commentLikes, 10) || 0 
           : Number(commentLikes) || 0;
       });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:195',message:'Initializing like states',data:{reviewsCount:reviews.length,initialLiked,initialCounts,sampleReview:{databaseId:reviews[0]?.databaseId,userLiked:reviews[0]?.userLiked,commentLikes:reviews[0]?.commentLikes}},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
       setUserLiked(initialLiked);
       setLikesCount(initialCounts);
     }
   }, [reviews]);
+
+  // Cache to avoid redundant API calls for the same review
+  const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
+  const CACHE_TTL = 30000; // 30 seconds cache
+
+  // Check like status and count when component opens or current review changes (with caching and debouncing)
+  useEffect(() => {
+    if (!isOpen || !user || !firebaseUser || reviews.length === 0) return;
+    
+    // Debounce to prevent rapid successive calls
+    const timeoutId = setTimeout(async () => {
+      const review = reviews[currentIndex];
+      if (!review?.id) return;
+      
+      const reviewId = review.id;
+      const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
+      if (!isReviewUUID) return;
+      
+      try {
+        const userId = await getUserUuid();
+        if (!userId) return;
+        
+        // Check cache with correct userId (from getUserUuid, not user?.id)
+        const cacheKey = `${reviewId}_${userId}`;
+        const cached = likeStatusCacheRef.current[cacheKey];
+        const now = Date.now();
+        
+        if (cached && (now - cached.timestamp) < CACHE_TTL) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:225',message:'Using cached like status',data:{reviewId,userId,reviewDatabaseId:review.databaseId,cached,timeSinceCache:now-cached.timestamp},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'H'})}).catch(()=>{});
+          // #endregion
+          setUserLiked((prev) => ({ ...prev, [review.databaseId]: cached.isLiked }));
+          setLikesCount((prev) => ({ ...prev, [review.databaseId]: cached.count }));
+          return;
+        }
+        
+        // #region agent log
+        const fetchStartTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:235',message:'Fetching like status and count',data:{reviewId,userId,reviewDatabaseId:review.databaseId},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        
+        // Get like status and count using the GET endpoint (now optimized with single query)
+        const idToken = await firebaseUser.getIdToken();
+        const statusResponse = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        
+        const fetchDuration = Date.now() - fetchStartTime;
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.success && statusData.data) {
+            const isLiked = statusData.data.liked ?? false;
+            const currentCount = statusData.data.likesCount ?? 0;
+            
+            // Cache the result with correct key
+            likeStatusCacheRef.current[cacheKey] = {
+              isLiked,
+              count: currentCount,
+              timestamp: Date.now()
+            };
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:255',message:'Like status and count fetched',data:{reviewId,userId,isLiked,currentCount,reviewDatabaseId:review.databaseId,fetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'H'})}).catch(()=>{});
+            // #endregion
+            
+            setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
+            setLikesCount((prev) => ({ ...prev, [review.databaseId]: currentCount }));
+          }
+        }
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:265',message:'Error checking like status',data:{reviewId:review.id,errorMessage:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'H'})}).catch(()=>{});
+        // #endregion
+        console.error('Error checking like status:', error);
+      }
+    }, 150); // 150ms debounce to prevent rapid calls
+    
+    return () => clearTimeout(timeoutId);
+  }, [isOpen, currentIndex, reviews, user, firebaseUser, getUserUuid, UUID_REGEX]);
 
   // Combined effect: Reset states and handle navbar when modal opens/closes (performance optimization)
   useEffect(() => {
@@ -353,7 +453,13 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   // Handle like/unlike - Optimized with cached user UUID
   const handleLike = useCallback(
     async (review: GraphQLReview) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:355',message:'handleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+      // #endregion
       if (!user || !firebaseUser) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:357',message:'Auth check failed',data:{hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         toast.error("Please sign in to like reviews");
         return;
       }
@@ -361,6 +467,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
       const reviewId = review.id || String(review.databaseId);
       const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:363',message:'Review ID validation',data:{reviewId,isReviewUUID,reviewDatabaseId:review.databaseId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
 
       if (!isReviewUUID) {
         toast.error("Like functionality requires review UUID. Please refresh the page.");
@@ -368,7 +477,12 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       }
 
       // Get user UUID (cached for performance)
+      const userIdStartTime = Date.now();
       const userId = await getUserUuid();
+      const userIdDuration = Date.now() - userIdStartTime;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:371',message:'getUserUuid result',data:{userId,userIdDuration,hasUserId:!!userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       if (!userId) {
         toast.error("Unable to get user ID. Please try again.");
         return;
@@ -377,6 +491,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       const reviewDatabaseId = review.databaseId;
       const currentLiked = userLiked[reviewDatabaseId] ?? false;
       const currentLikes = likesCount[reviewDatabaseId] ?? 0;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:378',message:'Current state before optimistic update',data:{reviewDatabaseId,currentLiked,currentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
 
       // Optimistic update
       const newLiked = !currentLiked;
@@ -384,19 +501,37 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       
       setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: newLiked }));
       setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: newCount }));
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:386',message:'Optimistic update applied',data:{reviewDatabaseId,newLiked,newCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
 
       try {
+        const apiStartTime = Date.now();
         // Call new API v1 endpoint
         const result = await reviewV2Service.toggleLike(reviewId, userId);
+        const apiDuration = Date.now() - apiStartTime;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:390',message:'API call success',data:{reviewId,userId,result,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'C,E'})}).catch(()=>{});
+        // #endregion
         
-        // Confirm the liked status from API
+        // Update cache with correct userId
+        const cacheKey = `${reviewId}_${userId}`;
+        likeStatusCacheRef.current[cacheKey] = {
+          isLiked: result.liked,
+          count: result.likesCount,
+          timestamp: Date.now()
+        };
+        
+        // Confirm the liked status and count from API
         setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: result.liked }));
-        
-        // If the result doesn't match our optimistic update, revert the count
-        if (result.liked !== newLiked) {
-          setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: currentLikes }));
-        }
+        setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: result.likesCount }));
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:394',message:'State updated from API',data:{reviewDatabaseId,resultLiked:result.liked,resultLikesCount:result.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'D,E'})}).catch(()=>{});
+        // #endregion
       } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewerDesktop.tsx:395',message:'API call error',data:{reviewId,userId,errorMessage:error instanceof Error?error.message:String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
         // Revert both on error
         setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: currentLiked }));
         setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: currentLikes }));

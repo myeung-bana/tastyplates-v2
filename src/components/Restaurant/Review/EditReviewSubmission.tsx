@@ -2,9 +2,10 @@
 import React, { FormEvent, useEffect, useState, useRef } from "react";
 import "@/styles/pages/_submit-restaurants.scss";
 import Rating from "./Rating";
-import { MdClose, MdOutlineFileUpload } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import Link from "next/link";
 import Image from "next/image";
+import { ImageUploadDropzone } from "@/components/ui/ImageUploadDropzone/ImageUploadDropzone";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
@@ -573,64 +574,27 @@ const EditReviewSubmissionPage = () => {
                   Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
-                  <div className="submitRestaurants__upload-area">
-                    <div className="submitRestaurants__upload-content">
-                      <MdOutlineFileUpload className="submitRestaurants__upload-icon" />
-                      <p className="submitRestaurants__upload-text">
-                        Drag and drop your photos here, or click to browse
-                      </p>
-                      <p className="submitRestaurants__upload-subtext">
-                        Supported formats: JPG, PNG, GIF (Max 5MB each)
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="submitRestaurants__file-input"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        if (files.length + selectedFiles.length > maximumImage) {
-                          const errorMsg = maximumImageLimit(maximumImage);
-                          setUploadedImageError(errorMsg);
-                          return;
-                        }
-                        if (files.length < minimumImage) {
-                          const errorMsg = minimumImageLimit(minimumImage);
-                          setUploadedImageError(errorMsg);
-                          return;
-                        }
-                        setUploadedImageError('');
-                        setIsDoneSelecting(true);
-                      }}
-                    />
-                  </div>
-                  {uploadedImageError && (
-                    <p className="text-red-600 text-sm mt-1">{uploadedImageError}</p>
-                  )}
-                <div className="flex flex-wrap gap-2">
-                  {(isDoneSelecting || selectedFiles.length > 0) &&
-                    selectedFiles.map((item: string, index: number) => (
-                      <div className="rounded-2xl relative" key={`image-${index}-${item.substring(0, 20)}`}>
-                        <button
-                          type="button"
-                          onClick={() => deleteSelectedFile(item)}
-                          className="absolute top-3 right-3 rounded-full bg-[#FCFCFC] p-2 z-10 hover:bg-[#E0E0E0] transition-colors"
-                          aria-label="Remove image"
-                        >
-                          <MdClose className="size-3 md:size-4" />
-                        </button>
-                        <Image
-                          src={item}
-                          alt={`Review image ${index + 1}`}
-                          width={187}
-                          height={140}
-                          className="rounded-2xl object-cover"
-                          unoptimized={item.startsWith('data:')}
-                        />
-                      </div>
-                    ))}
-                </div>
+                  <ImageUploadDropzone
+                    images={selectedFiles}
+                    onImagesAdd={(newImageUrls) => {
+                      const totalImages = selectedFiles.length + newImageUrls.length;
+                      if (totalImages > maximumImage) {
+                        setUploadedImageError(maximumImageLimit(maximumImage));
+                        return;
+                      }
+                      setSelectedFiles([...selectedFiles, ...newImageUrls]);
+                      setIsDoneSelecting(true);
+                      setUploadedImageError('');
+                    }}
+                    onImageRemove={(imageUrl) => {
+                      deleteSelectedFile(imageUrl);
+                    }}
+                    maxImages={maximumImage}
+                    minImages={minimumImage}
+                    error={uploadedImageError}
+                    disabled={isLoading || isSavingAsDraft}
+                    maxFileSizeMB={5}
+                  />
                 </div>
               </div>
               <div className="submitRestaurants__form-group">
@@ -661,7 +625,7 @@ const EditReviewSubmissionPage = () => {
                 By posting a review, you agree that you are above 13 years old and agree to TastyPlates'&nbsp;
                 <Link
                   href={WRITING_GUIDELINES}
-                  className="underline"
+                  className="underline text-sm md:text-sm font-neusans"
                   target="_blank"
                 >
                   Writing Guidelines

@@ -5,9 +5,10 @@ import "@/styles/pages/_restaurants.scss";
 import Rating from "./Rating";
 import RestaurantCard from "@/components/Restaurant/RestaurantCard";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
-import { MdClose, MdOutlineFileUpload } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import Link from "next/link";
 import Image from "next/image";
+import { ImageUploadDropzone } from "@/components/ui/ImageUploadDropzone/ImageUploadDropzone";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useParams } from "next/navigation";
@@ -759,46 +760,27 @@ const ReviewSubmissionPage = () => {
                   Upload Photos (Max 6 Photos)
                 </label>
                 <div className="submitRestaurants__input-group">
-                  <label className="flex gap-2 items-center rounded-xl py-2 px-4 md;py-3 md:px-6 border border-[#494D5D] w-fit cursor-pointer">
-                    <MdOutlineFileUpload className="size-5" />
-                    <input
-                      type="file"
-                      name="image"
-                      className="submitRestaurants__input hidden"
-                      placeholder="Image URL"
-                      onChange={handleFileChange}
-                      multiple
-                      accept="image/*"
-                    />
-                    <span className="text-sm md:text-base text-[#494D5D] font-semibold">
-                      Upload
-                    </span>
-                  </label>
-                  {uploadedImageError && (
-                    <p className="text-red-600 text-sm mt-1">{uploadedImageError}</p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {/* {selectedFiles} */}
-                  {isDoneSelecting &&
-                    selectedFiles.map((item: string, index: number) => (
-                      <div className="rounded-2xl relative" key={index}>
-                        <button
-                          type="button"
-                          onClick={() => deleteSelectedFile(item)}
-                          className="absolute top-3 right-3 rounded-full bg-[#FCFCFC] p-2"
-                        >
-                          <MdClose className="size-3 md:size-4" />
-                        </button>
-                        <Image
-                          src={item}
-                          alt="Review image"
-                          width={187}
-                          height={140}
-                          className="rounded-2xl object-cover"
-                        />
-                      </div>
-                    ))}
+                  <ImageUploadDropzone
+                    images={selectedFiles}
+                    onImagesAdd={(newImageUrls) => {
+                      const totalImages = selectedFiles.length + newImageUrls.length;
+                      if (totalImages > maximumImage) {
+                        setUploadedImageError(maximumImageLimit(maximumImage));
+                        return;
+                      }
+                      setSelectedFiles([...selectedFiles, ...newImageUrls]);
+                      setIsDoneSelecting(true);
+                      setUploadedImageError('');
+                    }}
+                    onImageRemove={(imageUrl) => {
+                      deleteSelectedFile(imageUrl);
+                    }}
+                    maxImages={maximumImage}
+                    minImages={minimumImage}
+                    error={uploadedImageError}
+                    disabled={isLoading || isSavingAsDraft}
+                    maxFileSizeMB={5}
+                  />
                 </div>
               </div>
               <div className="submitRestaurants__form-group">

@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_RESTAURANT_USER_BY_FIREBASE_UUID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const firebase_uuid = searchParams.get('firebase_uuid');
+    let firebase_uuid = searchParams.get('firebase_uuid');
+
+    // If firebase_uuid is not provided as query parameter, try to extract it from the Authorization token
+    if (!firebase_uuid) {
+      try {
+        const auth = getFirebaseAdmin().auth();
+        const authHeader = request.headers.get('authorization');
+        
+        if (authHeader?.startsWith('Bearer ')) {
+          const idToken = authHeader.split('Bearer ')[1];
+          try {
+            const decodedToken = await auth.verifyIdToken(idToken);
+            firebase_uuid = decodedToken.uid;
+          } catch (error) {
+            console.error('Failed to verify ID token:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to initialize Firebase Admin or extract Firebase UUID:', error);
+      }
+    }
 
     if (!firebase_uuid) {
       return NextResponse.json(
-        { success: false, error: 'Firebase UUID is required' },
+        { success: false, error: 'Firebase UUID is required. Provide it as a query parameter or in the Authorization header.' },
         { status: 400 }
       );
     }

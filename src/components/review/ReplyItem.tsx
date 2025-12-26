@@ -12,7 +12,7 @@ import "@/styles/components/_reply-item.scss";
 
 interface ReplyItemProps {
   reply: GraphQLReview;
-  onLike: (replyId: number) => void;
+  onLike: (reply: GraphQLReview) => void;
   onProfileClick: () => void;
   isLoading: boolean;
 }
@@ -71,7 +71,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
               {reply.author?.name || reply.author?.node?.name || "Unknown User"}
             </span>
             <button
-              onClick={() => onLike(reply.databaseId)}
+              onClick={() => onLike(reply)}
               disabled={isLoading}
               className="reply-item__like-btn"
             >
