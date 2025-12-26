@@ -1,11 +1,12 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { FiCheckCircle, FiArrowLeft, FiHome } from 'react-icons/fi';
 import { TASTYSTUDIO_DASHBOARD, TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
 
-export default function ReviewSubmissionSuccessPage() {
+function ReviewSubmissionSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const restaurantName = searchParams?.get('restaurant') || 'Restaurant';
@@ -58,3 +59,16 @@ export default function ReviewSubmissionSuccessPage() {
   );
 }
 
+export default function ReviewSubmissionSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white font-neusans flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm text-gray-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <ReviewSubmissionSuccessContent />
+    </Suspense>
+  );
+}
