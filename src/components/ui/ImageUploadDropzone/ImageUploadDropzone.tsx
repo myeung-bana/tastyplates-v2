@@ -134,31 +134,37 @@ const ImageUploadDropzone = React.forwardRef<HTMLDivElement, ImageUploadDropzone
           return { error: "No valid images found" }
         }
 
-        // Convert to base64 data URLs
+        // Convert to base64 data URLs using Promise.all for better error handling
         setIsProcessing(true)
-        const imageUrls: string[] = []
-        let processedCount = 0
+        
+        try {
+          const imageUrls = await Promise.all(
+            validFiles.map((file) => {
+              return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => {
+                  if (reader.result) {
+                    resolve(reader.result as string)
+                  } else {
+                    reject(new Error('Failed to read file'))
+                  }
+                }
+                reader.onerror = () => {
+                  reject(new Error('Failed to read file'))
+                }
+                reader.readAsDataURL(file)
+              })
+            })
+          )
 
-        for (const file of validFiles) {
-          const reader = new FileReader()
-          await new Promise<void>((resolve, reject) => {
-            reader.onload = () => {
-              if (reader.result) {
-                imageUrls.push(reader.result as string)
-              }
-              processedCount++
-              if (processedCount === validFiles.length) {
-                resolve()
-              }
-            }
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
+          setIsProcessing(false)
+          onImagesAdd(imageUrls)
+          return { success: true }
+        } catch (error) {
+          setIsProcessing(false)
+          console.error('Error processing images:', error)
+          return { error: 'Failed to process some images. Please try again.' }
         }
-
-        setIsProcessing(false)
-        onImagesAdd(imageUrls)
-        return { success: true }
       },
       [images.length, maxImages, maxFileSizeMB, onImagesAdd]
     )

@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
       longitude,
       phone,
       website,
+      featured_image_url, // Base64 data URL or S3 URL
+      uploaded_images, // Array of base64 data URLs or S3 URLs
       status = 'draft', // Default to 'draft' for user-created restaurants
     } = body;
 
@@ -83,6 +85,8 @@ export async function POST(request: NextRequest) {
       address,
       ...(latitude !== undefined && latitude !== null && { latitude: parseFloat(latitude.toString()) }),
       ...(longitude !== undefined && longitude !== null && { longitude: parseFloat(longitude.toString()) }),
+      ...(featured_image_url && { featured_image_url }), // Add featured image if provided
+      ...(uploaded_images && Array.isArray(uploaded_images) && uploaded_images.length > 0 && { uploaded_images }), // Add image gallery if provided
     };
 
     // Execute mutation

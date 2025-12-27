@@ -30,7 +30,7 @@ export function RestaurantMatchDialog({
   onCreateNew,
 }: RestaurantMatchDialogProps) {
   const photoUrl = googlePlaceData.photos && googlePlaceData.photos.length > 0
-    ? getPhotoUrl(googlePlaceData.photos[0], 400)
+    ? getPhotoUrl(googlePlaceData.photos[0] || null, 400)
     : null;
 
   const existingPhotoUrl = existingRestaurant?.featured_image_url || null;
@@ -117,7 +117,7 @@ export function RestaurantMatchDialog({
           {/* No Match Found - New Restaurant */}
           <div className="text-center mb-4">
             <p className="text-sm text-gray-600">
-              This restaurant is not in our database yet. You can create a new listing.
+              You have found a new restaurant! You can create a new listing for it.
             </p>
           </div>
 
@@ -142,7 +142,8 @@ export function RestaurantMatchDialog({
                 <p className="text-sm text-gray-600 mt-1">
                   {googlePlaceData.formatted_address || 'Address not available'}
                 </p>
-                {googlePlaceData.rating && (
+                {/* Only show Google rating if restaurant already exists in database */}
+                {existingRestaurant && googlePlaceData.rating && (
                   <div className="flex items-center gap-1 mt-2">
                     <span className="text-yellow-500">⭐</span>
                     <span className="text-sm font-medium text-gray-700">

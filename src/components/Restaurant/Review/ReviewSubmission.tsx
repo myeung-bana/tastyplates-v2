@@ -32,6 +32,7 @@ import { RestaurantSelection } from "@/components/reviews/RestaurantSearch";
 import { GooglePlacesAutocomplete } from "@/components/ui/GooglePlacesAutocomplete";
 import { RestaurantMatchInline } from "@/components/reviews/RestaurantMatchInline";
 import { RestaurantPlaceData, formatAddressComponents, getPhotoUrl, fetchPlaceDetails } from "@/lib/google-places-utils";
+import { downloadGooglePhotoAsBase64 } from "@/utils/imageUpload";
 import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
@@ -337,6 +338,24 @@ const ReviewSubmissionPage = () => {
             const addressComponents = placeData.address_components || [];
             const formattedAddress = placeData.formatted_address || '';
             
+            // Download Google image if available
+            let featuredImageBase64 = '';
+            let uploadedImagesBase64: string[] = [];
+            
+            if (placeData.photos && placeData.photos.length > 0) {
+              try {
+                const photoUrl = getPhotoUrl(placeData.photos[0], 800); // Higher resolution for upload
+                if (photoUrl) {
+                  featuredImageBase64 = await downloadGooglePhotoAsBase64(photoUrl);
+                  // Use same image for both featured and gallery
+                  uploadedImagesBase64 = [featuredImageBase64];
+                }
+              } catch (imageError) {
+                console.warn('Failed to download Google image, continuing without image:', imageError);
+                // Continue without image if download fails
+              }
+            }
+            
             const createResponse = await fetch('/api/v1/restaurants-v2/create-restaurant', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -349,6 +368,8 @@ const ReviewSubmissionPage = () => {
                 longitude: placeData.geometry?.location?.lng(),
                 phone: placeData.phone,
                 website: placeData.website,
+                featured_image_url: featuredImageBase64 || undefined,
+                uploaded_images: uploadedImagesBase64.length > 0 ? uploadedImagesBase64 : undefined,
                 status: 'publish', // Auto-publish new restaurants created by users
               }),
             });
