@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_REVIEWS_BY_RESTAURANT } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
-import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -78,38 +78,35 @@ export async function GET(request: NextRequest) {
     // Fetch author data separately for all unique authors
     const authorIds = [...new Set(reviews.map((r: any) => r.author_id).filter(Boolean))];
     
-    // Fetch all authors in parallel
-    const authorPromises = authorIds.map(async (authorId: string) => {
+    // Fetch all authors in a single batch query (more efficient)
+    let authorMap = new Map();
+    if (authorIds.length > 0) {
       try {
-        const authorResult = await hasuraQuery(GET_RESTAURANT_USER_BY_ID, {
-          id: authorId
+        const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
+          ids: authorIds
         });
 
-        if (!authorResult.errors && authorResult.data?.restaurant_users_by_pk) {
-          const user = authorResult.data.restaurant_users_by_pk;
-          return {
-            id: authorId,
-            author: {
-              id: user.id,
-              username: user.username || '',
-              display_name: user.display_name || user.username || '',
-              profile_image: user.profile_image,
-              palates: user.palates || null
-            }
-          };
+        if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
+          const users = authorsResult.data.restaurant_users;
+          authorMap = new Map(
+            users.map((user: any) => [
+              user.id,
+              {
+                id: user.id,
+                username: user.username || '',
+                display_name: user.display_name || user.username || '',
+                profile_image: user.profile_image,
+                palates: user.palates || null
+              }
+            ])
+          );
+        } else {
+          console.warn('Failed to fetch authors:', authorsResult.errors);
         }
       } catch (error) {
-        console.warn(`Failed to fetch author ${authorId}:`, error);
+        console.error('Error fetching authors batch:', error);
       }
-      return null;
-    });
-
-    const authorResults = await Promise.all(authorPromises);
-    const authorMap = new Map(
-      authorResults
-        .filter(Boolean)
-        .map((result: any) => [result.id, result.author])
-    );
+    }
 
     // Attach author and restaurant data to all reviews
     reviews = reviews.map((review: any) => ({

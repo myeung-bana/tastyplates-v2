@@ -21,7 +21,6 @@ const GET_RESTAURANT_USER_BY_ID_FALLBACK = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code

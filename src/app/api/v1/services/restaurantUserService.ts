@@ -18,7 +18,6 @@ export interface RestaurantUser {
   about_me?: string;
   birthdate?: string;
   gender?: string;
-  custom_gender?: string;
   pronoun?: string;
   address?: string;
   zip_code?: string;
@@ -80,7 +79,6 @@ export interface CreateRestaurantUserRequest {
   about_me?: string;
   birthdate?: string;
   gender?: string;
-  custom_gender?: string;
   pronoun?: string;
   address?: string;
   zip_code?: string;

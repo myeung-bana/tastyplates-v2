@@ -114,7 +114,6 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
             profile_image: response.data.profile_image,
             birthdate: response.data.birthdate,
             gender: response.data.gender,
-            custom_gender: response.data.custom_gender,
             pronoun: response.data.pronoun,
             address: response.data.address,
             zip_code: response.data.zip_code,

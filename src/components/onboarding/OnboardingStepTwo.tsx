@@ -152,7 +152,6 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       // Step 1 data (from localStorage)
       if (registrationData.birthdate) updateData.birthdate = registrationData.birthdate;
       if (registrationData.gender) updateData.gender = registrationData.gender;
-      if (registrationData.customGender) updateData.custom_gender = registrationData.customGender;
       if (registrationData.pronoun) updateData.pronoun = registrationData.pronoun;
       
       // Handle palates - convert string to array if needed

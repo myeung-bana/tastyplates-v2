@@ -15,7 +15,6 @@ export class UserService {
             email: userData.email,
             birthdate: userData.birthdate,
             gender: userData.gender,
-            custom_gender: userData.customGender,
             pronoun: userData.pronoun,
             palates: userData.palates,
             profile_image: userData.profileImage,

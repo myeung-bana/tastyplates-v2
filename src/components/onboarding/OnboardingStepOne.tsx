@@ -112,9 +112,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
               setGender(parsedData.gender);
             }
 
-            if (!parsedData.customGender && userData.custom_gender) {
-              setCustomGender(userData.custom_gender);
-            } else if (parsedData.customGender) {
+            if (parsedData.customGender) {
               setCustomGender(parsedData.customGender);
             }
 

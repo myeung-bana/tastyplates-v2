@@ -29,7 +29,6 @@ export const GET_ALL_RESTAURANT_USERS = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code
@@ -70,7 +69,6 @@ export const GET_RESTAURANT_USER_BY_ID = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code
@@ -119,7 +117,6 @@ export const GET_RESTAURANT_USER_BY_USERNAME = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code
@@ -154,7 +151,6 @@ export const GET_RESTAURANT_USER_BY_FIREBASE_UUID = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code
@@ -206,7 +202,6 @@ export const UPDATE_RESTAURANT_USER = `
       about_me
       birthdate
       gender
-      custom_gender
       pronoun
       address
       zip_code

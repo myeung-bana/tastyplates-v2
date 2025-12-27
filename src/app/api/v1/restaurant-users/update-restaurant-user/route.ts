@@ -30,7 +30,6 @@ export async function PUT(request: NextRequest) {
     if (updateFields.about_me !== undefined) changes.about_me = updateFields.about_me;
     if (updateFields.birthdate !== undefined) changes.birthdate = updateFields.birthdate;
     if (updateFields.gender !== undefined) changes.gender = updateFields.gender;
-    if (updateFields.custom_gender !== undefined) changes.custom_gender = updateFields.custom_gender;
     if (updateFields.pronoun !== undefined) changes.pronoun = updateFields.pronoun;
     if (updateFields.address !== undefined) changes.address = updateFields.address;
     if (updateFields.zip_code !== undefined) changes.zip_code = updateFields.zip_code;
