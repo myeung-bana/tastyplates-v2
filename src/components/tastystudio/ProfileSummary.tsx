@@ -118,7 +118,7 @@ const ProfileSummary: React.FC = () => {
 
         {/* Username and Stats - Right */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg md:text-xl font-neusans font-medium text-[#31343F] mb-2 truncate">
+          <h2 className="text-lg md:text-xl font-neusans font-medium text-[#31343F] mb-0 truncate">
             {displayName}
           </h2>
           <div className="flex items-center gap-3 md:gap-4 text-sm md:text-base">

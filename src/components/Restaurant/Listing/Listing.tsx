@@ -1,6 +1,6 @@
 // Listing.tsx
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import RestaurantCard from "@/components/Restaurant/RestaurantCard";
 import "@/styles/pages/_restaurants.scss";
 // import { RestaurantDummy, restaurantsDummy } from "@/data/dummyRestaurants";
@@ -23,6 +23,7 @@ import { LISTING_EXPLANATION, HOME } from "@/constants/pages";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 import { useRouter } from "next/navigation";
+import Pagination from "@/components/common/Pagination";
 
 interface Restaurant {
   id: string;
@@ -74,6 +75,9 @@ const ListingPage = () => {
   const [isLoadingDelete, setIsLoadingDelete] = useState(false);
   // Map numeric IDs to UUIDs for deletion
   const [draftIdToUuidMap, setDraftIdToUuidMap] = useState<Map<number, string>>(new Map());
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
 
   // Authentication check - redirect if not logged in
   useEffect(() => {
@@ -137,6 +141,73 @@ const ListingPage = () => {
         averageRating: parseFloat((item.averageRating as string) || "0") || 0,
         ratingsCount: (item.ratingsCount as number) || 0,
         status: item.status as string | undefined,
+      };
+    });
+  }, []);
+
+  // Transform ReviewV2 (published) to DraftReviewData format
+  const transformPublishedReviews = useCallback((reviews: ReviewV2[]): DraftReviewData[] => {
+    return reviews.map((review: ReviewV2) => {
+      // Convert UUID to numeric ID for compatibility
+      const numericId = parseInt(review.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
+      
+      // Get restaurant database ID
+      const restaurantDbId = review.restaurant?.id || 0;
+      
+      // Get author database ID (convert UUID to number)
+      const authorDbId = review.author?.id 
+        ? parseInt(review.author.id.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+        : 0;
+      
+      // Transform images from ReviewV2 format to DraftReviewData format
+      const reviewImages = (review.images || []).map((img: any, index: number) => {
+        const imageId = img.id || `${review.id}-${index}`;
+        const numericImageId = typeof imageId === 'string' && imageId.includes('-')
+          ? parseInt(imageId.replace(/-/g, '').substring(0, 8), 16) % 2147483647
+          : (typeof imageId === 'number' ? imageId : parseInt(String(imageId), 10) || 0);
+        
+        return {
+          databaseId: numericImageId,
+          id: String(imageId),
+          sourceUrl: typeof img === 'string' ? img : (img.url || img.sourceUrl || '')
+        };
+      });
+      
+      // Get author name and avatar
+      const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+      const authorAvatar = review.author?.profile_image 
+        ? (typeof review.author.profile_image === 'string' 
+            ? review.author.profile_image 
+            : (review.author.profile_image as any)?.url || '')
+        : undefined;
+      
+      // Format date
+      const date = review.published_at || review.created_at;
+      
+      // Generate link (using restaurant slug if available)
+      const restaurantSlug = review.restaurant?.slug || 'restaurant';
+      const link = `/restaurants/${restaurantSlug}`;
+      
+      return {
+        id: numericId,
+        post: restaurantDbId,
+        author: authorDbId,
+        authorName: authorName,
+        authorAvatar: authorAvatar,
+        content: {
+          rendered: review.content || "",
+          raw: review.content || ""
+        },
+        date: date,
+        link: link,
+        status: review.status || 'approved',
+        type: 'published',
+        recognitions: review.recognitions || [],
+        reviewImages: reviewImages,
+        reviewMainTitle: review.title || '',
+        reviewStars: String(review.rating || 0),
+        uuid: review.id,
+        restaurantSlug: restaurantSlug,
       };
     });
   }, []);
@@ -267,7 +338,7 @@ const ListingPage = () => {
       setDraftIdToUuidMap(idMap);
       
       setAllDrafts(transformedDrafts);
-      setReviewDrafts(transformedDrafts.slice(0, 4));
+      setReviewDrafts(transformedDrafts); // Use all drafts for pagination
     } catch (error) {
       console.error("Error fetching review drafts:", error);
       // Set empty arrays on error to prevent UI issues
@@ -330,10 +401,9 @@ const ListingPage = () => {
       await reviewV2Service.deleteReview(reviewUuid);
       
       // Update state
-      setReviewDrafts(prev => prev.filter(draft => draft.id !== draftId));
       const updatedAllDrafts = allDrafts.filter(d => d.id !== draftId);
       setAllDrafts(updatedAllDrafts);
-      setReviewDrafts(updatedAllDrafts.slice(0, 4));
+      setReviewDrafts(updatedAllDrafts); // Use all drafts for pagination
       
       // Remove from UUID map
       const updatedMap = new Map(draftIdToUuidMap);
@@ -356,6 +426,45 @@ const ListingPage = () => {
     setIsShowDelete(true);
   }
 
+  // Combine and sort reviews: drafts first, then published (newest first)
+  const combinedReviews = useMemo(() => {
+    // Transform published reviews to DraftReviewData format
+    const transformedPublished = transformPublishedReviews(publishedReviews);
+    
+    // Combine: drafts first, then published
+    const allReviews = [
+      ...reviewDrafts.map(d => ({ ...d, type: 'draft' as const })),
+      ...transformedPublished.map(p => ({ ...p, type: 'published' as const }))
+    ];
+    
+    // Sort: drafts first, then by date (newest first)
+    return allReviews.sort((a, b) => {
+      // Drafts first
+      if (a.status === 'draft' && b.status !== 'draft') return -1;
+      if (a.status !== 'draft' && b.status === 'draft') return 1;
+      
+      // Then by date (newest first)
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateB - dateA;
+    });
+  }, [reviewDrafts, publishedReviews, transformPublishedReviews]);
+
+  // Paginate combined reviews
+  const paginatedReviews = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return combinedReviews.slice(startIndex, endIndex);
+  }, [combinedReviews, currentPage]);
+
+  const totalPages = Math.ceil(combinedReviews.length / ITEMS_PER_PAGE);
+  const hasNextPage = currentPage < totalPages;
+
+  // Reset to page 1 when reviews change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [combinedReviews.length]);
+
   // Don't render content if session is loading or user is not authenticated
   if (sessionLoading || !firebaseUser) {
     return null;
@@ -363,92 +472,104 @@ const ListingPage = () => {
 
   return (
     <>
-      <div className="max-w-[900px] mx-auto px-4 py-8 md:py-12">
-        <div className="flex flex-col justify-center items-center">
-          {/* Conditional rendering of "My Review Drafts" */}
-          {!debouncedSearchTerm && (
-            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
-              <div className="restaurants__content">
-                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">My Review Drafts</h1>
-                {reviewDrafts.length === 0 && !loadingDrafts && (
-                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm font-neusans">
-                    You don't have any review drafts.
-                  </p>
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6 md:mt-8">
-                  {reviewDrafts.map((revDraft) => (
-                    <DraftReviewCard
-                      key={revDraft.id}
-                      reviewDraft={revDraft}
-                      onDelete={() => removeListing(revDraft)}
-                    />
-                  ))}
-                  {loadingDrafts && [...Array(4)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
-            <div className="w-full text-center mb-6">
-              <h2 className="text-lg md:text-xl text-[#31343F] font-neusans">
-                {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
-              </h2>
-            </div>
-          )}
-
-          {/* Conditional rendering of "Published Reviews" */}
-          {!debouncedSearchTerm && (
-            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
-              <div className="restaurants__content">
-                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-neusans">Published Reviews</h1>
-                {publishedReviews.length === 0 && !loadingPublished && (
-                  <p className="w-full text-center flex justify-center items-center py-8 text-gray-400 text-sm font-neusans">
-                    You haven't published any reviews yet.
-                  </p>
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6 md:mt-8">
-                  {publishedReviews.map((review) => (
-                    <PublishedReviewCard key={review.id} review={review} />
-                  ))}
-                  {loadingPublished && [...Array(4)].map((_, i) => <ReviewCardSkeleton2 key={i} />)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Display Restaurants section only when there's an active search or it's loading search results */}
-          {debouncedSearchTerm && (
-            <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
-              <div className="restaurants__content mt-6 md:mt-10">
-                <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">
-                  Search Results
+      <div className="min-h-screen bg-white font-neusans">
+        <div className="max-w-[900px] mx-auto px-4 py-8 md:py-12">
+          <div className="flex flex-col justify-center items-center">
+            {/* Combined "My Reviews" section */}
+            {!debouncedSearchTerm && (
+              <div className="w-full">
+                <h1 className="text-lg md:text-2xl text-[#31343F] text-center mb-6 md:mb-8 font-neusans">
+                  My Reviews
                 </h1>
-                <div className="flex justify-center text-center mt-6 min-h-[40px]">
-                  {!loading && restaurants.length === 0 && (
-                    <div className="flex flex-col items-center gap-4">
-                      <p className="text-m">
-                        No listings found for "{debouncedSearchTerm}". Try a different search!
-                      </p>
-                      <Link
-                        href={LISTING_EXPLANATION}
-                        type="submit"
-                        className="rounded-full    text-sm md:text-base text-black h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center"
-                      >
-                        Add Listing
-                      </Link>
-                    </div>
-                  )}
+                
+                {combinedReviews.length === 0 && !loadingDrafts && !loadingPublished && (
+                  <p className="w-full text-center flex justify-center items-center py-8 text-[#494D5D] text-sm font-neusans">
+                    You don't have any reviews yet.
+                  </p>
+                )}
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {paginatedReviews.map((review) => {
+                    if (review.status === 'draft') {
+                      return (
+                        <DraftReviewCard
+                          key={`draft-${review.id}`}
+                          reviewDraft={review}
+                          onDelete={() => removeListing(review)}
+                        />
+                      );
+                    } else {
+                      // Find the original ReviewV2 for PublishedReviewCard
+                      const originalReview = publishedReviews.find(r => r.id === review.uuid);
+                      if (originalReview) {
+                        return (
+                          <PublishedReviewCard
+                            key={`published-${review.id}`}
+                            review={originalReview}
+                          />
+                        );
+                      }
+                      return null;
+                    }
+                  })}
+                  {(loadingDrafts || loadingPublished) && 
+                    [...Array(8)].map((_, i) => <ReviewCardSkeleton2 key={i} />)
+                  }
                 </div>
-                <div className="restaurants__grid mt-6 md:mt-8">
-                  {!loading && restaurants.map((rest) => (
-                    <RestaurantCard key={rest.id} restaurant={rest} />
-                  ))}
-                  {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                
+                {totalPages > 1 && (
+                  <div className="mt-8">
+                    <Pagination
+                      currentPage={currentPage}
+                      hasNextPage={hasNextPage}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {debouncedSearchTerm && (restaurants.length > 0 || loading) && (
+              <div className="w-full text-center mb-6">
+                <h2 className="text-lg md:text-xl text-[#31343F] font-neusans">
+                  {loading ? `Searching for "${debouncedSearchTerm}"` : `${restaurants.length} results for "${debouncedSearchTerm}"`}
+                </h2>
+              </div>
+            )}
+
+            {/* Display Restaurants section only when there's an active search or it's loading search results */}
+            {debouncedSearchTerm && (
+              <div className="restaurants__container md:!px-4 xl:!px-0 mt-6 md:mt-10 w-full">
+                <div className="restaurants__content mt-6 md:mt-10">
+                  <h1 className="text-lg md:text-2xl text-[#31343F] text-center text font-medium">
+                    Search Results
+                  </h1>
+                  <div className="flex justify-center text-center mt-6 min-h-[40px]">
+                    {!loading && restaurants.length === 0 && (
+                      <div className="flex flex-col items-center gap-4">
+                        <p className="text-m">
+                          No listings found for "{debouncedSearchTerm}". Try a different search!
+                        </p>
+                        <Link
+                          href={LISTING_EXPLANATION}
+                          type="submit"
+                          className="rounded-full    text-sm md:text-base text-black h-9 md:h-11 font-semibold w-fit px-4 md:px-6 py-2 md:py-3 text-center"
+                        >
+                          Add Listing
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                  <div className="restaurants__grid mt-6 md:mt-8">
+                    {!loading && restaurants.map((rest) => (
+                      <RestaurantCard key={rest.id} restaurant={rest} />
+                    ))}
+                    {loading && [...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
       <ReviewModal

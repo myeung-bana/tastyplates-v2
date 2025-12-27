@@ -297,7 +297,8 @@ const EditReviewSubmissionPage = () => {
   }, [reviewId, user?.id, firebaseUser, sessionLoading, router]); // Added sessionLoading to dependencies
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]); // Preview URLs (base64 or existing S3)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]); // New File objects for S3 upload
   const tags = [
     {
       id: 1,
@@ -320,6 +321,30 @@ const EditReviewSubmissionPage = () => {
       icon: HELMET,
     },
   ];
+
+  // S3 Upload Functions
+  const uploadFileToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/v1/upload/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Upload failed");
+    }
+
+    const data = await response.json();
+    return data.fileUrl; // Returns S3 URL
+  };
+
+  const uploadAllFiles = async (files: File[]): Promise<string[]> => {
+    const uploadPromises = files.map(file => uploadFileToS3(file));
+    return Promise.all(uploadPromises);
+  };
 
   const handleRating = (rating: number) => {
     setReviewStars(rating);
@@ -388,8 +413,35 @@ const EditReviewSubmissionPage = () => {
         return;
       }
 
-      // Transform images to ReviewImage format
-      const reviewImages = transformWordPressImagesToReviewImages(selectedFiles);
+      // Upload pending files to S3 first
+      let s3ImageUrls: string[] = [];
+      if (pendingFiles.length > 0) {
+        try {
+          toast.loading(`Uploading ${pendingFiles.length} new image(s)...`, { id: 'upload-images' });
+          s3ImageUrls = await uploadAllFiles(pendingFiles);
+          toast.success("All new images uploaded successfully!", { id: 'upload-images' });
+        } catch (uploadError) {
+          const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload images';
+          toast.error(`Failed to upload images: ${errorMessage}`, { id: 'upload-images' });
+          setIsLoading(false);
+          setIsSavingAsDraft(false);
+          return;
+        }
+      }
+
+      // Combine existing S3 URLs with newly uploaded ones
+      // Filter out base64/blob URLs from selectedFiles (only keep existing S3 URLs)
+      const existingS3Urls = selectedFiles.filter(url => {
+        if (!url || typeof url !== 'string') return false;
+        if (url.startsWith('blob:') || url.startsWith('data:')) return false;
+        return url.startsWith('http://') || url.startsWith('https://');
+      });
+
+      // Combine existing and new S3 URLs
+      const finalImageUrls = [...existingS3Urls, ...s3ImageUrls];
+
+      // Transform S3 URLs to ReviewImage format
+      const reviewImages = transformWordPressImagesToReviewImages(finalImageUrls);
 
       // Transform recognitions to array format
       const recognitions = restaurant.recognition || [];
@@ -586,8 +638,22 @@ const EditReviewSubmissionPage = () => {
                       setIsDoneSelecting(true);
                       setUploadedImageError('');
                     }}
+                    onFilesAdd={(newFiles) => {
+                      // Track File objects for later upload to S3
+                      setPendingFiles([...pendingFiles, ...newFiles]);
+                    }}
                     onImageRemove={(imageUrl) => {
+                      // Remove from preview URLs
+                      const removedIndex = selectedFiles.indexOf(imageUrl);
                       deleteSelectedFile(imageUrl);
+                      
+                      // Also remove corresponding File object if it's a new upload
+                      if (removedIndex !== -1 && removedIndex >= (selectedFiles.length - pendingFiles.length)) {
+                        const fileIndex = removedIndex - (selectedFiles.length - pendingFiles.length);
+                        if (fileIndex >= 0 && fileIndex < pendingFiles.length) {
+                          setPendingFiles(prev => prev.filter((_, idx) => idx !== fileIndex));
+                        }
+                      }
                     }}
                     maxImages={maximumImage}
                     minImages={minimumImage}

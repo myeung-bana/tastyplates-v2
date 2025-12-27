@@ -9,11 +9,11 @@ import Link from 'next/link';
 import { FiEdit3, FiList, FiTrendingUp, FiClock } from 'react-icons/fi';
 import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
 import ProfileSummary from '@/components/tastystudio/ProfileSummary';
-import { GridLoader } from 'react-spinners';
 
 const TastyStudioDashboard = () => {
   const { user, loading } = useFirebaseSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   
   // Get user identifier for useProfileData
   const userIdentifier = user?.username || user?.id || '';
@@ -25,6 +25,11 @@ const TastyStudioDashboard = () => {
     draftReviews: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+
+  // Track mounted state to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -101,10 +106,14 @@ const TastyStudioDashboard = () => {
     }
   }, [userData?.id, profileLoading]);
 
-  if (loading || profileLoading) {
+  // Show loading state - ensure consistent rendering between server and client
+  if (!mounted || loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <GridLoader color="#ff7c0a" size={15} />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-[#ff7c0a] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-600 font-neusans">Loading...</p>
+        </div>
       </div>
     );
   }

@@ -12,9 +12,10 @@ import {
   FiSettings, 
   FiFileText, 
   FiMapPin,
-  FiLogOut
+  FiLogOut,
+  FiLayout
 } from "react-icons/fi";
-import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME } from "@/constants/pages";
+import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME, TASTYSTUDIO_DASHBOARD } from "@/constants/pages";
 import { useLocation } from "@/contexts/LocationContext";
 import LocationBottomSheet from "../navigation/LocationBottomSheet";
 import { useState } from "react";
@@ -98,12 +99,17 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       ? pathname === item.href ||
         (item.href === RESTAURANTS && pathname?.startsWith("/restaurants")) ||
         (item.href === PROFILE && pathname?.startsWith("/profile")) ||
-        (item.href === SETTINGS && pathname === SETTINGS)
+        (item.href === SETTINGS && pathname === SETTINGS) ||
+        (item.href === TASTYSTUDIO_DASHBOARD && pathname?.startsWith("/tastystudio"))
       : false;
+
+    // "Write a Review" should always have primary orange styling
+    const isWriteReview = item.name === "Write a Review";
+    const shouldUsePrimaryStyle = isActive || isWriteReview;
 
     const Icon = item.icon;
     const className = `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
-      isActive
+      shouldUsePrimaryStyle
         ? "bg-[#ff7c0a] text-white"
         : "bg-gray-50 text-[#494D5D] hover:bg-gray-100 active:bg-gray-200"
     }`;
@@ -120,10 +126,10 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
         >
           <Icon
             className={`w-4 h-4 flex-shrink-0 ${
-              isActive ? "text-white" : "text-[#494D5D]"
+              shouldUsePrimaryStyle ? "text-white" : "text-[#494D5D]"
             }`}
           />
-          <span className={`flex-1 text-left ${isActive ? "text-white" : "text-[#494D5D]"}`}>{item.name}</span>
+          <span className={`flex-1 text-left ${shouldUsePrimaryStyle ? "text-white" : "text-[#494D5D]"}`}>{item.name}</span>
           {item.name === "Region" && (
             <span className={`text-xs ${isActive ? "text-white/80" : "text-gray-500"}`}>{getLocationDisplayText()}</span>
           )}
@@ -140,20 +146,20 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       >
         <Icon
           className={`w-4 h-4 flex-shrink-0 ${
-            isActive ? "text-white" : "text-[#494D5D]"
+            shouldUsePrimaryStyle ? "text-white" : "text-[#494D5D]"
           }`}
         />
-        <span className={isActive ? "text-white" : "text-[#494D5D]"}>{item.name}</span>
+        <span className={shouldUsePrimaryStyle ? "text-white" : "text-[#494D5D]"}>{item.name}</span>
       </Link>
     );
   };
 
   const sidebarSections = [
-    // Section 1: Write a Review (only if authenticated)
+    // Section 1: Tasty Studio (only if authenticated)
     user ? [
-      { name: "Write a Review", href: "/tastystudio/add-review", icon: FiEdit3 },
+      { name: "Tasty Studio", href: TASTYSTUDIO_DASHBOARD, icon: FiEdit3 },
     ] : [],
-    // Section 2: Explore & Following (Following only for authenticated users)
+    // Section 3: Explore & Following (Following only for authenticated users)
     [
       { name: "Explore", href: RESTAURANTS, icon: FiSearch },
       ...(user ? [{ name: "Following", href: "/following", icon: FiHeart }] : []),

@@ -3,6 +3,9 @@ import { ContentGuidelinesService } from "@/services/ContentGuidelines/contentGu
 
 const contentGuidelinesService = new ContentGuidelinesService();
 
+// Force dynamic rendering since we're using cache: "no-store"
+export const dynamic = 'force-dynamic';
+
 async function getContentGuidelines() {
   return contentGuidelinesService.getContentGuidelines();
 }

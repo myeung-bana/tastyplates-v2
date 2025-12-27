@@ -40,9 +40,15 @@ export interface ImageUploadDropzoneProps
   
   /**
    * Callback when images are added
-   * Receives array of new image URLs (base64 data URLs)
+   * Receives array of new image URLs (base64 data URLs for preview)
    */
   onImagesAdd: (imageUrls: string[]) => void
+  
+  /**
+   * Callback when File objects are added
+   * Receives array of File objects for upload to S3
+   */
+  onFilesAdd?: (files: File[]) => void
   
   /**
    * Callback when an image is removed
@@ -89,6 +95,7 @@ const ImageUploadDropzone = React.forwardRef<HTMLDivElement, ImageUploadDropzone
       size,
       images,
       onImagesAdd,
+      onFilesAdd,
       onImageRemove,
       maxImages = 6,
       minImages = 1,
@@ -158,7 +165,8 @@ const ImageUploadDropzone = React.forwardRef<HTMLDivElement, ImageUploadDropzone
           )
 
           setIsProcessing(false)
-          onImagesAdd(imageUrls)
+          onImagesAdd(imageUrls) // Pass preview URLs
+          onFilesAdd?.(validFiles) // Pass File objects for upload
           return { success: true }
         } catch (error) {
           setIsProcessing(false)
@@ -166,7 +174,7 @@ const ImageUploadDropzone = React.forwardRef<HTMLDivElement, ImageUploadDropzone
           return { error: 'Failed to process some images. Please try again.' }
         }
       },
-      [images.length, maxImages, maxFileSizeMB, onImagesAdd]
+      [images.length, maxImages, maxFileSizeMB, onImagesAdd, onFilesAdd]
     )
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {

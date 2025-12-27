@@ -3,6 +3,9 @@ import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceS
 
 const termsOfServiceService = new TermsOfServiceService();
 
+// Force dynamic rendering since we're using cache: "no-store"
+export const dynamic = 'force-dynamic';
+
 async function getTermsOfService() {
   return termsOfServiceService.getTermsOfService();
 }

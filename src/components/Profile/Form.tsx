@@ -61,6 +61,19 @@ const getProfileImageUrl = (profileImage: any): string | null => {
   return null;
 };
 
+// Helper function to convert base64 to File (used for S3 upload)
+const base64ToFile = (base64String: string, filename: string): File => {
+  const arr = base64String.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+};
+
 interface FormContentProps {
   isSubmitted: boolean;
   setIsSubmitted: (value: boolean) => void;
@@ -112,6 +125,7 @@ const FormContent = memo(({
   tempImageSrc,
   setProfilePreview,
   setProfile,
+  setProfileImageFile,
   cuisineOptions,
   cuisinesLoading,
   cuisinesError,
@@ -233,7 +247,7 @@ const FormContent = memo(({
                 <textarea
                   ref={textareaRef}
                   name="aboutMe"
-                  className={`w-full px-4 py-3 border rounded-xl resize-none transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
+                  className={`w-full px-4 py-3 border rounded-xl resize-none text-sm font-neusans transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
                     isLoading ? "opacity-50" : ""
                   } ${
                     bioError ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-orange-300"
@@ -341,7 +355,14 @@ const FormContent = memo(({
         isOpen={showCropModal}
         onClose={() => setShowCropModal(false)}
         onCrop={(croppedImage) => {
+          // Set preview (base64 for display)
           setProfilePreview(croppedImage);
+          
+          // Convert base64 to File object for S3 upload
+          const file = base64ToFile(croppedImage, `profile-${Date.now()}.jpg`);
+          setProfileImageFile(file);
+          
+          // Keep base64 in profile state for preview only (will be replaced with S3 URL on submit)
           setProfile(croppedImage);
           setShowCropModal(false);
         }}
@@ -361,6 +382,7 @@ const Form = () => {
   const [aboutMe, setAboutMe] = useState("");
   const [profile, setProfile] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState(DEFAULT_USER_ICON);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null); // Track File object for S3 upload
   const [selectedPalates, setSelectedPalates] = useState<Set<Key>>(new Set());
   const [palateError, setPalateError] = useState("");
   const [profileError, setProfileError] = useState("");
@@ -398,6 +420,25 @@ const Form = () => {
 
   const handlePalateChange = (keys: Set<Key>) => {
     setSelectedPalates(keys);
+  };
+
+  // S3 Upload function (similar to review components)
+  const uploadFileToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/v1/upload/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Upload failed");
+    }
+
+    const data = await response.json();
+    return data.fileUrl; // Returns S3 URL
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -544,18 +585,6 @@ const Form = () => {
       return;
     }
 
-    if (profile) {
-      const profileParts = profile.split(",");
-      if (profileParts[1]) {
-        const sizeInBytes = (profileParts[1].length * 3) / 4;
-        if (sizeInBytes > imageSizeLimit) {
-          setProfileError(profileImageSizeLimit(imageMBLimit));
-          setIsLoading(false);
-          return;
-        }
-      }
-    }
-
     try {
       // Get user UUID from Firebase session
       if (!user?.id) {
@@ -566,6 +595,21 @@ const Form = () => {
 
       const userId = user.id as string;
 
+      // Upload profile image to S3 if a new image was selected
+      let profileImageUrl: string | undefined = undefined;
+      if (profileImageFile) {
+        try {
+          toast.loading('Uploading profile image...', { id: 'upload-profile-image' });
+          profileImageUrl = await uploadFileToS3(profileImageFile);
+          toast.success('Profile image uploaded successfully!', { id: 'upload-profile-image' });
+        } catch (uploadError) {
+          const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload image';
+          toast.error(`Failed to upload image: ${errorMessage}`, { id: 'upload-profile-image' });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Convert selected cuisine keys back to palate names for saving
       const palateNames = mapCuisineKeysToPalates(selectedPalates);
       // Convert to array format for JSONB storage (instead of pipe-separated string)
@@ -573,7 +617,13 @@ const Form = () => {
 
       // Build update data object
       const updateData: Record<string, any> = {};
-      if (profile) updateData.profile_image = profile;
+      
+      // Use S3 URL if uploaded, otherwise don't update profile_image (user didn't change it)
+      if (profileImageUrl) {
+        updateData.profile_image = profileImageUrl;
+      }
+      // Note: We no longer send base64 strings - only S3 URLs
+      
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (palatesArray) updateData.palates = palatesArray; // Send as array for JSONB
 
@@ -637,6 +687,7 @@ const Form = () => {
       tempImageSrc={tempImageSrc}
       setProfilePreview={setProfilePreview}
       setProfile={setProfile}
+      setProfileImageFile={setProfileImageFile}
       cuisineOptions={cuisineOptions}
       cuisinesLoading={cuisinesLoading}
       cuisinesError={cuisinesError}
@@ -682,6 +733,23 @@ const Form = () => {
       setAboutMe(aboutMeValue);
       setProfilePreview(profileImageValue);
       
+      // Handle existing profile images: if it's already an S3 URL, use it directly
+      // If it's base64 (legacy), we'll treat it as preview only and won't send it on update
+      if (profileImageValue && 
+          (profileImageValue.startsWith('http://') || profileImageValue.startsWith('https://'))) {
+        // It's already an S3 URL, use it directly
+        setProfile(profileImageValue);
+        setProfileImageFile(null); // No file to upload
+      } else if (profileImageValue && profileImageValue.startsWith('data:')) {
+        // It's base64 (legacy), treat as preview only
+        setProfile(null); // Don't send base64 on update
+        setProfileImageFile(null); // No file to upload
+      } else {
+        // Default icon or empty
+        setProfile(null);
+        setProfileImageFile(null);
+      }
+      
       // Set palates - map palate names to cuisine keys for pre-selection
       if (palatesValue && cuisines && cuisines.length > 0) {
         const palates = normalizePalates(palatesValue);
@@ -700,7 +768,18 @@ const Form = () => {
       // Fallback to user data if hook hasn't loaded yet or failed (only once)
       const userWithExtras = user as any; // Type assertion for optional properties
       setAboutMe(userWithExtras?.about_me ?? "");
-      setProfilePreview(getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON);
+      const fallbackProfileImage = getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON;
+      setProfilePreview(fallbackProfileImage);
+      
+      // Handle existing profile images: if it's already an S3 URL, use it directly
+      if (fallbackProfileImage && 
+          (fallbackProfileImage.startsWith('http://') || fallbackProfileImage.startsWith('https://'))) {
+        setProfile(fallbackProfileImage);
+        setProfileImageFile(null);
+      } else {
+        setProfile(null);
+        setProfileImageFile(null);
+      }
       // Set palates - map palate names to cuisine keys for pre-selection
       if (userWithExtras?.palates && cuisines && cuisines.length > 0) {
         const palates = normalizePalates(userWithExtras.palates);
@@ -765,7 +844,14 @@ const Form = () => {
         isOpen={showCropModal}
         onClose={() => setShowCropModal(false)}
         onCrop={(croppedImage) => {
+          // Set preview (base64 for display)
           setProfilePreview(croppedImage);
+          
+          // Convert base64 to File object for S3 upload
+          const file = base64ToFile(croppedImage, `profile-${Date.now()}.jpg`);
+          setProfileImageFile(file);
+          
+          // Keep base64 in profile state for preview only (will be replaced with S3 URL on submit)
           setProfile(croppedImage);
           setShowCropModal(false);
         }}

@@ -3,6 +3,9 @@ import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyServ
 
 const privacyPolicyService = new PrivacyPolicyService();
 
+// Force dynamic rendering since we're using cache: "no-store"
+export const dynamic = 'force-dynamic';
+
 async function getPrivacyPolicy() {
   return privacyPolicyService.getPrivacyPolicy();
 }

@@ -104,7 +104,7 @@ const DraftReviewCard = ({ reviewDraft, onDelete }: DraftReviewCardProps) => {
         />
         
         {/* Draft Badge */}
-        <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[10px] md:text-xs px-2 py-1 rounded-full font-medium">
+        <div className="absolute top-2 left-2 bg-yellow-500/90 text-white text-[10px] md:text-xs px-2 py-1 rounded-full font-medium">
           Draft
         </div>
 

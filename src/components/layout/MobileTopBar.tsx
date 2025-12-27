@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { FiSearch, FiMenu } from "react-icons/fi";
-import { RESTAURANTS } from "@/constants/pages";
+import { RESTAURANTS, HOME } from "@/constants/pages";
+import { TASTYPLATES_LOGO_COLOUR } from "@/constants/images";
+import Image from "next/image";
 import SidebarHeader from "./SidebarHeader";
 
 interface MobileTopBarProps {
@@ -24,12 +26,6 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
     setIsSidebarOpen(false);
   };
 
-  // Only show Following for authenticated users
-  const navItems = [
-    ...(user ? [{ name: "Following", href: "/following" }] : []),
-    { name: "Explore", href: RESTAURANTS },
-  ];
-
   return (
     <>
       {/* Mobile Top Bar */}
@@ -44,26 +40,17 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
             <FiMenu className="w-5 h-5" />
           </button>
 
-          {/* Center Navigation */}
-          <div className="flex items-center space-x-6">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || 
-                (item.href === RESTAURANTS && pathname?.startsWith('/restaurants'));
-              
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`text-sm font-neusans transition-colors ${
-                    isActive 
-                      ? 'text-[#ff7c0a]' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              );
-            })}
+          {/* Center Logo */}
+          <div className="flex-1 flex justify-center">
+            <Link href={HOME} className="flex items-center">
+              <Image
+                src={TASTYPLATES_LOGO_COLOUR}
+                className="h-5 w-auto object-contain"
+                height={20}
+                width={100}
+                alt="TastyPlates Logo"
+              />
+            </Link>
           </div>
 
           {/* Search Icon */}

@@ -12,7 +12,7 @@ export default function TastyStudioLayout({
       <Suspense fallback={<div></div>}>
         <Navbar />
       </Suspense>
-      <div className="flex pt-16">
+      <div className="flex md:pt-16">
         <TastyStudioSidebar />
         <main className="flex-1 lg:ml-64">
           {children}
