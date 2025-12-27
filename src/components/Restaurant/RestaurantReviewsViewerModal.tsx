@@ -53,6 +53,38 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const postRefs = useRef<Record<number, HTMLDivElement>>({});
 
+  // Helper function to convert UUID to numeric ID (for compatibility with old session structure)
+  const uuidToNumericId = (uuid: string | undefined): number => {
+    if (!uuid) return 0;
+    // Convert UUID to numeric ID by taking first 8 hex chars and converting to number
+    return parseInt(uuid.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
+  };
+
+  // Helper function to extract profile image URL from JSONB format
+  const getProfileImageUrl = (profileImage: any): string | null => {
+    if (!profileImage) return null;
+    if (typeof profileImage === 'string') return profileImage;
+    if (typeof profileImage === 'object') {
+      return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+    }
+    return null;
+  };
+
+  // Create session object compatible with old NextAuth session structure
+  const session = user ? {
+    user: {
+      id: uuidToNumericId(user.id),
+      userId: uuidToNumericId(user.id),
+      name: user.display_name || user.username || "Unknown User",
+      image: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+      palates: typeof user.palates === 'string' 
+        ? user.palates 
+        : Array.isArray(user.palates) 
+          ? user.palates.join('|') 
+          : "",
+    }
+  } : null;
+
   useEffect(() => {
     setReviews(initialReviews);
   }, [initialReviews]);
@@ -232,7 +264,7 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
       console.error("Error toggling like:", error);
       toast.error("Failed to update like");
     }
-  }, [session, userLiked, likesCount]);
+  }, [firebaseUser, userLiked, likesCount]);
 
   const handleCommentClick = useCallback((review: GraphQLReview) => {
     setSelectedReview(review);

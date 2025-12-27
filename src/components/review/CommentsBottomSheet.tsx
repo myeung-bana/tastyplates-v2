@@ -50,6 +50,31 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   const onCommentCountChangeRef = React.useRef(onCommentCountChange);
   const userUuidRef = useRef<string | null>(null);
 
+  // Helper function to extract profile image URL from JSONB format
+  const getProfileImageUrl = (profileImage: any): string | null => {
+    if (!profileImage) return null;
+    if (typeof profileImage === 'string') return profileImage;
+    if (typeof profileImage === 'object') {
+      return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
+    }
+    return null;
+  };
+
+  // Create session object compatible with old NextAuth session structure
+  const session = user ? {
+    user: {
+      id: user.id,
+      userId: user.id,
+      name: user.display_name || user.username || "Unknown User",
+      image: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+      palates: typeof user.palates === 'string' 
+        ? user.palates 
+        : Array.isArray(user.palates) 
+          ? user.palates.join('|') 
+          : "",
+    }
+  } : null;
+
   const getUserUuid = useCallback(async (): Promise<string | null> => {
     if (!user?.id || !firebaseUser) return null;
 
@@ -267,8 +292,12 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       date: isoDate,
       content: commentText,
       reviewImages: [],
-      palates: user.palates || "",
-      userAvatar: user.profile_image?.url || DEFAULT_USER_ICON,
+      palates: typeof user.palates === 'string' 
+        ? user.palates 
+        : Array.isArray(user.palates) 
+          ? user.palates.join('|') 
+          : "",
+      userAvatar: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
       author: {
         name: userName,
         node: {
@@ -276,7 +305,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
           databaseId: 0, // Firebase users don't have numeric userId
           name: userName,
           avatar: {
-            url: user.profile_image?.url || DEFAULT_USER_ICON,
+            url: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
           },
         },
       },
@@ -358,7 +387,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [commentText, isLoading, cooldown, session, review, onCommentCountChange]);
+  }, [commentText, isLoading, cooldown, user, firebaseUser, review, onCommentCountChange]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {

@@ -27,6 +27,35 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
   const { user } = useFirebaseSession();
   const isMobile = useIsMobile();
 
+  // Helper function to convert UUID to numeric ID (for compatibility with old session structure)
+  const uuidToNumericId = (uuid: string | undefined): number => {
+    if (!uuid) return 0;
+    // Convert UUID to numeric ID by taking first 8 hex chars and converting to number
+    return parseInt(uuid.replace(/-/g, '').substring(0, 8), 16) % 2147483647;
+  };
+
+  // Create session object compatible with old NextAuth session structure
+  const session = user ? {
+    user: {
+      id: uuidToNumericId(user.id),
+      userId: uuidToNumericId(user.id),
+      name: user.display_name || user.username || "Unknown User",
+      image: (() => {
+        if (!user.profile_image) return DEFAULT_USER_ICON;
+        if (typeof user.profile_image === 'string') return user.profile_image;
+        if (typeof user.profile_image === 'object') {
+          return user.profile_image.url || user.profile_image.thumbnail || user.profile_image.medium || user.profile_image.large || DEFAULT_USER_ICON;
+        }
+        return DEFAULT_USER_ICON;
+      })(),
+      palates: typeof user.palates === 'string' 
+        ? user.palates 
+        : Array.isArray(user.palates) 
+          ? user.palates.join('|') 
+          : "",
+    }
+  } : null;
+
   // Helper function to format relative time
   const formatRelativeTime = (dateString: string): string => {
     if (!dateString) return '';

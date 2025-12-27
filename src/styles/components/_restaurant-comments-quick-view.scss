@@ -183,6 +183,12 @@
   &__avatar {
     flex-shrink: 0;
     border-radius: 50%;
+    max-width: 35px;
+    max-height: 35px;
+    min-width: 35px;
+    min-height: 35px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
   }
 
   &__item-content {

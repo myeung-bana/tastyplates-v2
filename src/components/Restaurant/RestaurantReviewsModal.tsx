@@ -265,7 +265,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
       console.error("Error toggling like:", error);
       toast.error("Failed to update like");
     }
-  }, [session, userLiked, likesCount]);
+  }, [firebaseUser, userLiked, likesCount]);
 
   // Handle comment click
   const handleCommentClick = useCallback((review: GraphQLReview) => {
@@ -349,7 +349,7 @@ const RestaurantReviewsModal: React.FC<RestaurantReviewsModalProps> = ({
                     type={FallbackImageType.Icon}
                     />
                         </Link>
-                      ) : session ? (
+                      ) : user ? (
                         <Link href={generateProfileUrl(review.author?.node?.databaseId, review.author?.node?.username)} prefetch={false}>
                           <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}

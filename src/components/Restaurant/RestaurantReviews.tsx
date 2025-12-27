@@ -155,7 +155,7 @@ interface RestaurantReviewsProps {
   reviewCount?: number;
 }
 
-export default function RestaurantReviews({ restaurantId, restaurantUuid, reviews: initialReviews, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
+export default function RestaurantReviews({ restaurantId, restaurantUuid, restaurantTitle, restaurantSlug, reviews: initialReviews, onReviewsUpdate, reviewCount }: RestaurantReviewsProps) {
   // Session state
   const { user } = useFirebaseSession();
 
@@ -322,6 +322,8 @@ export default function RestaurantReviews({ restaurantId, restaurantUuid, review
                       authorId: authorDatabaseId, // Numeric ID for backward compatibility
                       authorUuid: authorUuid ? String(authorUuid) : undefined, // UUID string for restaurant_users lookup
                       restaurantId: restaurantId.toString(),
+                      restaurantTitle: restaurantTitle || review.commentedOn?.node?.title || "",
+                      restaurantSlug: restaurantSlug || review.commentedOn?.node?.slug || "",
                       user: review.author?.node?.name ?? review.author?.name ?? "Unknown User",
                       rating: Number(review.reviewStars) || 0,
                       date: review.date,
