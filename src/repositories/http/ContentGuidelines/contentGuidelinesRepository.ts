@@ -2,10 +2,20 @@ import { ContentGuidelinesRepo } from "@/repositories/interface/user/contentGuid
 
 export class ContentGuidelinesRepository implements ContentGuidelinesRepo {
   async fetchContentGuidelines() {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_WP_API_URL}/wp-json/v1/content-guidelines`,
-      { cache: "no-store" }
-    );
-    return await response.json() as Record<string, unknown>;
+    try {
+      // Fetch from Next.js API route that reads markdown
+      const response = await fetch('/api/v1/content/content-guidelines', { 
+        cache: "no-store" 
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch content guidelines: ${response.statusText}`);
+      }
+      
+      return await response.json() as Record<string, unknown>;
+    } catch (error) {
+      console.error('Error fetching content guidelines:', error);
+      throw error;
+    }
   }
 }

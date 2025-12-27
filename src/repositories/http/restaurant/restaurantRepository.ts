@@ -1,63 +1,62 @@
 // repositories/restaurant/restaurantRepository.ts
-import client from "@/app/graphql/client";
-import {
-    GET_LISTINGS,
-    GET_RESTAURANT_BY_SLUG,
-    GET_RESTAURANT_BY_ID,
-    ADD_RECENTLY_VISITED_RESTAURANT,
-    GET_RECENTLY_VISITED_RESTAURANTS,
-    GET_LISTINGS_NAME,
-} from "@/app/graphql/Restaurant/restaurantQueries";
-import { GET_ADDRESS_BY_PALATE_NO_TAX, GET_ADDRESS_BY_PALATE_WITH_TAX } from "@/app/graphql/Restaurant/addressQueries";
 import { RestaurantRepo } from "@/repositories/interface/user/restaurant";
 import { FavoriteListingData, CheckInData } from "@/interfaces/restaurant/restaurant";
 import HttpMethods from "../requests";
+import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 
 const request = new HttpMethods();
 
 export class RestaurantRepository implements RestaurantRepo {
     async getRestaurantBySlug(slug: string, palates: string) {
-        const { data } = await client.query<{
-            listing: {
-                id: string;
-                title: string;
-                slug: string;
-                content: string;
-                databaseId: number;
-                featuredImage?: {
+        try {
+            const response = await restaurantV2Service.getRestaurantBySlug(slug);
+            
+            if (!response.success || !response.data) {
+                console.error('Failed to fetch restaurant by slug:', response.error);
+                return null;
+            }
+
+            // Return the restaurant data in the expected format
+            const restaurant = response.data;
+            return {
+                id: restaurant.uuid,
+                title: restaurant.title,
+                slug: restaurant.slug,
+                content: restaurant.content || '',
+                databaseId: restaurant.id,
+                featuredImage: restaurant.featured_image_url ? {
                     node: {
-                        sourceUrl: string;
-                    };
-                };
+                        sourceUrl: restaurant.featured_image_url
+                    }
+                } : undefined,
                 listingDetails: {
-                    latitude: string;
-                    longitude: string;
-                    phone: string;
-                    openingHours: string;
-                    menuUrl: string;
-                };
+                    latitude: restaurant.latitude?.toString() || '',
+                    longitude: restaurant.longitude?.toString() || '',
+                    phone: restaurant.phone || '',
+                    openingHours: JSON.stringify(restaurant.opening_hours || {}),
+                    menuUrl: restaurant.menu_url || '',
+                },
                 palates: {
-                    nodes: Array<{
-                        name: string;
-                        slug: string;
-                    }>;
-                };
+                    nodes: Array.isArray(restaurant.palates)
+                        ? restaurant.palates.map(p => ({
+                            name: p.name,
+                            slug: p.slug
+                        }))
+                        : []
+                },
                 listingCategories: {
-                    nodes: Array<{
-                        name: string;
-                        slug: string;
-                    }>;
-                };
-            };
-        }>({
-            query: GET_RESTAURANT_BY_SLUG,
-            fetchPolicy: "no-cache",
-            variables: {
-                slug,
-                palates
-            },
-        });
-        return (data?.listing ?? null) as unknown as Record<string, unknown>;
+                    nodes: Array.isArray(restaurant.categories)
+                        ? restaurant.categories.map(c => ({
+                            name: c.name,
+                            slug: c.slug
+                        }))
+                        : []
+                }
+            } as unknown as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching restaurant by slug:', error);
+            return null;
+        }
     }
 
     async getAllRestaurants(
@@ -77,338 +76,233 @@ export class RestaurantRepository implements RestaurantRepo {
         palates?: string,
         orderBy?: unknown[]
     ) {
-        // Keep search term separate from location filtering
-        const enhancedSearchTerm = searchTerm;
+        try {
+            // Calculate offset from cursor
+            const offset = after ? parseInt(after) || 0 : 0;
 
-        const variables = {
-            searchTerm: enhancedSearchTerm,
-            first,
-            after,
-            taxQuery,
-            priceRange,
-            status,
-            userId,
-            recognition,
-            recognitionSort: sortOption,
-            minAverageRating: rating,
-            statuses: statuses || [],
-            streetAddress: null, // Use client-side filtering for multi-field location search
-            ethnicSearch: ethnicSearch || null, // Don't filter by empty string
-            palates: palates || null, // Don't filter by empty string
-            orderBy: orderBy || null,
-        };
-
-        console.log('🔍 GraphQL query variables:', variables);
-        console.log('📍 Search term:', enhancedSearchTerm);
-        console.log('📍 Location filter (client-side):', address || 'None');
-
-        const { data } = await client.query<{
-            listings: {
-                nodes: Array<{
-                    id: string;
-                    title: string;
-                    slug: string;
-                    content: string;
-                    databaseId: number;
-                    featuredImage?: {
-                        node: {
-                            sourceUrl: string;
-                        };
-                    };
-                    listingDetails: {
-                        latitude: string;
-                        longitude: string;
-                        phone: string;
-                        openingHours: string;
-                        menuUrl: string;
-                    };
-                    palates: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                    listingCategories: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                }>;
-                pageInfo: {
-                    endCursor: string;
-                    hasNextPage: boolean;
-                };
+            // Map parameters to V2 API format
+            const params: any = {
+                limit: first,
+                offset: offset,
+                search: searchTerm || undefined,
+                status: status || 'publish',
             };
-        }>({
-            query: GET_LISTINGS,
-            variables,
-        });
-        return {
-            nodes: data?.listings?.nodes ?? [],
-            pageInfo: data?.listings?.pageInfo ?? { endCursor: null, hasNextPage: false },
-        };
-    }
 
-    async getRestaurantById(
-        id: string,
-        idType: string = "DATABASE_ID",
-        accessToken?: string,
-        userId?: number | null
-    ) {
-        const { data } = await client.query<{
-            listing: {
-                id: string;
-                title: string;
-                slug: string;
-                content: string;
-                databaseId: number;
-                featuredImage?: {
+            // Add rating filter if specified
+            if (rating !== null && rating > 0) {
+                params.min_rating = rating;
+            }
+
+            // Note: Additional filtering (cuisine, palate, price) will be handled by the service
+            // when those features are fully implemented in V2 API
+
+            const response = await restaurantV2Service.getAllRestaurants(params);
+
+            if (!response.success) {
+                console.error('Failed to fetch restaurants:', response.error);
+                return {
+                    nodes: [],
+                    pageInfo: { endCursor: null, hasNextPage: false }
+                };
+            }
+
+            // Transform to legacy format for backward compatibility
+            const nodes = (response.data || []).map(restaurant => ({
+                id: restaurant.uuid,
+                title: restaurant.title,
+                slug: restaurant.slug,
+                content: restaurant.content || '',
+                databaseId: restaurant.id,
+                status: restaurant.status,
+                priceRange: restaurant.restaurant_price_range?.symbol || '',
+                averageRating: restaurant.average_rating || 0,
+                listingStreet: restaurant.listing_street || '',
+                featuredImage: restaurant.featured_image_url ? {
                     node: {
-                        sourceUrl: string;
-                    };
-                };
-                listingDetails: {
-                    latitude: string;
-                    longitude: string;
-                    phone: string;
-                    openingHours: string;
-                    menuUrl: string;
-                };
+                        sourceUrl: restaurant.featured_image_url
+                    }
+                } : undefined,
                 palates: {
-                    nodes: Array<{
-                        name: string;
-                        slug: string;
-                    }>;
-                };
+                    nodes: Array.isArray(restaurant.palates) 
+                        ? restaurant.palates.map(p => ({
+                            name: p.name,
+                            slug: p.slug
+                        }))
+                        : []
+                },
                 listingCategories: {
-                    nodes: Array<{
-                        name: string;
-                        slug: string;
-                    }>;
-                };
-            };
-        }>({
-            query: GET_RESTAURANT_BY_ID,
-            variables: {
-                id,
-                idType,
-                accessToken,
-                userId
-            },
-        });
-        return (data?.listing ?? null) as unknown as Record<string, unknown>;
-    }
-
-    async addRecentlyVisitedRestaurant(postId: number, accessToken?: string) {
-        try {
-            // Authentication handled by authLink in GraphQL client
-            // accessToken parameter kept for backward compatibility but not used
-            const { data } = await client.mutate({
-                mutation: ADD_RECENTLY_VISITED_RESTAURANT,
-                variables: {
-                    postId,
+                    nodes: Array.isArray(restaurant.categories)
+                        ? restaurant.categories.map(c => ({
+                            name: c.name,
+                            slug: c.slug
+                        }))
+                        : []
                 },
-                // Removed context.headers - authLink automatically adds Authorization header
-            });
-            return !!data; // Return boolean as expected by interface
-        } catch (error) {
-            // Silently handle error - return false instead of throwing
-            // This prevents errors when fetching restaurants for other users or when not logged in
-            return false;
-        }
-    }
-
-    async getRecentlyVisitedRestaurants(accessToken?: string) {
-        try {
-            const { data } = await client.query<{
-                recentlyVisitedRestaurants: Array<{
-                    id: string;
-                    title: string;
-                    slug: string;
-                    content: string;
-                    databaseId: number;
-                    featuredImage?: {
-                        node: {
-                            sourceUrl: string;
-                        };
-                    };
-                    listingDetails: {
-                        latitude: string;
-                        longitude: string;
-                        phone: string;
-                        openingHours: string;
-                        menuUrl: string;
-                    };
-                    palates: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                    listingCategories: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                }>;
-            }>({
-                query: GET_RECENTLY_VISITED_RESTAURANTS,
-                variables: {
-                    accessToken
+                listingDetails: {
+                    googleMapUrl: {
+                        streetAddress: restaurant.address?.street_address || restaurant.listing_street || '',
+                        streetNumber: restaurant.address?.street_number || '',
+                        streetName: restaurant.address?.street_name || '',
+                        city: restaurant.address?.city || '',
+                        state: restaurant.address?.state || '',
+                        stateShort: restaurant.address?.state_short || '',
+                        country: restaurant.address?.country || '',
+                        countryShort: restaurant.address?.country_short || '',
+                        postCode: restaurant.address?.post_code || '',
+                        latitude: restaurant.latitude?.toString() || '',
+                        longitude: restaurant.longitude?.toString() || '',
+                        placeId: restaurant.address?.place_id || '',
+                        zoom: restaurant.google_zoom || 15
+                    }
                 },
-            });
-            return data?.recentlyVisitedRestaurants || [];
-        } catch (error) {
-            console.error('Error fetching recently visited restaurants:', error);
-            throw error;
-        }
-    }
+                ratingsCount: restaurant.ratings_count || 0
+            }));
 
-    async getAddressByPalate(
-        searchTerm: string,
-        taxQuery: Record<string, unknown>,
-        first = 32,
-        after: string | null = null,
-    ) {
-        const hasTaxQuery = taxQuery && Object.keys(taxQuery).length > 0;
-        const variables: Record<string, unknown> = { searchTerm, first, after };
+            // Update pagination with next offset
+            const nextOffset = offset + first;
+            const hasMore = response.meta?.hasMore || false;
 
-        if (hasTaxQuery) {
-            variables.taxQuery = taxQuery;
-        }
-
-        const { data } = await client.query<{
-            listings: {
-                nodes: Array<{
-                    id: string;
-                    title: string;
-                    slug: string;
-                    content: string;
-                    databaseId: number;
-                    featuredImage?: {
-                        node: {
-                            sourceUrl: string;
-                        };
-                    };
-                    listingDetails: {
-                        latitude: string;
-                        longitude: string;
-                        phone: string;
-                        openingHours: string;
-                        menuUrl: string;
-                    };
-                    palates: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                    listingCategories: {
-                        nodes: Array<{
-                            name: string;
-                            slug: string;
-                        }>;
-                    };
-                }>;
+            return {
+                nodes,
                 pageInfo: {
-                    hasNextPage: boolean;
-                    endCursor: string | null;
-                };
+                    endCursor: hasMore ? nextOffset.toString() : null,
+                    hasNextPage: hasMore
+                }
             };
-        }>({
-            query: hasTaxQuery
-                ? GET_ADDRESS_BY_PALATE_WITH_TAX
-                : GET_ADDRESS_BY_PALATE_NO_TAX,
-            variables,
-            fetchPolicy: 'network-only',
-        });
+        } catch (error) {
+            console.error('Error fetching all restaurants:', error);
+            return {
+                nodes: [],
+                pageInfo: { endCursor: null, hasNextPage: false }
+            };
+        }
+    }
 
-        return {
-            nodes: (data?.listings?.nodes ?? []) as unknown as Record<string, unknown>[],
-            pageInfo: (data?.listings?.pageInfo ?? { hasNextPage: false, endCursor: null }) as unknown as Record<string, unknown>,
-            hasNextPage: data?.listings?.pageInfo?.hasNextPage ?? false,
-            endCursor: (data?.listings?.pageInfo?.endCursor ?? null) as unknown as string,
-        };
+    async getRestaurantById(id: number) {
+        try {
+            const response = await restaurantV2Service.getRestaurantById(id.toString());
+            
+            if (!response.success || !response.data) {
+                console.error('Failed to fetch restaurant by ID:', response.error);
+                return null;
+            }
+
+            return response.data as unknown as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching restaurant by ID:', error);
+            return null;
+        }
+    }
+
+    async getRestaurantByName(name: string) {
+        try {
+            // Search for restaurant by name using getAllRestaurants
+            const response = await this.getAllRestaurants(name, 1, null);
+            return response.nodes[0] as unknown as Record<string, unknown> || null;
+        } catch (error) {
+            console.error('Error fetching restaurant by name:', error);
+            return null;
+        }
+    }
+
+    async getRestaurantListingName() {
+        try {
+            // Fetch all restaurants without filtering
+            const response = await this.getAllRestaurants('', 100, null);
+            return {
+                listings: {
+                    nodes: response.nodes
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching restaurant listing names:', error);
+            return { listings: { nodes: [] } };
+        }
     }
 
     async getListingsName(
         searchTerm: string,
-        first = 32,
-        after: string | null = null,
-    ) {
+        first: number = 32,
+        after: string | null = null
+    ): Promise<{ nodes: Record<string, unknown>[]; pageInfo: Record<string, unknown>; hasNextPage: boolean; endCursor: string }> {
         try {
-            const { data } = await client.query<{
-                listings: {
-                    nodes: Array<{
-                        id: string;
-                        title: string;
-                        slug: string;
-                        content: string;
-                        databaseId: number;
-                        featuredImage?: {
-                            node: {
-                                sourceUrl: string;
-                            };
-                        };
-                        listingDetails: {
-                            latitude: string;
-                            longitude: string;
-                            phone: string;
-                            openingHours: string;
-                            menuUrl: string;
-                        };
-                        palates: {
-                            nodes: Array<{
-                                name: string;
-                                slug: string;
-                            }>;
-                        };
-                        listingCategories: {
-                            nodes: Array<{
-                                name: string;
-                                slug: string;
-                            }>;
-                        };
-                    }>;
-                    pageInfo: {
-                        endCursor: string;
-                        hasNextPage: boolean;
-                    };
-                };
-            }>({
-                query: GET_LISTINGS_NAME,
-                variables: {
-                    searchTerm,
-                    first,
-                    after
-                },
-            });
+            // Use getAllRestaurants with search term
+            const response = await this.getAllRestaurants(searchTerm, first, after);
             return {
-                nodes: (data?.listings?.nodes ?? []) as unknown as Record<string, unknown>[],
-                pageInfo: (data?.listings?.pageInfo ?? { hasNextPage: false, endCursor: null }) as unknown as Record<string, unknown>,
-                hasNextPage: data?.listings?.pageInfo?.hasNextPage ?? false,
-                endCursor: (data?.listings?.pageInfo?.endCursor ?? null) as unknown as string,
+                nodes: response.nodes,
+                pageInfo: response.pageInfo,
+                hasNextPage: response.pageInfo.hasNextPage as boolean || false,
+                endCursor: (response.pageInfo.endCursor as string) || ''
             };
         } catch (error) {
             console.error('Error fetching listings name:', error);
-            throw new Error('Failed to fetch listings name');
+            return {
+                nodes: [],
+                pageInfo: { endCursor: null, hasNextPage: false },
+                hasNextPage: false,
+                endCursor: ''
+            };
         }
     }
 
-    async checkInRestaurant(restaurantId: number, accessToken: string) {
+    async getAddressByPalate(
+        palates: string,
+        first: number,
+        after: string | null,
+        withTax: boolean,
+        taxQuery?: unknown
+    ) {
         try {
-            const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
-                body: JSON.stringify({ 
-                    restaurantId: restaurantId,
-                    action: 'checkin'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
+            // Use getAllRestaurants with palate filtering
+            // Note: This will need proper palate filtering implementation in V2 API
+            const response = await this.getAllRestaurants('', first, after, {}, null, null, null, null, null, null, null, null, palates);
+            return response;
+        } catch (error) {
+            console.error('Error fetching address by palate:', error);
+            return {
+                nodes: [],
+                pageInfo: { endCursor: null, hasNextPage: false }
+            };
+        }
+    }
+
+    async saveRestaurant(listingData: FavoriteListingData, idToken: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST(
+                `/api/v1/restaurant-users/toggle-favorite`,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`,
+                    },
+                    body: JSON.stringify({
+                        restaurant_id: listingData.restaurantId,
+                        is_saved: listingData.isSaved,
+                    }),
+                }
+            );
+            return response;
+        } catch (error) {
+            console.error('Error saving restaurant:', error);
+            throw error;
+        }
+    }
+
+    async checkInRestaurant(checkInData: CheckInData, idToken: string): Promise<Record<string, unknown>> {
+        try {
+            const response = await request.POST(
+                `/api/v1/restaurant-users/toggle-checkin`,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`,
+                    },
+                    body: JSON.stringify({
+                        restaurant_id: checkInData.restaurantId,
+                        is_checked_in: checkInData.isCheckedIn,
+                    }),
+                }
+            );
             return response;
         } catch (error) {
             console.error('Error checking in restaurant:', error);
@@ -416,438 +310,36 @@ export class RestaurantRepository implements RestaurantRepo {
         }
     }
 
-    async addFavoriteRestaurant(restaurantId: number, accessToken: string) {
+    async addRecentlyVisitedRestaurant(restaurantId: string): Promise<Record<string, unknown>> {
         try {
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({ 
-                    restaurantId: restaurantId,
-                    action: 'save'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
+            // Store in localStorage for now (can be migrated to Hasura if needed)
+            if (typeof window !== 'undefined') {
+                const visited = JSON.parse(localStorage.getItem('recentlyVisited') || '[]');
+                const updated = [restaurantId, ...visited.filter((id: string) => id !== restaurantId)].slice(0, 10);
+                localStorage.setItem('recentlyVisited', JSON.stringify(updated));
+            }
+            return { success: true };
         } catch (error) {
-            console.error('Error adding favorite restaurant:', error);
-            throw error;
+            console.error('Error adding recently visited restaurant:', error);
+            return { success: false };
         }
     }
 
-    async removeFavoriteRestaurant(restaurantId: number, accessToken: string) {
+    async getRecentlyVisitedRestaurants(first: number): Promise<Record<string, unknown>> {
         try {
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({ 
-                    restaurantId: restaurantId,
-                    action: 'unsave'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
+            // Retrieve from localStorage
+            if (typeof window !== 'undefined') {
+                const visited = JSON.parse(localStorage.getItem('recentlyVisited') || '[]');
+                return {
+                    recentlyVisited: {
+                        nodes: visited.slice(0, first)
+                    }
+                };
+            }
+            return { recentlyVisited: { nodes: [] } };
         } catch (error) {
-            console.error('Error removing favorite restaurant:', error);
-            throw error;
-        }
-    }
-
-    async getFavoriteRestaurants(accessToken: string) {
-        try {
-            const response = await request.GET('/wp-json/restaurant/v1/favorites/', {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return response;
-        } catch (error) {
-            console.error('Error fetching favorite restaurants:', error);
-            throw error;
-        }
-    }
-
-    async getRestaurantReviews(restaurantId: number, page = 1, limit = 10) {
-        try {
-            const response = await request.GET(`/wp-json/restaurant/v1/reviews/?restaurantId=${restaurantId}&page=${page}&limit=${limit}`);
-            return response;
-        } catch (error) {
-            console.error('Error fetching restaurant reviews:', error);
-            throw error;
-        }
-    }
-
-    async addRestaurantReview(reviewData: Record<string, unknown>, accessToken: string) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant review creation in WordPress plugin
-        throw new Error('Restaurant review creation not implemented in WordPress plugin yet');
-    }
-
-    async updateRestaurantReview(reviewId: number, reviewData: Record<string, unknown>, accessToken: string) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant review update in WordPress plugin
-        throw new Error('Restaurant review update not implemented in WordPress plugin yet');
-    }
-
-    async deleteRestaurantReview(reviewId: number, accessToken: string) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant review deletion in WordPress plugin
-        throw new Error('Restaurant review deletion not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantStats(restaurantId: number) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant stats in WordPress plugin
-        throw new Error('Restaurant stats not implemented in WordPress plugin yet');
-    }
-
-    async searchRestaurants(query: string, filters: Record<string, unknown> = {}) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant search in WordPress plugin
-        throw new Error('Restaurant search not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantCategories() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant categories in WordPress plugin
-        throw new Error('Restaurant categories not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantCuisines() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant cuisines in WordPress plugin
-        throw new Error('Restaurant cuisines not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantPriceRanges() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant price ranges in WordPress plugin
-        throw new Error('Restaurant price ranges not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantBadges() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant badges in WordPress plugin
-        throw new Error('Restaurant badges not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantRecognition() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant recognition in WordPress plugin
-        throw new Error('Restaurant recognition not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantSortOptions() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant sort options in WordPress plugin
-        throw new Error('Restaurant sort options not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantFilters() {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant filters in WordPress plugin
-        throw new Error('Restaurant filters not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantSuggestions(userId: number, accessToken: string) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant suggestions in WordPress plugin
-        throw new Error('Restaurant suggestions not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantTrending(limit = 10) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement trending restaurants in WordPress plugin
-        throw new Error('Trending restaurants not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantNearby(latitude: number, longitude: number, radius = 10) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement nearby restaurants in WordPress plugin
-        throw new Error('Nearby restaurants not implemented in WordPress plugin yet');
-    }
-
-    async getRestaurantRecommendations(userId: number, accessToken: string, limit = 10) {
-        // Note: This endpoint doesn't exist in the WordPress plugin yet
-        // TODO: Implement restaurant recommendations in WordPress plugin
-        throw new Error('Restaurant recommendations not implemented in WordPress plugin yet');
-    }
-
-    async getFavoriteListing(userId: number, accessToken?: string): Promise<Record<string, unknown>> {
-        // Validate and ensure userId is a valid number
-        const numericUserId = Number(userId);
-        if (isNaN(numericUserId) || numericUserId <= 0) {
-            console.error('Repository getFavoriteListing: Invalid userId', { 
-                originalUserId: userId, 
-                type: typeof userId,
-                numericUserId 
-            });
-            return { favorites: [], count: 0, user_id: 0 };
-        }
-
-        try {
-            const url = `/wp-json/restaurant/v1/favorites/?user_id=${numericUserId}`;
-            console.log('Repository getFavoriteListing: Calling endpoint', { 
-                url, 
-                userId: numericUserId, 
-                userIdType: typeof numericUserId 
-            });
-            
-            const response = await request.GET(url, {
-                headers: {
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error fetching favorite listings:', error);
-            throw error;
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async getCheckInRestaurant(userId: number, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        // Validate and ensure userId is a valid number
-        const numericUserId = Number(userId);
-        if (isNaN(numericUserId) || numericUserId <= 0) {
-            console.error('Repository getCheckInRestaurant: Invalid userId', { 
-                originalUserId: userId, 
-                type: typeof userId,
-                numericUserId 
-            });
-            return { checkins: [], count: 0, user_id: 0 };
-        }
-
-        try {
-            const url = `/wp-json/restaurant/v1/checkins/?user_id=${numericUserId}`;
-            console.log('Repository getCheckInRestaurant: Calling endpoint', { 
-                url, 
-                userId: numericUserId, 
-                userIdType: typeof numericUserId 
-            });
-            
-            const response = await request.GET(url, {
-                headers: {
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error fetching check-in restaurants:', error);
-            throw error;
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async saveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({
-                    restaurant_slug: restaurantSlug,
-                    action: 'save'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error saving favorite listing:', error);
-            throw error;
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async unsaveFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({
-                    restaurant_slug: restaurantSlug,
-                    action: 'unsave'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error unsaving favorite listing:', error);
-            throw error;
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async checkFavoriteListing(restaurantSlug: string, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({
-                    restaurant_slug: restaurantSlug,
-                    action: 'check'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error checking favorite listing:', error);
-            throw error;
-        }
-    }
-
-    // Keep the old function for backward compatibility, but mark as deprecated
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async createFavoriteListing(data: FavoriteListingData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        try {
-            // Map frontend actions to WordPress plugin actions
-            const actionMap: Record<string, string> = {
-                'add': 'save',
-                'remove': 'unsave',
-                'save': 'save',
-                'unsave': 'unsave',
-                'check': 'check'
-            };
-            
-            const wpAction = actionMap[data.action] || 'save';
-            
-            const response = await request.POST('/wp-json/restaurant/v1/favorite/', {
-                body: JSON.stringify({
-                    restaurant_slug: data.restaurant_slug,
-                    action: wpAction
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error creating favorite listing:', error);
-            throw error;
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async createCheckIn(data: CheckInData, accessToken?: string, jsonResponse?: boolean): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/restaurant/v1/checkin/', {
-                body: JSON.stringify({
-                    restaurant_slug: data.restaurant_slug,
-                    action: data.action || 'checkin'
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error creating check-in:', error);
-            throw error;
-        }
-    }
-
-    async createRestaurantListingAndReview(data: Record<string, unknown>, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/wp/v2/api/restaurant-listing-and-review', {
-                body: JSON.stringify(data),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error creating restaurant listing and review:', error);
-            throw error;
-        }
-    }
-
-    async deleteRestaurantListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.DELETE(`/wp-json/wp/v2/api/restaurant-listing/${id}`, {
-                headers: {
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error deleting restaurant listing:', error);
-            throw error;
-        }
-    }
-
-    async createListingAndReview(payload: Record<string, unknown>, token: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.POST('/wp-json/wp/v2/api/listing-and-review', {
-                body: JSON.stringify(payload),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error creating listing and review:', error);
-            throw error;
-        }
-    }
-
-    async updateListing(id: number, listingUpdateData: Record<string, unknown>, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.PUT(`/wp-json/wp/v2/api/listing/${id}`, {
-                body: JSON.stringify(listingUpdateData),
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error updating listing:', error);
-            throw error;
-        }
-    }
-
-    async deleteListing(id: number, accessToken?: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.DELETE(`/wp-json/wp/v2/api/listing/${id}`, {
-                headers: {
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error deleting listing:', error);
-            throw error;
-        }
-    }
-
-    async getlistingDrafts(token: string): Promise<Record<string, unknown>> {
-        try {
-            const response = await request.GET('/wp-json/wp/v2/api/listing-drafts', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-            return response as Record<string, unknown>;
-        } catch (error) {
-            console.error('Error fetching listing drafts:', error);
-            throw error;
-        }
-    }
-
-    async getRestaurantRatingsCount(restaurantId: number): Promise<number> {
-        try {
-            const response = await request.GET(`/wp-json/wp/v2/api/restaurant/${restaurantId}/ratings-count`) as { count: number };
-            return response.count || 0;
-        } catch (error) {
-            console.error('Error fetching restaurant ratings count:', error);
-            return 0;
+            console.error('Error getting recently visited restaurants:', error);
+            return { recentlyVisited: { nodes: [] } };
         }
     }
 }

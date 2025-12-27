@@ -7,9 +7,6 @@ import { HttpResponse } from "@/interfaces/httpResponse";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_WP_API_URL;
-const USE_WP_PROXY = process.env.NEXT_PUBLIC_USE_WP_PROXY === 'true';
-
 const handleUnauthorized = async () => {
     try {
         // Sign out from Firebase
@@ -40,12 +37,12 @@ export default class HttpMethods {
             ...options.headers,
         };
 
-        const isWpJson = endpoint && endpoint.startsWith('/wp-json');
-        // On server-side, always use direct API URL (proxy only works client-side)
-        const isServerSide = typeof window === 'undefined';
-        const fetchUrl = USE_WP_PROXY && isWpJson && !isServerSide 
-            ? `/api/wp-proxy${endpoint}` 
-            : `${API_BASE_URL}${endpoint}`;
+        // Construct the full URL
+        // If endpoint starts with '/', it's relative to the current domain
+        // If it's a full URL (http/https), use it as-is
+        const fetchUrl = endpoint.startsWith('http') 
+            ? endpoint 
+            : endpoint;
 
         // Helper function to check if Authorization header is present
         const checkAuthHeader = (headerObj: HeadersInit | undefined): boolean => {
@@ -62,7 +59,7 @@ export default class HttpMethods {
             return false;
         };
 
-        // Check if this is an authenticated request (POST/PUT/DELETE with Authorization header)
+        // Check if this is an authenticated request
         const hasAuthHeader = checkAuthHeader(headers);
         const isAuthenticatedRequest = (
             (options.method === HTTP_METHODS.POST || 
@@ -72,14 +69,13 @@ export default class HttpMethods {
         );
 
         // Add timeout to prevent hanging requests (only on client-side)
-        // Only add timeout if no signal is already provided
         const hasExistingSignal = options.signal !== undefined;
         const controller = !hasExistingSignal && typeof AbortController !== 'undefined' 
             ? new AbortController() 
             : null;
         const timeoutId = controller ? setTimeout(() => {
             controller.abort();
-        }, 10000) : null; // 10 second timeout
+        }, 15000) : null; // 15 second timeout
 
         let response: Response;
         try {
@@ -142,7 +138,7 @@ export default class HttpMethods {
                     }
                 }
                 
-                // Return the error response for public endpoints (GET requests without auth)
+                // Return the error response for public endpoints
                 return jsonData as Record<string, unknown>;
             } catch (parseError) {
                 // For authenticated requests, throw error even if JSON parsing fails
@@ -159,7 +155,7 @@ export default class HttpMethods {
                     throw error;
                 }
 
-                // For public endpoints, return generic error object (don't throw)
+                // For public endpoints, return generic error object
                 console.warn(`[HttpMethods] Public request failed: ${options.method} ${endpoint} - Failed to parse error response as JSON`, {
                     status: response.status,
                     statusText: response.statusText,

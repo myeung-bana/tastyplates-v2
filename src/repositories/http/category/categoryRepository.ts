@@ -1,23 +1,16 @@
-import client from "@/app/graphql/client";
-import { GET_ALL_CATEGORIES } from "@/app/graphql/Category/categoryQueries";
 import { CategoryRepo } from "@/repositories/interface/user/category";
+import HttpMethods from "../requests";
 
+const request = new HttpMethods();
 
 export class CategoryRepository implements CategoryRepo {
     async getCategories() {
-        const { data } = await client.query<{
-            listingCategories: {
-                nodes: Array<{
-                    id: string;
-                    name: string;
-                    slug: string;
-                }>;
-            };
-        }>({
-            query: GET_ALL_CATEGORIES
-        });
-
-        // Optional: format the response with proper null checking
-        return (data?.listingCategories?.nodes ?? []) as unknown as Record<string, unknown>;
+        try {
+            const response = await request.GET('/api/v1/categories/get-all-categories', {});
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            return [] as unknown as Record<string, unknown>;
+        }
     }
 };

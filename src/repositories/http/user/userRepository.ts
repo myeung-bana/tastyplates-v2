@@ -1,5 +1,3 @@
-import client from "@/app/graphql/client";
-import { GET_USER_BY_ID } from "@/app/graphql/User/userQueries";
 import { HttpResponse } from "@/interfaces/httpResponse";
 import { CheckEmailExistResponse, CheckGoogleUserResponse, CurrentUserResponse, followUserResponse, IJWTResponse, IRegisterData, isFollowingUserResponse, IUserUpdate, IUserUpdateResponse } from "@/interfaces/user/user";
 import { UserRepo } from "../../interface/user/user";
@@ -134,29 +132,17 @@ export class UserRepository implements UserRepo {
         id: number | null,
         accessToken?: string
     ): Promise<Record<string, unknown>> {
-        // Authentication handled by authLink in GraphQL client
-        // accessToken parameter kept for backward compatibility but not used
-        const { data } = await client.query<{
-            user: {
-                id: string;
-                databaseId: number;
-                firstName: string;
-                lastName: string;
-                email: string;
-                username: string;
-                avatar?: {
-                    url: string;
-                };
-            };
-        }>({
-            query: GET_USER_BY_ID,
-            variables: { id },
-            fetchPolicy: "no-cache",
-            // Removed context.headers - authLink automatically adds Authorization header
-        });
+        const headers: HeadersInit = {
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        };
 
-        // Return empty object instead of null for production safety
-        return (data?.user ?? {}) as Record<string, unknown>;
+        try {
+            const response = await request.GET(`/api/v1/users/get-user-by-id?id=${id}`, { headers });
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching user by ID:', error);
+            return {};
+        }
     }
 
     async updateUserFields(

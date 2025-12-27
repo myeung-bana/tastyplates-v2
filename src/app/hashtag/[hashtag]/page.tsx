@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirebaseSession } from '@/hooks/useFirebaseSession';
-import client from '@/app/graphql/client';
-import { SEARCH_REVIEWS_BY_HASHTAG } from '@/app/graphql/Reviews/reviewsQueries';
 import { GraphQLReview } from '@/types/graphql';
 import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
+import HttpMethods from '@/repositories/http/requests';
+
+const request = new HttpMethods();
 
 const HashtagPage = () => {
   const params = useParams();
@@ -32,19 +33,17 @@ const HashtagPage = () => {
       // Get Firebase ID token if user is authenticated
       const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
       
-      const { data } = await client.query({
-        query: SEARCH_REVIEWS_BY_HASHTAG,
-        variables: { hashtag, first: append ? 8 : 16, after: append ? endCursor : null },
-        context: {
-          headers: {
-            ...(idToken && { Authorization: `Bearer ${idToken}` }),
-          },
-        },
-        fetchPolicy: 'no-cache',
-      });
+      const headers: HeadersInit = {
+        ...(idToken && { Authorization: `Bearer ${idToken}` }),
+      };
 
-      const newReviews = data?.comments?.nodes || [];
-      const pageInfo = data?.comments?.pageInfo || { endCursor: null, hasNextPage: false };
+      const response = await request.GET(
+        `/api/v1/restaurant-reviews/search-by-hashtag?hashtag=${encodeURIComponent(hashtag)}&limit=${append ? 8 : 16}${endCursor ? `&cursor=${endCursor}` : ''}`,
+        { headers }
+      );
+
+      const newReviews = (response as any)?.reviews || [];
+      const pageInfo = (response as any)?.pageInfo || { endCursor: null, hasNextPage: false };
 
       if (append) {
         setReviews((prev) => [...prev, ...newReviews]);

@@ -1,22 +1,16 @@
-import client from "@/app/graphql/client";
-import { GET_ALL_PALATES } from "@/app/graphql/Palates/palatesQueries";
 import { PalateRepo } from "@/repositories/interface/user/palate";
+import HttpMethods from "../requests";
 
+const request = new HttpMethods();
 
 export class PalatesRepository implements PalateRepo {
     async getPalates() {
-        const { data } = await client.query<{
-            palates: {
-                nodes: Array<{
-                    id: string;
-                    name: string;
-                    slug: string;
-                }>;
-            };
-        }>({
-            query: GET_ALL_PALATES
-        });
-
-        return (data?.palates?.nodes ?? []) as unknown as Record<string, unknown>;
+        try {
+            const response = await request.GET('/api/v1/palates/get-all-palates', {});
+            return response as Record<string, unknown>;
+        } catch (error) {
+            console.error('Error fetching palates:', error);
+            return [] as unknown as Record<string, unknown>;
+        }
     }
 };

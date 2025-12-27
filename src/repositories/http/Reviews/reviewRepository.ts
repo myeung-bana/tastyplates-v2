@@ -1,285 +1,233 @@
-import client from "@/app/graphql/client";
-import { GET_ALL_RECENT_REVIEWS, GET_COMMENT_REPLIES, GET_RESTAURANT_REVIEWS, GET_REVIEWS_BY_RESTAURANT_ID, GET_USER_REVIEWS } from "@/app/graphql/Reviews/reviewsQueries";
 import { ReviewRepo } from "@/repositories/interface/user/review";
 import { GraphQLReview, PageInfo } from "@/types/graphql";
-import { isGraphQLReviewArray } from "@/utils/typeGuards";
 import HttpMethods from "../requests";
+import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 
 const request = new HttpMethods();
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class ReviewRepository implements ReviewRepo {
   async getAllReviews(first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
-    // Authentication handled by authLink in GraphQL client
-    // accessToken parameter kept for backward compatibility but not used
-    const { data } = await client.query<{
-      comments: {
-        nodes: GraphQLReview[];
-        pageInfo: PageInfo;
+    try {
+      const offset = after ? parseInt(after) || 0 : 0;
+      
+      const response = await reviewV2Service.getAllReviews({
+        limit: first,
+        offset: offset
+      });
+
+      // Transform to legacy format
+      const pageInfo: PageInfo = {
+        endCursor: response.hasMore ? (offset + first).toString() : null,
+        hasNextPage: response.hasMore
       };
-    }>({
-      query: GET_ALL_RECENT_REVIEWS,
-      variables: { first, after },
-      // Removed context.headers - authLink automatically adds Authorization header
-      fetchPolicy: "no-cache",
-    });
 
-    const reviews = data?.comments?.nodes ?? [];
-    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
-
-    // Runtime validation - more lenient approach
-    if (!Array.isArray(reviews)) {
-      throw new Error('Invalid review data received from GraphQL - not an array');
+      return { 
+        reviews: response.reviews as GraphQLReview[], 
+        pageInfo 
+      };
+    } catch (error) {
+      console.error('Error fetching all reviews:', error);
+      return { 
+        reviews: [], 
+        pageInfo: { endCursor: null, hasNextPage: false } 
+      };
     }
-
-    // Validate that we have at least some basic structure
-    if (reviews.length > 0) {
-      const firstReview = reviews[0];
-      if (!firstReview || typeof firstReview !== 'object' || !firstReview.id || !firstReview.databaseId) {
-        console.warn('Review data structure may not match expected format:', firstReview);
-        // Don't throw error, just log warning and continue
-      }
-    }
-
-    return { reviews, pageInfo };
   }
 
   async getCommentReplies(id: string): Promise<GraphQLReview[]> {
-    const { data } = await client.query<{
-      comment: {
-        replies: {
-          nodes: GraphQLReview[];
-        };
-      };
-    }>({
-      query: GET_COMMENT_REPLIES,
-      variables: { id },
-      fetchPolicy: "no-cache",
-    });
-
-    const replies = data?.comment?.replies?.nodes ?? [];
-
-    // Runtime validation - more lenient approach
-    if (!Array.isArray(replies)) {
-      throw new Error('Invalid replies data received from GraphQL - not an array');
+    try {
+      // Check if ID is a UUID (Hasura format)
+      if (UUID_REGEX.test(id)) {
+        const params = new URLSearchParams({ parent_review_id: id });
+        const response = await fetch(`/api/v1/restaurant-reviews/get-replies?${params.toString()}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error((errorData as any).error || `Failed to fetch replies: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch replies');
+        }
+        return result.data || [];
+      } else {
+        // Legacy numeric ID - return empty array or handle differently
+        console.warn('Legacy numeric review ID not supported in V2 API:', id);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching comment replies:', error);
+      return [];
     }
-
-    return replies;
   }
 
   async getUserReviews(userId: number, first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo; userCommentCount: number }> {
-    // Authentication handled by authLink in GraphQL client
-    // accessToken parameter kept for backward compatibility but not used
-    const { data } = await client.query<{
-      comments: {
-        nodes: GraphQLReview[];
-        pageInfo: PageInfo;
-      };
-      userCommentCount: number;
-    }>({
-      query: GET_USER_REVIEWS,
-      variables: { userId: userId.toString(), first, after },
-      // Removed context.headers - authLink automatically adds Authorization header
-      fetchPolicy: "no-cache",
-    });
-
-    const reviews = data?.comments?.nodes ?? [];
-    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
-    const userCommentCount = data?.userCommentCount ?? 0;
-
-    // Runtime validation - more lenient approach
-    if (!Array.isArray(reviews)) {
-      throw new Error('Invalid review data received from GraphQL - not an array');
-    }
-
-    return { reviews, pageInfo, userCommentCount };
-  }
-
-  async likeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
-    const response = await request.POST(
-      `/wp-json/v1/like-comment`,
-      {
-        body: JSON.stringify({
-          comment_id: commentId,
-        }),
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    return {
-      userLiked: (response as any)?.userLiked ?? false,
-      likesCount: (response as any)?.likesCount ?? 0
-    };
-  }
-
-  async unlikeComment(commentId: number, accessToken: string): Promise<{ userLiked: boolean; likesCount: number }> {
-    const response = await request.POST(
-      `/wp-json/v1/unlike-comment`,
-      {
-        body: JSON.stringify({
-          comment_id: commentId,
-        }),
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    return {
-      userLiked: (response as any)?.userLiked ?? false,
-      likesCount: (response as any)?.likesCount ?? 0
-    };
-  }
-
-  async getRestaurantReviews(restaurantId: number, accessToken?: string, first = 5, after?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
-    // Authentication handled by authLink in GraphQL client
-    // accessToken parameter kept for backward compatibility but not used
-    const { data } = await client.query<{
-      comments: {
-        nodes: GraphQLReview[];
-        pageInfo: PageInfo;
-      };
-    }>({
-      query: GET_RESTAURANT_REVIEWS,
-      variables: { restaurantId: restaurantId.toString(), first, after },
-      // Removed context.headers - authLink automatically adds Authorization header
-      fetchPolicy: "no-cache",
-    });
-
-    const reviews = data?.comments?.nodes ?? [];
-    const pageInfo = data?.comments?.pageInfo ?? { endCursor: null, hasNextPage: false };
-
-    // Runtime validation - more lenient approach
-    if (!Array.isArray(reviews)) {
-      throw new Error('Invalid review data received from GraphQL - not an array');
-    }
-
-    return { reviews, pageInfo };
-  }
-
-  async getRestaurantReviewsById(restaurantId: string | number): Promise<GraphQLReview | null> {
     try {
-      const { data } = await client.query<{
-        reviews: {
-          nodes: GraphQLReview[];
-        };
-      }>({
-        query: GET_REVIEWS_BY_RESTAURANT_ID,
-        variables: { restaurantId: restaurantId.toString() },
-        fetchPolicy: "no-cache",
+      const offset = after ? parseInt(after) || 0 : 0;
+      
+      // Assume userId is now a UUID string
+      const response = await reviewV2Service.getUserReviews(userId.toString(), {
+        limit: first,
+        offset: offset
       });
 
-      const reviews = data?.reviews?.nodes ?? [];
-      
-      if (!Array.isArray(reviews) || reviews.length === 0) {
-        return null;
-      }
+      const pageInfo: PageInfo = {
+        endCursor: response.hasMore ? (offset + first).toString() : null,
+        hasNextPage: response.hasMore
+      };
 
-      return reviews[0] || null;
+      return { 
+        reviews: response.reviews as GraphQLReview[], 
+        pageInfo,
+        userCommentCount: response.total
+      };
     } catch (error) {
-      console.error('Error fetching restaurant reviews by ID:', error);
-      return null;
+      console.error('Error fetching user reviews:', error);
+      return { 
+        reviews: [], 
+        pageInfo: { endCursor: null, hasNextPage: false },
+        userCommentCount: 0
+      };
     }
   }
 
-  async postReview(payload: any, accessToken: string): Promise<any> {
-    const response = await request.POST(
-      `/wp-json/v1/review`,
-      {
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    return response;
-  }
-
-  // Placeholder implementations for missing interface methods
-  async createReview<T>(data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: T }> {
-    throw new Error('Method not implemented');
-  }
-
-  async getReviewDrafts(accessToken?: string): Promise<Record<string, unknown>[]> {
+  async getRestaurantReviews(restaurantId: string | number, first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
     try {
-      const response = await request.GET('/wp-json/wp/v2/api/review-drafts', {
-        headers: {
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-        },
+      const offset = after ? parseInt(after) || 0 : 0;
+      
+      // Convert restaurantId to UUID if it's a number
+      const restaurantUuid = typeof restaurantId === 'string' && UUID_REGEX.test(restaurantId) 
+        ? restaurantId 
+        : restaurantId.toString();
+
+      const response = await reviewV2Service.getReviewsByRestaurant(restaurantUuid, {
+        limit: first,
+        offset: offset
       });
-      
-      // Handle different response formats
-      if (Array.isArray(response)) {
-        return response;
-      }
-      
-      // If response has a data property (common REST API pattern)
-      if (response && typeof response === 'object' && 'data' in response) {
-        return Array.isArray((response as { data: unknown }).data) 
-          ? (response as { data: Record<string, unknown>[] }).data 
-          : [];
-      }
-      
-      // If response has a different structure, return empty array
-      return [];
+
+      const pageInfo: PageInfo = {
+        endCursor: response.hasMore ? (offset + first).toString() : null,
+        hasNextPage: response.hasMore
+      };
+
+      return { 
+        reviews: response.reviews as GraphQLReview[], 
+        pageInfo 
+      };
     } catch (error) {
-      console.error('Error fetching review drafts from API:', error);
-      // Return empty array instead of throwing to prevent UI breakage
-      return [];
+      console.error('Error fetching restaurant reviews:', error);
+      return { 
+        reviews: [], 
+        pageInfo: { endCursor: null, hasNextPage: false } 
+      };
     }
   }
 
-  async deleteReviewDraft(draftId: number, accessToken?: string, force?: boolean): Promise<void> {
+  async likeComment(commentId: number | string, accessToken: string): Promise<Record<string, unknown>> {
     try {
-      await request.DELETE(
-        `/wp-json/wp/v2/api/review-drafts/${draftId}`,
+      const response = await request.POST(
+        `/api/v1/restaurant-reviews/like-review`,
         {
           headers: {
-            ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Error deleting review draft:', error);
-      throw error;
-    }
-  }
-
-  async updateReviewDraft(draftId: number, data: Record<string, unknown>, accessToken: string): Promise<{ status: number; data: unknown }> {
-    try {
-      const response = await request.PUT(
-        `/wp-json/wp/v2/api/review-drafts/${draftId}`,
-        {
-          body: JSON.stringify(data),
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
+          body: JSON.stringify({
+            review_id: commentId.toString()
+          }),
         }
       );
-      return response as { status: number; data: unknown };
+      return response;
     } catch (error) {
-      console.error('Error updating review draft:', error);
+      console.error('Error liking comment:', error);
       throw error;
     }
   }
 
-  async getReviewById(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
+  async unlikeComment(commentId: number | string, accessToken: string): Promise<Record<string, unknown>> {
     try {
-      const response = await request.GET(`/wp-json/wp/v2/api/review-drafts/${reviewId}`, {
-        headers: {
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-        },
-      });
-      return response as Record<string, unknown>;
+      const response = await request.POST(
+        `/api/v1/restaurant-reviews/unlike-review`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            review_id: commentId.toString()
+          }),
+        }
+      );
+      return response;
     } catch (error) {
-      console.error('Error fetching review by ID:', error);
+      console.error('Error unliking comment:', error);
       throw error;
     }
   }
 
-  async likeReview(reviewId: number, accessToken?: string): Promise<Record<string, unknown>> {
-    throw new Error('Method not implemented');
+  async postReview(payload: Record<string, unknown>, accessToken: string): Promise<Record<string, unknown>> {
+    try {
+      const response = await request.POST(
+        `/api/v1/restaurant-reviews/create-review`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error posting review:', error);
+      throw error;
+    }
+  }
+
+  async updateReview(reviewId: string, payload: Record<string, unknown>, accessToken: string): Promise<Record<string, unknown>> {
+    try {
+      const response = await request.POST(
+        `/api/v1/restaurant-reviews/update-review`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            review_id: reviewId,
+            ...payload
+          }),
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error updating review:', error);
+      throw error;
+    }
+  }
+
+  async deleteReview(reviewId: string, accessToken: string): Promise<Record<string, unknown>> {
+    try {
+      const response = await request.DELETE(
+        `/api/v1/restaurant-reviews/delete-review`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            review_id: reviewId
+          }),
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      throw error;
+    }
   }
 }
