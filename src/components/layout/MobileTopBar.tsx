@@ -8,6 +8,7 @@ import { RESTAURANTS, HOME } from "@/constants/pages";
 import { TASTYPLATES_LOGO_COLOUR } from "@/constants/images";
 import Image from "next/image";
 import SidebarHeader from "./SidebarHeader";
+import SearchMenu from "./SearchMenu";
 
 interface MobileTopBarProps {
   onSearchClick?: () => void;
@@ -17,6 +18,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
   const pathname = usePathname();
   const { user } = useFirebaseSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -24,6 +26,14 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  const toggleSearchMenu = () => {
+    setIsSearchMenuOpen(!isSearchMenuOpen);
+  };
+
+  const closeSearchMenu = () => {
+    setIsSearchMenuOpen(false);
   };
 
   return (
@@ -55,7 +65,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
 
           {/* Search Icon */}
           <button
-            onClick={onSearchClick}
+            onClick={toggleSearchMenu}
             className="flex items-center justify-center w-8 h-8 text-gray-700 hover:text-gray-900 transition-colors"
             aria-label="Search"
           >
@@ -64,17 +74,17 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
         </div>
       </div>
 
-      {/* Sidebar Overlay */}
+      {/* Left Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50"
+          className="md:hidden fixed inset-0 z-[60] bg-black bg-opacity-50"
           onClick={closeSidebar}
         />
       )}
 
-      {/* Sidebar Menu */}
+      {/* Left Sidebar Menu */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 w-64 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed top-0 left-0 z-[60] w-64 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -90,6 +100,9 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
           </div>
         </div>
       </div>
+
+      {/* Search Menu Component */}
+      <SearchMenu isOpen={isSearchMenuOpen} onClose={closeSearchMenu} />
     </>
   );
 };

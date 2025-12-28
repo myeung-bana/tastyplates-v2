@@ -42,6 +42,9 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   const [sheetPosition, setSheetPosition] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isAnimatingIn, setIsAnimatingIn] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [replyLikes, setReplyLikes] = useState<Record<string, number>>({});
   const [replyUserLiked, setReplyUserLiked] = useState<Record<string, boolean>>({});
   const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
@@ -218,11 +221,31 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     return undefined;
   }, [cooldown]);
 
-  // Reset position when modal opens/closes
+  // Smooth entrance animation when opening
   useEffect(() => {
     if (isOpen) {
-      setSheetPosition(0);
+      // Reset states
+      setIsClosing(false);
+      setIsAnimatingIn(true);
+      setIsVisible(true);
       setIsDragging(false);
+      
+      // Start with sheet below viewport
+      setSheetPosition(400);
+      
+      // Small delay for backdrop to render, then slide up
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setSheetPosition(0);
+        }, 50); // Small delay for backdrop fade-in
+      });
+      
+      // Mark animation complete
+      setTimeout(() => {
+        setIsAnimatingIn(false);
+      }, 400); // Total entrance animation time
+    } else {
+      setIsVisible(false);
     }
   }, [isOpen]);
 
@@ -252,17 +275,39 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }
   }, [isDragging, startY]);
 
+  // Smooth close handler with animation
+  const handleSmoothClose = useCallback(() => {
+    if (isClosing) return;
+    
+    setIsClosing(true);
+    
+    // Slide down animation
+    setSheetPosition(400); // Slide below viewport
+    
+    // Wait for slide animation, then fade out backdrop
+    setTimeout(() => {
+      setIsVisible(false);
+      
+      // Finally close after backdrop fade
+      setTimeout(() => {
+        onClose();
+        setIsClosing(false);
+        setSheetPosition(0);
+      }, 200); // Backdrop fade duration
+    }, 300); // Sheet slide duration
+  }, [isClosing, onClose]);
+
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return;
     setIsDragging(false);
     
     // If swiped down more than 80px, close the modal
     if (sheetPosition > 80) {
-      onClose();
+      handleSmoothClose();
     } else {
       setSheetPosition(0);
     }
-  }, [isDragging, sheetPosition, onClose]);
+  }, [isDragging, sheetPosition, handleSmoothClose]);
 
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
@@ -402,23 +447,33 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isVisible) return null;
 
   return (
     <div className="comments-bottom-sheet">
-      {/* Backdrop */}
+      {/* Backdrop with fade animation */}
       <div 
-        className="comments-bottom-sheet__backdrop" 
-        onClick={onClose}
+        className="comments-bottom-sheet__backdrop"
+        style={{
+          opacity: isVisible && !isClosing ? 1 : 0,
+          transition: 'opacity 300ms ease-in-out'
+        }}
+        onClick={handleSmoothClose}
       />
       
-      {/* Bottom Sheet */}
+      {/* Bottom Sheet with smooth slide animation */}
       <div 
         ref={sheetRef}
-        className="comments-bottom-sheet__sheet"
+        className={`comments-bottom-sheet__sheet ${
+          isClosing || isAnimatingIn ? 'pointer-events-none' : ''
+        }`}
         style={{
           transform: `translateY(${sheetPosition}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+          transition: isDragging 
+            ? 'none' 
+            : isClosing 
+              ? 'transform 300ms cubic-bezier(0.4, 0, 1, 1)' // ease-in for closing
+              : 'transform 350ms cubic-bezier(0, 0, 0.2, 1)', // ease-out for opening
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -437,7 +492,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
           </h2>
           <button
             className="comments-bottom-sheet__close"
-            onClick={onClose}
+            onClick={handleSmoothClose}
             aria-label="Close"
           >
             <FiX className="w-5 h-5" />

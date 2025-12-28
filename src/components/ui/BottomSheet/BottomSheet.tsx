@@ -22,6 +22,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
+  const [isAnimatingIn, setIsAnimatingIn] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Touch handlers for swipe-to-close with improved detection
@@ -55,36 +57,66 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     if (!isDragging) return;
     setIsDragging(false);
     
-    // If swiped down more than 80px, close the modal (reduced threshold)
+    // If swiped down more than 80px, close the modal
     if (sheetPosition > 80) {
-      onClose();
+      handleClose();
     } else {
       setSheetPosition(0);
     }
-  }, [isDragging, sheetPosition, onClose]);
+  }, [isDragging, sheetPosition]);
 
-  // Handle backdrop click with slide-down animation
-  const handleBackdropClick = useCallback(() => {
-    if (isClosing) return; // Prevent multiple clicks during animation
+  // Smooth close handler with animation
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
     
     setIsClosing(true);
-    // Animate slide down
-    setSheetPosition(300); // Slide down beyond viewport
     
-    // Close after animation completes
+    // Slide down animation
+    setSheetPosition(400); // Slide below viewport
+    
+    // Wait for slide animation, then fade out backdrop
     setTimeout(() => {
-      onClose();
-      setIsClosing(false);
-      setSheetPosition(0); // Reset for next open
-    }, 300); // Match the CSS transition duration
+      setIsVisible(false);
+      
+      // Finally close after backdrop fade
+      setTimeout(() => {
+        onClose();
+        setIsClosing(false);
+        setSheetPosition(0);
+      }, 200); // Backdrop fade duration
+    }, 300); // Sheet slide duration
   }, [isClosing, onClose]);
 
-  // Reset position when modal opens/closes
+  // Handle backdrop click
+  const handleBackdropClick = useCallback(() => {
+    handleClose();
+  }, [handleClose]);
+
+  // Smooth entrance animation when opening
   useEffect(() => {
     if (isOpen) {
-      setSheetPosition(0);
-      setIsDragging(false);
+      // Reset states
       setIsClosing(false);
+      setIsAnimatingIn(true);
+      setIsVisible(true);
+      setIsDragging(false);
+      
+      // Start with sheet below viewport
+      setSheetPosition(400);
+      
+      // Small delay for backdrop to render, then slide up
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setSheetPosition(0);
+        }, 50); // Small delay for backdrop fade-in
+      });
+      
+      // Mark animation complete
+      setTimeout(() => {
+        setIsAnimatingIn(false);
+      }, 400); // Total entrance animation time
+    } else {
+      setIsVisible(false);
     }
   }, [isOpen]);
 
@@ -102,24 +134,32 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isVisible) return null;
 
   return (
     <div className="fixed inset-0 z-[10001] font-neusans">
-      {/* Backdrop */}
+      {/* Backdrop with fade animation */}
       <div 
-        className="absolute inset-0 bg-black bg-opacity-50" 
+        className={`absolute inset-0 bg-black transition-opacity duration-300 ease-in-out ${
+          isVisible && !isClosing ? 'opacity-50' : 'opacity-0'
+        }`}
         onClick={handleBackdropClick}
       />
       
-      {/* Bottom Sheet */}
+      {/* Bottom Sheet with smooth slide animation */}
       <div 
         ref={sheetRef}
-        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl flex flex-col w-full ${className} ${isClosing ? 'pointer-events-none' : ''}`}
+        className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl flex flex-col w-full ${className} ${
+          isClosing || isAnimatingIn ? 'pointer-events-none' : ''
+        }`}
         style={{
           maxHeight,
           transform: `translateY(${sheetPosition}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+          transition: isDragging 
+            ? 'none' 
+            : isClosing 
+              ? 'transform 300ms cubic-bezier(0.4, 0, 1, 1)' // ease-in for closing
+              : 'transform 350ms cubic-bezier(0, 0, 0.2, 1)', // ease-out for opening
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -144,8 +184,15 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           </div>
         )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Content with subtle fade-in delay */}
+        <div 
+          className={`flex-1 overflow-y-auto transition-opacity duration-200 ${
+            isAnimatingIn ? 'opacity-0' : 'opacity-100'
+          }`}
+          style={{
+            transitionDelay: isAnimatingIn ? '0ms' : '150ms'
+          }}
+        >
           {children}
         </div>
       </div>
