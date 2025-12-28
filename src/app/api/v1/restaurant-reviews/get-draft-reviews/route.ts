@@ -159,8 +159,8 @@ export async function GET(request: NextRequest) {
           uuid
         });
 
-        if (!restaurantResult.errors && restaurantResult.data?.restaurants_by_pk) {
-          const restaurant = restaurantResult.data.restaurants_by_pk;
+        if (!restaurantResult.errors && restaurantResult.data?.restaurants && restaurantResult.data.restaurants.length > 0) {
+          const restaurant = restaurantResult.data.restaurants[0];
           return {
             uuid,
             restaurant: {

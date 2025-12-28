@@ -19,25 +19,36 @@ const PalateTags: React.FC<PalateTagsProps> = ({
 
   const displayTags = palateNames.slice(0, maxTags);
 
+  // Helper function to capitalize palate names
+  const capitalizePalate = (palate: string): string => {
+    return palate
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <div className={`flex space-x-1 mb-2 ${className}`}>
-      {displayTags.map((tag: string, index: number) => (
-        <span 
-          key={index} 
-          className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs"
-        >
-          {palateFlagMap[tag.toLowerCase()] && (
-            <Image
-              src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
-              alt={`${tag} flag`}
-              width={12}
-              height={8}
-              className="w-3 h-2 rounded object-cover"
-            />
-          )}
-          <span>{tag}</span>
-        </span>
-      ))}
+      {displayTags.map((tag: string, index: number) => {
+        const capitalizedTag = capitalizePalate(tag);
+        return (
+          <span 
+            key={index} 
+            className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-xs"
+          >
+            {palateFlagMap[tag.toLowerCase()] && (
+              <Image
+                src={palateFlagMap[tag.toLowerCase()] || '/default-image.png'}
+                alt={`${capitalizedTag} flag`}
+                width={12}
+                height={8}
+                className="w-3 h-2 rounded object-cover"
+              />
+            )}
+            <span>{capitalizedTag}</span>
+          </span>
+        );
+      })}
     </div>
   );
 };

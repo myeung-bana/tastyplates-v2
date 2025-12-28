@@ -248,8 +248,14 @@ export function transformReviewV2ToReviewedDataProps(review: ReviewV2): Reviewed
   const restaurantSlug = review.restaurant?.slug || '';
   const restaurantImage = review.restaurant?.featured_image_url || '';
 
-  // Parse palates
-  const palatesArray = Array.isArray(review.palates) ? review.palates : [];
+  // Parse palates - use author's palates if available (for user preferences)
+  // Otherwise fall back to review's palates
+  const authorPalatesArray = Array.isArray(review.author?.palates) 
+    ? review.author.palates 
+    : [];
+  const reviewPalatesArray = Array.isArray(review.palates) ? review.palates : [];
+  // Prefer author palates for display
+  const palatesArray = authorPalatesArray.length > 0 ? authorPalatesArray : reviewPalatesArray;
   const palatesString = palatesArray.join('|');
 
   // Format date

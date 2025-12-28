@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
               username: user.username || '',
               display_name: user.display_name || user.username || 'Unknown User',
               profile_image: user.profile_image || null,
+              palates: user.palates || null,
             }
           };
         }
@@ -160,6 +161,7 @@ export async function GET(request: NextRequest) {
           username: authorData.username || '',
           display_name: authorData.display_name || authorData.username || 'Unknown User',
           profile_image: authorData.profile_image || null,
+          palates: authorData.palates || null,
         } : undefined,
         user_liked: userLiked,
       };

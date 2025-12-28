@@ -15,6 +15,7 @@ import { PROFILE } from "@/constants/pages";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { FollowButton } from "@/components/ui/follow-button";
+import PalateTags from "@/components/ui/PalateTags/PalateTags";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -1104,25 +1105,25 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                     />
                   )}
                 </div>
+                {/* Palate Tags - Below username */}
+                {(() => {
+                  const palateNames = currentReview.palates 
+                    ? (typeof currentReview.palates === 'string' 
+                        ? currentReview.palates.split('|').map(p => p.trim()).filter(Boolean)
+                        : [])
+                    : [];
+                  return palateNames.length > 0 ? (
+                    <div className="mt-2">
+                      <PalateTags palateNames={palateNames} maxTags={3} className="mb-0" />
+                    </div>
+                  ) : null;
+                })()}
               </div>
             </div>
           </div>
 
           {/* Review content */}
           <div className="swipeable-review-viewer-desktop__content-area">
-            {/* Restaurant Name - Show at top of content */}
-            {restaurantLocationData && (
-              <div className="mb-4">
-                <Link 
-                  href={`/restaurants/${restaurantLocationData.slug}`}
-                  className="text-[#ff7c0a] hover:underline font-medium flex items-center gap-2"
-                >
-                  <FiMapPin className="w-4 h-4" />
-                  <span>{restaurantLocationData.title}</span>
-                </Link>
-              </div>
-            )}
-            
             {/* Title */}
             {currentReview.reviewMainTitle && (
               <h2 className="swipeable-review-viewer-desktop__title">

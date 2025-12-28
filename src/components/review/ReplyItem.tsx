@@ -8,6 +8,7 @@ import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
+import PalateTags from "@/components/ui/PalateTags/PalateTags";
 import "@/styles/components/_reply-item.scss";
 
 interface ReplyItemProps {
@@ -67,9 +68,22 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         
         <div className="reply-item__content">
           <div className="reply-item__header">
-            <span className="reply-item__username">
-              {reply.author?.name || reply.author?.node?.name || "Unknown User"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="reply-item__username">
+                {reply.author?.name || reply.author?.node?.name || "Unknown User"}
+              </span>
+              {/* Palate Tags - Inline with username */}
+              {(() => {
+                const palateNames = reply.palates 
+                  ? (typeof reply.palates === 'string' 
+                      ? reply.palates.split('|').map(p => p.trim()).filter(Boolean)
+                      : [])
+                  : [];
+                return palateNames.length > 0 ? (
+                  <PalateTags palateNames={palateNames} maxTags={2} className="mb-0" />
+                ) : null;
+              })()}
+            </div>
             <button
               onClick={() => onLike(reply)}
               disabled={isLoading}

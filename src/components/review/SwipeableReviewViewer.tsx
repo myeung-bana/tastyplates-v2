@@ -567,9 +567,22 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     <div className="swipeable-review-viewer__user-details">
                       <div className="swipeable-review-viewer__user-header">
                         <div className="swipeable-review-viewer__user-info-left">
-                          <h3 className="swipeable-review-viewer__username">
-                            {review.author?.node?.name || review.author?.name || "Unknown User"}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="swipeable-review-viewer__username">
+                              {review.author?.node?.name || review.author?.name || "Unknown User"}
+                            </h3>
+                            {/* Palate Tags - Inline with username */}
+                            {(() => {
+                              const palateNames = review.palates 
+                                ? (typeof review.palates === 'string' 
+                                    ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
+                                    : [])
+                                : [];
+                              return palateNames.length > 0 ? (
+                                <PalateTags palateNames={palateNames} maxTags={2} className="mb-0" />
+                              ) : null;
+                            })()}
+                          </div>
                           {review.commentedOn?.node?.title && (
                             <Link
                               href={`/restaurants/${review.commentedOn.node.slug}`}
@@ -586,19 +599,6 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           </span>
                         )}
                       </div>
-                      {/* Palate Tags */}
-                      {(() => {
-                        const palateNames = review.palates 
-                          ? (typeof review.palates === 'string' 
-                              ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
-                              : [])
-                          : [];
-                        return palateNames.length > 0 ? (
-                          <div className="swipeable-review-viewer__palates">
-                            <PalateTags palateNames={palateNames} maxTags={2} />
-                          </div>
-                        ) : null;
-                      })()}
                     </div>
                   </div>
 
