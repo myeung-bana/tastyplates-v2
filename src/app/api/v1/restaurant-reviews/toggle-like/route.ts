@@ -5,6 +5,7 @@ import {
   INSERT_REVIEW_LIKE, 
   DELETE_REVIEW_LIKE 
 } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { rateLimitOrThrow, likeRateLimit } from '@/lib/redis-ratelimit';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,11 +14,25 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { review_id, user_id } = body;
-    // #region agent log
-    const fs = require('fs');
-    const logPath = '/Users/museryeung/Documents/dev/tastyplates-v2/.cursor/debug.log';
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:13',message:'POST request received',data:{review_id,user_id,hasReviewId:!!review_id,hasUserId:!!user_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})+'\n');
-    // #endregion
+
+    // Rate limiting: 20 requests / 10s per user (prevent spam clicks)
+    const rateLimitResult = await rateLimitOrThrow(user_id, likeRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please slow down.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
 
     if (!review_id || !user_id) {
       return NextResponse.json(

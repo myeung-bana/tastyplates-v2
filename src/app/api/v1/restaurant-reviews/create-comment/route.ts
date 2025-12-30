@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { CREATE_REVIEW, GET_REVIEW_BY_ID } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { rateLimitOrThrow, createRateLimit } from '@/lib/redis-ratelimit';
+import { bumpVersion } from '@/lib/redis-versioning';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -14,6 +16,25 @@ export async function POST(request: NextRequest) {
       content,           // Required: Comment text
       restaurant_uuid,   // Optional: Can be derived from parent review if not provided
     } = body;
+
+    // Rate limiting: 5 requests / 30s per user (prevent spam)
+    const rateLimitResult = await rateLimitOrThrow(author_id, createRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please wait before posting another comment.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
 
     // Validation
     if (!parent_review_id || !author_id || !content) {
@@ -153,6 +174,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Cache invalidation: Bump version for parent review's replies
+    await bumpVersion(`v:review:${parent_review_id}:replies`);
 
     return NextResponse.json({
       success: true,

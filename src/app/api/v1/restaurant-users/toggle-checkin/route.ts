@@ -6,6 +6,7 @@ import {
   REMOVE_CHECKIN,
   GET_RESTAURANT_UUID_BY_SLUG 
 } from '@/app/graphql/RestaurantUsers/restaurantUserActionsQueries';
+import { rateLimitOrThrow, wishlistRateLimit } from '@/lib/redis-ratelimit';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,6 +27,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Invalid user ID format. Expected UUID.' },
         { status: 400 }
+      );
+    }
+
+    // Rate limiting: 15 requests / 10s per user
+    const rateLimitResult = await rateLimitOrThrow(user_id, wishlistRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please slow down.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
       );
     }
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
+import { cacheGetOrSetJSON } from '@/lib/redis-cache';
+import { getVersion } from '@/lib/redis-versioning';
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -101,45 +103,57 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch suggested users from Hasura
-    const result = await hasuraQuery<HasuraResponse['data']>(
-      GET_SUGGESTED_USERS,
-      {
-        limit,
-        excludeUserId: currentUserId
+    // Get version for suggested users
+    const version = await getVersion('v:users:suggested');
+    
+    // Cache key with limit and version
+    const cacheKey = `users:suggested:v${version}:limit=${limit}:exclude=${currentUserId || 'none'}`;
+    
+    const { value: responseData, hit } = await cacheGetOrSetJSON(
+      cacheKey,
+      60, // 60 seconds TTL
+      async () => {
+        // Fetch suggested users from Hasura
+        const result = await hasuraQuery<HasuraResponse['data']>(
+          GET_SUGGESTED_USERS,
+          {
+            limit,
+            excludeUserId: currentUserId
+          }
+        );
+
+        if (result.errors) {
+          console.error('GraphQL errors:', result.errors);
+          throw new Error(result.errors[0]?.message || 'Failed to fetch suggested users');
+        }
+
+        const suggestedUsers = result.data?.restaurant_users || [];
+
+        // Format the response
+        const formattedUsers = suggestedUsers.map((user) => ({
+          id: user.id,
+          username: user.username,
+          name: user.display_name || user.username,
+          avatar: getProfileImageUrl(user.profile_image),
+          reviewCount: user.review_count || 0,
+          followerCount: user.follower_count || 0,
+          bio: user.about_me || null
+        }));
+
+        return {
+          success: true,
+          data: {
+            users: formattedUsers,
+            total: formattedUsers.length
+          }
+        };
       }
     );
-
-    if (result.errors) {
-      console.error('GraphQL errors:', result.errors);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to fetch suggested users',
-          details: result.errors
-        },
-        { status: 500 }
-      );
-    }
-
-    const suggestedUsers = result.data?.restaurant_users || [];
-
-    // Format the response
-    const formattedUsers = suggestedUsers.map((user) => ({
-      id: user.id,
-      username: user.username,
-      name: user.display_name || user.username,
-      avatar: getProfileImageUrl(user.profile_image),
-      reviewCount: user.review_count || 0,
-      followerCount: user.follower_count || 0,
-      bio: user.about_me || null
-    }));
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        users: formattedUsers,
-        total: formattedUsers.length
+    
+    return NextResponse.json(responseData, {
+      headers: {
+        'X-Cache': hit ? 'HIT' : 'MISS',
+        'X-Cache-Key': cacheKey
       }
     });
 

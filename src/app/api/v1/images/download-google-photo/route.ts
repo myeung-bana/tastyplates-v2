@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimitOrThrow, uploadRateLimit } from '@/lib/redis-ratelimit';
 
 /**
  * POST /api/v1/images/download-google-photo
@@ -8,6 +9,28 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: Strict per IP to avoid bandwidth abuse
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    const rateLimitResult = await rateLimitOrThrow(ip, uploadRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
+
     const body = await request.json();
     const { photoUrl } = body;
 

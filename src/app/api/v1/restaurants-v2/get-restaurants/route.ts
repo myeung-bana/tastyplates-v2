@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_ALL_RESTAURANTS } from '@/app/graphql/Restaurants/restaurantQueries';
+import { cacheGetOrSetJSON } from '@/lib/redis-cache';
+import { getVersion } from '@/lib/redis-versioning';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -210,94 +212,115 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const variables = {
+    // Build cache key from query params
+    const cacheKeyParams = {
       limit,
       offset,
-      where,
-      order_by: [orderByClause]
+      status: status || 'publish',
+      search: search || '',
+      cuisine_ids: cuisineIds || '',
+      palate_ids: palateIds || '',
+      category_ids: categoryIds || '',
+      price_range_id: priceRangeId || '',
+      min_rating: minRating || '',
+      max_rating: maxRating || '',
+      latitude: latitude || '',
+      longitude: longitude || '',
+      radius_km: radiusKm || '',
+      is_main_location: isMainLocation || '',
+      order_by: orderBy || 'created_at'
     };
-
-    console.log('🔍 Fetching restaurants with variables:', JSON.stringify(variables, null, 2));
     
-    let result;
-    try {
-      result = await hasuraQuery(GET_ALL_RESTAURANTS, variables);
-    } catch (hasuraError) {
-      console.error('❌ Hasura connection error:', hasuraError);
-      const errorMessage = hasuraError instanceof Error ? hasuraError.message : 'Unknown Hasura error';
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to connect to Hasura',
-          message: errorMessage,
-          hint: 'Check if NEXT_PUBLIC_HASURA_GRAPHQL_API_URL and HASURA_GRAPHQL_ADMIN_SECRET are configured correctly'
-        },
-        { status: 500 }
-      );
-    }
+    // Get version for restaurants list
+    const version = await getVersion('v:restaurants:all');
+    
+    // Create cache key (use a hash or JSON string of params)
+    const paramsStr = JSON.stringify(cacheKeyParams);
+    const cacheKey = `restaurants:v${version}:${paramsStr}`;
+    
+    const { value: responseData, hit } = await cacheGetOrSetJSON(
+      cacheKey,
+      30, // 30 seconds TTL
+      async () => {
+        const variables = {
+          limit,
+          offset,
+          where,
+          order_by: [orderByClause]
+        };
 
-    if (result.errors) {
-      console.error('❌ GraphQL errors:', JSON.stringify(result.errors, null, 2));
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to fetch restaurants',
-          details: result.errors,
-          message: result.errors[0]?.message || 'Unknown GraphQL error',
-          hint: 'Check if the restaurants table exists and is tracked in Hasura'
-        },
-        { status: 500 }
-      );
-    }
+        console.log('🔍 Fetching restaurants with variables:', JSON.stringify(variables, null, 2));
+        
+        let result;
+        try {
+          result = await hasuraQuery(GET_ALL_RESTAURANTS, variables);
+        } catch (hasuraError) {
+          console.error('❌ Hasura connection error:', hasuraError);
+          const errorMessage = hasuraError instanceof Error ? hasuraError.message : 'Unknown Hasura error';
+          throw new Error(`Failed to connect to Hasura: ${errorMessage}`);
+        }
 
-    console.log('✅ GraphQL response received:', {
-      hasData: !!result.data,
-      dataKeys: result.data ? Object.keys(result.data) : [],
-      restaurantCount: result.data?.restaurants?.length || 0
-    });
+        if (result.errors) {
+          console.error('❌ GraphQL errors:', JSON.stringify(result.errors, null, 2));
+          throw new Error(result.errors[0]?.message || 'Unknown GraphQL error');
+        }
 
-    const restaurants = result.data?.restaurants || [];
-    const total = result.data?.restaurants_aggregate?.aggregate?.count || restaurants.length;
-
-    // If distance sorting was requested, sort client-side (requires lat/lon)
-    let sortedRestaurants = restaurants;
-    if (orderBy === 'distance' && latitude && longitude) {
-      const lat = parseFloat(latitude);
-      const lon = parseFloat(longitude);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        sortedRestaurants = [...restaurants].sort((a, b) => {
-          if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
-          const distA = calculateDistance(lat, lon, a.latitude, a.longitude);
-          const distB = calculateDistance(lat, lon, b.latitude, b.longitude);
-          return distA - distB;
+        console.log('✅ GraphQL response received:', {
+          hasData: !!result.data,
+          dataKeys: result.data ? Object.keys(result.data) : [],
+          restaurantCount: result.data?.restaurants?.length || 0
         });
-      }
-    }
 
-    // Apply radius filter if specified (client-side after distance sort)
-    let filteredRestaurants = sortedRestaurants;
-    if (latitude && longitude && radiusKm) {
-      const lat = parseFloat(latitude);
-      const lon = parseFloat(longitude);
-      const radius = parseFloat(radiusKm);
-      if (!isNaN(lat) && !isNaN(lon) && !isNaN(radius) && radius > 0) {
-        filteredRestaurants = sortedRestaurants.filter(restaurant => {
-          if (!restaurant.latitude || !restaurant.longitude) return false;
-          const distance = calculateDistance(lat, lon, restaurant.latitude, restaurant.longitude);
-          return distance <= radius;
-        });
-      }
-    }
+        const restaurants = result.data?.restaurants || [];
+        const total = result.data?.restaurants_aggregate?.aggregate?.count || restaurants.length;
 
-    return NextResponse.json({
-      success: true,
-      data: filteredRestaurants,
-      meta: {
-        total: filteredRestaurants.length, // Use filtered count for hasMore calculation
-        limit,
-        offset,
-        hasMore: offset + limit < total,
-        fetchedAt: new Date().toISOString()
+        // If distance sorting was requested, sort client-side (requires lat/lon)
+        let sortedRestaurants = restaurants;
+        if (orderBy === 'distance' && latitude && longitude) {
+          const lat = parseFloat(latitude);
+          const lon = parseFloat(longitude);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            sortedRestaurants = [...restaurants].sort((a, b) => {
+              if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
+              const distA = calculateDistance(lat, lon, a.latitude, a.longitude);
+              const distB = calculateDistance(lat, lon, b.latitude, b.longitude);
+              return distA - distB;
+            });
+          }
+        }
+
+        // Apply radius filter if specified (client-side after distance sort)
+        let filteredRestaurants = sortedRestaurants;
+        if (latitude && longitude && radiusKm) {
+          const lat = parseFloat(latitude);
+          const lon = parseFloat(longitude);
+          const radius = parseFloat(radiusKm);
+          if (!isNaN(lat) && !isNaN(lon) && !isNaN(radius) && radius > 0) {
+            filteredRestaurants = sortedRestaurants.filter(restaurant => {
+              if (!restaurant.latitude || !restaurant.longitude) return false;
+              const distance = calculateDistance(lat, lon, restaurant.latitude, restaurant.longitude);
+              return distance <= radius;
+            });
+          }
+        }
+
+        return {
+          success: true,
+          data: filteredRestaurants,
+          meta: {
+            total: filteredRestaurants.length, // Use filtered count for hasMore calculation
+            limit,
+            offset,
+            hasMore: offset + limit < total,
+            fetchedAt: new Date().toISOString()
+          }
+        };
+      }
+    );
+    
+    return NextResponse.json(responseData, {
+      headers: {
+        'X-Cache': hit ? 'HIT' : 'MISS'
       }
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomBytes } from 'crypto';
+import { rateLimitOrThrow, uploadRateLimit } from '@/lib/redis-ratelimit';
 
 /**
  * Validate AWS credentials from environment variables
@@ -78,6 +79,28 @@ function getFileExtension(mimeType: string, fileName: string): string {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 10 requests / 60s per IP (protects cost-intensive uploads)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    const rateLimitResult = await rateLimitOrThrow(ip, uploadRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
+
     // Validate AWS credentials
     validateAWSCredentials();
 

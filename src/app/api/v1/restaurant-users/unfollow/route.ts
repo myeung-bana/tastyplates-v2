@@ -3,6 +3,7 @@ import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client'
 import { UNFOLLOW_USER, GET_FOLLOWERS_COUNT, GET_FOLLOWING_COUNT } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { rateLimitOrThrow, followRateLimit } from '@/lib/redis-ratelimit';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -81,6 +82,26 @@ export async function POST(request: NextRequest) {
     }
 
     const followerId = userData.data.id;
+    
+    // Rate limiting: 10 requests / 10s per user
+    const rateLimitResult = await rateLimitOrThrow(followerId, followRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please slow down.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
+
     const body = await request.json();
     const userIdParam = body.user_id;
 

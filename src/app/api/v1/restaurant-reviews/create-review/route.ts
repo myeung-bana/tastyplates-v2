@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation } from '@/app/graphql/hasura-server-client';
 import { CREATE_REVIEW } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { rateLimitOrThrow, createRateLimit } from '@/lib/redis-ratelimit';
+import { bumpVersion } from '@/lib/redis-versioning';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +24,25 @@ export async function POST(request: NextRequest) {
       status = 'draft',
       parent_review_id,
     } = body;
+
+    // Rate limiting: 5 requests / 30s per user (prevent spam)
+    const rateLimitResult = await rateLimitOrThrow(author_id, createRateLimit);
+    
+    if (!rateLimitResult.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please wait before creating another review.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter)
+          }
+        }
+      );
+    }
 
     // Validation
     if (!restaurant_uuid || !author_id || !content || rating === undefined) {
@@ -126,6 +147,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Cache invalidation: Bump versions for affected caches
+    await Promise.all([
+      bumpVersion(`v:restaurant:${restaurant_uuid}:reviews`),
+      bumpVersion(`v:reviews:all`),
+      bumpVersion(`v:user:${author_id}:reviews`),
+    ]);
 
     return NextResponse.json({
       success: true,
