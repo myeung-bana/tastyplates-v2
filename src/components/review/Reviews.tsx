@@ -26,6 +26,8 @@ const Reviews = () => {
   const LOAD_MORE_LIMIT = 8; // Subsequent loads
   const observerRef = useRef<HTMLDivElement | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isInitialFetchRef = useRef(false);
 
   // For You reviews (using the hook)
   const {
@@ -48,6 +50,21 @@ const Reviews = () => {
   ) => {
     if (loading || !hasNextPage) return;
     
+    // Cancel previous request if it exists (only for pagination, not initial load)
+    if (abortControllerRef.current && currentOffset > 0) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    // Track if this is the initial fetch
+    const isInitialFetch = currentOffset === 0;
+    if (isInitialFetch) {
+      isInitialFetchRef.current = true;
+    }
+    
     setLoading(true);
     
     try {
@@ -56,11 +73,18 @@ const Reviews = () => {
         currentOffset
       });
       
-      // Fetch reviews from new API
+      // Fetch reviews from new API with abort signal
       const response = await reviewV2Service.getAllReviews({
         limit,
-        offset: currentOffset
+        offset: currentOffset,
+        signal: abortController.signal
       });
+      
+      // Check if request was aborted after fetch completes
+      if (abortController.signal.aborted) {
+        console.log('Reviews - Request was aborted after fetch');
+        return;
+      }
 
       console.log('Reviews - API Response:', {
         success: response.reviews ? true : false,
@@ -129,6 +153,11 @@ const Reviews = () => {
       setOffset(currentOffset + transformedReviews.length);
       setHasNextPage(response.hasMore || false);
       
+      // Mark initial fetch as complete
+      if (isInitialFetch) {
+        isInitialFetchRef.current = false;
+      }
+      
       console.log('Reviews - Final state:', {
         reviewsCount: transformedReviews.length,
         total: response.total,
@@ -136,10 +165,30 @@ const Reviews = () => {
         hasNextPage: response.hasMore || false
       });
     } catch (error) {
+      // Ignore abort errors (request was intentionally canceled)
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Reviews - Request was aborted');
+        // Mark initial fetch as complete if it was aborted
+        if (isInitialFetch) {
+          isInitialFetchRef.current = false;
+        }
+        return;
+      }
       console.error('Error loading trending reviews:', error);
-      setHasNextPage(false);
+      // Only update state if request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setHasNextPage(false);
+        setLoading(false);
+        // Mark initial fetch as complete on error
+        if (isInitialFetch) {
+          isInitialFetchRef.current = false;
+        }
+      }
     } finally {
-      setLoading(false);
+      // Only clear loading state if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [loading, hasNextPage]);
 
@@ -150,20 +199,37 @@ const Reviews = () => {
 
   // Load trending reviews on mount or when switching to trending tab
   useEffect(() => {
+    // Only fetch if we're on trending tab and haven't loaded yet
     if (activeTab === 'trending' && !initialLoaded) {
       console.log('Reviews - Starting initial fetch');
       setTrendingReviews([]);
       setOffset(0);
       setHasNextPage(true);
       setInitialLoaded(true);
+      
+      // Fetch reviews - don't await, let it run
+      // The initial fetch will not be aborted by cleanup
       fetchTrendingReviews(LIMIT, 0);
     }
-    return () => {
-      if (activeTab !== 'trending') {
-        setTrendingReviews([]);
+    
+    // No cleanup here - we don't want to abort the initial fetch
+    // Cleanup will be handled by the tab switching effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, initialLoaded]); // Removed fetchTrendingReviews from deps to prevent re-render loop
+  
+  // Separate effect to handle tab switching cleanup
+  useEffect(() => {
+    // When switching away from trending, clean up any pending requests
+    // But only if it's not the initial fetch
+    if (activeTab !== 'trending') {
+      if (abortControllerRef.current && !isInitialFetchRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
-    };
-  }, [activeTab, initialLoaded, fetchTrendingReviews]);
+      // DON'T clear reviews - preserve them for when user switches back
+      // This provides better UX and avoids unnecessary re-fetching
+    }
+  }, [activeTab]);
 
   // Setup Intersection Observer for trending
   useEffect(() => {

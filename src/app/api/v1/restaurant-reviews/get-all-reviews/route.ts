@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_ALL_REVIEWS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
-import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
+import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQueries';
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
-      15, // 15 seconds TTL (short for active feeds)
+      300, // 300 seconds (5 minutes) TTL for better performance
       async () => {
         const result = await hasuraQuery(GET_ALL_REVIEWS, {
           limit: Math.min(limit, 100), // Cap at 100
@@ -40,33 +40,36 @@ export async function GET(request: NextRequest) {
         const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
         const authorIds = [...new Set(reviews.map((r: any) => r.author_id).filter(Boolean))];
 
-        // Fetch all restaurants in parallel
-        const restaurantPromises = restaurantUuids.map(async (uuid: string) => {
+        // Fetch all restaurants in a SINGLE batch query (optimized from N+1)
+        let restaurantMap = new Map();
+        if (restaurantUuids.length > 0) {
           try {
-            const restaurantResult = await hasuraQuery(GET_RESTAURANT_BY_UUID, {
-              uuid
+            const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, {
+              uuids: restaurantUuids
             });
 
-            if (!restaurantResult.errors && restaurantResult.data?.restaurants && restaurantResult.data.restaurants.length > 0) {
-              const restaurant = restaurantResult.data.restaurants[0];
-              return {
-                uuid,
-                restaurant: {
-                  uuid: restaurant.uuid,
-                  id: restaurant.id,
-                  title: restaurant.title || '',
-                  slug: restaurant.slug || '',
-                  featured_image_url: restaurant.featured_image_url || ''
-                }
-              };
+            if (!restaurantsResult.errors && restaurantsResult.data?.restaurants) {
+              restaurantMap = new Map(
+                restaurantsResult.data.restaurants.map((restaurant: any) => [
+                  restaurant.uuid,
+                  {
+                    uuid: restaurant.uuid,
+                    id: restaurant.id,
+                    title: restaurant.title || '',
+                    slug: restaurant.slug || '',
+                    featured_image_url: restaurant.featured_image_url || ''
+                  }
+                ])
+              );
+            } else {
+              console.warn('Failed to fetch restaurants:', restaurantsResult.errors);
             }
           } catch (error) {
-            console.warn(`Failed to fetch restaurant ${uuid}:`, error);
+            console.error('Error fetching restaurants batch:', error);
           }
-          return null;
-        });
+        }
 
-        // Fetch all authors in a single batch query (more efficient)
+        // Fetch all authors in a single batch query (already optimized)
         let authorMap = new Map();
         if (authorIds.length > 0) {
           try {
@@ -96,14 +99,6 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const restaurantResults = await Promise.all(restaurantPromises);
-
-        const restaurantMap = new Map(
-          restaurantResults
-            .filter(Boolean)
-            .map((result: any) => [result.uuid, result.restaurant])
-        );
-
         // Attach author and restaurant data to all reviews
         reviews = reviews.map((review: any) => ({
           ...review,
@@ -127,7 +122,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey
+        'X-Cache-Key': cacheKey,
+        // HTTP caching for CDN and browsers (5 minutes, stale-while-revalidate for 10 minutes)
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'CDN-Cache-Control': 'public, s-maxage=300',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=300'
       }
     });
 

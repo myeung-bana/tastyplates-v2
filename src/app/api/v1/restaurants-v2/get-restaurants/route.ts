@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
-      30, // 30 seconds TTL
+      600, // 600 seconds (10 minutes) TTL for better performance
       async () => {
         const variables = {
           limit,
@@ -320,7 +320,12 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(responseData, {
       headers: {
-        'X-Cache': hit ? 'HIT' : 'MISS'
+        'X-Cache': hit ? 'HIT' : 'MISS',
+        'X-Cache-Key': cacheKey,
+        // HTTP caching for CDN and browsers (10 minutes, stale-while-revalidate for 20 minutes)
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+        'CDN-Cache-Control': 'public, s-maxage=600',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=600'
       }
     });
   } catch (error) {

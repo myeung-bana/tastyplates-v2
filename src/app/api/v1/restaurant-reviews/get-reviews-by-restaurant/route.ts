@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
-      30, // 30 seconds TTL
+      300, // 300 seconds (5 minutes) TTL for better performance
       async () => {
         const result = await hasuraQuery(GET_REVIEWS_BY_RESTAURANT, {
           restaurantUuid: restaurant_uuid,
@@ -136,7 +136,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey
+        'X-Cache-Key': cacheKey,
+        // HTTP caching for CDN and browsers (5 minutes, stale-while-revalidate for 10 minutes)
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'CDN-Cache-Control': 'public, s-maxage=300',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=300'
       }
     });
 

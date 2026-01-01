@@ -153,13 +153,16 @@ class ReviewV2Service {
   }
 
   async getAllReviews(
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number; signal?: AbortSignal }
   ): Promise<ReviewsResponse> {
     const params = new URLSearchParams();
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.offset) params.append('offset', options.offset.toString());
 
-    const response = await fetch(`${this.baseUrl}/get-all-reviews?${params}`);
+    const response = await fetch(`${this.baseUrl}/get-all-reviews?${params}`, {
+      signal: options?.signal // Add abort signal support
+    });
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to fetch reviews' }));
       throw new Error(error.error || 'Failed to fetch reviews');

@@ -87,6 +87,19 @@ export const GET_RESTAURANT_BY_UUID = `
   }
 `;
 
+// GET RESTAURANTS BY UUIDs - Batch fetch multiple restaurants (optimized for N+1 prevention)
+export const GET_RESTAURANTS_BY_UUIDS = `
+  query GetRestaurantsByUuids($uuids: [uuid!]!) {
+    restaurants(where: { uuid: { _in: $uuids } }) {
+      id
+      uuid
+      title
+      slug
+      featured_image_url
+    }
+  }
+`;
+
 // GET BY UUID WITH PRICE RANGE - Includes price_range_id and relationship (if configured)
 export const GET_RESTAURANT_BY_UUID_WITH_PRICE_RANGE = `
   query GetRestaurantByUuid($uuid: uuid!) {

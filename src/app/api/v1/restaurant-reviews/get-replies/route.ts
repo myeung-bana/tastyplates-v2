@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_REVIEW_REPLIES, GET_REVIEW_BY_ID, CHECK_REVIEW_LIKES_BATCH } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
-import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
-      10, // 10 seconds TTL (very short for interactive content)
+      120, // 120 seconds (2 minutes) TTL - balance between freshness and performance
       async () => {
         // Fetch replies from Hasura
         const result = await hasuraQuery(GET_REVIEW_REPLIES, {
@@ -73,41 +73,37 @@ export async function GET(request: NextRequest) {
           console.warn('Could not fetch parent review for restaurant ID:', error);
         }
 
-        // Fetch author data separately for all unique authors (similar to get-reviews-by-restaurant)
+        // Fetch author data in a SINGLE batch query (optimized from N+1)
         const authorIds = [...new Set(replies.map((r: any) => r.author_id).filter(Boolean))];
         
-        // Fetch all authors in parallel
-        const authorPromises = authorIds.map(async (authorId: string) => {
+        let authorMap = new Map();
+        if (authorIds.length > 0) {
           try {
-            const authorResult = await hasuraQuery(GET_RESTAURANT_USER_BY_ID, {
-              id: authorId
+            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
+              ids: authorIds
             });
 
-            if (!authorResult.errors && authorResult.data?.restaurant_users_by_pk) {
-              const user = authorResult.data.restaurant_users_by_pk;
-              return {
-                id: authorId,
-                author: {
-                  id: user.id,
-                  username: user.username || '',
-                  display_name: user.display_name || user.username || 'Unknown User',
-                  profile_image: user.profile_image || null,
-                  palates: user.palates || null,
-                }
-              };
+            if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
+              const users = authorsResult.data.restaurant_users;
+              authorMap = new Map(
+                users.map((user: any) => [
+                  user.id,
+                  {
+                    id: user.id,
+                    username: user.username || '',
+                    display_name: user.display_name || user.username || 'Unknown User',
+                    profile_image: user.profile_image || null,
+                    palates: user.palates || null,
+                  }
+                ])
+              );
+            } else {
+              console.warn('Failed to fetch authors:', authorsResult.errors);
             }
           } catch (error) {
-            console.warn(`Failed to fetch author ${authorId}:`, error);
+            console.error('Error fetching authors batch:', error);
           }
-          return null;
-        });
-
-        const authorResults = await Promise.all(authorPromises);
-        const authorMap = new Map(
-          authorResults
-            .filter(Boolean)
-            .map((result: any) => [result.id, result.author])
-        );
+        }
 
         // Fetch like status for all replies if user_id is provided
         const likedReviewIds = new Set<string>();
@@ -186,7 +182,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey
+        'X-Cache-Key': cacheKey,
+        // HTTP caching for CDN and browsers (2 minutes, stale-while-revalidate for 5 minutes)
+        'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300',
+        'CDN-Cache-Control': 'public, s-maxage=120',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=120'
       }
     });
 

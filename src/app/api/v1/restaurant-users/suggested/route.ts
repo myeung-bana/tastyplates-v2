@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
-      60, // 60 seconds TTL
+      600, // 600 seconds (10 minutes) TTL - suggested users don't change frequently
       async () => {
         // Fetch suggested users from Hasura
         const result = await hasuraQuery<HasuraResponse['data']>(
@@ -153,7 +153,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey
+        'X-Cache-Key': cacheKey,
+        // HTTP caching for CDN and browsers (10 minutes, stale-while-revalidate for 20 minutes)
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+        'CDN-Cache-Control': 'public, s-maxage=600',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=600'
       }
     });
 
