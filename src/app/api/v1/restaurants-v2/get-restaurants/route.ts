@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_ALL_RESTAURANTS } from '@/app/graphql/Restaurants/restaurantQueries';
+import { GET_RESTAURANTS_LIST } from '@/app/graphql/Restaurants/restaurantQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
+import { createHash } from 'crypto';
+
+const isDev = process.env.NODE_ENV === 'development';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -234,9 +237,10 @@ export async function GET(request: NextRequest) {
     // Get version for restaurants list
     const version = await getVersion('v:restaurants:all');
     
-    // Create cache key (use a hash or JSON string of params)
+    // Create compact cache key (hash params to avoid huge keys/headers)
     const paramsStr = JSON.stringify(cacheKeyParams);
-    const cacheKey = `restaurants:v${version}:${paramsStr}`;
+    const paramsHash = createHash('sha1').update(paramsStr).digest('hex');
+    const cacheKey = `restaurants:v${version}:${paramsHash}`;
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
@@ -249,11 +253,13 @@ export async function GET(request: NextRequest) {
           order_by: [orderByClause]
         };
 
-        console.log('🔍 Fetching restaurants with variables:', JSON.stringify(variables, null, 2));
+        if (isDev) {
+          console.log('🔍 Fetching restaurants with variables:', JSON.stringify(variables, null, 2));
+        }
         
         let result;
         try {
-          result = await hasuraQuery(GET_ALL_RESTAURANTS, variables);
+          result = await hasuraQuery(GET_RESTAURANTS_LIST, variables);
         } catch (hasuraError) {
           console.error('❌ Hasura connection error:', hasuraError);
           const errorMessage = hasuraError instanceof Error ? hasuraError.message : 'Unknown Hasura error';
@@ -265,11 +271,13 @@ export async function GET(request: NextRequest) {
           throw new Error(result.errors[0]?.message || 'Unknown GraphQL error');
         }
 
-        console.log('✅ GraphQL response received:', {
-          hasData: !!result.data,
-          dataKeys: result.data ? Object.keys(result.data) : [],
-          restaurantCount: result.data?.restaurants?.length || 0
-        });
+        if (isDev) {
+          console.log('✅ GraphQL response received:', {
+            hasData: !!result.data,
+            dataKeys: result.data ? Object.keys(result.data) : [],
+            restaurantCount: (result.data as any)?.restaurants?.length || 0
+          });
+        }
 
         const restaurants = result.data?.restaurants || [];
         const total = result.data?.restaurants_aggregate?.aggregate?.count || restaurants.length;
@@ -296,7 +304,7 @@ export async function GET(request: NextRequest) {
           const lon = parseFloat(longitude);
           const radius = parseFloat(radiusKm);
           if (!isNaN(lat) && !isNaN(lon) && !isNaN(radius) && radius > 0) {
-            filteredRestaurants = sortedRestaurants.filter(restaurant => {
+            filteredRestaurants = sortedRestaurants.filter((restaurant: any) => {
               if (!restaurant.latitude || !restaurant.longitude) return false;
               const distance = calculateDistance(lat, lon, restaurant.latitude, restaurant.longitude);
               return distance <= radius;
@@ -321,7 +329,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey,
+        ...(isDev ? { 'X-Cache-Key': cacheKey } : {}),
         // HTTP caching for CDN and browsers (10 minutes, stale-while-revalidate for 20 minutes)
         'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
         'CDN-Cache-Control': 'public, s-maxage=600',

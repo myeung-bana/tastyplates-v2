@@ -54,6 +54,50 @@ export const GET_ALL_RESTAURANTS = `
   }
 `;
 
+// GET RESTAURANTS (LIST) - Lightweight list query for /restaurants page
+// Intentionally excludes large fields (content, opening_hours, uploaded_images, etc.)
+// to reduce payload size and speed up cache hits.
+export const GET_RESTAURANTS_LIST = `
+  query GetRestaurantsList(
+    $limit: Int
+    $offset: Int
+    $where: restaurants_bool_exp
+    $order_by: [restaurants_order_by!]
+  ) {
+    restaurants(
+      limit: $limit
+      offset: $offset
+      where: $where
+      order_by: $order_by
+    ) {
+      id
+      uuid
+      title
+      slug
+      status
+      price_range_id
+      average_rating
+      ratings_count
+      listing_street
+      longitude
+      latitude
+      featured_image_url
+      address
+      cuisines
+      palates
+      categories
+      is_main_location
+      updated_at
+      published_at
+    }
+    restaurants_aggregate(where: $where) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 // GET BY UUID - Get single restaurant by UUID
 export const GET_RESTAURANT_BY_UUID = `
   query GetRestaurantByUuid($uuid: uuid!) {

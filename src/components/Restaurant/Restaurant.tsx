@@ -78,6 +78,31 @@ interface RestaurantPageProps {
   hideCuisineFilter?: boolean;
 }
 
+type PreferenceStatsMap = Record<string, { avg: number; count: number }>;
+
+const normalizeUserPalates = (palates: any): string[] => {
+  if (!palates) return [];
+  if (Array.isArray(palates)) {
+    // Most common: ["korean","japanese"]
+    if (palates.every((p) => typeof p === 'string')) {
+      return palates.map((p) => p.trim().toLowerCase()).filter(Boolean);
+    }
+    // Fallback: [{slug:"korean"}] or [{name:"Korean"}]
+    return palates
+      .map((p: any) => (typeof p === 'string' ? p : (p?.slug || p?.name || '')))
+      .map((p: string) => p.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  if (typeof palates === 'string') {
+    // Sometimes stored as pipe-delimited from older components
+    return palates
+      .split('|')
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }: RestaurantPageProps = {}) => {
   const { user } = useFirebaseSession();
   const { selectedLocation } = useLocation();
@@ -166,8 +191,12 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     price: null as string | null,
     rating: null as number | null,
     badges: null as string | null,
-    sortOption: null as string | null,
+    sortOption: null as string | null, // 'MY_PREFERENCE' | 'SMART' | 'ASC' | 'DESC' | 'NEWEST'
   });
+
+  const userPreferencePalates = useMemo(() => normalizeUserPalates(user?.palates), [user?.palates]);
+  const [preferenceStats, setPreferenceStats] = useState<PreferenceStatsMap>({});
+  const [preferenceLoading, setPreferenceLoading] = useState(false);
 
   const [listingEndCursor, setListingEndCursor] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -230,6 +259,22 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     }
     
     return sortedRestaurants.sort((a, b) => {
+      // MY PREFERENCE sorting (uses precomputed stats from API)
+      if (sortOption === 'MY_PREFERENCE') {
+        const aPref = a.searchPalateStats?.avg ?? -1;
+        const bPref = b.searchPalateStats?.avg ?? -1;
+        if (aPref !== bPref) return bPref - aPref;
+
+        const aCount = a.searchPalateStats?.count ?? 0;
+        const bCount = b.searchPalateStats?.count ?? 0;
+        if (aCount !== bCount) return bCount - aCount;
+
+        // Fallback to overall rating & review count
+        const ratingDiff = (b.rating || 0) - (a.rating || 0);
+        if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
+        return (b.ratingsCount || 0) - (a.ratingsCount || 0);
+      }
+
       // PALATE-BASED SORTING (when palates are selected)
       if (selectedPalates && selectedPalates.length > 0) {
         const aPalateStats = a.searchPalateStats;
@@ -287,6 +332,10 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
       } else if (sortOption === 'DESC') {
         // Descending order (highest to lowest)
         return (b.rating || 0) - (a.rating || 0);
+      } else if (sortOption === 'NEWEST') {
+        // Server already returns newest first (created_at desc), so keep stable fallback:
+        // Prefer higher databaseId as a rough proxy if needed.
+        return (b.databaseId || 0) - (a.databaseId || 0);
       } else {
         // Default: Smart sorting by quality
         const ratingDiff = (b.rating || 0) - (a.rating || 0);
@@ -351,52 +400,17 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
         hasNextPage = false;
       }
       
-      // Apply cuisine filtering if cuisineSlug is provided
-      let filteredRestaurants = transformed;
-      
-      if (cuisineSlug && filters.cuisine && filters.cuisine.length > 0) {
-        filteredRestaurants = transformed.filter(restaurant => {
-          // Check if restaurant has the matching cuisine slug in listingCategories
-          if (!restaurant.listingCategories || restaurant.listingCategories.length === 0) {
-            return false;
-          }
-          return restaurant.listingCategories.some(category => 
-            category.slug === cuisineSlug || filters.cuisine?.includes(category.slug)
-          );
-        });
-      }
-      
-      // Apply location filtering using the enhanced location system
-      // First apply URL-based address filtering if provided
-      if (searchAddress && searchAddress.trim()) {
-        filteredRestaurants = filteredRestaurants.filter(restaurant => {
-          const relevance = restaurantService.calculateLocationRelevance(restaurant, searchAddress);
-          return relevance > 0; // Only include restaurants with location relevance
-        });
-      }
-      
-      // Then apply enhanced selected location filtering (city/country)
-      if (selectedLocation && selectedLocation.type) {
-        filteredRestaurants = applyLocationFilter(filteredRestaurants, selectedLocation, 100); // 100km radius
-        
-        // Sort by location relevance for better results
-        filteredRestaurants = sortByLocationRelevance(filteredRestaurants, selectedLocation);
-      }
-      
-      // Apply client-side sorting (location-based, palate-based, or regular)
-      const sortedRestaurants = sortRestaurants(filteredRestaurants, filters.palates, filters.sortOption, searchAddress);
-
-      
+      // Store raw fetched restaurants; filtering/sorting happens in a derived memo.
       setRestaurants((prev: Restaurant[]) => {
-        if (reset || !after) return sortedRestaurants;
+        if (reset || !after) return transformed;
         const uniqueMap = new Map<string, Restaurant>();
         prev.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
-        sortedRestaurants.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
+        transformed.forEach((r: Restaurant) => uniqueMap.set(r.id, r));
         return Array.from(uniqueMap.values());
       });
       
       // Check if we should show suggestions
-      const totalResults = sortedRestaurants.length;
+      const totalResults = transformed.length;
       setShowSuggestions(shouldShowSuggestions(totalResults) && filters.palates && filters.palates.length > 0);
       
       setEndCursor(endCursor);
@@ -406,7 +420,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm, filters.palates, filters.cuisine, filters.sortOption, searchAddress, selectedLocation, sortRestaurants, cuisineSlug]);
+  }, [debouncedSearchTerm]);
 
   // Debounced filter change handler
   type FilterChangeType = {
@@ -462,7 +476,110 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     isFirstLoad.current = true;
     fetchRestaurants(true, null, RESTAURANT_CONSTANTS.INITIAL_LOAD_RESULTS);
     isFirstLoad.current = false;
-  }, [debouncedSearchTerm, filters.palates, filters.cuisine, filters.sortOption, searchAddress, selectedLocation, fetchRestaurants]);
+  }, [debouncedSearchTerm, fetchRestaurants]);
+
+  // Default sort to MY_PREFERENCE for users with palates (don't override user choice once set)
+  useEffect(() => {
+    if (!userPreferencePalates || userPreferencePalates.length === 0) {
+      // If user logs out while on MY_PREFERENCE, fall back to SMART
+      setFilters((prev) => (prev.sortOption === 'MY_PREFERENCE' ? { ...prev, sortOption: 'SMART' } : prev));
+      return;
+    }
+    setFilters((prev) => (prev.sortOption ? prev : { ...prev, sortOption: 'MY_PREFERENCE' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPreferencePalates.join('|')]);
+
+  // Fetch preference stats when needed (cached endpoint)
+  useEffect(() => {
+    const shouldFetch = filters.sortOption === 'MY_PREFERENCE' && userPreferencePalates.length > 0;
+    if (!shouldFetch) return;
+
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        setPreferenceLoading(true);
+        const url = `/api/v1/restaurants-v2/get-preference-stats?palates=${encodeURIComponent(
+          userPreferencePalates.join(',')
+        )}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Failed to fetch preference stats: ${res.status}`);
+        const json = await res.json();
+        if (!json?.success) throw new Error(json?.error || 'Failed to fetch preference stats');
+        setPreferenceStats(json.data || {});
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return;
+        devError('Failed to load preference stats:', e);
+        setPreferenceStats({});
+      } finally {
+        setPreferenceLoading(false);
+      }
+    };
+
+    load();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.sortOption, userPreferencePalates.join('|')]);
+
+  const displayedRestaurants = useMemo(() => {
+    let list = restaurants;
+
+    // Attach preference stats when available
+    if (filters.sortOption === 'MY_PREFERENCE') {
+      list = list.map((r) => ({
+        ...r,
+        searchPalateStats: preferenceStats[r.id] || r.searchPalateStats || { avg: 0, count: 0 },
+      }));
+    }
+
+    // Cuisine filtering
+    if (cuisineSlug && filters.cuisine && filters.cuisine.length > 0) {
+      list = list.filter((restaurant) => {
+        if (!restaurant.listingCategories || restaurant.listingCategories.length === 0) return false;
+        return restaurant.listingCategories.some(
+          (category) => category.slug === cuisineSlug || filters.cuisine?.includes(category.slug)
+        );
+      });
+    }
+
+    // Price filter (client-side)
+    if (filters.price) {
+      list = list.filter((r) => {
+        const price = (r.priceRange || '').toLowerCase();
+        return price.includes(filters.price!.toLowerCase());
+      });
+    }
+
+    // Rating filter
+    if (filters.rating && filters.rating > 0) {
+      list = list.filter((r) => (r.rating || 0) >= (filters.rating || 0));
+    }
+
+    // Address keyword filter
+    if (searchAddress && searchAddress.trim()) {
+      list = list.filter((restaurant) => restaurantService.calculateLocationRelevance(restaurant, searchAddress) > 0);
+    }
+
+    // Selected location (city/country)
+    if (selectedLocation && selectedLocation.type) {
+      list = applyLocationFilter(list, selectedLocation, 100);
+      list = sortByLocationRelevance(list, selectedLocation);
+    }
+
+    // Sorting
+    return sortRestaurants(list, filters.palates, filters.sortOption, searchAddress);
+  }, [
+    restaurants,
+    preferenceStats,
+    filters.cuisine,
+    filters.palates,
+    filters.price,
+    filters.rating,
+    filters.sortOption,
+    cuisineSlug,
+    searchAddress,
+    selectedLocation,
+    sortRestaurants,
+  ]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -533,16 +650,17 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
               onFilterChange={handleFilterChange}
               initialCuisines={filters.cuisine || []}
               initialPalates={filters.palates || []}
+              initialSortOption={filters.sortOption || (userPreferencePalates.length > 0 ? 'MY_PREFERENCE' : 'SMART')}
             />
           )}
 
-          {loading && restaurants.length === 0 ? (
+          {loading && displayedRestaurants.length === 0 ? (
             <div className="restaurants__grid restaurants__grid--skeleton">
               {Array.from({ length: 4 }).map((_, index) => (
                 <SkeletonCard key={index} />
               ))}
             </div>
-          ) : restaurants.length === 0 ? (
+          ) : displayedRestaurants.length === 0 ? (
             <div className="restaurants__no-results">
               <div className="text-center py-12">
                 <h3 className="text-lg font-normal text-gray-900 mb-2 font-neusans">No results found</h3>
@@ -554,7 +672,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           ) : (
             <>
               <div className="restaurants__grid">
-                {restaurants.map((restaurant, index) => (
+                {displayedRestaurants.map((restaurant, index) => (
                   <RestaurantCard
                     key={restaurant.id}
                     restaurant={restaurant}

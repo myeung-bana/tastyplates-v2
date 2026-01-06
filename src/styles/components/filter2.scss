@@ -106,6 +106,16 @@
     align-items: center;
     margin-bottom: 2rem;
   }
+  &__buttons-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  &__buttons-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
   &__button {
     display: flex;
     align-items: center;

@@ -11,19 +11,36 @@ interface Filter2Props {
     price?: string | null;
     rating?: number | null;
     palates?: string[] | null;
+    sortOption?: string | null;
   }) => void;
   initialCuisines?: string[];
   initialPalates?: string[];
+  initialSortOption?: string | null;
 }
 
 
-const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: Filter2Props) => {
+const SORT_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: 'MY_PREFERENCE', label: 'My Preference' },
+  { key: 'SMART', label: 'Smart' },
+  { key: 'DESC', label: 'Highest Rated' },
+  { key: 'ASC', label: 'Lowest Rated' },
+  { key: 'NEWEST', label: 'Newest' },
+];
+
+const Filter2 = ({
+  onFilterChange,
+  initialCuisines = [],
+  initialPalates = [],
+  initialSortOption = 'SMART',
+}: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialCuisines);
   const [selectedPalates, setSelectedPalates] = useState<string[]>(initialPalates);
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
   const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
+  const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
+  const [sortOption, setSortOption] = useState<string>(initialSortOption || 'SMART');
 
   // Use centralized usePriceRanges hook to fetch price data
   const { priceRanges, loading: isLoadingPrices } = usePriceRanges();
@@ -32,7 +49,8 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
   useEffect(() => {
     setSelectedCuisines(initialCuisines);
     setSelectedPalates(initialPalates);
-  }, [initialCuisines, initialPalates]);
+    setSortOption(initialSortOption || 'SMART');
+  }, [initialCuisines, initialPalates, initialSortOption]);
 
   const handleCuisineChange = (cuisines: string[], palates: string[]) => {
     setSelectedCuisines(cuisines);
@@ -55,6 +73,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
       palates: selectedPalates,
       price: price || null,
       rating: rating > 0 ? rating : null,
+      sortOption,
     });
     
     onFilterChange({
@@ -62,6 +81,7 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
       price: price || null,
       rating: rating > 0 ? rating : null,
       palates: selectedPalates,
+      sortOption: sortOption || null,
     });
     setIsModalOpen(false);
   };
@@ -82,24 +102,68 @@ const Filter2 = ({ onFilterChange, initialCuisines = [], initialPalates = [] }: 
     <>
       {/* Filter Buttons */}
       <div className="filter2__buttons text-sm font-neusans">
-        <CuisineFilter 
-          onFilterChange={handleCuisineChange}
-          selectedCuisines={selectedCuisines}
-          selectedPalates={selectedPalates}
-          onApplyFilters={applyFilters}
-        />
-        <div className="filter2">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="filter2__button font-neusans"
-          >
-            <span className="filter2__button-text text-sm font-neusans">
-              Price & Rating
-              {activeFiltersCount > 0 && (
-                <span className="filter2__badge font-neusans">{activeFiltersCount}</span>
-              )}
-            </span>
-          </button>
+        <div className="filter2__buttons-left">
+          <CuisineFilter 
+            onFilterChange={handleCuisineChange}
+            selectedCuisines={selectedCuisines}
+            selectedPalates={selectedPalates}
+            onApplyFilters={applyFilters}
+          />
+          <div className="filter2">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="filter2__button font-neusans"
+            >
+              <span className="filter2__button-text text-sm font-neusans">
+                Price & Rating
+                {activeFiltersCount > 0 && (
+                  <span className="filter2__badge font-neusans">{activeFiltersCount}</span>
+                )}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="filter2__buttons-right">
+          <CustomPopover
+            isOpen={isSortOpen}
+            setIsOpen={setIsSortOpen}
+            align="end"
+            trigger={
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="filter2__button font-neusans"
+              >
+                <span className="filter2__button-text text-sm font-neusans">
+                  Sort: {SORT_OPTIONS.find((s) => s.key === sortOption)?.label || 'Smart'}
+                </span>
+              </button>
+            }
+            content={
+              <div className="filter2__dropdown font-neusans">
+                {SORT_OPTIONS.map((opt) => (
+                  <div
+                    key={opt.key}
+                    onClick={() => {
+                      setSortOption(opt.key);
+                      setIsSortOpen(false);
+                      // Apply immediately to feel snappy (no need to open modal)
+                      onFilterChange({
+                        cuisine: selectedCuisines,
+                        price: price || null,
+                        rating: rating > 0 ? rating : null,
+                        palates: selectedPalates,
+                        sortOption: opt.key,
+                      });
+                    }}
+                    className={`filter2__option font-neusans ${sortOption === opt.key ? "filter2__option--active" : ""}`}
+                  >
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            }
+          />
         </div>
       </div>
 
