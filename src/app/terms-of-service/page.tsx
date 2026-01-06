@@ -1,17 +1,11 @@
 import Navbar from "@/components/layout/Navbar";
-import { TermsOfServiceService } from "@/services/TermsOfService/termsOfServiceService";
+import { loadMarkdownContent } from "@/utils/markdownLoader";
 
-const termsOfServiceService = new TermsOfServiceService();
-
-// Force dynamic rendering since we're using cache: "no-store"
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-async function getTermsOfService() {
-  return termsOfServiceService.getTermsOfService();
-}
-
 export default async function TermsOfService() {
-  const data = await getTermsOfService();
+  const data = await loadMarkdownContent('terms-of-service');
 
   return (
     <>
@@ -19,7 +13,7 @@ export default async function TermsOfService() {
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="font-neusans text-[32px] font-normal text-center text-[#31343F] mb-8 max-w-xl w-full">
-            {(data.title as string) || "Terms of Service"}
+            {data.title}
           </h1>
         </div>
 
@@ -27,8 +21,8 @@ export default async function TermsOfService() {
           <div className="w-full max-w-xl">
             <section>
               <div
-                className="font-neusans font-normal prose prose-xs max-w-none text-[#31343F] text-justify"
-                dangerouslySetInnerHTML={{ __html: data.content as string }}
+                className="legal-content text-justify"
+                dangerouslySetInnerHTML={{ __html: data.content }}
               />
             </section>
           </div>

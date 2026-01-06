@@ -4,8 +4,8 @@ import { loadMarkdownContent } from "@/utils/markdownLoader";
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-export default async function ContentGuidelines() {
-  const data = await loadMarkdownContent('content-guidelines');
+export default async function CookiePolicy() {
+  const data = await loadMarkdownContent('cookie-policy');
 
   return (
     <>
@@ -13,7 +13,7 @@ export default async function ContentGuidelines() {
       <main className="min-h-screen flex flex-col justify-between bg-white gap-[12px]">
         <div className="pt-24 px-4 flex justify-center">
           <h1 className="font-neusans text-[32px] font-normal text-center text-[#31343F] mb-8 max-w-xl w-full">
-            {data.title || "Content Guidelines"}
+            {data.title}
           </h1>
         </div>
 
@@ -31,3 +31,4 @@ export default async function ContentGuidelines() {
     </>
   );
 }
+

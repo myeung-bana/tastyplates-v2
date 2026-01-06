@@ -1,17 +1,11 @@
 import Navbar from "@/components/layout/Navbar";
-import { PrivacyPolicyService } from "@/services/PrivacyPolicy/privacyPolicyService";
+import { loadMarkdownContent } from "@/utils/markdownLoader";
 
-const privacyPolicyService = new PrivacyPolicyService();
-
-// Force dynamic rendering since we're using cache: "no-store"
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-async function getPrivacyPolicy() {
-  return privacyPolicyService.getPrivacyPolicy();
-}
-
 export default async function PrivacyPolicy() {
-  const data = await getPrivacyPolicy();
+  const data = await loadMarkdownContent('privacy-policy');
 
   return (
     <>
@@ -27,7 +21,7 @@ export default async function PrivacyPolicy() {
           <div className="w-full max-w-xl">
             <section>
               <div
-                className="font-neusans prose prose-xs max-w-none text-[#31343F] text-justify"
+                className="legal-content text-justify"
                 dangerouslySetInnerHTML={{ __html: data.content }}
               />
             </section>

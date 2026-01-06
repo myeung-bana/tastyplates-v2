@@ -12,7 +12,8 @@ export async function GET(
     const filenameMap: Record<string, string> = {
       'terms-of-service': 'terms-of-service',
       'privacy-policy': 'privacy-policy',
-      'content-guidelines': 'content-guidelines'
+      'content-guidelines': 'content-guidelines',
+      'cookie-policy': 'cookie-policy'
     };
 
     const filename = filenameMap[type];
