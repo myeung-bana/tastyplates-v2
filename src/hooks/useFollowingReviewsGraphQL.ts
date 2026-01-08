@@ -14,7 +14,7 @@ interface UseFollowingReviewsGraphQLReturn {
   refreshFollowingReviews: () => Promise<void>;
 }
 
-export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn => {
+export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowingReviewsGraphQLReturn => {
   const { user } = useFirebaseSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +54,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
   }, [user?.id]);
 
   const loadFollowingReviews = useCallback(async (append: boolean = false) => {
+    if (!enabled) return;
     if (followingUserIds.length === 0) {
       if (!append) {
         setInitialLoading(false);
@@ -69,7 +70,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
     }
     
     try {
-      const limit = append ? 8 : 16;
+      const limit = 4;
       const currentOffset = append ? offset : 0;
       const allReviews: GraphQLReview[] = [];
       let hasMoreReviews = false;
@@ -80,6 +81,7 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       const startUserIndex = append ? currentUserIndex : 0;
       
       for (let i = startUserIndex; i < followingUserIds.length; i++) {
+        if (!enabled) break;
         const userId = followingUserIds[i];
         const userOffset = (i === startUserIndex && append) ? currentOffset : 0;
         
@@ -149,35 +151,39 @@ export const useFollowingReviewsGraphQL = (): UseFollowingReviewsGraphQLReturn =
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [followingUserIds, offset, currentUserIndex]);
+  }, [enabled, followingUserIds, offset, currentUserIndex]);
 
   const loadMore = useCallback(() => {
+    if (!enabled) return;
     if (!loading && hasMore && user && !initialLoading) {
       loadFollowingReviews(true);
     }
-  }, [loading, hasMore, user, initialLoading, loadFollowingReviews]);
+  }, [enabled, loading, hasMore, user, initialLoading, loadFollowingReviews]);
 
   const refreshFollowingReviews = useCallback(async () => {
+    if (!enabled) return;
     setOffset(0);
     setHasMore(true);
     setCurrentUserIndex(0);
     await loadFollowingReviews(false);
-  }, [loadFollowingReviews]);
+  }, [enabled, loadFollowingReviews]);
 
   // Initialize following user IDs when user is available
   useEffect(() => {
+    if (!enabled) return;
     if (user && !isInitialized) {
       setIsInitialized(true);
       fetchFollowingUserIds().then(setFollowingUserIds);
     }
-  }, [user, isInitialized, fetchFollowingUserIds]);
+  }, [enabled, user, isInitialized, fetchFollowingUserIds]);
 
   // Load reviews when following user IDs are available
   useEffect(() => {
+    if (!enabled) return;
     if (followingUserIds.length > 0 && isInitialized) {
       loadFollowingReviews(false);
     }
-  }, [followingUserIds, isInitialized, loadFollowingReviews]);
+  }, [enabled, followingUserIds, isInitialized, loadFollowingReviews]);
 
   // Reset state when user is lost
   useEffect(() => {

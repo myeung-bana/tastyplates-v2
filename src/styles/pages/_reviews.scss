@@ -27,7 +27,7 @@
   }
 
   &__container {
-    max-width: 82rem; // Increased from 80rem to accommodate 4 cards
+    max-width: 900px; // Cap width for faster layout/paint and consistent 4-up grid
     margin: 0 auto;
     padding: 0 1rem;
 

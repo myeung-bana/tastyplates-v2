@@ -6,27 +6,39 @@ import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/resta
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export async function GET(request: NextRequest) {
   try {
+    const t0 = Date.now();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '16');
     const offset = parseInt(searchParams.get('offset') || '0');
     // Note: userId parameter removed - like status checking can be added later if needed
 
     // Get version for all reviews
+    const tVersion0 = Date.now();
     const version = await getVersion('v:reviews:all');
+    const tVersion = Date.now() - tVersion0;
     
     // Cache key with version
     const cacheKey = `reviews:all:v${version}:limit=${limit}:offset=${offset}`;
     
+    let tHasuraReviews = 0;
+    let tHasuraRestaurants = 0;
+    let tHasuraAuthors = 0;
+
+    const tCache0 = Date.now();
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
       300, // 300 seconds (5 minutes) TTL for better performance
       async () => {
+        const tReviews0 = Date.now();
         const result = await hasuraQuery(GET_ALL_REVIEWS, {
           limit: Math.min(limit, 100), // Cap at 100
           offset
         });
+        tHasuraReviews = Date.now() - tReviews0;
 
         if (result.errors) {
           console.error('GraphQL errors:', result.errors);
@@ -44,9 +56,11 @@ export async function GET(request: NextRequest) {
         let restaurantMap = new Map();
         if (restaurantUuids.length > 0) {
           try {
+            const tRestaurants0 = Date.now();
             const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, {
               uuids: restaurantUuids
             });
+            tHasuraRestaurants = Date.now() - tRestaurants0;
 
             if (!restaurantsResult.errors && restaurantsResult.data?.restaurants) {
               restaurantMap = new Map(
@@ -73,9 +87,11 @@ export async function GET(request: NextRequest) {
         let authorMap = new Map();
         if (authorIds.length > 0) {
           try {
+            const tAuthors0 = Date.now();
             const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
               ids: authorIds
             });
+            tHasuraAuthors = Date.now() - tAuthors0;
 
             if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
               const users = authorsResult.data.restaurant_users;
@@ -118,11 +134,21 @@ export async function GET(request: NextRequest) {
         };
       }
     );
+    const tCache = Date.now() - tCache0;
+    const tTotal = Date.now() - t0;
     
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Cache-Key': cacheKey,
+        ...(isDev ? { 'X-Cache-Key': cacheKey } : {}),
+        'Server-Timing': [
+          `version;dur=${tVersion}`,
+          `cache;dur=${tCache}`,
+          `hasura_reviews;dur=${hit ? 0 : tHasuraReviews}`,
+          `hasura_restaurants;dur=${hit ? 0 : tHasuraRestaurants}`,
+          `hasura_authors;dur=${hit ? 0 : tHasuraAuthors}`,
+          `total;dur=${tTotal}`
+        ].join(', '),
         // HTTP caching for CDN and browsers (5 minutes, stale-while-revalidate for 10 minutes)
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
         'CDN-Cache-Control': 'public, s-maxage=300',

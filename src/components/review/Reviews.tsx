@@ -16,14 +16,15 @@ const Reviews = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trending');
   const { user } = useFirebaseSession();
   const { showSignin } = useAuthModal();
+  const isDev = process.env.NODE_ENV === 'development';
   
   // Trending reviews state
   const [trendingReviews, setTrendingReviews] = useState<ReviewedDataProps[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
-  const LIMIT = 16; // Initial load
-  const LOAD_MORE_LIMIT = 8; // Subsequent loads
+  const LIMIT = 4; // Initial load (small for faster first paint)
+  const LOAD_MORE_LIMIT = 4; // Subsequent loads
   const observerRef = useRef<HTMLDivElement | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -36,7 +37,7 @@ const Reviews = () => {
     initialLoading: forYouInitialLoading,
     hasMore: forYouHasMore,
     loadMore: loadMoreForYou
-  } = useFollowingReviewsGraphQL();
+  } = useFollowingReviewsGraphQL(activeTab === 'foryou');
 
   // Get current reviews based on active tab
   const currentReviews = activeTab === 'trending' ? trendingReviews : forYouReviews;
@@ -68,10 +69,12 @@ const Reviews = () => {
     setLoading(true);
     
     try {
-      console.log('Reviews - fetchTrendingReviews called:', {
-        limit,
-        currentOffset
-      });
+      if (isDev) {
+        console.log('Reviews - fetchTrendingReviews called:', {
+          limit,
+          currentOffset
+        });
+      }
       
       // Fetch reviews from new API with abort signal
       const response = await reviewV2Service.getAllReviews({
@@ -82,19 +85,21 @@ const Reviews = () => {
       
       // Check if request was aborted after fetch completes
       if (abortController.signal.aborted) {
-        console.log('Reviews - Request was aborted after fetch');
+        if (isDev) console.log('Reviews - Request was aborted after fetch');
         return;
       }
 
-      console.log('Reviews - API Response:', {
-        success: response.reviews ? true : false,
-        dataLength: response.reviews?.length,
-        meta: { total: response.total, hasMore: response.hasMore },
-        firstItem: response.reviews?.[0]
-      });
+      if (isDev) {
+        console.log('Reviews - API Response:', {
+          success: response.reviews ? true : false,
+          dataLength: response.reviews?.length,
+          meta: { total: response.total, hasMore: response.hasMore },
+          firstItem: response.reviews?.[0]
+        });
+      }
 
       if (!response.reviews || response.reviews.length === 0) {
-        console.log('Reviews - No reviews returned');
+        if (isDev) console.log('Reviews - No reviews returned');
         setHasNextPage(false);
         setLoading(false);
         return;
@@ -131,14 +136,14 @@ const Reviews = () => {
         return reviewV2;
       });
 
-      console.log('Reviews - ReviewV2 items created:', reviewV2Items.length);
+      if (isDev) console.log('Reviews - ReviewV2 items created:', reviewV2Items.length);
 
       // Transform to ReviewedDataProps (same as profile tab)
       const transformedReviews = reviewV2Items.map((reviewV2) => {
         return transformReviewV2ToReviewedDataProps(reviewV2);
       });
 
-      console.log('Reviews - Transformed reviews:', transformedReviews.length);
+      if (isDev) console.log('Reviews - Transformed reviews:', transformedReviews.length);
 
       setTrendingReviews((prev) => {
         if (currentOffset === 0) {
@@ -158,16 +163,18 @@ const Reviews = () => {
         isInitialFetchRef.current = false;
       }
       
-      console.log('Reviews - Final state:', {
-        reviewsCount: transformedReviews.length,
-        total: response.total,
-        offset: currentOffset + transformedReviews.length,
-        hasNextPage: response.hasMore || false
-      });
+      if (isDev) {
+        console.log('Reviews - Final state:', {
+          reviewsCount: transformedReviews.length,
+          total: response.total,
+          offset: currentOffset + transformedReviews.length,
+          hasNextPage: response.hasMore || false
+        });
+      }
     } catch (error) {
       // Ignore abort errors (request was intentionally canceled)
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Reviews - Request was aborted');
+        if (isDev) console.log('Reviews - Request was aborted');
         // Mark initial fetch as complete if it was aborted
         if (isInitialFetch) {
           isInitialFetchRef.current = false;
@@ -314,8 +321,8 @@ const Reviews = () => {
           </div>
           
           {/* Skeleton loading */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
-            {Array.from({ length: 10 }, (_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+            {Array.from({ length: 4 }, (_, i) => (
               <ReviewCardSkeleton key={`skeleton-${i}`} />
             ))}
           </div>
@@ -360,7 +367,7 @@ const Reviews = () => {
         {/* Reviews Grid */}
         {currentReviews.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
               {currentReviews.map((review, index) => (
                 <ReviewCard2 
                   key={review.id}
@@ -373,8 +380,8 @@ const Reviews = () => {
             
             {/* Loading more content with skeletons */}
             {currentLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-6">
-                {Array.from({ length: 5 }, (_, i) => (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                {Array.from({ length: 4 }, (_, i) => (
                   <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
                 ))}
               </div>
@@ -391,8 +398,8 @@ const Reviews = () => {
           </>
         ) : currentLoading || currentInitialLoading ? (
           /* Show skeletons when loading and no reviews yet */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-10">
-            {Array.from({ length: 10 }, (_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+            {Array.from({ length: 4 }, (_, i) => (
               <ReviewCardSkeleton key={`empty-loading-skeleton-${i}`} />
             ))}
           </div>
