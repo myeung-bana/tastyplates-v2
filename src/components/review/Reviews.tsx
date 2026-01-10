@@ -374,6 +374,7 @@ const Reviews = () => {
                   data={review}
                   reviews={currentReviews}
                   reviewIndex={index}
+                  viewerSource={activeTab === 'trending' ? { src: 'global' } : { src: 'following' }}
                 />
               ))}
             </div>

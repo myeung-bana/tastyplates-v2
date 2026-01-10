@@ -14,7 +14,7 @@ import {
   FiLogOut,
   FiLayout
 } from "react-icons/fi";
-import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME, TASTYSTUDIO_DASHBOARD } from "@/constants/pages";
+import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME, TASTYSTUDIO_DASHBOARD, PRIVACY_POLICY, TERMS_OF_SERVICE, COOKIE_POLICY } from "@/constants/pages";
 import { logOutSuccessfull } from "@/constants/messages";
 import { LOGOUT_KEY } from "@/constants/session";
 import { LOCATION_HIERARCHY } from "@/constants/location";
@@ -131,9 +131,12 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       { name: "Profile", href: PROFILE, icon: FiUser },
       { name: "Settings", href: SETTINGS, icon: FiSettings },
     ] : [],
-    // Section 4: Content Guidelines
+    // Section 4: Content Guidelines & Legal
     [
       { name: "Content Guidelines", href: CONTENT_GUIDELINES, icon: FiFileText },
+      { name: "Privacy Policy", href: PRIVACY_POLICY, icon: FiFileText },
+      { name: "Cookie Policy", href: COOKIE_POLICY, icon: FiFileText },
+      { name: "Terms and Conditions", href: TERMS_OF_SERVICE, icon: FiFileText },
     ],
     // Section 5: Log out (only if authenticated)
     user ? [

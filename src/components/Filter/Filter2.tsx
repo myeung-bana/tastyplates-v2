@@ -103,12 +103,14 @@ const Filter2 = ({
       {/* Filter Buttons */}
       <div className="filter2__buttons text-sm font-neusans">
         <div className="filter2__buttons-left">
-          <CuisineFilter 
-            onFilterChange={handleCuisineChange}
-            selectedCuisines={selectedCuisines}
-            selectedPalates={selectedPalates}
-            onApplyFilters={applyFilters}
-          />
+          <div className="hidden md:block">
+            <CuisineFilter 
+              onFilterChange={handleCuisineChange}
+              selectedCuisines={selectedCuisines}
+              selectedPalates={selectedPalates}
+              onApplyFilters={applyFilters}
+            />
+          </div>
           <div className="filter2">
             <button
               onClick={() => setIsModalOpen(true)}

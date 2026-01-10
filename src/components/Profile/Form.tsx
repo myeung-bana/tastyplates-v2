@@ -75,8 +75,6 @@ const base64ToFile = (base64String: string, filename: string): File => {
 };
 
 interface FormContentProps {
-  isSubmitted: boolean;
-  setIsSubmitted: (value: boolean) => void;
   isLoading: boolean;
   profilePreview: string;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -103,8 +101,6 @@ interface FormContentProps {
 }
 
 const FormContent = memo(({
-  isSubmitted,
-  setIsSubmitted,
   isLoading,
   profilePreview,
   handleFileChange,
@@ -132,43 +128,6 @@ const FormContent = memo(({
 }: FormContentProps) => {
   return (
   <>
-    {isSubmitted && (
-      <>
-        <div className="fixed inset-0 bg-white z-[60]" />
-        <div className="fixed inset-0 flex items-center justify-center z-[70]">
-          <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-fade-in">
-            <button
-              className="absolute top-3 right-3 text-gray-400 hover:text-orange-600 transition-colors text-2xl"
-              onClick={() => setIsSubmitted(false)}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <div className="flex flex-col items-center">
-              <div className="mb-4">
-                <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                  <circle cx="28" cy="28" r="28" fill="#FFF3E6" />
-                  <path
-                    d="M18 29.5L25 36.5L38 23.5"
-                    stroke="#ff7c0a"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-orange-700 mb-2">
-                Profile Updated!
-              </h2>
-              <p className="mb-6 text-center text-gray-700">
-                Your profile has been successfully updated.
-              </p>
-            </div>
-          </div>
-        </div>
-      </>
-    )}
-    
     {/* Modern Instagram-inspired Profile Edit Layout */}
     <div className="min-h-screen bg-white md:min-h-screen">
       <div className="max-w-4xl mx-auto px-0 md:px-4 py-0 md:py-8">
@@ -378,7 +337,6 @@ const Form = () => {
   const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [aboutMe, setAboutMe] = useState("");
   const [profile, setProfile] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState(DEFAULT_USER_ICON);
@@ -648,8 +606,10 @@ const Form = () => {
         responseKeys: Object.keys(response.data || {})
       });
 
-      setIsSubmitted(true);
-      setTimeout(() => router.push(PROFILE), 2000);
+      // Get username for profile URL
+      const username = (userData?.username as string) || (user?.username as string);
+      toast.success('Profile updated successfully!');
+      router.push(username ? `/profile/${username}` : PROFILE);
     } catch (error: any) {
       console.error('❌ Profile Form - Update failed:', {
         errorMessage: error?.message,
@@ -665,8 +625,6 @@ const Form = () => {
 
   const formContent = (
     <FormContent
-      isSubmitted={isSubmitted}
-      setIsSubmitted={setIsSubmitted}
       isLoading={isLoading}
       profilePreview={profilePreview}
       handleFileChange={handleFileChange}
@@ -706,72 +664,47 @@ const Form = () => {
   }, [sessionLoading, user, firebaseUser]);
 
   // Update form state when userData is loaded from useProfileData hook
-  // Only run once when data is first loaded to prevent flickering
+  // Initialize immediately with available data, update palates when cuisines load
   useEffect(() => {
-    // Prevent re-initialization if we've already set up the form
+    // Prevent re-initialization if we've already set up basic form data
     if (hasInitialized.current) {
       return;
     }
 
-    // Wait for cuisines to load before mapping palates
-    if (cuisinesLoading) {
-      return;
-    }
-
     if (userData && isViewingOwnProfile && !isLoadingData) {
-      // Extract data from GraphQL structure (userProfile.aboutMe, userProfile.profileImage, etc.)
-      // or use direct properties if already transformed
+      // Extract data from GraphQL structure
       const userProfile = (userData.userProfile as any);
       const aboutMeValue = (userData.about_me as string) || 
                           (userProfile?.aboutMe as string) || "";
       const profileImageValue = getProfileImageUrl(userData.profile_image) || 
                                (userProfile?.profileImage?.node?.mediaItemUrl as string) || 
                                DEFAULT_USER_ICON;
-      const palatesValue = userData.palates || userProfile?.palates || null;
 
-      // Update form fields with data from hook
+      // Update form fields immediately (don't wait for cuisines)
       setAboutMe(aboutMeValue);
       setProfilePreview(profileImageValue);
       
-      // Handle existing profile images: if it's already an S3 URL, use it directly
-      // If it's base64 (legacy), we'll treat it as preview only and won't send it on update
+      // Handle existing profile images
       if (profileImageValue && 
           (profileImageValue.startsWith('http://') || profileImageValue.startsWith('https://'))) {
-        // It's already an S3 URL, use it directly
         setProfile(profileImageValue);
-        setProfileImageFile(null); // No file to upload
+        setProfileImageFile(null);
       } else if (profileImageValue && profileImageValue.startsWith('data:')) {
-        // It's base64 (legacy), treat as preview only
-        setProfile(null); // Don't send base64 on update
-        setProfileImageFile(null); // No file to upload
+        setProfile(null);
+        setProfileImageFile(null);
       } else {
-        // Default icon or empty
         setProfile(null);
         setProfileImageFile(null);
       }
       
-      // Set palates - map palate names to cuisine keys for pre-selection
-      if (palatesValue && cuisines && cuisines.length > 0) {
-        const palates = normalizePalates(palatesValue);
-        if (palates.length > 0) {
-          // Map palate names to cuisine keys (only child cuisines)
-          const cuisineKeys = mapPalatesToCuisineKeys(palates);
-          setSelectedPalates(cuisineKeys);
-        }
-      }
-      
-      // Note: Session updates are handled automatically by useFirebaseSession hook
-      // when user data changes in Hasura, so no manual session update is needed
-      
       hasInitialized.current = true; // Mark as initialized
     } else if (!isLoadingData && !userData && user && currentUserId && !hasInitialized.current) {
-      // Fallback to user data if hook hasn't loaded yet or failed (only once)
-      const userWithExtras = user as any; // Type assertion for optional properties
+      // Fallback to user data
+      const userWithExtras = user as any;
       setAboutMe(userWithExtras?.about_me ?? "");
       const fallbackProfileImage = getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON;
       setProfilePreview(fallbackProfileImage);
       
-      // Handle existing profile images: if it's already an S3 URL, use it directly
       if (fallbackProfileImage && 
           (fallbackProfileImage.startsWith('http://') || fallbackProfileImage.startsWith('https://'))) {
         setProfile(fallbackProfileImage);
@@ -780,18 +713,28 @@ const Form = () => {
         setProfile(null);
         setProfileImageFile(null);
       }
-      // Set palates - map palate names to cuisine keys for pre-selection
-      if (userWithExtras?.palates && cuisines && cuisines.length > 0) {
-        const palates = normalizePalates(userWithExtras.palates);
-        if (palates.length > 0) {
-          // Map palate names to cuisine keys (only child cuisines)
-          const cuisineKeys = mapPalatesToCuisineKeys(palates);
-          setSelectedPalates(cuisineKeys);
-        }
-      }
-      hasInitialized.current = true; // Mark as initialized even with fallback
+      
+      hasInitialized.current = true;
     }
-  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user, cuisines, cuisinesLoading, mapPalatesToCuisineKeys]); // Added cuisines and cuisinesLoading to dependencies
+  }, [userData, isViewingOwnProfile, isLoadingData, currentUserId, user]);
+
+  // Separate effect for palates - only updates when cuisines are loaded
+  useEffect(() => {
+    if (!userData || cuisinesLoading || !cuisines || cuisines.length === 0) {
+      return;
+    }
+
+    const userProfile = (userData.userProfile as any);
+    const palatesValue = userData.palates || userProfile?.palates || null;
+    
+    if (palatesValue) {
+      const palates = normalizePalates(palatesValue);
+      if (palates.length > 0) {
+        const cuisineKeys = mapPalatesToCuisineKeys(palates);
+        setSelectedPalates(cuisineKeys);
+      }
+    }
+  }, [userData, cuisines, cuisinesLoading, mapPalatesToCuisineKeys]);
 
   // Reset initialization flag when user changes
   useEffect(() => {

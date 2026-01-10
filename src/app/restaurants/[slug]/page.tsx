@@ -11,7 +11,6 @@ import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import "@/styles/pages/_restaurant-details-v2.scss";
 import RestaurantReviews from "@/components/Restaurant/RestaurantReviews";
 import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMobile";
-import RestaurantReviewsViewerModal from "@/components/Restaurant/RestaurantReviewsViewerModal";
 import RestaurantDetailSkeleton from "@/components/ui/Skeleton/RestaurantDetailSkeleton";
 import { useIsMobile } from "@/utils/deviceUtils";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
@@ -132,7 +131,6 @@ export default function RestaurantDetail() {
     valueForMoney: 0,
     bestService: 0
   });
-  const [showReviewsModal, setShowReviewsModal] = useState(false);
   const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -385,7 +383,8 @@ export default function RestaurantDetail() {
               <RestaurantReviewsMobile
                 reviews={reviews}
                 restaurantId={restaurant.databaseId || 0}
-                onOpenModal={() => setShowReviewsModal(true)}
+                restaurantUuid={restaurant.id}
+                restaurantSlug={restaurant.slug || slug}
               />
             )}
         </div>
@@ -409,16 +408,6 @@ export default function RestaurantDetail() {
         }}
       />
       
-      {/* Restaurant Reviews Modal */}
-      {isMobile && (
-        <RestaurantReviewsViewerModal
-          reviews={reviews}
-          isOpen={showReviewsModal}
-          onClose={() => setShowReviewsModal(false)}
-          initialIndex={0}
-          restaurantId={restaurant.databaseId || 0}
-        />
-      )}
       </div>
     </div>
     </>

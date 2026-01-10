@@ -10,6 +10,7 @@
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch; // iOS smooth scroll
   scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
   
   // Support for iPhone safe areas
   padding-top: env(safe-area-inset-top);
@@ -52,6 +53,7 @@
     flex-direction: column;
     position: relative;
     background: #000;
+    scroll-snap-align: start;
   }
 
   // Image Section - 60-70% of viewport

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
@@ -26,6 +26,7 @@ interface SwipeableReviewViewerProps {
   onClose: () => void;
   onLoadMore?: () => Promise<{ reviews: GraphQLReview[]; hasNextPage: boolean }>;
   hasNextPage?: boolean;
+  onActiveIndexChange?: (index: number) => void;
 }
 
 const reviewService = new ReviewService();
@@ -38,6 +39,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   onClose,
   onLoadMore,
   hasNextPage = false,
+  onActiveIndexChange,
 }) => {
   const { user, firebaseUser } = useFirebaseSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>(initialReviews);
@@ -52,9 +54,17 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const [isTextExpanded, setIsTextExpanded] = useState<Record<number, boolean>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const postRefs = useRef<Record<number, HTMLDivElement>>({});
+  const [activeIndex, setActiveIndex] = useState<number>(initialIndex);
+  const activeIndexRef = useRef<number>(initialIndex);
   const userUuidRef = useRef<string | null>(null);
   const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
   const CACHE_TTL = 30000; // 30s
+
+  // Used to re-bind observers when the *windowed* review list changes (not just its length).
+  const reviewsKey = useMemo(
+    () => reviews.map((r) => r.id || String(r.databaseId)).join("|"),
+    [reviews]
+  );
 
   const getUserUuid = useCallback(async (): Promise<string | null> => {
     if (!user?.id || !firebaseUser) return null;
@@ -242,6 +252,57 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       }
     }
   }, [isOpen, initialIndex, reviews.length]);
+
+  // Keep ref in sync so we don't have to rebuild observers on every activeIndex change.
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  // When the window changes, reset the active index to the new initialIndex.
+  useEffect(() => {
+    if (!isOpen) return;
+    setActiveIndex(initialIndex);
+    activeIndexRef.current = initialIndex;
+  }, [isOpen, initialIndex, reviewsKey]);
+
+  // Track which post is "active" (most visible) to support windowed paging viewers.
+  useEffect(() => {
+    if (!isOpen) return;
+    const root = scrollContainerRef.current;
+    if (!root) return;
+
+    const elementToIndex = new Map<Element, number>();
+    Object.entries(postRefs.current).forEach(([idx, el]) => {
+      if (el) elementToIndex.set(el, Number(idx));
+    });
+
+    if (elementToIndex.size === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the entry with the highest intersection ratio above threshold
+        let best: { idx: number; ratio: number } | null = null;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const idx = elementToIndex.get(entry.target);
+          if (typeof idx !== 'number') continue;
+          const ratio = entry.intersectionRatio || 0;
+          if (ratio < 0.6) continue;
+          if (!best || ratio > best.ratio) best = { idx, ratio };
+        }
+
+        if (best && best.idx !== activeIndexRef.current) {
+          activeIndexRef.current = best.idx;
+          setActiveIndex(best.idx);
+          onActiveIndexChange?.(best.idx);
+        }
+      },
+      { root, threshold: [0.6, 0.75, 0.9] }
+    );
+
+    elementToIndex.forEach((_, el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [isOpen, reviewsKey, onActiveIndexChange]);
 
   // Fetch first comment for initial post and adjacent posts immediately
   useEffect(() => {

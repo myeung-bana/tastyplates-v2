@@ -7,6 +7,7 @@ import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
@@ -15,6 +16,7 @@ import { generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import HashtagDisplay from "../ui/HashtagDisplay/HashtagDisplay";
 import { useIsMobile } from "@/utils/deviceUtils";
+import { buildReviewViewerUrl, ReviewViewerSource } from "@/utils/reviewViewerUrl";
 import {
   DEFAULT_REVIEW_IMAGE,
   DEFAULT_USER_ICON,
@@ -24,12 +26,15 @@ import {
 interface ReviewCard2Props extends Omit<ReviewCardProps, 'width' | 'index'> {
   reviews?: GraphQLReview[];
   reviewIndex?: number;
+  viewerSource?: ReviewViewerSource;
+  viewerReturnTo?: string;
 }
 
-const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
+const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo }: ReviewCard2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const router = useRouter();
 
   const { user } = useFirebaseSession();
 
@@ -38,6 +43,19 @@ const ReviewCard2 = ({ data, reviews, reviewIndex }: ReviewCard2Props) => {
   const currentIndex = typeof reviewIndex === 'number' ? reviewIndex : 0;
 
   const handleCardClick = () => {
+    // Mobile: route to the shareable viewer if source context is provided
+    if (isMobile && viewerSource) {
+      router.push(
+        buildReviewViewerUrl({
+          ...(viewerSource as any),
+          offset: currentIndex,
+          returnTo: viewerReturnTo,
+        })
+      );
+      return;
+    }
+
+    // Fallback: existing modal viewer
     setIsModalOpen(true);
   };
 

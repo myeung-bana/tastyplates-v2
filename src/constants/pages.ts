@@ -29,5 +29,7 @@ export const WRITING_GUIDELINES = "/writing-guidelines";
 export const TERMS_OF_SERVICE = "/terms-of-service";
 export const CONTENT_GUIDELINES = "/content-guidelines";
 export const PRIVACY_POLICY = "/privacy-policy";
+export const COOKIE_POLICY = "/cookie-policy";
+export const REVIEWS_VIEWER = "/reviews/viewer";
 
 export const GOOGLE_MAPS = (lat: number, lng: number) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;

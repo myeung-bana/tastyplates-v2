@@ -65,6 +65,14 @@ body.swipeable-review-viewer-open {
     pointer-events: none;
     transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
   }
+
+  // Hide bottom nav too (viewer is full-screen)
+  .bottom-nav {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+  }
 }
 
 .auth {

@@ -6,9 +6,11 @@ import { formatDistanceToNow } from "date-fns";
 import { FiStar, FiHeart, FiMessageCircle } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { generateProfileUrl, formatDate, capitalizeWords, stripTags } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
+import { buildReviewViewerUrl } from "@/utils/reviewViewerUrl";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import PalateTags from "../ui/PalateTags/PalateTags";
@@ -17,13 +19,16 @@ import "@/styles/components/_restaurant-reviews-mobile.scss";
 interface RestaurantReviewsMobileProps {
   reviews: GraphQLReview[];
   restaurantId: number;
-  onOpenModal: () => void;
+  restaurantUuid: string;
+  restaurantSlug: string;
 }
 
 const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
   reviews,
-  onOpenModal,
+  restaurantUuid,
+  restaurantSlug,
 }) => {
+  const router = useRouter();
   const { user } = useFirebaseSession();
   const isMobile = useIsMobile();
 
@@ -269,7 +274,16 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
       {hasMoreReviews && (
         <button
           className="restaurant-reviews-mobile__see-all-btn"
-          onClick={onOpenModal}
+          onClick={() => {
+            router.push(
+              buildReviewViewerUrl({
+                src: 'restaurant',
+                restaurantUuid,
+                offset: 0,
+                returnTo: `/restaurants/${restaurantSlug}`,
+              })
+            );
+          }}
         >
           See All Reviews
         </button>

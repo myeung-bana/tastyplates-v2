@@ -113,13 +113,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6 font-inter text-[#31343F]">
-      {/* Compact Mobile Instagram-style Layout */}
-      <div className="flex items-start gap-4 w-full">
-        {/* Profile Image - Left column, left-aligned */}
+      {/* Top Section: Profile Picture + Username + Stats + Palates */}
+      <div className="flex items-end gap-3 md:gap-6 w-full mb-4">
+        {/* Profile Image */}
         <div className="flex-shrink-0">
           <FallbackImage
             src={
-              // Priority order: profile_image from API > currentUser.image > session.user.image > default
               profileImageUrl ||
               (currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
               (session?.user?.image as string) ||
@@ -128,59 +127,40 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             alt={displayName || "User"}
             width={150}
             height={150}
-            className="rounded-full object-cover w-[150px] h-[150px]"
+            className="rounded-full object-cover w-20 h-20 md:w-32 md:h-32"
             type={FallbackImageType.Icon}
           />
         </div>
         
-        {/* Profile Details - Right column, compact layout */}
+        {/* Username + Stats + Palates */}
         <div className="flex-1 min-w-0">
-          {/* Username and Follow Button */}
-          <div className="mb-2 flex items-center gap-3">
-            <h1 className="font-neusans text-base md:text-2xl font-normal truncate">
-              {nameLoading ? (
-                <span className="inline-block w-32 h-6 bg-gray-200 rounded animate-pulse" />
-              ) : (
-                displayName
-              )}
-            </h1>
-            
-            {/* Follow/Unfollow Button - Only show for other users */}
-            {!isViewingOwnProfile && (currentUser || session?.user) && (
-              <FollowButton
-                isFollowing={isFollowing}
-                isLoading={followLoading}
-                onToggle={async (isFollowing) => {
-                  if (isFollowing) {
-                    await onUnfollow(targetUserId.toString());
-                  } else {
-                    await onFollow(targetUserId.toString());
-                  }
-                }}
-                size="default"
-              />
+          {/* Username */}
+          <h1 className="font-neusans text-base md:text-xl font-normal truncate mb-1 md:mb-3">
+            {nameLoading ? (
+              <span className="inline-block w-32 h-5 md:h-6 bg-gray-200 rounded animate-pulse" />
+            ) : (
+              displayName
             )}
-          </div>
+          </h1>
           
-          {/* Stats Row - Compact Instagram style */}
-          <div className="flex items-center gap-2 text-sm mb-3">
+          {/* Stats Row */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-6 text-xs md:text-base mb-2 md:mb-3">
             {/* Reviews Count */}
             <span className="cursor-default">
               <span className="font-neusans font-medium">
                 {userReviewCount ?? 0}
-              </span> Reviews
+              </span>{" "}
+              <span className="hidden md:inline">Reviews</span>
+              <span className="md:hidden">Posts</span>
             </span>
             
-            {/* Separator */}
-            <span className="text-gray-400">·</span>
+            <span className="text-gray-400 hidden md:inline">·</span>
             
             {/* Followers Count */}
             <button
               type="button"
-              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans"
-              onClick={() => {
-                onShowFollowers();
-              }}
+              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans hover:text-gray-600 transition-colors"
+              onClick={onShowFollowers}
               disabled={followersLoading}
             >
               <span className="font-neusans font-medium">
@@ -192,16 +172,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </span> Followers
             </button>
             
-            {/* Separator */}
-            <span className="text-gray-400">·</span>
+            <span className="text-gray-400 hidden md:inline">·</span>
             
             {/* Following Count */}
             <button
               type="button"
-              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans"
-              onClick={() => {
-                onShowFollowing();
-              }}
+              className="cursor-pointer focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-neusans hover:text-gray-600 transition-colors"
+              onClick={onShowFollowing}
               disabled={followingLoading}
             >
               <span className="font-neusans font-medium">
@@ -214,25 +191,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </button>
           </div>
           
-          {/* Bio Section */}
-          <div className="mb-2">
-            {aboutMeLoading ? (
-              <div className="w-full h-12 bg-gray-200 rounded animate-pulse" />
-            ) : (
-              <p className="text-sm leading-relaxed">
-                {(userData?.about_me as string) || (
-                  <span className="text-gray-400">No bio set</span>
-                )}
-              </p>
-            )}
-          </div>
-          
-          {/* Palates Section */}
-          <div className="mb-2">
+          {/* Palates Section - Below stats */}
+          <div className="mb-2 md:mb-3">
             {palatesLoading ? (
               <span className="inline-block w-24 h-5 bg-gray-200 rounded animate-pulse" />
             ) : (
-              <div className="flex gap-1 flex-wrap">
+              <div className="flex gap-1 md:gap-1.5 flex-wrap">
                 {palatesArray.length > 0 ? (
                   palatesArray.map((palate: string, index: number) => {
                       const capitalizedPalate = palate
@@ -248,15 +212,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       return (
                         <span
                           key={index}
-                          className="bg-gray-100 py-0.5 px-1.5 rounded-full text-xs font-medium text-gray-700 flex items-center gap-1"
+                          className="bg-gray-100 py-0.5 px-1.5 md:py-1 md:px-2 rounded-full text-xs md:text-sm font-medium text-gray-700 flex items-center gap-1"
                         >
                           {flagSrc && (
                             <Image
                               src={flagSrc}
                               alt={`${capitalizedPalate} flag`}
-                              width={12}
-                              height={7}
-                              className="rounded object-cover"
+                              width={16}
+                              height={10}
+                              className="rounded object-cover w-3 h-2 md:w-4 md:h-2.5"
                             />
                           )}
                           {capitalizedPalate}
@@ -264,22 +228,84 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       );
                     })
                 ) : (
-                  <span className="text-gray-400 text-xs">No palates set</span>
+                  <span className="text-gray-400 text-xs md:text-sm">No palates set</span>
                 )}
               </div>
             )}
           </div>
           
-          {/* Edit Profile Button - Show for own profile on all screen sizes */}
-          {isViewingOwnProfile && (
-            <div className="mt-4">
+          {/* Action Buttons - Show on desktop */}
+          <div className="hidden md:block">
+            {/* Follow Button */}
+            {!isViewingOwnProfile && (currentUser || session?.user) && (
+              <FollowButton
+                isFollowing={isFollowing}
+                isLoading={followLoading}
+                onToggle={async (isFollowing) => {
+                  if (isFollowing) {
+                    await onUnfollow(targetUserId.toString());
+                  } else {
+                    await onFollow(targetUserId.toString());
+                  }
+                }}
+                size="default"
+              />
+            )}
+            
+            {/* Edit Profile Button */}
+            {isViewingOwnProfile && (
               <Link
                 href="/profile/edit"
-                className="items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
               >
                 <span>Edit Profile</span>
               </Link>
-            </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom Section: Bio + Buttons (Full width) */}
+      <div className="w-full">
+        {/* Bio Section */}
+        <div className="mb-3">
+          {aboutMeLoading ? (
+            <div className="w-full h-12 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <p className="text-sm md:text-base leading-relaxed whitespace-pre-line">
+              {(userData?.about_me as string) || (
+                <span className="text-gray-400">No bio set</span>
+              )}
+            </p>
+          )}
+        </div>
+        
+        {/* Action Buttons (Mobile only) */}
+        <div className="md:hidden">
+          {/* Follow Button */}
+          {!isViewingOwnProfile && (currentUser || session?.user) && (
+            <FollowButton
+              isFollowing={isFollowing}
+              isLoading={followLoading}
+              onToggle={async (isFollowing) => {
+                if (isFollowing) {
+                  await onUnfollow(targetUserId.toString());
+                } else {
+                  await onFollow(targetUserId.toString());
+                }
+              }}
+              size="default"
+            />
+          )}
+          
+          {/* Edit Profile Button */}
+          {isViewingOwnProfile && (
+            <Link
+              href="/profile/edit"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+            >
+              <span>Edit Profile</span>
+            </Link>
           )}
         </div>
       </div>

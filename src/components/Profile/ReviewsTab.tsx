@@ -209,6 +209,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
               data={restaurant}
               reviews={reviewsAsGraphQL}
               reviewIndex={index >= 0 ? index : 0}
+              viewerSource={{ src: 'user', userId: targetUserId, status }}
               {...props}
             />
           );

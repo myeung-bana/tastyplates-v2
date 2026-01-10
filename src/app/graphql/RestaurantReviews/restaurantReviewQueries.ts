@@ -42,7 +42,7 @@ export const GET_REVIEWS_BY_RESTAURANT = `
         deleted_at: { _is_null: true }
         parent_review_id: { _is_null: true }
       }
-      order_by: [{ is_pinned: desc }, { created_at: desc }]
+      order_by: [{ is_pinned: desc }, { created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
     ) {
@@ -90,7 +90,7 @@ export const GET_USER_REVIEWS = `
         deleted_at: { _is_null: true }
         parent_review_id: { _is_null: true }
       }
-      order_by: { created_at: desc }
+      order_by: [{ created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
     ) {
@@ -122,6 +122,56 @@ export const GET_USER_REVIEWS = `
   }
 `;
 
+// GET REVIEWS BY AUTHORS (for following feed)
+export const GET_REVIEWS_BY_AUTHORS = `
+  query GetReviewsByAuthors(
+    $authorIds: [uuid!]!
+    $limit: Int
+    $offset: Int
+  ) {
+    restaurant_reviews(
+      where: {
+        author_id: { _in: $authorIds }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        author_id: { _in: $authorIds }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 // GET USER'S REVIEWS WITH STATUS FILTER
 export const GET_USER_REVIEWS_BY_STATUS = `
   query GetUserReviewsByStatus(
@@ -137,7 +187,7 @@ export const GET_USER_REVIEWS_BY_STATUS = `
         parent_review_id: { _is_null: true }
         status: { _eq: $status }
       }
-      order_by: { created_at: desc }
+      order_by: [{ created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
     ) {
@@ -184,7 +234,7 @@ export const GET_USER_DRAFT_REVIEWS = `
         parent_review_id: { _is_null: true }
         status: { _eq: "draft" }
       }
-      order_by: { created_at: desc }
+      order_by: [{ created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
     ) {
@@ -398,7 +448,7 @@ export const GET_ALL_REVIEWS = `
         parent_review_id: { _is_null: true }
         status: { _eq: "approved" }
       }
-      order_by: { created_at: desc }
+      order_by: [{ created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
     ) {
