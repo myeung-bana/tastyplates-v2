@@ -402,7 +402,7 @@ export const GET_REVIEW_WITH_LIKE_STATUS = `
 
 // GET REVIEW REPLIES (comments/replies to a review)
 export const GET_REVIEW_REPLIES = `
-  query GetReviewReplies($parentReviewId: uuid!) {
+  query GetReviewReplies($parentReviewId: uuid!, $limit: Int = 50, $offset: Int = 0) {
     restaurant_reviews(
       where: {
         parent_review_id: { _eq: $parentReviewId }
@@ -410,6 +410,8 @@ export const GET_REVIEW_REPLIES = `
         status: { _eq: "approved" }
       }
       order_by: { created_at: asc }
+      limit: $limit
+      offset: $offset
     ) {
       id
       content
@@ -417,6 +419,17 @@ export const GET_REVIEW_REPLIES = `
       created_at
       updated_at
       author_id
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        parent_review_id: { _eq: $parentReviewId }
+        deleted_at: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
     }
   }
 `;

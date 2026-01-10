@@ -87,8 +87,11 @@ export const GET_RESTAURANT_USER_BY_ID = `
 
 // GET USERS BY IDS - Get multiple users by their IDs
 export const GET_RESTAURANT_USERS_BY_IDS = `
-  query GetRestaurantUsersByIds($ids: [uuid!]!) {
-    restaurant_users(where: { id: { _in: $ids }, deleted_at: { _is_null: true } }) {
+  query GetRestaurantUsersByIds($ids: [uuid!]!, $limit: Int = 100) {
+    restaurant_users(
+      where: { id: { _in: $ids }, deleted_at: { _is_null: true } }
+      limit: $limit
+    ) {
       id
       username
       display_name

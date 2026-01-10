@@ -3,6 +3,7 @@ import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_USER_CHECKINS, GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/RestaurantUsers/restaurantUserActionsQueries';
 import { transformRestaurantV2ToRestaurant } from '@/utils/restaurantTransformers';
 import { RestaurantV2 } from '@/app/api/v1/services/restaurantV2Service';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -81,7 +82,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch restaurant data by UUIDs
     const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, {
-      uuids: restaurantUuids
+      uuids: restaurantUuids,
+      limit: GRAPHQL_LIMITS.BATCH_RESTAURANTS_MAX
     });
 
     if (restaurantsResult.errors) {

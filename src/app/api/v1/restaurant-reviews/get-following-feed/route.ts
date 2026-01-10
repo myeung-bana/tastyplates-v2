@@ -6,6 +6,7 @@ import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQu
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,8 +77,8 @@ export async function GET(request: NextRequest) {
           followOffset += ids.length;
           hasMoreFollows = ids.length === FOLLOW_PAGE;
 
-          // Safety: cap to keep query size reasonable
-          if (followingIds.length >= 1000) {
+          // Safety: cap to 100 followed users for feed generation (free tier optimization)
+          if (followingIds.length >= GRAPHQL_LIMITS.BATCH_FOLLOWING_MAX) {
             hasMoreFollows = false;
           }
         }
@@ -91,10 +92,13 @@ export async function GET(request: NextRequest) {
           };
         }
 
+        // Cap following IDs to prevent huge queries on free tier
+        const cappedFollowingIds = followingIds.slice(0, GRAPHQL_LIMITS.BATCH_FOLLOWING_MAX);
+
         // Fetch reviews for followed authors
         const reviewsRes = await hasuraQuery(GET_REVIEWS_BY_AUTHORS, {
-          authorIds: followingIds,
-          limit: Math.min(limit, 100),
+          authorIds: cappedFollowingIds,
+          limit: Math.min(limit, GRAPHQL_LIMITS.API_MAX),
           offset,
         });
 
@@ -112,7 +116,10 @@ export async function GET(request: NextRequest) {
         let restaurantMap = new Map();
         if (restaurantUuids.length > 0) {
           try {
-            const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, { uuids: restaurantUuids });
+            const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, { 
+              uuids: restaurantUuids,
+              limit: GRAPHQL_LIMITS.BATCH_RESTAURANTS_MAX
+            });
             if (!restaurantsResult.errors && restaurantsResult.data?.restaurants) {
               restaurantMap = new Map(
                 restaurantsResult.data.restaurants.map((restaurant: any) => [
@@ -135,7 +142,10 @@ export async function GET(request: NextRequest) {
         let authorMap = new Map();
         if (authorIds.length > 0) {
           try {
-            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, { ids: authorIds });
+            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, { 
+              ids: authorIds,
+              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
+            });
             if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
               const users = authorsResult.data.restaurant_users;
               authorMap = new Map(

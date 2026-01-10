@@ -5,6 +5,7 @@ import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQu
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -58,7 +59,8 @@ export async function GET(request: NextRequest) {
           try {
             const tRestaurants0 = Date.now();
             const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, {
-              uuids: restaurantUuids
+              uuids: restaurantUuids,
+              limit: GRAPHQL_LIMITS.BATCH_RESTAURANTS_MAX
             });
             tHasuraRestaurants = Date.now() - tRestaurants0;
 
@@ -89,7 +91,8 @@ export async function GET(request: NextRequest) {
           try {
             const tAuthors0 = Date.now();
             const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds
+              ids: authorIds,
+              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
             });
             tHasuraAuthors = Date.now() - tAuthors0;
 

@@ -6,6 +6,7 @@ import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -42,9 +43,11 @@ export async function GET(request: NextRequest) {
       cacheKey,
       120, // 120 seconds (2 minutes) TTL - balance between freshness and performance
       async () => {
-        // Fetch replies from Hasura
+        // Fetch replies from Hasura (with pagination support)
         const result = await hasuraQuery(GET_REVIEW_REPLIES, {
-          parentReviewId: parent_review_id
+          parentReviewId: parent_review_id,
+          limit: GRAPHQL_LIMITS.REVIEW_REPLIES,
+          offset: 0
         });
 
         if (result.errors) {
@@ -80,7 +83,8 @@ export async function GET(request: NextRequest) {
         if (authorIds.length > 0) {
           try {
             const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds
+              ids: authorIds,
+              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
             });
 
             if (!authorsResult.errors && authorsResult.data?.restaurant_users) {

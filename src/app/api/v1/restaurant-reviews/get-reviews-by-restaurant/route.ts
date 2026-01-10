@@ -5,6 +5,7 @@ import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQuer
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -88,7 +89,8 @@ export async function GET(request: NextRequest) {
         if (authorIds.length > 0) {
           try {
             const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds
+              ids: authorIds,
+              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
             });
 
             if (!authorsResult.errors && authorsResult.data?.restaurant_users) {

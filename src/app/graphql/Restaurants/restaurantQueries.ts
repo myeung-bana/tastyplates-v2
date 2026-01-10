@@ -133,8 +133,11 @@ export const GET_RESTAURANT_BY_UUID = `
 
 // GET RESTAURANTS BY UUIDs - Batch fetch multiple restaurants (optimized for N+1 prevention)
 export const GET_RESTAURANTS_BY_UUIDS = `
-  query GetRestaurantsByUuids($uuids: [uuid!]!) {
-    restaurants(where: { uuid: { _in: $uuids } }) {
+  query GetRestaurantsByUuids($uuids: [uuid!]!, $limit: Int = 100) {
+    restaurants(
+      where: { uuid: { _in: $uuids } }
+      limit: $limit
+    ) {
       id
       uuid
       title

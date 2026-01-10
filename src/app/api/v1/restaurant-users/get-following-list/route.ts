@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_FOLLOWING_LIST, GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -117,7 +118,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch user details for all user IDs
     const usersResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-      ids: userIds
+      ids: userIds,
+      limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
     });
 
     if (usersResult.errors) {
