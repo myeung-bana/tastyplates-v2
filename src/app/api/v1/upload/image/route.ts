@@ -52,9 +52,14 @@ function generateFileName(originalName: string, extension: string): string {
 }
 
 /**
- * Process image with Sharp (resize, convert to WebP)
+ * Process image with Sharp (resize, convert to AVIF/WebP)
+ * AVIF provides 20-30% better compression than WebP
  */
-async function processImage(buffer: Buffer, mimeType: string): Promise<{ buffer: Buffer; contentType: string; extension: string }> {
+async function processImage(
+  buffer: Buffer, 
+  mimeType: string,
+  preferredFormat: 'webp' | 'avif' = 'avif'
+): Promise<{ buffer: Buffer; contentType: string; extension: string }> {
   const isGif = mimeType === 'image/gif';
   
   // Preserve animated GIFs as-is
@@ -69,16 +74,45 @@ async function processImage(buffer: Buffer, mimeType: string): Promise<{ buffer:
   // Get max dimensions from environment (default: 1600x1600)
   const maxWidth = parseInt(process.env.IMAGE_MAX_WIDTH || '1600', 10);
   const maxHeight = parseInt(process.env.IMAGE_MAX_HEIGHT || '1600', 10);
-  const quality = parseInt(process.env.IMAGE_WEBP_QUALITY || '75', 10);
+  
+  // Try AVIF first (best compression, 20-30% smaller than WebP)
+  if (preferredFormat === 'avif') {
+    try {
+      const avifQuality = parseInt(process.env.IMAGE_AVIF_QUALITY || '60', 10);
+      
+      const processed = await sharp(buffer)
+        .rotate() // Auto-rotate based on EXIF
+        .resize(maxWidth, maxHeight, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .avif({ 
+          quality: avifQuality,
+          effort: 4, // Balance between speed and compression (0-9)
+        })
+        .toBuffer();
+      
+      return {
+        buffer: processed,
+        contentType: 'image/avif',
+        extension: 'avif',
+      };
+    } catch (avifError) {
+      console.warn('AVIF conversion failed, falling back to WebP:', avifError);
+      // Fall through to WebP fallback
+    }
+  }
 
-  // Process image with Sharp
+  // Fallback to WebP (excellent compression, universal support)
+  const webpQuality = parseInt(process.env.IMAGE_WEBP_QUALITY || '75', 10);
+  
   const processed = await sharp(buffer)
-    .rotate() // Auto-rotate based on EXIF
+    .rotate()
     .resize(maxWidth, maxHeight, {
       fit: 'inside',
-      withoutEnlargement: true, // Don't upscale
+      withoutEnlargement: true,
     })
-    .webp({ quality })
+    .webp({ quality: webpQuality })
     .toBuffer();
 
   return {

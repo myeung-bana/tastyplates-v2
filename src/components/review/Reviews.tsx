@@ -16,7 +16,6 @@ const Reviews = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trending');
   const { user } = useFirebaseSession();
   const { showSignin } = useAuthModal();
-  const isDev = process.env.NODE_ENV === 'development';
   
   // Trending reviews state
   const [trendingReviews, setTrendingReviews] = useState<ReviewedDataProps[]>([]);
@@ -69,13 +68,6 @@ const Reviews = () => {
     setLoading(true);
     
     try {
-      if (isDev) {
-        console.log('Reviews - fetchTrendingReviews called:', {
-          limit,
-          currentOffset
-        });
-      }
-      
       // Fetch reviews from new API with abort signal
       const response = await reviewV2Service.getAllReviews({
         limit,
@@ -85,21 +77,10 @@ const Reviews = () => {
       
       // Check if request was aborted after fetch completes
       if (abortController.signal.aborted) {
-        if (isDev) console.log('Reviews - Request was aborted after fetch');
         return;
       }
 
-      if (isDev) {
-        console.log('Reviews - API Response:', {
-          success: response.reviews ? true : false,
-          dataLength: response.reviews?.length,
-          meta: { total: response.total, hasMore: response.hasMore },
-          firstItem: response.reviews?.[0]
-        });
-      }
-
       if (!response.reviews || response.reviews.length === 0) {
-        if (isDev) console.log('Reviews - No reviews returned');
         setHasNextPage(false);
         setLoading(false);
         return;
@@ -136,14 +117,10 @@ const Reviews = () => {
         return reviewV2;
       });
 
-      if (isDev) console.log('Reviews - ReviewV2 items created:', reviewV2Items.length);
-
       // Transform to ReviewedDataProps (same as profile tab)
       const transformedReviews = reviewV2Items.map((reviewV2) => {
         return transformReviewV2ToReviewedDataProps(reviewV2);
       });
-
-      if (isDev) console.log('Reviews - Transformed reviews:', transformedReviews.length);
 
       setTrendingReviews((prev) => {
         if (currentOffset === 0) {
@@ -162,26 +139,15 @@ const Reviews = () => {
       if (isInitialFetch) {
         isInitialFetchRef.current = false;
       }
-      
-      if (isDev) {
-        console.log('Reviews - Final state:', {
-          reviewsCount: transformedReviews.length,
-          total: response.total,
-          offset: currentOffset + transformedReviews.length,
-          hasNextPage: response.hasMore || false
-        });
-      }
     } catch (error) {
       // Ignore abort errors (request was intentionally canceled)
       if (error instanceof Error && error.name === 'AbortError') {
-        if (isDev) console.log('Reviews - Request was aborted');
         // Mark initial fetch as complete if it was aborted
         if (isInitialFetch) {
           isInitialFetchRef.current = false;
         }
         return;
       }
-      console.error('Error loading trending reviews:', error);
       // Only update state if request wasn't aborted
       if (!abortController.signal.aborted) {
         setHasNextPage(false);
@@ -208,7 +174,6 @@ const Reviews = () => {
   useEffect(() => {
     // Only fetch if we're on trending tab and haven't loaded yet
     if (activeTab === 'trending' && !initialLoaded) {
-      console.log('Reviews - Starting initial fetch');
       setTrendingReviews([]);
       setOffset(0);
       setHasNextPage(true);

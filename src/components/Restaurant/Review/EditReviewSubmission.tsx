@@ -12,6 +12,7 @@ import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionS
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useRouter } from "next/navigation";
+import { useUpload } from '@/contexts/UploadContext';
 import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, transformReviewImagesToUrls } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
@@ -23,6 +24,7 @@ import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
+import ContentGuidelinesReminder from "@/components/reviews/ContentGuidelinesReminder";
 
 interface Restaurant {
   id: string;
@@ -44,6 +46,7 @@ const EditReviewSubmissionPage = () => {
   const restaurantSlug = params.slug; // Optional: may not exist in new route
   const reviewId = params.id; // UUID of the review
   const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
+  const { startUpload, updateProgress, completeUpload, resetUpload } = useUpload();
   const hasAttemptedFetch = useRef(false);
   const userDataLoadingTimeout = useRef<NodeJS.Timeout | null>(null);
   const [restaurantName, setRestaurantName] = useState('');
@@ -342,8 +345,22 @@ const EditReviewSubmissionPage = () => {
   };
 
   const uploadAllFiles = async (files: File[]): Promise<string[]> => {
-    const uploadPromises = files.map(file => uploadFileToS3(file));
-    return Promise.all(uploadPromises);
+    startUpload(files.length); // Show progress bar
+    
+    const uploadedUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const url = await uploadFileToS3(files[i]);
+        uploadedUrls.push(url);
+        updateProgress(i + 1, files.length); // Update progress after each upload
+      } catch (error) {
+        resetUpload(); // Hide progress bar on error
+        throw error;
+      }
+    }
+    
+    return uploadedUrls;
   };
 
   const handleRating = (rating: number) => {
@@ -417,12 +434,10 @@ const EditReviewSubmissionPage = () => {
       let s3ImageUrls: string[] = [];
       if (pendingFiles.length > 0) {
         try {
-          toast.loading(`Uploading ${pendingFiles.length} new image(s)...`, { id: 'upload-images' });
           s3ImageUrls = await uploadAllFiles(pendingFiles);
-          toast.success("All new images uploaded successfully!", { id: 'upload-images' });
         } catch (uploadError) {
           const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload images';
-          toast.error(`Failed to upload images: ${errorMessage}`, { id: 'upload-images' });
+          toast.error(`Failed to upload images: ${errorMessage}`);
           setIsLoading(false);
           setIsSavingAsDraft(false);
           return;
@@ -459,8 +474,10 @@ const EditReviewSubmissionPage = () => {
 
         const updatedReview = await reviewV2Service.updateReview(currentReviewId, updateData);
         
+        // Complete upload progress
+        completeUpload();
+        
         if (mode === 'publish') {
-          toast.success('Review updated and submitted successfully!');
           // Redirect to user's profile page (reviews tab)
           if (user?.username) {
             const profileUrl = generateProfileUrl(user.id, user.username);
@@ -478,6 +495,8 @@ const EditReviewSubmissionPage = () => {
           router.push(TASTYSTUDIO_REVIEW_LISTING);
         }
       } catch (apiError: any) {
+        // Reset upload progress on error
+        resetUpload();
         // Handle specific error messages
         const errorMessage = apiError.message || errorOccurred;
         
@@ -551,6 +570,9 @@ const EditReviewSubmissionPage = () => {
               googleMapUrl={googleMapUrl}
             />
             <form className="submitRestaurants__form">
+              {/* Content Guidelines Reminder */}
+              <ContentGuidelinesReminder />
+              
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">How would you rate your experience?</label>
                 <div className="submitRestaurants__input-group">

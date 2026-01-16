@@ -12,6 +12,7 @@ import MobileTopBar from "@/components/layout/MobileTopBar";
 import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { UploadProvider } from '@/contexts/UploadContext';
 import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
 import Script from "next/script";
 
@@ -86,27 +87,29 @@ export default function RootLayout({
             },
           }}
         />
-        <FollowProvider>
-          <LocationProvider>
-            <SessionWrapper>
-              <OAuthCallbackHandler />
-              <OnboardingRedirect />
-              <LanguageProvider>
-                <InactivityLogout />
-                <AuthModalWrapper>
-                  <div className="min-h-screen bg-white flex flex-col">
-                    <MobileTopBar />
-                    <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
-                      {children}
-                    </main>
-                    <ConditionalFooter />
-                    <BottomNav />
-                  </div>
-                </AuthModalWrapper>
-              </LanguageProvider>
-            </SessionWrapper>
-          </LocationProvider>
-        </FollowProvider>
+        <UploadProvider>
+          <FollowProvider>
+            <LocationProvider>
+              <SessionWrapper>
+                <OAuthCallbackHandler />
+                <OnboardingRedirect />
+                <LanguageProvider>
+                  <InactivityLogout />
+                  <AuthModalWrapper>
+                    <div className="min-h-screen bg-white flex flex-col">
+                      <MobileTopBar />
+                      <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
+                        {children}
+                      </main>
+                      <ConditionalFooter />
+                      <BottomNav />
+                    </div>
+                  </AuthModalWrapper>
+                </LanguageProvider>
+              </SessionWrapper>
+            </LocationProvider>
+          </FollowProvider>
+        </UploadProvider>
       </body>
     </html>
   );

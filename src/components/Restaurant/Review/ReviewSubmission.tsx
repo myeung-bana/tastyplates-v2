@@ -17,6 +17,7 @@ import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from '@/hooks/useFirebaseSession'
 import { useRouter } from "next/navigation";
+import { useUpload } from '@/contexts/UploadContext';
 import toast from 'react-hot-toast';
 import { useLocation } from '@/contexts/LocationContext';
 import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
@@ -35,6 +36,7 @@ import { RestaurantPlaceData, formatAddressComponents, fetchPlaceDetails, getPho
 import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
+import ContentGuidelinesReminder from "@/components/reviews/ContentGuidelinesReminder";
 interface Restaurant {
   id: string;
   slug: string;
@@ -59,6 +61,7 @@ const ReviewSubmissionPage = () => {
   const restaurantSlug = params.slug; // Optional - undefined for /add-review route
   const { user, firebaseUser } = useFirebaseSession();
   const { selectedLocation } = useLocation();
+  const { startUpload, updateProgress, completeUpload, resetUpload } = useUpload();
   const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
@@ -235,8 +238,22 @@ const ReviewSubmissionPage = () => {
   };
 
   const uploadAllFiles = async (files: File[]): Promise<string[]> => {
-    const uploadPromises = files.map(file => uploadFileToS3(file));
-    return Promise.all(uploadPromises);
+    startUpload(files.length); // Show progress bar
+    
+    const uploadedUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const url = await uploadFileToS3(files[i]);
+        uploadedUrls.push(url);
+        updateProgress(i + 1, files.length); // Update progress after each upload
+      } catch (error) {
+        resetUpload(); // Hide progress bar on error
+        throw error;
+      }
+    }
+    
+    return uploadedUrls;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,12 +445,10 @@ const ReviewSubmissionPage = () => {
       let s3ImageUrls: string[] = [];
       if (pendingFiles.length > 0) {
         try {
-          toast.loading(`Uploading ${pendingFiles.length} image(s)...`, { id: 'upload-images' });
           s3ImageUrls = await uploadAllFiles(pendingFiles);
-          toast.success("All images uploaded successfully!", { id: 'upload-images' });
         } catch (uploadError) {
           const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload images';
-          toast.error(`Failed to upload images: ${errorMessage}`, { id: 'upload-images' });
+          toast.error(`Failed to upload images: ${errorMessage}`);
           setIsLoading(false);
           setIsSavingAsDraft(false);
           return;
@@ -477,6 +492,9 @@ const ReviewSubmissionPage = () => {
 
         const createdReview = await reviewV2Service.createReview(reviewData);
 
+        // Complete upload progress
+        completeUpload();
+
         if (mode === 'publish') {
           // Redirect to success page with restaurant name
           router.push(`/tastystudio/add-review/success?restaurant=${encodeURIComponent(restaurantName)}`);
@@ -485,6 +503,9 @@ const ReviewSubmissionPage = () => {
           router.push(LISTING);
         }
       } catch (apiError: any) {
+        // Reset upload progress on error
+        resetUpload();
+        
         // Handle specific error messages
         const errorMessage = apiError.message || errorOccurred;
         
@@ -739,6 +760,9 @@ const ReviewSubmissionPage = () => {
           {/* Only show form if restaurant is selected */}
           {(restaurantSlug || isRestaurantSelected) && (
           <form className="submitRestaurants__form">
+              {/* Content Guidelines Reminder */}
+              <ContentGuidelinesReminder />
+              
               <div className="submitRestaurants__form-group">
                 <label className="submitRestaurants__label">How would you rate your experience?</label>
                 <div className="submitRestaurants__input-group">

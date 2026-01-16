@@ -14,6 +14,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFirebaseSession } from '@/hooks/useFirebaseSession'
+import { useUpload } from '@/contexts/UploadContext';
 import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
 import { commentDuplicateError, commentDuplicateWeekError, commentFloodError, errorOccurred, maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, requiredDescription, requiredRating, savedAsDraft } from "@/constants/messages";
@@ -24,6 +25,7 @@ import { GoogleMapUrl } from "@/utils/addressUtils";
 import RestaurantReviewHeader from "./RestaurantReviewHeader";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
+import ContentGuidelinesReminder from "@/components/reviews/ContentGuidelinesReminder";
 
 interface Restaurant {
   id: string;
@@ -48,6 +50,7 @@ const ReviewSubmissionCreatePage = () => {
   const router = useRouter();
   const restaurantSlug = searchParams?.get('slug') || undefined; // Get from query parameter
   const { user, firebaseUser } = useFirebaseSession();
+  const { startUpload, updateProgress, completeUpload, resetUpload } = useUpload();
   const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
@@ -125,8 +128,22 @@ const ReviewSubmissionCreatePage = () => {
   };
 
   const uploadAllFiles = async (files: File[]): Promise<string[]> => {
-    const uploadPromises = files.map(file => uploadFileToS3(file));
-    return Promise.all(uploadPromises);
+    startUpload(files.length); // Show progress bar
+    
+    const uploadedUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const url = await uploadFileToS3(files[i]);
+        uploadedUrls.push(url);
+        updateProgress(i + 1, files.length); // Update progress after each upload
+      } catch (error) {
+        resetUpload(); // Hide progress bar on error
+        throw error;
+      }
+    }
+    
+    return uploadedUrls;
   };
 
   useEffect(() => {
@@ -350,12 +367,10 @@ const ReviewSubmissionCreatePage = () => {
       let s3ImageUrls: string[] = [];
       if (pendingFiles.length > 0) {
         try {
-          toast.loading(`Uploading ${pendingFiles.length} image(s)...`, { id: 'upload-images' });
           s3ImageUrls = await uploadAllFiles(pendingFiles);
-          toast.success("All new images uploaded successfully!", { id: 'upload-images' });
         } catch (uploadError) {
           const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload images';
-          toast.error(`Failed to upload images: ${errorMessage}`, { id: 'upload-images' });
+          toast.error(`Failed to upload images: ${errorMessage}`);
           setIsLoading(false);
           setIsSavingAsDraft(false);
           return;
@@ -390,14 +405,19 @@ const ReviewSubmissionCreatePage = () => {
 
         const createdReview = await reviewV2Service.createReview(reviewData);
 
+        // Complete upload progress
+        completeUpload();
+
         if (mode === 'publish') {
           setIsSubmitted(true);
-          toast.success('Review submitted successfully!');
         } else if (mode === 'draft') {
           toast.success(savedAsDraft);
           router.push(TASTYSTUDIO_REVIEW_LISTING);
         }
       } catch (apiError: any) {
+        // Reset upload progress on error
+        resetUpload();
+        
         // Handle specific error messages
         const errorMessage = apiError.message || errorOccurred;
         
@@ -430,6 +450,7 @@ const ReviewSubmissionCreatePage = () => {
       setUploadedImageError('');
     } catch (error) {
       console.error('Failed to submit review:', error);
+      resetUpload(); // Reset upload progress on any error
     }
     setIsLoading(false);
   };
@@ -474,6 +495,9 @@ const ReviewSubmissionCreatePage = () => {
             {/* Show form */}
             {restaurantSlug && (
               <form className="submitRestaurants__form">
+                {/* Content Guidelines Reminder */}
+                <ContentGuidelinesReminder />
+                
                 <div className="submitRestaurants__form-group">
                   <label className="submitRestaurants__label">How would you rate your experience?</label>
                   <div className="submitRestaurants__input-group">
