@@ -8,7 +8,7 @@ import {
   FiUser,
   FiPlusSquare
 } from "react-icons/fi";
-import { HOME, RESTAURANTS, PROFILE, LISTING_STEP_ONE } from "@/constants/pages";
+import { HOME, RESTAURANTS, PROFILE, TASTYSTUDIO_ADD_REVIEW } from "@/constants/pages";
 import { useAuthModal } from "../auth/AuthModalWrapper";
 import { useProfileData } from "@/hooks/useProfileData";
 import { DEFAULT_USER_ICON } from "@/constants/images";
@@ -115,10 +115,10 @@ const BottomNav: React.FC = () => {
       activePaths: [RESTAURANTS, "/restaurants/"],
     },
     {
-      name: "Add Listing",
-      href: LISTING_STEP_ONE,
+      name: "Add Review",
+      href: TASTYSTUDIO_ADD_REVIEW,
       icon: FiPlusSquare,
-      activePaths: [LISTING_STEP_ONE, "/listing/"],
+      activePaths: [TASTYSTUDIO_ADD_REVIEW, "/tastystudio/add-review"],
       requiresAuth: true,
       isCenter: true,
     },
