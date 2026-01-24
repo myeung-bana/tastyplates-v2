@@ -165,8 +165,12 @@ export default function Navbar(props: Record<string, unknown>) {
     const googleErrorType = Cookies.get('googleErrorType');
     if (googleErrorType == 'signup') {
       setIsOpenSignup(true);
+      // Clean up the cookie after using it
+      Cookies.remove('googleErrorType');
     } else if (googleErrorType == 'login') {
       setIsOpenSignin(true);
+      // Clean up the cookie after using it
+      Cookies.remove('googleErrorType');
     }
 
   }, [router]);
