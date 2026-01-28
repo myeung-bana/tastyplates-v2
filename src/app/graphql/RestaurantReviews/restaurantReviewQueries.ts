@@ -496,3 +496,171 @@ export const GET_ALL_REVIEWS = `
   }
 `;
 
+// GET ALL REVIEWS WITH CURSOR PAGINATION (New - Phase 2)
+export const GET_ALL_REVIEWS_CURSOR = `
+  query GetAllReviewsCursor(
+    $limit: Int!
+    $cursorTimestamp: timestamptz
+    $cursorId: uuid
+  ) {
+    restaurant_reviews(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+        _or: [
+          { created_at: { _lt: $cursorTimestamp } }
+          {
+            _and: [
+              { created_at: { _eq: $cursorTimestamp } }
+              { id: { _lt: $cursorId } }
+            ]
+          }
+        ]
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// GET REVIEWS BY AUTHORS WITH CURSOR (for following feed)
+export const GET_REVIEWS_BY_AUTHORS_CURSOR = `
+  query GetReviewsByAuthorsCursor(
+    $authorIds: [uuid!]!
+    $limit: Int!
+    $cursorTimestamp: timestamptz
+    $cursorId: uuid
+  ) {
+    restaurant_reviews(
+      where: {
+        author_id: { _in: $authorIds }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+        _or: [
+          { created_at: { _lt: $cursorTimestamp } }
+          {
+            _and: [
+              { created_at: { _eq: $cursorTimestamp } }
+              { id: { _lt: $cursorId } }
+            ]
+          }
+        ]
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        author_id: { _in: $authorIds }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// GET USER REVIEWS WITH CURSOR
+export const GET_USER_REVIEWS_CURSOR = `
+  query GetUserReviewsCursor(
+    $authorId: uuid!
+    $limit: Int!
+    $cursorTimestamp: timestamptz
+    $cursorId: uuid
+  ) {
+    restaurant_reviews(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        _or: [
+          { created_at: { _lt: $cursorTimestamp } }
+          {
+            _and: [
+              { created_at: { _eq: $cursorTimestamp } }
+              { id: { _lt: $cursorId } }
+            ]
+          }
+        ]
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      likes_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+    restaurant_reviews_aggregate(
+      where: {
+        author_id: { _eq: $authorId }
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;

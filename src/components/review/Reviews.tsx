@@ -9,6 +9,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
+import { useIsMobile } from "@/utils/deviceUtils";
+import SwipeableReviewViewer from "./SwipeableReviewViewer";
+import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
+import { GraphQLReview } from "@/types/graphql";
 
 type TabType = 'trending' | 'foryou';
 
@@ -16,18 +20,23 @@ const Reviews = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trending');
   const { user } = useFirebaseSession();
   const { showSignin } = useAuthModal();
+  const isMobile = useIsMobile();
   
   // Trending reviews state
   const [trendingReviews, setTrendingReviews] = useState<ReviewedDataProps[]>([]);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const LIMIT = 4; // Initial load (small for faster first paint)
-  const LOAD_MORE_LIMIT = 4; // Subsequent loads
+  const [cursor, setCursor] = useState<string | null>(null); // Phase 2: Cursor pagination
+  const LIMIT = 8;
+  const LOAD_MORE_LIMIT = 16;
   const observerRef = useRef<HTMLDivElement | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isInitialFetchRef = useRef(false);
+  
+  // Full-screen viewer state
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   // For You reviews (using the hook)
   const {
@@ -46,12 +55,12 @@ const Reviews = () => {
 
   const fetchTrendingReviews = useCallback(async (
     limit = LIMIT,
-    currentOffset = 0
+    currentCursor: string | null = null
   ) => {
     if (loading || !hasNextPage) return;
     
     // Cancel previous request if it exists (only for pagination, not initial load)
-    if (abortControllerRef.current && currentOffset > 0) {
+    if (abortControllerRef.current && currentCursor !== null) {
       abortControllerRef.current.abort();
     }
     
@@ -60,7 +69,7 @@ const Reviews = () => {
     abortControllerRef.current = abortController;
     
     // Track if this is the initial fetch
-    const isInitialFetch = currentOffset === 0;
+    const isInitialFetch = currentCursor === null;
     if (isInitialFetch) {
       isInitialFetchRef.current = true;
     }
@@ -68,10 +77,10 @@ const Reviews = () => {
     setLoading(true);
     
     try {
-      // Fetch reviews from new API with abort signal
+      // Fetch reviews with cursor pagination (Phase 2 - Fast!)
       const response = await reviewV2Service.getAllReviews({
         limit,
-        offset: currentOffset,
+        cursor: currentCursor || undefined,
         signal: abortController.signal
       });
       
@@ -123,7 +132,7 @@ const Reviews = () => {
       });
 
       setTrendingReviews((prev) => {
-        if (currentOffset === 0) {
+        if (isInitialFetch) {
           return transformedReviews;
         }
         const all = [...prev, ...transformedReviews];
@@ -132,7 +141,8 @@ const Reviews = () => {
         return Array.from(uniqueMap.values());
       });
 
-      setOffset(currentOffset + transformedReviews.length);
+      // Phase 2: Store cursor for next page
+      setCursor(response.cursor || null);
       setHasNextPage(response.hasMore || false);
       
       // Mark initial fetch as complete
@@ -167,21 +177,21 @@ const Reviews = () => {
 
   const loadMoreTrending = useCallback(async () => {
     if (loading || !hasNextPage) return;
-    await fetchTrendingReviews(LOAD_MORE_LIMIT, offset);
-  }, [loading, hasNextPage, offset, fetchTrendingReviews]);
+    await fetchTrendingReviews(LOAD_MORE_LIMIT, cursor);
+  }, [loading, hasNextPage, cursor, fetchTrendingReviews]);
 
   // Load trending reviews on mount or when switching to trending tab
   useEffect(() => {
     // Only fetch if we're on trending tab and haven't loaded yet
     if (activeTab === 'trending' && !initialLoaded) {
       setTrendingReviews([]);
-      setOffset(0);
+      setCursor(null); // Phase 2: Reset cursor
       setHasNextPage(true);
       setInitialLoaded(true);
       
       // Fetch reviews - don't await, let it run
       // The initial fetch will not be aborted by cleanup
-      fetchTrendingReviews(LIMIT, 0);
+      fetchTrendingReviews(LIMIT, null); // Phase 2: Pass null cursor for first page
     }
     
     // No cleanup here - we don't want to abort the initial fetch
@@ -203,51 +213,34 @@ const Reviews = () => {
     }
   }, [activeTab]);
 
-  // Setup Intersection Observer for trending
+  // Infinite scroll with IntersectionObserver
   useEffect(() => {
-    if (activeTab !== 'trending' || !initialLoaded) return;
+    if (!observerRef.current || currentInitialLoading) return;
+    
     const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting && hasNextPage && !loading) {
+      (entries) => {
+        if (entries[0].isIntersecting && currentHasMore && !currentLoading) {
+          if (activeTab === 'trending') {
           loadMoreTrending();
+          } else if (activeTab === 'foryou' && user) {
+            loadMoreForYou();
+          }
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.1, rootMargin: '200px' }
     );
-
-    const current = observerRef.current;
-    if (current) observer.observe(current);
-
-    return () => {
-      if (current) observer.unobserve(current);
-    };
-  }, [hasNextPage, loading, initialLoaded, loadMoreTrending, activeTab]);
-
-  // Setup Intersection Observer for For You
-  useEffect(() => {
-    if (activeTab !== 'foryou' || !user) return;
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0]?.isIntersecting && forYouHasMore && !forYouLoading && !forYouInitialLoading) {
-          loadMoreForYou();
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    const current = observerRef.current;
-    if (current) observer.observe(current);
-
-    return () => {
-      if (current) observer.unobserve(current);
-    };
-  }, [forYouHasMore, forYouLoading, forYouInitialLoading, loadMoreForYou, activeTab, user]);
+    
+    observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [activeTab, currentHasMore, currentLoading, currentInitialLoading, loadMoreTrending, loadMoreForYou, user]);
 
   const handleTabClick = (tab: TabType) => {
     if (tab === 'foryou' && !user) {
       showSignin();
       return;
     }
+    // Close viewer when switching tabs
+    setViewerOpen(false);
     setActiveTab(tab);
   };
 
@@ -255,38 +248,36 @@ const Reviews = () => {
     return (
       <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
         <div className="reviews__container xl:!px-0">
-          {/* Tabs - Centered */}
-          <div className="flex justify-center gap-1 mb-6 border-b border-gray-200">
+          {/* Tabs - Segmented control style (matches main view) */}
+          <div className="border-b border-gray-200 mb-4">
+            <div className="flex justify-center py-2">
+              <div className="inline-flex rounded-full bg-gray-100 p-1">
             <button
               onClick={() => handleTabClick('trending')}
-              className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                  className={`px-4 py-2 text-sm md:text-base font-neusans font-normal transition-colors rounded-full ${
                 activeTab === 'trending'
-                  ? 'text-[#ff7c0a]'
+                      ? 'bg-white text-[#ff7c0a] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Trending
-              {activeTab === 'trending' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
-              )}
             </button>
             <button
               onClick={() => handleTabClick('foryou')}
-              className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                  className={`px-4 py-2 text-sm md:text-base font-neusans font-normal transition-colors rounded-full ${
                 activeTab === 'foryou'
-                  ? 'text-[#ff7c0a]'
+                      ? 'bg-white text-[#ff7c0a] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               For You
-              {activeTab === 'foryou' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
-              )}
             </button>
+              </div>
+            </div>
           </div>
           
           {/* Skeleton loading */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             {Array.from({ length: 4 }, (_, i) => (
               <ReviewCardSkeleton key={`skeleton-${i}`} />
             ))}
@@ -299,91 +290,115 @@ const Reviews = () => {
   return (
     <section className="!w-full reviews !bg-white z-30 rounded-t-3xl sm:rounded-t-[40px]">
       <div className="reviews__container xl:!px-0">
-        {/* Tabs - Centered */}
-        <div className="flex justify-center gap-1 mb-6 border-b border-gray-200">
+        {/* Tabs - Sticky segmented control (feels more like an app feed) */}
+        <div className="sticky top-[60px] z-40 -mx-4 px-4 bg-white/95 backdrop-blur border-b border-gray-200">
+          <div className="flex justify-center py-2">
+            <div className="inline-flex rounded-full bg-gray-100 p-1">
           <button
             onClick={() => handleTabClick('trending')}
-            className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                className={`px-4 py-2 text-sm md:text-base font-neusans font-normal transition-colors rounded-full ${
               activeTab === 'trending'
-                ? 'text-[#ff7c0a]'
+                    ? 'bg-white text-[#ff7c0a] shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             Trending
-            {activeTab === 'trending' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
-            )}
           </button>
           <button
             onClick={() => handleTabClick('foryou')}
-            className={`px-4 py-2 text-base md:text-lg font-neusans font-normal transition-colors relative ${
+                className={`px-4 py-2 text-sm md:text-base font-neusans font-normal transition-colors rounded-full ${
               activeTab === 'foryou'
-                ? 'text-[#ff7c0a]'
+                    ? 'bg-white text-[#ff7c0a] shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             For You
-            {activeTab === 'foryou' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7c0a]" />
-            )}
           </button>
+            </div>
+          </div>
         </div>
 
-        {/* Reviews Grid */}
+        {/* Simple Reviews Grid - Infinite Scroll */}
         {currentReviews.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-              {currentReviews.map((review, index) => (
-                <ReviewCard2 
-                  key={review.id}
-                  data={review}
-                  reviews={currentReviews}
-                  reviewIndex={index}
-                  viewerSource={activeTab === 'trending' ? { src: 'global' } : { src: 'following' }}
-                />
-              ))}
-            </div>
-            
-            {/* Loading more content with skeletons */}
-            {currentLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                {Array.from({ length: 4 }, (_, i) => (
-                  <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
+            <div className="mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {currentReviews.map((review, index) => (
+                  <ReviewCard2 
+                    key={review.id}
+                    data={review}
+                    reviews={currentReviews}
+                    reviewIndex={index}
+                    viewerSource={activeTab === 'trending' ? { src: 'global' } : { src: 'following' }}
+                    onOpenViewer={(idx) => {
+                      setViewerIndex(idx);
+                      setViewerOpen(true);
+                    }}
+                  />
                 ))}
               </div>
-            )}
-            
-            <div ref={observerRef} className="flex justify-center text-center mt-6 min-h-[40px]">
-              {!currentHasMore && !currentLoading && activeTab === 'trending' && (
-                <p className="text-gray-400 text-sm">No more reviews to load.</p>
+              
+              {/* Infinite scroll trigger */}
+              <div ref={observerRef} className="h-4" />
+              
+              {/* Loading indicator at bottom */}
+              {currentLoading && (
+                <div className="py-6 flex justify-center">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
+                    ))}
+                  </div>
+                </div>
               )}
-              {!currentHasMore && !currentLoading && activeTab === 'foryou' && (
-                <p className="text-gray-400 text-sm">No more reviews to load.</p>
+              
+              {/* End message */}
+              {!currentHasMore && !currentLoading && (
+                <div className="flex justify-center text-center py-6">
+                  <p className="text-gray-400 text-sm">No more reviews to load.</p>
+                </div>
               )}
             </div>
           </>
         ) : currentLoading || currentInitialLoading ? (
           /* Show skeletons when loading and no reviews yet */
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-            {Array.from({ length: 4 }, (_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            {Array.from({ length: 8 }, (_, i) => (
               <ReviewCardSkeleton key={`empty-loading-skeleton-${i}`} />
             ))}
           </div>
         ) : activeTab === 'trending' ? (
           /* Empty state for Trending tab */
-          <div className="text-center py-12 mt-10">
+          <div className="text-center py-12 mt-4">
             <p className="text-gray-500 font-neusans">
               No reviews found. Be the first to share your dining experience!
             </p>
           </div>
         ) : activeTab === 'foryou' && user ? (
           /* Empty state for For You tab */
-          <div className="text-center py-12 mt-10">
+          <div className="text-center py-12 mt-4">
             <p className="text-gray-500 font-neusans">
               No reviews yet from people you follow. Start following food lovers to see their reviews here!
             </p>
           </div>
         ) : null}
+
+        {/* Full-screen viewer (rendered via portal to document.body) */}
+        {isMobile ? (
+          <SwipeableReviewViewer
+            reviews={currentReviews as unknown as GraphQLReview[]}
+            initialIndex={viewerIndex}
+            isOpen={viewerOpen}
+            onClose={() => setViewerOpen(false)}
+          />
+        ) : (
+          <SwipeableReviewViewerDesktop
+            reviews={currentReviews as unknown as GraphQLReview[]}
+            initialIndex={viewerIndex}
+            isOpen={viewerOpen}
+            onClose={() => setViewerOpen(false)}
+          />
+        )}
       </div>
     </section>
   );

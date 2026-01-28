@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useWheel } from "@use-gesture/react";
 import { useSpring, animated } from "@react-spring/web";
 import { GraphQLReview } from "@/types/graphql";
@@ -916,7 +917,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     displayText
   } = currentReviewData;
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  const content = (
     <div className="swipeable-review-viewer-desktop" onClick={onClose}>
       <div
         className="swipeable-review-viewer-desktop__content"
@@ -1235,6 +1238,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       />
     </div>
   );
+
+  // Render into document.body to avoid being constrained by transformed/virtualized ancestors
+  return createPortal(content, document.body);
 };
 
 export default SwipeableReviewViewerDesktop;

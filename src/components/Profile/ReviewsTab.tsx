@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReviewCard2 from '../review/ReviewCard2';
 import ReviewCardSkeleton2 from '../ui/Skeleton/ReviewCardSkeleton2';
-import TabContentGrid from '../ui/TabContentGrid/TabContentGrid';
+import VirtualizedTabContentGrid from '../ui/TabContentGrid/VirtualizedTabContentGrid';
 import { ReviewedDataProps } from '@/interfaces/Reviews/review';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { transformReviewV2ToReviewedDataProps } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { GraphQLReview } from '@/types/graphql';
 
 interface ReviewsTabProps {
@@ -157,17 +156,11 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
     }
   }, [onReviewCountChange]);
 
-  // Infinite scroll handler
+  // Load more handler for virtualized grid
   const loadMore = useCallback(async () => {
     if (reviewsLoading || !hasNextPage || !targetUserId) return;
     await fetchReviews(LOAD_MORE_LIMIT, offset, targetUserId);
   }, [reviewsLoading, hasNextPage, offset, targetUserId, fetchReviews]);
-
-  const { observerRef } = useInfiniteScroll({
-    loadMore,
-    hasNextPage,
-    loading: reviewsLoading
-  });
 
   useEffect(() => {
     // Debug: Log targetUserId
@@ -198,30 +191,31 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   const reviewsAsGraphQL = reviews.map(r => r as unknown as GraphQLReview);
 
   return (
-    <>
-      <TabContentGrid
-        items={reviews}
-        loading={reviewsLoading}
-        ItemComponent={({ restaurant, ...props }: { restaurant: ReviewedDataProps; [key: string]: any }) => {
-          const index = reviews.findIndex(r => r.id === restaurant.id);
-          return (
-            <ReviewCard2 
-              data={restaurant}
-              reviews={reviewsAsGraphQL}
-              reviewIndex={index >= 0 ? index : 0}
-              viewerSource={{ src: 'user', userId: targetUserId, status }}
-              {...props}
-            />
-          );
-        }}
-        SkeletonComponent={ReviewCardSkeleton2}
-        emptyHeading="No Reviews Found"
-        emptyMessage="No reviews have been made yet."
-        skeletonKeyPrefix="review-skeleton"
-        gridClassName="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-      />
-      <div ref={observerRef} className="h-10" />
-    </>
+    <VirtualizedTabContentGrid
+      items={reviews}
+      loading={reviewsLoading}
+      ItemComponent={({ restaurant, ...props }: { restaurant: ReviewedDataProps; [key: string]: any }) => {
+        const index = reviews.findIndex(r => r.id === restaurant.id);
+        return (
+          <ReviewCard2 
+            data={restaurant}
+            reviews={reviewsAsGraphQL}
+            reviewIndex={index >= 0 ? index : 0}
+            viewerSource={{ src: 'user', userId: targetUserId, status }}
+            {...props}
+          />
+        );
+      }}
+      SkeletonComponent={ReviewCardSkeleton2}
+      emptyHeading="No Reviews Found"
+      emptyMessage="No reviews have been made yet."
+      skeletonKeyPrefix="review-skeleton"
+      gridClassName="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+      columns={{ mobile: 2, tablet: 3, desktop: 4 }}
+      estimatedRowHeight={450}
+      onLoadMore={loadMore}
+      hasMore={hasNextPage}
+    />
   );
 };
 

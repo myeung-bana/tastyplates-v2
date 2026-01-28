@@ -93,7 +93,8 @@ export interface ReviewsResponse {
   reviews: ReviewV2[];
   total: number;
   limit: number;
-  offset: number;
+  offset?: number; // Optional for backward compatibility
+  cursor?: string | null; // Cursor for cursor-based pagination
   hasMore?: boolean;
 }
 
@@ -153,11 +154,17 @@ class ReviewV2Service {
   }
 
   async getAllReviews(
-    options?: { limit?: number; offset?: number; signal?: AbortSignal }
+    options?: { limit?: number; offset?: number; cursor?: string; signal?: AbortSignal }
   ): Promise<ReviewsResponse> {
     const params = new URLSearchParams();
     if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.offset) params.append('offset', options.offset.toString());
+    
+    // Prefer cursor over offset (Phase 2 optimization)
+    if (options?.cursor) {
+      params.append('cursor', options.cursor);
+    } else if (options?.offset !== undefined) {
+      params.append('offset', options.offset.toString());
+    }
 
     const response = await fetch(`${this.baseUrl}/get-all-reviews?${params}`, {
       signal: options?.signal // Add abort signal support
@@ -177,7 +184,8 @@ class ReviewV2Service {
       reviews: result.data || [],
       total: result.meta?.total || 0,
       limit: result.meta?.limit || 0,
-      offset: result.meta?.offset || 0,
+      offset: result.meta?.offset,
+      cursor: result.meta?.cursor,
       hasMore: result.meta?.hasMore || false
     };
   }

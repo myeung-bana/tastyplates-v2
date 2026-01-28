@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_ALL_REVIEWS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_ALL_REVIEWS, GET_ALL_REVIEWS_CURSOR } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQueries';
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
@@ -9,21 +9,39 @@ import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// Helper to parse cursor (format: "2024-01-15T10:30:00Z_uuid123")
+function parseCursor(cursor: string | null): { timestamp: string; id: string } | null {
+  if (!cursor) return null;
+  const parts = cursor.split('_');
+  if (parts.length !== 2) return null;
+  return { timestamp: parts[0], id: parts[1] };
+}
+
+// Helper to encode cursor from review
+function encodeCursor(review: any): string {
+  return `${review.created_at}_${review.id}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const t0 = Date.now();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '16');
+    
+    // Support both cursor and offset pagination (backwards compatible)
+    const cursor = searchParams.get('cursor');
     const offset = parseInt(searchParams.get('offset') || '0');
-    // Note: userId parameter removed - like status checking can be added later if needed
+    const useCursor = !!cursor; // Use cursor pagination if cursor param exists
 
     // Get version for all reviews
     const tVersion0 = Date.now();
     const version = await getVersion('v:reviews:all');
     const tVersion = Date.now() - tVersion0;
     
-    // Cache key with version
-    const cacheKey = `reviews:all:v${version}:limit=${limit}:offset=${offset}`;
+    // Cache key with version (different keys for cursor vs offset)
+    const cacheKey = useCursor 
+      ? `reviews:all:v${version}:limit=${limit}:cursor=${cursor}`
+      : `reviews:all:v${version}:limit=${limit}:offset=${offset}`;
     
     let tHasuraReviews = 0;
     let tHasuraRestaurants = 0;
@@ -35,10 +53,23 @@ export async function GET(request: NextRequest) {
       300, // 300 seconds (5 minutes) TTL for better performance
       async () => {
         const tReviews0 = Date.now();
-        const result = await hasuraQuery(GET_ALL_REVIEWS, {
-          limit: Math.min(limit, 100), // Cap at 100
-          offset
-        });
+        
+        let result;
+        if (useCursor) {
+          // Cursor-based pagination (Phase 2 - Fast!)
+          const parsedCursor = parseCursor(cursor);
+          result = await hasuraQuery(GET_ALL_REVIEWS_CURSOR, {
+            limit: Math.min(limit + 1, 101), // Fetch limit+1 to check if more exist
+            cursorTimestamp: parsedCursor?.timestamp || null,
+            cursorId: parsedCursor?.id || null
+          });
+        } else {
+          // Offset-based pagination (Legacy - slower for deep pagination)
+          result = await hasuraQuery(GET_ALL_REVIEWS, {
+            limit: Math.min(limit, 100), // Cap at 100
+            offset
+          });
+        }
         tHasuraReviews = Date.now() - tReviews0;
 
         if (result.errors) {
@@ -48,6 +79,22 @@ export async function GET(request: NextRequest) {
 
         let reviews = result.data?.restaurant_reviews || [];
         const total = result.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
+
+        // For cursor pagination, check if we have more results
+        let hasMore = false;
+        let nextCursor = null;
+        if (useCursor && reviews.length > limit) {
+          hasMore = true;
+          reviews = reviews.slice(0, limit); // Remove the extra item we fetched
+          const lastReview = reviews[reviews.length - 1];
+          nextCursor = encodeCursor(lastReview);
+        } else if (useCursor) {
+          hasMore = reviews.length === limit; // If we got exactly limit, there might be more
+          if (reviews.length > 0) {
+            const lastReview = reviews[reviews.length - 1];
+            nextCursor = encodeCursor(lastReview);
+          }
+        }
 
         // Get unique restaurant UUIDs and author IDs
         const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
@@ -125,16 +172,30 @@ export async function GET(request: NextRequest) {
           restaurant: restaurantMap.get(review.restaurant_uuid) || null
         }));
 
-        return {
-          success: true,
-          data: reviews,
-          meta: {
-            total,
-            limit,
-            offset,
-            hasMore: (offset + limit) < total
-          }
-        };
+        // Return response with cursor or offset metadata
+        if (useCursor) {
+          return {
+            success: true,
+            data: reviews,
+            meta: {
+              total,
+              limit,
+              cursor: nextCursor,
+              hasMore
+            }
+          };
+        } else {
+          return {
+            success: true,
+            data: reviews,
+            meta: {
+              total,
+              limit,
+              offset,
+              hasMore: (offset + limit) < total
+            }
+          };
+        }
       }
     );
     const tCache = Date.now() - tCache0;
@@ -143,6 +204,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
+        'X-Pagination-Type': useCursor ? 'cursor' : 'offset', // Track pagination type
         ...(isDev ? { 'X-Cache-Key': cacheKey } : {}),
         'Server-Timing': [
           `version;dur=${tVersion}`,

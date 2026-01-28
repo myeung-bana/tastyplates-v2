@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
@@ -533,8 +534,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   }, [isOpen]);
 
   if (!isOpen || reviews.length === 0) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  const content = (
     <>
       <div className="swipeable-review-viewer" ref={scrollContainerRef}>
         {/* Close Button */}
@@ -856,6 +858,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       )}
     </>
   );
+
+  // Render into document.body to avoid being constrained by transformed/virtualized ancestors
+  return createPortal(content, document.body);
 };
 
 export default SwipeableReviewViewer;

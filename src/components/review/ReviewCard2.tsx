@@ -1,7 +1,5 @@
 // ReviewCard2.tsx - Optimized for Grid Layout
 import Image from "next/image";
-import SwipeableReviewViewer from "./SwipeableReviewViewer";
-import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
 import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
 import { ReviewCardProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
@@ -28,23 +26,27 @@ interface ReviewCard2Props extends Omit<ReviewCardProps, 'width' | 'index'> {
   reviewIndex?: number;
   viewerSource?: ReviewViewerSource;
   viewerReturnTo?: string;
+  onOpenViewer?: (index: number) => void;
 }
 
-const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo }: ReviewCard2Props) => {
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo, onOpenViewer }: ReviewCard2Props) => {
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const router = useRouter();
 
   const { user } = useFirebaseSession();
 
-  // Create reviews array if not provided (fallback to single review)
-  const reviewsArray = reviews && reviews.length > 0 ? reviews : [data as unknown as GraphQLReview];
   const currentIndex = typeof reviewIndex === 'number' ? reviewIndex : 0;
 
   const handleCardClick = () => {
-    // Mobile: route to the shareable viewer if source context is provided
-    if (isMobile && viewerSource) {
+    // Preferred: delegate to parent's shared viewer
+    if (onOpenViewer) {
+      onOpenViewer(currentIndex);
+      return;
+    }
+
+    // Fallback: route to shareable viewer URL (for mobile or when no parent viewer)
+    if (viewerSource) {
       router.push(
         buildReviewViewerUrl({
           ...(viewerSource as any),
@@ -54,30 +56,10 @@ const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo 
       );
       return;
     }
-
-    // Fallback: existing modal viewer
-    setIsModalOpen(true);
   };
 
   return (
     <div className="overflow-hidden font-neusans">
-      {/* Mobile: SwipeableReviewViewer, Desktop: SwipeableReviewViewerDesktop */}
-      {isMobile ? (
-        <SwipeableReviewViewer
-          reviews={reviewsArray}
-          initialIndex={currentIndex}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
-      ) : (
-        <SwipeableReviewViewerDesktop
-          reviews={reviewsArray}
-          initialIndex={currentIndex}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
-      )}
-      
       {/* Auth modals */}
       {showAuthModal === "signup" && (
         <SignupModal
