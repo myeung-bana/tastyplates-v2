@@ -11,8 +11,8 @@ export class RestaurantRepository implements RestaurantRepo {
         try {
             const response = await restaurantV2Service.getRestaurantBySlug(slug);
             
-            if (!response.success || !response.data) {
-                console.error('Failed to fetch restaurant by slug:', response.error);
+            if (!response || !response.data) {
+                console.error('Failed to fetch restaurant by slug: No data returned');
                 return null;
             }
 

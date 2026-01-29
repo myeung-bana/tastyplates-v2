@@ -1,6 +1,6 @@
 import React from "react";
 import { MdOutlineMessage } from "react-icons/md";
-import { FiHeart } from "react-icons/fi"
+import { FiBookmark } from "react-icons/fi"
 import Image from "next/image";
 import "@/styles/components/_restaurant-card.scss";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -402,9 +402,9 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
                 {saved === null && loading ? (
                   <span className="w-4 h-4 rounded-full bg-gray-200 animate-pulse block" />
                 ) : saved ? (
-                  <FiHeart className="size-3 md:size-4 text-[#ff7c0a]" fill="currentColor" />
+                  <FiBookmark className="size-3 md:size-4 text-orange-500" fill="currentColor" />
                 ) : (
-                  <FiHeart className="size-3 md:size-4" />
+                  <FiBookmark className="size-3 md:size-4" />
                 )}
               </button>
               <button className="rounded-full p-2 bg-white" onClick={handleCommentButtonClick}>

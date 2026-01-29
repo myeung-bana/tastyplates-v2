@@ -1,3 +1,4 @@
+import React from "react";
 import Image from "next/image";
 import { FLAG, HELMET, CASH, PHONE } from "@/constants/images";
 import { CommunityRecognitionMetrics } from "@/utils/reviewUtils";
@@ -16,70 +17,109 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   };
 
   const recognitionMetrics = metrics || defaultMetrics;
+  
+  // Helper function to display value (show "-" if 0)
+  const displayValue = (value: number): string => {
+    return value > 0 ? value.toString() : "-";
+  };
+  
+  const recognitionItems = [
+    { 
+      icon: FLAG, 
+      value: recognitionMetrics.mustRevisit, 
+      label: "Must Revisit",
+      description: "Users will come back"
+    },
+    { 
+      icon: PHONE, 
+      value: recognitionMetrics.instaWorthy, 
+      label: "Insta-Worthy",
+      description: "Great for the gram"
+    },
+    { 
+      icon: CASH, 
+      value: recognitionMetrics.valueForMoney, 
+      label: "Value for Money",
+      description: "Worth every penny"
+    },
+    { 
+      icon: HELMET, 
+      value: recognitionMetrics.bestService, 
+      label: "Best Service",
+      description: "Users come back happy"
+    }
+  ];
+
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
-      <h3 className="text-lg font-normal font-neusans mb-4">Community Recognition</h3>
-      <div className="community-recognition w-full flex flex-row items-center justify-center gap-0 my-5 lg:my-0">
-        <div className="rating-column w-full border-r border-[#CACACA]">
-          <div className="rating-value">
-            <Image
-              src={FLAG}
-              height={40}
-              width={40}
-              className="size-6 md:size-10"
-              alt="Flag icon"
-            />
-            <span className="font-neusans text-lg md:text-2xl font-normal">
-              {recognitionMetrics.mustRevisit}
-            </span>
+    <div className="bg-white rounded-2xl p-6 md:shadow-sm border border-gray-200 font-neusans">
+      <h3 className="text-lg font-neusans mb-4 md:mb-6">Community Recognition</h3>
+      
+      {/* Mobile: Horizontal scroll wrapper */}
+      <div className="md:hidden -mx-6 px-6">
+        <div className="overflow-x-auto pb-2 hide-scrollbar">
+          <div className="flex gap-4 min-w-max">
+            {recognitionItems.map((item, index) => (
+              <div key={index} className="flex flex-col items-center min-w-[140px]">
+                <h3 className="font-neusans font-semibold text-sm mb-1">{item.label}</h3>
+                <div className="flex flex-col items-center">
+                  {/* Score with icon badge overlay */}
+                  <div className="relative inline-block mb-2">
+                    <span className="font-neusans text-gray-800 text-2xl font-bold">
+                      {displayValue(item.value)}
+                    </span>
+                    <div className="absolute -bottom-1 -right-4 flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-gray-200">
+                      <Image
+                        src={item.icon}
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                        alt={`${item.label} icon`}
+                      />
+                    </div>
+                  </div>
+                  {/* Description text */}
+                  <span className="text-[10px] text-gray-500 text-center leading-tight">
+                    {item.description}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Must Revisit</span>
         </div>
-        <div className="rating-column w-full border-r border-[#CACACA]">
-          <div className="rating-value">
-            <Image
-              src={PHONE}
-              height={40}
-              width={40}
-              className="size-6 md:size-10"
-              alt="phone icon"
-            />
-            <span className="font-neusans text-lg md:text-2xl font-normal">
-              {recognitionMetrics.instaWorthy}
-            </span>
-          </div>
-          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Insta-Worthy</span>
-        </div>
-        <div className="rating-column w-full border-r border-[#CACACA]">
-          <div className="rating-value">
-            <Image
-              src={CASH}
-              height={40}
-              width={40}
-              className="size-6 md:size-10"
-              alt="cash icon"
-            />
-            <span className="font-neusans text-lg md:text-2xl font-normal">
-              {recognitionMetrics.valueForMoney}
-            </span>
-          </div>
-          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Value for Money</span>
-        </div>
-        <div className="rating-column w-full">
-          <div className="rating-value">
-            <Image
-              src={HELMET}
-              height={40}
-              width={40}
-              className="size-6 md:size-10"
-              alt="helmet icon"
-            />
-            <span className="font-neusans text-lg md:text-2xl font-normal">
-              {recognitionMetrics.bestService}
-            </span>
-          </div>
-          <span className="font-neusans text-[10px] lg:text-sm whitespace-pre">Best Service</span>
-        </div>
+      </div>
+
+      {/* Desktop: Grid layout matching Rating section */}
+      <div className="!hidden md:!flex w-full justify-evenly items-center gap-0">
+        {recognitionItems.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && <div className="h-[85%] border-l border-[#CACACA]"></div>}
+            
+            <div className="flex flex-col items-center flex-1">
+              <h3 className="font-neusans font-semibold text-sm mb-1">{item.label}</h3>
+              <div className="flex flex-col items-center">
+                {/* Score with icon badge overlay */}
+                <div className="relative inline-block mb-3">
+                  <span className="font-neusans text-gray-800 text-4xl font-bold">
+                    {displayValue(item.value)}
+                  </span>
+                  <div className="absolute -bottom-1 -right-5 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-200">
+                    <Image
+                      src={item.icon}
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                      alt={`${item.label} icon`}
+                    />
+                  </div>
+                </div>
+                {/* Description text */}
+                <span className="text-xs text-gray-500 text-center">
+                  {item.description}
+                </span>
+              </div>
+            </div>
+          </React.Fragment>
+        ))}
       </div>
     </div>
   );

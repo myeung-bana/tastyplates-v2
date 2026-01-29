@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
-import { FiHeart } from "react-icons/fi";
+import { FiBookmark } from "react-icons/fi";
 import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
 import toast from "react-hot-toast";
 import {
@@ -150,9 +150,9 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
       className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
     >
       {saved ? (
-        <FiHeart className="w-4 h-4 text-red-500" fill="currentColor" />
+        <FiBookmark className="w-4 h-4 text-orange-500" fill="currentColor" />
       ) : (
-        <FiHeart className="w-4 h-4 text-gray-500" />
+        <FiBookmark className="w-4 h-4 text-gray-500" />
       )}
       <span className="text-sm font-normal">{saved ? "Saved" : "Save"}</span>
     </button>

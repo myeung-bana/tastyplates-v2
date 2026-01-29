@@ -14,26 +14,60 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
   restaurant,
   isWide = false,
 }) => {
+  // Extract address JSONB object
+  const addressJson = (restaurant as any)?.address || null;
+  
+  // Get coordinates - check multiple sources
   const lat = parseFloat(
-    restaurant?.listingDetails?.googleMapUrl?.latitude || "0"
+    restaurant?.listingDetails?.latitude || 
+    restaurant?.listingDetails?.googleMapUrl?.latitude || 
+    (addressJson?.latitude) || "0"
   );
   const lng = parseFloat(
-    restaurant?.listingDetails?.googleMapUrl?.longitude || "0"
+    restaurant?.listingDetails?.longitude ||
+    restaurant?.listingDetails?.googleMapUrl?.longitude || 
+    (addressJson?.longitude) || "0"
   );
   
+  // Get place_id from JSONB address or googleMapUrl
+  const placeId = addressJson?.place_id || restaurant?.listingDetails?.googleMapUrl?.placeId;
+  
   const googleMapUrl = restaurant?.listingDetails?.googleMapUrl;
+  
+  // Priority for address display:
+  // 1. listing_street (already formatted)
+  // 2. Construct from address JSONB
+  // 3. Format from googleMapUrl
+  let singleLineAddress = restaurant?.listingStreet || null;
+  
+  if (!singleLineAddress && addressJson) {
+    // Construct address from JSONB fields
+    const parts = [
+      addressJson.street_address || (addressJson.street_number && addressJson.street_name 
+        ? `${addressJson.street_number} ${addressJson.street_name}` 
+        : null),
+      addressJson.city,
+      addressJson.state_short || addressJson.state,
+      addressJson.post_code,
+      addressJson.country_short || addressJson.country
+    ].filter(Boolean);
+    
+    singleLineAddress = parts.join(', ');
+  }
+  
+  if (!singleLineAddress) {
+    singleLineAddress = formatAddressSingleLine(googleMapUrl || null);
+  }
+  
   const hasLocationData = (lat && lng && !isNaN(lat) && !isNaN(lng)) || 
-                          googleMapUrl?.placeId || 
-                          googleMapUrl?.streetAddress ||
-                          restaurant?.listingStreet;
-
-  // Format address for display (single line)
-  const singleLineAddress = formatAddressSingleLine(googleMapUrl || null) || restaurant?.listingStreet || null;
+                          placeId || 
+                          singleLineAddress;
 
   // Generate Google Maps URL
   const getGoogleMapsUrl = (): string | null => {
-    if (googleMapUrl?.placeId) {
-      return `https://www.google.com/maps/place/?q=place_id:${googleMapUrl.placeId}`;
+    // Prioritize place_id from JSONB address
+    if (placeId) {
+      return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
     }
     if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
       return `https://www.google.com/maps?q=${lat},${lng}`;
@@ -55,8 +89,8 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
             <RestaurantMap
               lat={lat && !isNaN(lat) ? lat : undefined}
               lng={lng && !isNaN(lng) ? lng : undefined}
-              googleMapUrl={googleMapUrl}
-              address={singleLineAddress || restaurant?.listingStreet || undefined}
+              googleMapUrl={placeId ? { ...googleMapUrl, placeId } : googleMapUrl}
+              address={singleLineAddress || undefined}
             />
           </div>
         ) : (
