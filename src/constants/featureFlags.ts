@@ -6,10 +6,8 @@
  */
 
 export const FEATURE_FLAGS = {
-  // Restaurant API Migration
-  USE_RESTAURANT_V2_API: process.env.NEXT_PUBLIC_USE_RESTAURANT_V2_API === 'true' || false,
-  
   // Other feature flags can be added here
+  // Example: NEW_FEATURE: process.env.NEXT_PUBLIC_NEW_FEATURE === 'true' || false,
 } as const;
 
 /**

@@ -2,10 +2,8 @@
 import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { transformRestaurantV2ToListing } from "@/utils/restaurantTransformers";
-import { isFeatureEnabled } from "@/constants/featureFlags";
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import "@/styles/pages/_restaurant-details-v2.scss";
@@ -56,59 +54,7 @@ function getRestaurantImages(restaurant: Listing): string[] {
 }
 
 // Helper function to transform WordPress GraphQL data to Listing format
-function transformWordPressToListing(restaurantData: any): Listing {
-  return {
-            id: restaurantData.id,
-            slug: restaurantData.slug,
-            title: restaurantData.title,
-            content: restaurantData.content || "",
-            averageRating: restaurantData.averageRating || 0,
-            status: "published",
-            listingStreet: restaurantData.listingStreet || "",
-            priceRange: restaurantData.priceRange || "$$",
-            palates: {
-              nodes: restaurantData.palates?.nodes || []
-            },
-            databaseId: restaurantData.databaseId,
-            listingDetails: {
-              googleMapUrl: {
-                streetAddress: restaurantData.listingDetails?.googleMapUrl?.streetAddress || "",
-                streetNumber: restaurantData.listingDetails?.googleMapUrl?.streetNumber || "",
-                streetName: restaurantData.listingDetails?.googleMapUrl?.streetName || "",
-                city: restaurantData.listingDetails?.googleMapUrl?.city || "",
-                state: restaurantData.listingDetails?.googleMapUrl?.state || "",
-                stateShort: restaurantData.listingDetails?.googleMapUrl?.stateShort || "",
-                country: restaurantData.listingDetails?.googleMapUrl?.country || "",
-                countryShort: restaurantData.listingDetails?.googleMapUrl?.countryShort || "",
-                postCode: restaurantData.listingDetails?.googleMapUrl?.postCode || "",
-                latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-                longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-                placeId: restaurantData.listingDetails?.googleMapUrl?.placeId || "",
-                zoom: restaurantData.listingDetails?.googleMapUrl?.zoom || 0,
-              },
-              latitude: restaurantData.listingDetails?.googleMapUrl?.latitude || "",
-              longitude: restaurantData.listingDetails?.googleMapUrl?.longitude || "",
-              menuUrl: restaurantData.listingDetails?.menuUrl || "",
-              openingHours: restaurantData.listingDetails?.openingHours || "",
-              phone: restaurantData.listingDetails?.phone || "",
-            },
-            featuredImage: restaurantData.featuredImage,
-            imageGallery: restaurantData.imageGallery || [],
-            listingCategories: {
-              nodes: restaurantData.listingCategories?.nodes || []
-            },
-            countries: {
-              nodes: restaurantData.countries?.nodes || []
-            },
-            cuisines: restaurantData.cuisines || [],
-            isFavorite: restaurantData.isFavorite || false,
-            ratingsCount: restaurantData.ratingsCount || 0,
-          } as Listing;
-}
-
-
 // Main Component
-const restaurantService = new RestaurantService();
 
 export default function RestaurantDetail() {
   const { user } = useFirebaseSession();
@@ -142,50 +88,28 @@ export default function RestaurantDetail() {
   useEffect(() => {
     if (!slug) return;
     
-    const useV2API = isFeatureEnabled('USE_RESTAURANT_V2_API');
-    
     const fetchRestaurant = async () => {
       try {
-        let transformed: Listing | null = null;
-
-        if (useV2API) {
-          // Use new Hasura-based API
-          try {
-            const response = await restaurantV2Service.getRestaurantBySlug(slug);
-            
-            if (!response.data) {
-              return notFound();
-            }
-
-            // Transform Hasura format to component format
-            transformed = transformRestaurantV2ToListing(response.data);
-            console.log('✅ V2 API: Fetched restaurant by slug:', slug);
-          } catch (v2Error) {
-            console.error('V2 API failed, falling back to V1:', v2Error);
-            // Fallback to V1 API if V2 fails
-            const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
-            if (!data) return notFound();
-            transformed = transformWordPressToListing(data);
-          }
-        } else {
-          // Use existing WordPress GraphQL API
-          const data = await restaurantService.fetchRestaurantDetails(slug, decodeURIComponent(palatesParam ?? ''));
-          if (!data) return notFound();
-          transformed = transformWordPressToListing(data);
+        const response = await restaurantV2Service.getRestaurantBySlug(slug);
+        
+        if (!response.data) {
+          return notFound();
         }
 
-        if (transformed) {
-          setRestaurant(transformed);
-        }
+        // Transform Hasura format to component format
+        const transformed = transformRestaurantV2ToListing(response.data);
+
+        setRestaurant(transformed);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching restaurant:", err);
+        console.error('Failed to fetch restaurant:', err);
         setLoading(false);
+        return notFound();
       }
     };
 
     fetchRestaurant();
-  }, [slug, palatesParam]);
+  }, [slug]);
 
   // Calculate rating metrics when data changes
   useEffect(() => {

@@ -28,12 +28,14 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
       return restaurant.listingStreet;
     }
     
-    // Second priority: Try to construct from structured address
-    const city = restaurant.listingDetails?.googleMapUrl?.city;
-    const state = restaurant.listingDetails?.googleMapUrl?.stateShort || restaurant.listingDetails?.googleMapUrl?.state;
-    
-    if (city && state) return `${city}, ${state}`;
-    if (city) return city;
+    // Second priority: Try to construct from normalized googleMapUrl (camelCase)
+    const googleMapUrl = restaurant.listingDetails?.googleMapUrl;
+    if (googleMapUrl) {
+      const city = googleMapUrl.city;
+      const state = googleMapUrl.stateShort || googleMapUrl.state;
+      if (city && state) return `${city}, ${state}`;
+      if (city) return city;
+    }
     
     return "Address not available";
   };
@@ -64,12 +66,6 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
   return (
     <div className="bg-white rounded-2xl overflow-hidden">
       <div className="p-4 md:p-6">
-        {/* Location Badge - Top */}
-        <div className="flex items-center gap-1.5 text-gray-600 text-sm mb-4">
-          <FiMapPin className="w-4 h-4 flex-shrink-0" />
-          <span className="font-medium">{getLocation()}</span>
-        </div>
-
         {/* Main Content: Image + Info */}
         <div className="flex gap-4 mb-6">
           {/* Circular Image - 120x120px */}
@@ -93,33 +89,37 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
 
           {/* Restaurant Info */}
           <div className="flex-1 min-w-0">
-            {/* Restaurant Title */}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 font-neusans leading-tight">
-              {restaurant.title}
-            </h1>
-
-            {/* Primary Ethnic Palate */}
-            {primaryPalate && (
+          {/* Primary Ethnic Palate */}
+          {primaryPalate && (
               <div className="mb-2">
                 <span className="inline-block px-3 py-1 bg-orange-50 text-[#ff7c0a] rounded-full text-sm font-medium font-neusans">
                   {primaryPalate}
                 </span>
               </div>
             )}
+            {/* Restaurant Title */}
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 font-neusans leading-tight">
+              {restaurant.title}
+            </h1>
+            {/* Location Badge - Top */}
+            <div className="flex items-center gap-1.5 text-gray-600 text-sm mb-2">
+              <FiMapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">{getLocation()}</span>
+            </div>
 
             {/* Categories with Bullet Separator */}
             {categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm mb-2">
+              <div className="flex flex-wrap items-center gap-2 text-gray-600 text-sm mb-2 font-neusans">
                 {categories.map((category: { name: string; slug: string }, index: number) => (
                   <React.Fragment key={`cat-${index}`}>
                     <Link
                       href={`/restaurants/cuisines/${category.slug}`}
-                      className="hover:text-[#ff7c0a] transition-colors font-medium"
+                      className="hover:text-[#ff7c0a] transition-colors font-neusans"
                     >
                       {category.name}
                     </Link>
                     {index < categories.length - 1 && (
-                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-400 font-neusans">•</span>
                     )}
                   </React.Fragment>
                 ))}

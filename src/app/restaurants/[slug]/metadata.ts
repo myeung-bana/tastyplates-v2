@@ -1,11 +1,7 @@
 import { Metadata } from "next";
 import { generateMetadata as generateSEOMetadata, siteConfig } from "@/lib/seo";
-import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
-import { isFeatureEnabled } from "@/constants/featureFlags";
 import { calculateOverallRating } from "@/utils/reviewUtils";
-
-const restaurantService = new RestaurantService();
 
 /**
  * Generate metadata for restaurant detail pages
@@ -18,39 +14,30 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   try {
     const { slug } = await params;
-    const useV2API = isFeatureEnabled('USE_RESTAURANT_V2_API');
     
     let restaurantData: any = null;
 
-    if (useV2API) {
-      try {
-        const response = await restaurantV2Service.getRestaurantBySlug(slug);
-        if (response.data) {
-          restaurantData = {
-            title: response.data.title,
-            listingDetails: {
-              description: response.data.content,
-              googleMapUrl: response.data.address
-            },
-            featuredImage: response.data.featured_image_url ? {
-              node: { sourceUrl: response.data.featured_image_url }
-            } : null,
-            imageGallery: response.data.uploaded_images || [],
-            palates: {
-              nodes: response.data.palates?.map((p: any) => ({ name: p.name || p.slug })) || []
-            },
-            reviews: { nodes: [] } // Reviews not included in V2 API response yet
-          };
-        }
-      } catch (v2Error) {
-        console.error('V2 API failed in metadata, falling back to V1:', v2Error);
-        // Fallback to V1
-        const restaurant = await restaurantService.fetchRestaurantDetails(slug, "");
-        restaurantData = restaurant;
+    try {
+      const response = await restaurantV2Service.getRestaurantBySlug(slug);
+      if (response.data) {
+        restaurantData = {
+          title: response.data.title,
+          listingDetails: {
+            description: response.data.content,
+            googleMapUrl: response.data.address
+          },
+          featuredImage: response.data.featured_image_url ? {
+            node: { sourceUrl: response.data.featured_image_url }
+          } : null,
+          imageGallery: response.data.uploaded_images || [],
+          palates: {
+            nodes: response.data.palates?.map((p: any) => ({ name: p.name || p.slug })) || []
+          },
+          reviews: { nodes: [] } // Reviews not included in V2 API response yet
+        };
       }
-    } else {
-      const restaurant = await restaurantService.fetchRestaurantDetails(slug, "");
-      restaurantData = restaurant;
+    } catch (error) {
+      console.error('Failed to fetch restaurant for metadata:', error);
     }
 
     if (!restaurantData) {

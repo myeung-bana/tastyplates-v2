@@ -8,6 +8,8 @@ import { transformReviewV2ToReviewedDataProps } from '@/utils/reviewTransformers
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { GraphQLReview } from '@/types/graphql';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface ReviewsTabProps {
   targetUserId: string; // Only UUID string (from userData?.id)
   status: string;
@@ -30,6 +32,13 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   ) => {
     if (!userId) {
       console.log('ReviewsTab - fetchReviews: No userId provided');
+      return;
+    }
+    
+    // Validate UUID format before making API call
+    if (!UUID_REGEX.test(userId)) {
+      console.error('ReviewsTab - Invalid user ID format:', userId);
+      setReviewsLoading(false);
       return;
     }
     

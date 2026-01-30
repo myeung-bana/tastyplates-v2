@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
 
     if (!UUID_REGEX.test(user_id)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid user ID format. Expected UUID.' },
+        { 
+          success: false, 
+          error: `Invalid user ID format. Expected UUID, got: "${user_id}"` 
+        },
         { status: 400 }
       );
     }

@@ -30,12 +30,22 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [userReviewCount, setUserReviewCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<string>("reviews");
   const [wishlist, setWishlist] = useState<any[]>([]);
-  const [wishlistLoading, setWishlistLoading] = useState(true);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [wishlistFetched, setWishlistFetched] = useState(false);
   const [checkins, setCheckins] = useState<any[]>([]);
-  const [checkinsLoading, setCheckinsLoading] = useState(true);
+  const [checkinsLoading, setCheckinsLoading] = useState(false);
+  const [checkinsFetched, setCheckinsFetched] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+
+  // UUID validation helper
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUUID = (id: string | undefined | null): boolean => {
+    if (!id) return false;
+    return UUID_REGEX.test(id);
+  };
 
   // Validate identifier - can be username, UUID (string), or numeric ID
   if (!identifier || (typeof identifier === 'string' && identifier.trim() === '')) {
@@ -232,19 +242,37 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     checkFollowingStatus();
   }, [user, userData?.id, isViewingOwnProfile, getFirebaseToken]);
 
-  // Fetch wishlist data - DELAYED LOADING (Priority 3 - after reviews)
+  // Debug logging for userData changes
+  useEffect(() => {
+    console.log('Profile - userData changed:', {
+      hasUserData: !!userData,
+      userId: userData?.id,
+      userIdType: typeof userData?.id,
+      isValidUUID: userData?.id ? UUID_REGEX.test(userData.id as string) : false
+    });
+  }, [userData]);
+
+  // Fetch wishlist data - Only when wishlist tab is active
   useEffect(() => {
     const fetchWishlist = async () => {
+      // Only fetch if wishlist tab is active and not already fetched
+      if (activeTab !== "wishlists" || wishlistFetched) return;
+      
       if (!userData?.id) return;
       
-      // Increase delay to prioritize reviews (first/default tab)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Validate UUID format before making API call
+      const userId = userData.id as string;
+      if (!isValidUUID(userId)) {
+        console.error('Invalid user ID format for wishlist:', userId);
+        setWishlistLoading(false);
+        return;
+      }
       
       setWishlistLoading(true);
       try {
         const response = await restaurantUserService.getWishlist({
-          user_id: userData.id as string,
-          limit: 50, // Adjust as needed
+          user_id: userId,
+          limit: 50,
           offset: 0
         });
 
@@ -252,6 +280,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
           // Extract restaurants from wishlist items
           const restaurants = response.data.map((item) => item.restaurant);
           setWishlist(restaurants);
+          setWishlistFetched(true); // Mark as fetched
         } else {
           console.error("Failed to fetch wishlist:", response.error);
           toast.error("Failed to load wishlist");
@@ -265,21 +294,29 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     fetchWishlist();
-  }, [userData?.id]);
+  }, [activeTab, userData?.id, wishlistFetched]);
 
-  // Fetch check-ins data - DELAYED LOADING (Priority 4 - after reviews and wishlist)
+  // Fetch check-ins data - Only when checkins tab is active
   useEffect(() => {
     const fetchCheckins = async () => {
+      // Only fetch if checkins tab is active and not already fetched
+      if (activeTab !== "checkins" || checkinsFetched) return;
+      
       if (!userData?.id) return;
       
-      // Increase delay to prioritize reviews (first/default tab)
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Validate UUID format before making API call
+      const userId = userData.id as string;
+      if (!isValidUUID(userId)) {
+        console.error('Invalid user ID format for check-ins:', userId);
+        setCheckinsLoading(false);
+        return;
+      }
       
       setCheckinsLoading(true);
       try {
         const response = await restaurantUserService.getCheckins({
-          user_id: userData.id as string,
-          limit: 50, // Adjust as needed
+          user_id: userId,
+          limit: 50,
           offset: 0
         });
 
@@ -287,6 +324,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
           // Extract restaurants from check-in items
           const restaurants = response.data.map((item) => item.restaurant);
           setCheckins(restaurants);
+          setCheckinsFetched(true); // Mark as fetched
         } else {
           console.error("Failed to fetch check-ins:", response.error);
           toast.error("Failed to load check-ins");
@@ -300,7 +338,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     fetchCheckins();
-  }, [userData?.id]);
+  }, [activeTab, userData?.id, checkinsFetched]);
 
   // Tab configuration with review count callback
   const tabs = [
@@ -402,6 +440,11 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
         <Tabs
           aria-label="Dynamic tabs"
           items={tabs}
+          selectedKey={activeTab}
+          onSelectionChange={(key) => {
+            const tabKey = key as string;
+            setActiveTab(tabKey);
+          }}
           classNames={{
             tabWrapper: "w-full",
             base: "w-full border-b justify-center min-w-max sm:min-w-0 px-0",

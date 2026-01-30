@@ -3,7 +3,7 @@ import React from "react";
 import { FiMapPin, FiExternalLink } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import RestaurantMap from "./RestaurantMap";
-import { formatAddressMultiLine, formatAddressSingleLine } from "@/utils/addressUtils";
+import { formatAddressMultiLine, formatAddressSingleLine, getStreetCity } from "@/utils/addressUtils";
 
 interface RestaurantLocationSectionProps {
   restaurant: Listing;
@@ -14,45 +14,33 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
   restaurant,
   isWide = false,
 }) => {
-  // Extract address JSONB object
-  const addressJson = (restaurant as any)?.address || null;
+  // Use the normalized googleMapUrl which has camelCase fields
+  const googleMapUrl = restaurant?.listingDetails?.googleMapUrl || null;
   
   // Get coordinates - check multiple sources
   const lat = parseFloat(
     restaurant?.listingDetails?.latitude || 
-    restaurant?.listingDetails?.googleMapUrl?.latitude || 
-    (addressJson?.latitude) || "0"
+    googleMapUrl?.latitude || 
+    "0"
   );
   const lng = parseFloat(
     restaurant?.listingDetails?.longitude ||
-    restaurant?.listingDetails?.googleMapUrl?.longitude || 
-    (addressJson?.longitude) || "0"
+    googleMapUrl?.longitude || 
+    "0"
   );
   
-  // Get place_id from JSONB address or googleMapUrl
-  const placeId = addressJson?.place_id || restaurant?.listingDetails?.googleMapUrl?.placeId;
-  
-  const googleMapUrl = restaurant?.listingDetails?.googleMapUrl;
+  // Get place_id from normalized googleMapUrl (camelCase)
+  const placeId = googleMapUrl?.placeId;
   
   // Priority for address display:
-  // 1. listing_street (already formatted)
-  // 2. Construct from address JSONB
-  // 3. Format from googleMapUrl
+  // 1. listing_street (already formatted string from database)
+  // 2. Use getStreetCity helper (handles googleMapUrl format properly)
+  // 3. Format from googleMapUrl using utility function
   let singleLineAddress = restaurant?.listingStreet || null;
   
-  if (!singleLineAddress && addressJson) {
-    // Construct address from JSONB fields
-    const parts = [
-      addressJson.street_address || (addressJson.street_number && addressJson.street_name 
-        ? `${addressJson.street_number} ${addressJson.street_name}` 
-        : null),
-      addressJson.city,
-      addressJson.state_short || addressJson.state,
-      addressJson.post_code,
-      addressJson.country_short || addressJson.country
-    ].filter(Boolean);
-    
-    singleLineAddress = parts.join(', ');
+  if (!singleLineAddress && googleMapUrl) {
+    // Use the getStreetCity helper which properly formats the address
+    singleLineAddress = getStreetCity(googleMapUrl, restaurant.listingStreet, null);
   }
   
   if (!singleLineAddress) {
