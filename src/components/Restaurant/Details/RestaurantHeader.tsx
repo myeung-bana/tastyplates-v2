@@ -68,8 +68,8 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
       <div className="p-4 md:p-6">
         {/* Main Content: Image + Info */}
         <div className="flex gap-4 mb-6">
-          {/* Circular Image - 120x120px */}
-          <div className="flex-shrink-0">
+          {/* Circular Image - 120x120px - Hidden on mobile */}
+          <div className="flex-shrink-0 hidden md:block">
             {restaurant.featuredImage?.node?.sourceUrl ? (
               <div className="relative w-[120px] h-[120px] rounded-full overflow-hidden ring-4 ring-gray-100 shadow-md">
                 <Image
@@ -135,44 +135,8 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Order: Website, Call, Directions, Save, Check-in */}
         <div className="flex flex-wrap gap-2">
-          <SaveRestaurantButton
-            restaurantSlug={restaurant.slug}
-            onShowSignin={onShowSignin}
-          />
-          <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
-          
-          {/* Directions */}
-          <a
-            href={getDirectionsUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
-          >
-            <FiNavigation className="w-4 h-4 text-gray-500" />
-            <span>Directions</span>
-          </a>
-          
-          {/* Call */}
-          {phone ? (
-            <a
-              href={`tel:${phone}`}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
-            >
-              <FiPhone className="w-4 h-4 text-gray-500" />
-              <span>Call</span>
-            </a>
-          ) : (
-            <button
-              disabled
-              className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-[50px] cursor-not-allowed font-normal text-sm font-neusans opacity-50"
-            >
-              <FiPhone className="w-4 h-4 text-gray-400" />
-              <span className="text-gray-400">Call</span>
-            </button>
-          )}
-          
           {/* Website */}
           {websiteUrl ? (
             <a
@@ -193,6 +157,42 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
               <span className="text-gray-400">Website</span>
             </button>
           )}
+          
+          {/* Call */}
+          {phone ? (
+            <a
+              href={`tel:${phone}`}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
+            >
+              <FiPhone className="w-4 h-4 text-gray-500" />
+              <span>Call</span>
+            </a>
+          ) : (
+            <button
+              disabled
+              className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-[50px] cursor-not-allowed font-normal text-sm font-neusans opacity-50"
+            >
+              <FiPhone className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-400">Call</span>
+            </button>
+          )}
+          
+          {/* Directions */}
+          <a
+            href={getDirectionsUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
+          >
+            <FiNavigation className="w-4 h-4 text-gray-500" />
+            <span>Directions</span>
+          </a>
+          
+          <SaveRestaurantButton
+            restaurantSlug={restaurant.slug}
+            onShowSignin={onShowSignin}
+          />
+          <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
         </div>
       </div>
     </div>

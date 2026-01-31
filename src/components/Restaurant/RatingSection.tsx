@@ -24,7 +24,7 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
   const userPalates = user?.palates || null;
 
   return (
-    <div className="bg-white rounded-2xl p-6 md:shadow-sm border border-gray-200 font-neusans">
+    <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
       <h3 className="text-lg font-neusans mb-4 md:mb-6">Ratings</h3>
       
       {/* Mobile: Horizontal scroll wrapper */}

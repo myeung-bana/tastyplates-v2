@@ -238,7 +238,7 @@ export default function RestaurantDetail() {
         <div className="flex flex-col lg:flex-row gap-8 px-2">
           {/* Left Column - Main Content */}
           <div className="flex-1 min-w-0">
-            <div className="space-y-8">
+            <div className="space-y-4 md:space-y-8">
               {/* Restaurant Header - Title, Info, Actions */}
               <RestaurantHeader
                 restaurant={restaurant}
@@ -274,7 +274,7 @@ export default function RestaurantDetail() {
 
         {/* Full-Width Reviews Section */}
         <div className="mt-12">
-          <div className="bg-white rounded-2xl p-6 -sm border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200">
             {/* Desktop view */}
             <div className={isMobile ? "hidden" : ""}>
               <RestaurantReviews 

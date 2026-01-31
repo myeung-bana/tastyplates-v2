@@ -64,11 +64,13 @@ export const GET_RESTAURANTS_BY_UUIDS = `
       average_rating
       ratings_count
       price_range
+      price_range_id
       featured_image_url
       listing_street
       address
       cuisines
       palates
+      categories
     }
   }
 `;

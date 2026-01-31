@@ -3,7 +3,6 @@ import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_USER_CHECKINS, GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/RestaurantUsers/restaurantUserActionsQueries';
 import { transformRestaurantV2ToRestaurant } from '@/utils/restaurantTransformers';
 import { RestaurantV2 } from '@/app/api/v1/services/restaurantV2Service';
-import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -85,8 +84,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch restaurant data by UUIDs
     const restaurantsResult = await hasuraQuery(GET_RESTAURANTS_BY_UUIDS, {
-      uuids: restaurantUuids,
-      limit: GRAPHQL_LIMITS.BATCH_RESTAURANTS_MAX
+      uuids: restaurantUuids
     });
 
     if (restaurantsResult.errors) {
@@ -123,12 +121,14 @@ export async function GET(request: NextRequest) {
           status: restaurant.status,
           average_rating: restaurant.average_rating || 0,
           ratings_count: restaurant.ratings_count || 0,
-          price_range: restaurant.restaurant_price_range?.display_name || '',
+          price_range: restaurant.price_range || '',
+          price_range_id: restaurant.price_range_id || null,
           featured_image_url: restaurant.featured_image_url,
           address: restaurant.address,
           listing_street: restaurant.listing_street || restaurant.address?.street_address || '',
           cuisines: restaurant.cuisines,
           palates: restaurant.palates,
+          categories: restaurant.categories,
           created_at: '',
           updated_at: ''
         };

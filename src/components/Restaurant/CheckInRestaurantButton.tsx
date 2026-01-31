@@ -155,17 +155,17 @@ export default function CheckInRestaurantButton({ restaurantSlug }: { restaurant
   // Show button immediately without loading spinner
   return (
     <button
-      className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans ${
-        checkedIn ? 'border-primary' : ''
-      }`}
       onClick={handleToggle}
       disabled={loading}
+      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors disabled:opacity-50 font-normal text-sm font-neusans"
       aria-pressed={checkedIn}
     >
-      <FiMapPin className={`w-4 h-4 ${checkedIn ? "text-primary" : "text-gray-500"}`} />
-      <span className="font-normal">
-        {checkedIn ? "Checked-in" : "Check-In"}
-      </span>
+      {checkedIn ? (
+        <FiMapPin className="w-4 h-4 text-orange-500" fill="currentColor" />
+      ) : (
+        <FiMapPin className="w-4 h-4 text-gray-500" />
+      )}
+      <span className="text-sm font-normal">{checkedIn ? "Checked-in" : "Check-In"}</span>
       {error && <span className="text-xs text-red-500 ml-2">{error}</span>}
     </button>
   );

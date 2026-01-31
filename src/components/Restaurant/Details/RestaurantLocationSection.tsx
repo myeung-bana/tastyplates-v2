@@ -69,7 +69,7 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
   const googleMapsUrl = getGoogleMapsUrl();
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 font-neusans">
+    <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
       <h3 className="text-lg font-normal font-neusans mb-4">Location</h3>
       <div className="space-y-4">
         {hasLocationData ? (

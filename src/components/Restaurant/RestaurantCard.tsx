@@ -114,12 +114,16 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const palateParam = searchParams?.get("ethnic");
 
   useEffect(() => {
-    setSaved(initialSavedStatus ?? false);
+    // Only set initial state if explicitly provided as boolean
+    if (typeof initialSavedStatus === 'boolean') {
+      setSaved(initialSavedStatus);
+    }
   }, [initialSavedStatus]);
 
-  // Check favorite status on mount if user is logged in and status is not provided
+  // Check favorite status on mount if user is logged in and status is not explicitly provided
   useEffect(() => {
-    if (!user || !restaurant.slug || initialSavedStatus !== null) return;
+    // Skip fetching if initialSavedStatus is explicitly set to true or false
+    if (!user || !restaurant.slug || typeof initialSavedStatus === 'boolean') return;
     
     const checkStatus = async () => {
       try {

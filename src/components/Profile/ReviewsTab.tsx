@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReviewCard2 from '../review/ReviewCard2';
 import ReviewCardSkeleton2 from '../ui/Skeleton/ReviewCardSkeleton2';
-import VirtualizedTabContentGrid from '../ui/TabContentGrid/VirtualizedTabContentGrid';
+import TabContentGrid from '../ui/TabContentGrid/TabContentGrid';
 import { ReviewedDataProps } from '@/interfaces/Reviews/review';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { transformReviewV2ToReviewedDataProps } from '@/utils/reviewTransformers';
@@ -22,8 +22,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [offset, setOffset] = useState(0);
-  const LIMIT = 16; // Initial load
-  const LOAD_MORE_LIMIT = 8; // Subsequent loads
+  const LIMIT = 50; // Load more reviews at once for profile page
 
   const fetchReviews = useCallback(async (
     limit = LIMIT,
@@ -165,12 +164,6 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
     }
   }, [onReviewCountChange]);
 
-  // Load more handler for virtualized grid
-  const loadMore = useCallback(async () => {
-    if (reviewsLoading || !hasNextPage || !targetUserId) return;
-    await fetchReviews(LOAD_MORE_LIMIT, offset, targetUserId);
-  }, [reviewsLoading, hasNextPage, offset, targetUserId, fetchReviews]);
-
   useEffect(() => {
     // Debug: Log targetUserId
     console.log('ReviewsTab - useEffect triggered:', {
@@ -200,7 +193,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   const reviewsAsGraphQL = reviews.map(r => r as unknown as GraphQLReview);
 
   return (
-    <VirtualizedTabContentGrid
+    <TabContentGrid
       items={reviews}
       loading={reviewsLoading}
       ItemComponent={({ restaurant, ...props }: { restaurant: ReviewedDataProps; [key: string]: any }) => {
@@ -220,10 +213,6 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
       emptyMessage="No reviews have been made yet."
       skeletonKeyPrefix="review-skeleton"
       gridClassName="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-      columns={{ mobile: 2, tablet: 3, desktop: 4 }}
-      estimatedRowHeight={450}
-      onLoadMore={loadMore}
-      hasMore={hasNextPage}
     />
   );
 };

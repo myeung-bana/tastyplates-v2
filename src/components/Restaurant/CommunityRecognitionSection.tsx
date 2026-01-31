@@ -51,7 +51,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   ];
 
   return (
-    <div className="bg-white rounded-2xl p-6 md:shadow-sm border border-gray-200 font-neusans">
+    <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
       <h3 className="text-lg font-neusans mb-4 md:mb-6">Community Recognition</h3>
       
       {/* Mobile: Horizontal scroll wrapper */}
@@ -67,7 +67,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
                     <span className="font-neusans text-gray-800 text-2xl font-bold">
                       {displayValue(item.value)}
                     </span>
-                    <div className="absolute -bottom-1 -right-4 flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-gray-200">
+                    <div className="absolute -bottom-1 -right-[25px] flex items-center justify-center w-7 h-7 rounded-full">
                       <Image
                         src={item.icon}
                         width={16}
@@ -102,7 +102,7 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
                   <span className="font-neusans text-gray-800 text-4xl font-bold">
                     {displayValue(item.value)}
                   </span>
-                  <div className="absolute -bottom-1 -right-5 flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-200">
+                  <div className="absolute -bottom-1 -right-[25px] flex items-center justify-center w-8 h-8 rounded-full">
                     <Image
                       src={item.icon}
                       width={20}

@@ -2,11 +2,13 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaPen, FaRegHeart, FaHeart } from 'react-icons/fa';
+import { FiShare2 } from 'react-icons/fi';
 import FallbackImage, { FallbackImageType } from '../ui/Image/FallbackImage';
 import { DEFAULT_USER_ICON } from '@/constants/images';
 import { palateFlagMap } from '@/utils/palateFlags';
 import { PROFILE_EDIT } from '@/constants/pages';
 import { FollowButton } from '@/components/ui/follow-button';
+import toast from 'react-hot-toast';
 
 interface ProfileHeaderProps {
   userData: Record<string, unknown> | null;
@@ -110,6 +112,38 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const profileImageUrl = getProfileImageUrl(userData?.profile_image);
   const displayName = getDisplayName(userData);
   const palatesArray = getPalatesArray(userData?.palates);
+
+  // Share profile handler
+  const handleShareProfile = async () => {
+    const username = userData?.username || userData?.display_name || '';
+    const profileUrl = `${window.location.origin}/profile/${username}`;
+    
+    // Check if Web Share API is available
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${displayName}'s Profile`,
+          text: `Check out ${displayName}'s profile on TastyPlates!`,
+          url: profileUrl
+        });
+        toast.success('Profile shared successfully!');
+      } catch (error) {
+        // User cancelled the share or error occurred
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(profileUrl);
+        toast.success('Profile link copied to clipboard!');
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+        toast.error('Failed to copy link');
+      }
+    }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 md:py-6 font-inter text-[#31343F]">
@@ -252,14 +286,22 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               />
             )}
             
-            {/* Edit Profile Button */}
+            {/* Edit Profile & Share Profile Buttons */}
             {isViewingOwnProfile && (
-              <Link
-                href="/profile/edit"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
-              >
-                <span>Edit Profile</span>
-              </Link>
+              <>
+                <Link
+                  href="/profile/edit"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+                >
+                  <span>Edit Profile</span>
+                </Link>
+                <button
+                  onClick={handleShareProfile}
+                  className="ml-2 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+                >
+                  <span>Share Profile</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -298,14 +340,23 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             />
           )}
           
-          {/* Edit Profile Button */}
+          {/* Edit Profile & Share Profile Buttons */}
           {isViewingOwnProfile && (
-            <Link
-              href="/profile/edit"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
-            >
-              <span>Edit Profile</span>
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                href="/profile/edit"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+              >
+                <span>Edit Profile</span>
+              </Link>
+              <button
+                onClick={handleShareProfile}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm"
+              >
+                <FiShare2 className="w-4 h-4" />
+                <span>Share Profile</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
