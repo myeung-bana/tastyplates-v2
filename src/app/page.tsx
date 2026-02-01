@@ -1,6 +1,7 @@
 import Hero from "@/components/Hero";
 import Navbar from "@/components/layout/Navbar";
 import ClientOnlyReviews from "@/components/review/ClientOnlyReviews";
+import Discover from "@/components/Discover";
 import { Suspense } from "react";
 import { generateMetadata as generateSEOMetadata, siteConfig } from "@/lib/seo";
 import type { Metadata } from "next";
@@ -22,6 +23,7 @@ export default function Home() {
         <main className="!w-full flex flex-col gap-8 items-center sm:items-start">
           <Hero />
           <ClientOnlyReviews/>
+          <Discover />
         </main>
       </div>
     </Suspense>

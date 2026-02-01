@@ -1,4 +1,4 @@
-.swipeable-review-viewer {
+.review-screen {
   position: fixed;
   top: 0;
   left: 0;
@@ -419,7 +419,7 @@
 
 // Mobile optimizations
 @media (max-width: 768px) {
-  .swipeable-review-viewer {
+  .review-screen {
     &__image-section {
       height: 60vh;
       height: 60dvh;
@@ -443,7 +443,7 @@
 
 // Tablet and larger
 @media (min-width: 769px) {
-  .swipeable-review-viewer {
+  .review-screen {
     &__image-section {
       height: 70vh;
       height: 70dvh;

@@ -18,9 +18,9 @@ import CommentsBottomSheet from "@/components/review/CommentsBottomSheet";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import PalateTags from "../ui/PalateTags/PalateTags";
-import "@/styles/components/_swipeable-review-viewer.scss";
+import "@/styles/components/_review-screen.scss";
 
-interface SwipeableReviewViewerProps {
+interface ReviewScreenProps {
   reviews: GraphQLReview[];
   initialIndex: number;
   isOpen: boolean;
@@ -33,7 +33,7 @@ interface SwipeableReviewViewerProps {
 const reviewService = new ReviewService();
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
+const ReviewScreen: React.FC<ReviewScreenProps> = ({
   reviews: initialReviews,
   initialIndex,
   isOpen,
@@ -49,6 +49,10 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
   const [firstComments, setFirstComments] = useState<Record<string, GraphQLReview | null>>({});
   const [loadingFirstComments, setLoadingFirstComments] = useState<Record<string, boolean>>({});
+  // Comment like state (similar to review likes)
+  const [replyLikes, setReplyLikes] = useState<Record<string, number>>({});
+  const [replyUserLiked, setReplyUserLiked] = useState<Record<string, boolean>>({});
+  const [replyLikeLoading, setReplyLikeLoading] = useState<Record<string, boolean>>({});
   const [showComments, setShowComments] = useState(false);
   const [selectedReview, setSelectedReview] = useState<GraphQLReview | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -177,7 +181,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: true }));
     
     try {
-      const replies = await reviewService.fetchCommentReplies(reviewId);
+      // Pass userId to check which comments the user has liked
+      const userId = await getUserUuid();
+      const replies = await reviewService.fetchCommentReplies(reviewId, userId || undefined);
       const firstComment = replies && replies.length > 0 ? replies[0] : null;
       setFirstComments((prev) => ({ ...prev, [reviewId]: firstComment ?? null }));
       
@@ -389,7 +395,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   // Handle like
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:247',message:'handleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:247',message:'handleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
     // #endregion
     if (!firebaseUser) {
       toast.error("Please sign in to like reviews");
@@ -400,7 +406,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     const currentLikes = likesCount[review.databaseId] ?? 0;
     const reviewDatabaseId = review.databaseId;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:256',message:'Current state before optimistic update',data:{reviewDatabaseId,isLiked,currentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:256',message:'Current state before optimistic update',data:{reviewDatabaseId,isLiked,currentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
     // Optimistic update
@@ -415,7 +421,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:268',message:'Review ID validation',data:{reviewId,isUUID},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:268',message:'Review ID validation',data:{reviewId,isUUID},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
 
       if (isUUID) {
@@ -427,26 +433,26 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         });
         const userFetchDuration = Date.now() - userFetchStartTime;
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:273',message:'User UUID fetch response',data:{userResponseOk:userResponse.ok,userResponseStatus:userResponse.status,userFetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:273',message:'User UUID fetch response',data:{userResponseOk:userResponse.ok,userResponseStatus:userResponse.status,userFetchDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
         // #endregion
         
         if (userResponse.ok) {
           const userData = await userResponse.json();
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:277',message:'User UUID parsed',data:{userDataSuccess:userData.success,hasUserId:!!userData.data?.id,userId:userData.data?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:277',message:'User UUID parsed',data:{userDataSuccess:userData.success,hasUserId:!!userData.data?.id,userId:userData.data?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
           // #endregion
           if (userData.success && userData.data?.id) {
             const apiStartTime = Date.now();
             const result = await reviewV2Service.toggleLike(reviewId, userData.data.id);
             const apiDuration = Date.now() - apiStartTime;
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:280',message:'API call success',data:{reviewId,userId:userData.data.id,result,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:280',message:'API call success',data:{reviewId,userId:userData.data.id,result,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
             // #endregion
             // Update with actual values from API
             setUserLiked((prev) => ({ ...prev, [review.databaseId]: result.liked }));
             setLikesCount((prev) => ({ ...prev, [review.databaseId]: result.likesCount }));
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:283',message:'State updated from API',data:{reviewDatabaseId,resultLiked:result.liked,resultLikesCount:result.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:283',message:'State updated from API',data:{reviewDatabaseId,resultLiked:result.liked,resultLikesCount:result.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
             // #endregion
           }
         }
@@ -461,12 +467,12 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         }
         const apiDuration = Date.now() - apiStartTime;
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:291',message:'Legacy API call completed',data:{reviewId,isLiked,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:291',message:'Legacy API call completed',data:{reviewId,isLiked,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
       }
     } catch (error: any) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SwipeableReviewViewer.tsx:294',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error?.message||String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:294',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error?.message||String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
       // Revert on error
       setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
@@ -488,6 +494,56 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
     }
   }, [firebaseUser, userLiked, likesCount]);
 
+  // Handle comment/reply like - Same pattern as review likes
+  const handleCommentLike = useCallback(
+    async (reply: GraphQLReview) => {
+      if (!user || !firebaseUser) {
+        toast.error("Please sign in to like comments");
+        return;
+      }
+
+      const replyId = reply.id;
+      if (!replyId || !UUID_REGEX.test(replyId)) {
+        toast.error("Cannot like this comment. Please refresh.");
+        return;
+      }
+
+      // Get user UUID
+      const userId = await getUserUuid();
+      if (!userId) {
+        toast.error("Unable to get user ID. Please try again.");
+        return;
+      }
+
+      const currentLiked = replyUserLiked[replyId] ?? false;
+      const currentCount = replyLikes[replyId] ?? 0;
+
+      // Optimistic update
+      const newLiked = !currentLiked;
+      const newCount = currentLiked ? currentCount - 1 : currentCount + 1;
+      
+      setReplyUserLiked((prev) => ({ ...prev, [replyId]: newLiked }));
+      setReplyLikes((prev) => ({ ...prev, [replyId]: newCount }));
+
+      try {
+        // Use the SAME endpoint as review likes (comments are reviews!)
+        const result = await reviewV2Service.toggleLike(replyId, userId);
+        
+        // Confirm with API response
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: result.liked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: result.likesCount }));
+      } catch (error) {
+        // Revert on error
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: currentLiked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: currentCount }));
+        
+        console.error("Comment like error:", error);
+        toast.error("Failed to like comment. Please try again.");
+      }
+    },
+    [user, firebaseUser, replyUserLiked, replyLikes, getUserUuid]
+  );
+
   // Handle comment click
   const handleCommentClick = useCallback((review: GraphQLReview) => {
     setSelectedReview(review);
@@ -502,7 +558,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
         // Add class immediately for fade transition
-        document.body.classList.add("swipeable-review-viewer-open");
+        document.body.classList.add("review-screen-open");
         // Set display: none after fade completes (300ms)
         const timeoutId = setTimeout(() => {
           const topBar = document.querySelector(".mobile-top-bar") as HTMLElement;
@@ -521,7 +577,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
           // Remove class after a brief delay to allow display to be restored
           // This ensures the fade-in transition works
           setTimeout(() => {
-            document.body.classList.remove("swipeable-review-viewer-open");
+            document.body.classList.remove("review-screen-open");
           }, 10);
           clearTimeout(timeoutId);
         };
@@ -538,10 +594,10 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
   const content = (
     <>
-      <div className="swipeable-review-viewer" ref={scrollContainerRef}>
+      <div className="review-screen" ref={scrollContainerRef}>
         {/* Close Button */}
         <button
-          className="swipeable-review-viewer__close"
+          className="review-screen__close"
           onClick={onClose}
           aria-label="Close"
         >
@@ -549,7 +605,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
         </button>
 
         {/* Scroll Container */}
-        <div className="swipeable-review-viewer__scroll-container">
+        <div className="review-screen__scroll-container">
           {reviews.map((review, index) => {
             const images = review.reviewImages || [];
             const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
@@ -565,23 +621,23 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                 ref={(el) => {
                   if (el) postRefs.current[index] = el;
                 }}
-                className="swipeable-review-viewer__post"
+                className="review-screen__post"
               >
                 {/* Image Section - 60-70% */}
-                <div className="swipeable-review-viewer__image-section">
+                <div className="review-screen__image-section">
                   <FallbackImage
                     src={mainImage}
                     alt={stripTags(review.reviewMainTitle || "Review")}
                     fill
-                    className="swipeable-review-viewer__image"
+                    className="review-screen__image"
                     priority={index < 3}
                   />
                 </div>
 
                 {/* Content Section - 30-40% */}
-                <div className="swipeable-review-viewer__content-section">
+                <div className="review-screen__content-section">
                   {/* User Info */}
-                  <div className="swipeable-review-viewer__user-info">
+                  <div className="review-screen__user-info">
                     {review.author?.node?.databaseId ? (
                       user?.id &&
                       String(user.id) === String(review.author?.node?.databaseId) ? (
@@ -591,7 +647,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                             alt={review.author?.node?.name || "User"}
                             width={40}
                             height={40}
-                            className="swipeable-review-viewer__avatar"
+                            className="review-screen__avatar"
                             type={FallbackImageType.Icon}
                           />
                         </Link>
@@ -602,7 +658,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                             alt={review.author?.node?.name || "User"}
                             width={40}
                             height={40}
-                            className="swipeable-review-viewer__avatar"
+                            className="review-screen__avatar"
                             type={FallbackImageType.Icon}
                           />
                         </Link>
@@ -612,7 +668,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           alt={review.author?.node?.name || "User"}
                           width={40}
                           height={40}
-                          className="swipeable-review-viewer__avatar"
+                          className="review-screen__avatar"
                           type={FallbackImageType.Icon}
                         />
                       )
@@ -622,16 +678,16 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         alt={review.author?.node?.name || "User"}
                         width={40}
                         height={40}
-                        className="swipeable-review-viewer__avatar"
+                        className="review-screen__avatar"
                         type={FallbackImageType.Icon}
                       />
                     )}
 
-                    <div className="swipeable-review-viewer__user-details">
-                      <div className="swipeable-review-viewer__user-header">
-                        <div className="swipeable-review-viewer__user-info-left">
+                    <div className="review-screen__user-details">
+                      <div className="review-screen__user-header">
+                        <div className="review-screen__user-info-left">
                           <div className="flex items-center gap-2">
-                            <h3 className="swipeable-review-viewer__username">
+                            <h3 className="review-screen__username">
                               {review.author?.node?.name || review.author?.name || "Unknown User"}
                             </h3>
                             {/* Palate Tags - Inline with username */}
@@ -649,7 +705,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           {review.commentedOn?.node?.title && (
                             <Link
                               href={`/restaurants/${review.commentedOn.node.slug}`}
-                              className="swipeable-review-viewer__restaurant-link"
+                              className="review-screen__restaurant-link"
                             >
                               <FiMapPin className="w-3 h-3" />
                               <span>{review.commentedOn.node.title}</span>
@@ -657,7 +713,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                           )}
                         </div>
                         {review.date && (
-                          <span className="swipeable-review-viewer__timestamp">
+                          <span className="review-screen__timestamp">
                             {formatRelativeTime(review.date)}
                           </span>
                         )}
@@ -666,9 +722,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                   </div>
 
                   {/* Review Content */}
-                  <div className="swipeable-review-viewer__review-content">
+                  <div className="review-screen__review-content">
                     {review.reviewMainTitle && (
-                      <h2 className="swipeable-review-viewer__title">
+                      <h2 className="review-screen__title">
                         {capitalizeWords(stripTags(review.reviewMainTitle))}
                       </h2>
                     )}
@@ -682,13 +738,13 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                         : reviewContent.slice(0, MAX_CHARS) + "...";
                       
                       return (
-                        <div className="swipeable-review-viewer__text-container">
-                          <p className="swipeable-review-viewer__text">
+                        <div className="review-screen__text-container">
+                          <p className="review-screen__text">
                             {displayText}
                           </p>
                           {shouldTruncate && (
                             <button
-                              className="swipeable-review-viewer__see-more"
+                              className="review-screen__see-more"
                               onClick={() => setIsTextExpanded(prev => ({
                                 ...prev,
                                 [review.databaseId]: !isExpanded
@@ -703,7 +759,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     
                     {/* Rating */}
                     {review.reviewStars && (
-                      <div className="swipeable-review-viewer__rating">
+                      <div className="review-screen__rating">
                         <FiStar className="w-3 h-3" />
                         <span>{review.reviewStars}/5</span>
                       </div>
@@ -726,7 +782,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     // Show skeleton only while loading and haven't confirmed no comments
                     if (isLoading && firstComment === undefined) {
                       return (
-                        <div className="swipeable-review-viewer__comment-preview">
+                        <div className="review-screen__comment-preview">
                           <ReplySkeleton count={1} />
                         </div>
                       );
@@ -735,28 +791,28 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     // Show first comment if it exists
                     if (firstComment) {
                       return (
-                        <div className="swipeable-review-viewer__comment-preview">
-                          <div className="swipeable-review-viewer__comment-item">
+                        <div className="review-screen__comment-preview">
+                          <div className="review-screen__comment-item">
                             <FallbackImage
                               src={firstComment.userAvatar || DEFAULT_USER_ICON}
                               alt={firstComment.author?.node?.name || "User"}
                               width={24}
                               height={24}
-                              className="swipeable-review-viewer__comment-avatar"
+                              className="review-screen__comment-avatar"
                               type={FallbackImageType.Icon}
                             />
-                            <div className="swipeable-review-viewer__comment-content">
-                              <span className="swipeable-review-viewer__comment-author">
+                            <div className="review-screen__comment-content">
+                              <span className="review-screen__comment-author">
                                 {firstComment.author?.node?.name || firstComment.author?.name || "Unknown"}
                               </span>
-                              <span className="swipeable-review-viewer__comment-text">
+                              <span className="review-screen__comment-text">
                                 {stripTags(firstComment.content || "")}
                               </span>
                             </div>
                           </div>
                           {reviewCommentCount > 1 && (
                             <button
-                              className="swipeable-review-viewer__view-all-comments"
+                              className="review-screen__view-all-comments"
                               onClick={() => handleCommentClick(review)}
                             >
                               View all {reviewCommentCount} comments
@@ -771,9 +827,9 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                   })()}
 
                   {/* Action Buttons */}
-                  <div className="swipeable-review-viewer__actions">
+                  <div className="review-screen__actions">
                     <button
-                      className="swipeable-review-viewer__action-btn"
+                      className="review-screen__action-btn"
                       onClick={() => handleLike(review)}
                     >
                       {reviewIsLiked ? (
@@ -785,7 +841,7 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
                     </button>
 
                     <button
-                      className="swipeable-review-viewer__action-btn"
+                      className="review-screen__action-btn"
                       onClick={() => handleCommentClick(review)}
                     >
                       <FiMessageCircle className="w-6 h-6" />
@@ -799,14 +855,14 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
 
           {/* Infinite Scroll Trigger & Loading Skeleton */}
           {onLoadMore && hasNextPage && (
-            <div ref={observerRef} className="swipeable-review-viewer__load-more">
+            <div ref={observerRef} className="review-screen__load-more">
               {loadingMore && (
-                <div className="swipeable-review-viewer__skeleton-post">
-                  <div className="swipeable-review-viewer__skeleton-image" />
-                  <div className="swipeable-review-viewer__skeleton-content">
-                    <div className="swipeable-review-viewer__skeleton-avatar" />
-                    <div className="swipeable-review-viewer__skeleton-text" />
-                    <div className="swipeable-review-viewer__skeleton-text" />
+                <div className="review-screen__skeleton-post">
+                  <div className="review-screen__skeleton-image" />
+                  <div className="review-screen__skeleton-content">
+                    <div className="review-screen__skeleton-avatar" />
+                    <div className="review-screen__skeleton-text" />
+                    <div className="review-screen__skeleton-text" />
                   </div>
                 </div>
               )}
@@ -831,8 +887,11 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
             }));
             // Refresh first comment if count changed
             if (count > 0 && !firstComments[selectedReview.id || ""]) {
-              reviewService
-                .fetchCommentReplies(selectedReview.id || "")
+              // Pass userId to check which comments the user has liked
+              (async () => {
+                const userId = await getUserUuid();
+                return reviewService.fetchCommentReplies(selectedReview.id || "", userId || undefined);
+              })()
                 .then((replies) => {
                   if (replies && replies.length > 0) {
                     setFirstComments((prev) => ({
@@ -863,4 +922,4 @@ const SwipeableReviewViewer: React.FC<SwipeableReviewViewerProps> = ({
   return createPortal(content, document.body);
 };
 
-export default SwipeableReviewViewer;
+export default ReviewScreen;

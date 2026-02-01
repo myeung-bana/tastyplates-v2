@@ -34,9 +34,9 @@ import ReplyItem from "./ReplyItem";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import SigninModal from "../auth/SigninModal";
 import SignupModal from "../auth/SignupModal";
-import "@/styles/components/_swipeable-review-viewer-desktop.scss";
+import "@/styles/components/_review-screen-desktop.scss";
 
-interface SwipeableReviewViewerDesktopProps {
+interface ReviewScreenDesktopProps {
   reviews: GraphQLReview[];
   initialIndex: number;
   isOpen: boolean;
@@ -45,7 +45,7 @@ interface SwipeableReviewViewerDesktopProps {
 
 const reviewService = new ReviewService();
 
-const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> = ({
+const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   reviews,
   initialIndex,
   isOpen,
@@ -123,7 +123,10 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   const [cooldown, setCooldown] = useState(0);
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
-  const [followLoading, setFollowLoading] = useState<Record<number, boolean>>({});
+  // Comment like state (similar to review likes)
+  const [replyLikes, setReplyLikes] = useState<Record<string, number>>({});
+  const [replyUserLiked, setReplyUserLiked] = useState<Record<string, boolean>>({});
+  const [replyLikeLoading, setReplyLikeLoading] = useState<Record<string, boolean>>({});
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -262,13 +265,13 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       setIsTextExpanded(false);
       
       // Hide navbar
-      document.body.classList.add('swipeable-review-viewer-open');
+      document.body.classList.add('review-screen-open');
     } else {
-      document.body.classList.remove('swipeable-review-viewer-open');
+      document.body.classList.remove('review-screen-open');
     }
 
     return () => {
-      document.body.classList.remove('swipeable-review-viewer-open');
+      document.body.classList.remove('review-screen-open');
     };
   }, [isOpen, initialIndex]);
 
@@ -373,12 +376,29 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     // Load comments automatically when component is open and comments section is visible
     if (isOpen && showComments && review?.id) {
       setIsLoadingReplies(true);
-      reviewService
-        .fetchCommentReplies(review.id)
-        .then((fetchedReplies) => {
-          // Limit to top 5 initially for better performance
-          const topReplies = fetchedReplies.slice(0, 5);
-          setReplies(topReplies);
+      
+      // Get userId to check which comments the user has liked
+      (async () => {
+        const userId = await getUserUuid();
+        
+        reviewService
+          .fetchCommentReplies(review.id, userId || undefined)
+          .then((fetchedReplies) => {
+            // Show all comments (API already limits and returns newest first)
+            setReplies(fetchedReplies);
+            
+            // Initialize like state for comments
+            const initialLikes: Record<string, number> = {};
+            const initialLiked: Record<string, boolean> = {};
+            fetchedReplies.forEach((reply) => {
+              if (reply.id) {
+                initialLikes[reply.id] = reply.commentLikes ?? 0;
+                initialLiked[reply.id] = reply.userLiked ?? false;
+              }
+            });
+            setReplyLikes(initialLikes);
+            setReplyUserLiked(initialLiked);
+            
           setIsLoadingReplies(false);
         })
         .catch((error: any) => {
@@ -397,11 +417,12 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           setReplies([]);
           setIsLoadingReplies(false);
         });
+      })();
     } else if (!isOpen) {
       // Clear replies when component closes
       setReplies([]);
     }
-  }, [isOpen, showComments, currentIndex, reviews]);
+  }, [isOpen, showComments, currentIndex, reviews, getUserUuid]);
 
   // Cooldown timer
   useEffect(() => {
@@ -487,6 +508,56 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     [user, firebaseUser, userLiked, likesCount, getUserUuid, UUID_REGEX]
   );
 
+  // Handle comment/reply like - Same pattern as review likes
+  const handleCommentLike = useCallback(
+    async (reply: GraphQLReview) => {
+      if (!user || !firebaseUser) {
+        toast.error("Please sign in to like comments");
+        return;
+      }
+
+      const replyId = reply.id;
+      if (!replyId || !UUID_REGEX.test(replyId)) {
+        toast.error("Cannot like this comment. Please refresh.");
+        return;
+      }
+
+      // Get user UUID (cached for performance)
+      const userId = await getUserUuid();
+      if (!userId) {
+        toast.error("Unable to get user ID. Please try again.");
+        return;
+      }
+
+      const currentLiked = replyUserLiked[replyId] ?? false;
+      const currentCount = replyLikes[replyId] ?? 0;
+
+      // Optimistic update
+      const newLiked = !currentLiked;
+      const newCount = currentLiked ? currentCount - 1 : currentCount + 1;
+      
+      setReplyUserLiked((prev) => ({ ...prev, [replyId]: newLiked }));
+      setReplyLikes((prev) => ({ ...prev, [replyId]: newCount }));
+
+      try {
+        // Use the SAME endpoint as review likes (comments are reviews!)
+        const result = await reviewV2Service.toggleLike(replyId, userId);
+        
+        // Confirm with API response
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: result.liked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: result.likesCount }));
+      } catch (error) {
+        // Revert on error
+        setReplyUserLiked((prev) => ({ ...prev, [replyId]: currentLiked }));
+        setReplyLikes((prev) => ({ ...prev, [replyId]: currentCount }));
+        
+        console.error("Comment like error:", error);
+        toast.error("Failed to like comment. Please try again.");
+      }
+    },
+    [user, firebaseUser, replyUserLiked, replyLikes, getUserUuid, UUID_REGEX]
+  );
+
   // Navigate between images in current review
   const handleImageNavigation = useCallback(
     (direction: "prev" | "next") => {
@@ -507,7 +578,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     [reviews, currentIndex]
   );
 
-  // Handle follow/unfollow - Updated to work with FollowButton
+  // Handle follow/unfollow - Optimistic UI updates for instant feel (like the like button)
   const handleFollowToggle = useCallback(async (isFollowingState: boolean) => {
     if (!user) {
       setIsShowSignin(true);
@@ -539,12 +610,20 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       return;
     }
 
-    setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: true }));
+    const authorDatabaseId = review.author.node.databaseId;
+    const newFollowState = !isFollowingState;
+    
+    // Optimistic update - change UI immediately
+    setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: newFollowState }));
+    setFollowState(authorDatabaseId, newFollowState);
+    
     try {
       const token = await getFirebaseToken();
       if (!token) {
         toast.error("Authentication required");
-        setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+        // Revert on error
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+        setFollowState(authorDatabaseId, isFollowingState);
         return;
       }
       
@@ -570,18 +649,20 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       const result = await response.json();
       
       if (result.success) {
-        const newFollowState = !isFollowingState;
-        setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: newFollowState }));
-        setFollowState(review.author.node.databaseId, newFollowState);
+        // Confirm the state (usually matches optimistic update)
         toast.success(newFollowState ? "Following user!" : "Unfollowed user!");
       } else {
+        // Revert on API error
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+        setFollowState(authorDatabaseId, isFollowingState);
         toast.error(result.error || errorOccurred);
       }
     } catch (error) {
+      // Revert on error
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+      setFollowState(authorDatabaseId, isFollowingState);
       console.error("Follow/unfollow error:", error);
       toast.error(errorOccurred);
-    } finally {
-      setFollowLoading((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
     }
   }, [user, currentIndex, reviews, setFollowState, getFirebaseToken]);
 
@@ -673,6 +754,11 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
     };
 
     setReplies((prev) => [optimisticReply, ...prev]);
+    
+    // Initialize like state for optimistic comment
+    setReplyLikes((prev) => ({ ...prev, [optimisticReply.id]: 0 }));
+    setReplyUserLiked((prev) => ({ ...prev, [optimisticReply.id]: false }));
+    
     setCommentText("");
 
     try {
@@ -721,9 +807,25 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
       }, token);
 
       if (res.success) {
-        // Refetch replies to get the actual reply with proper ID
-        const updatedReplies = await reviewService.fetchCommentReplies(review.id);
+        // Refetch replies with userId to get proper like status (now newest first)
+        const userId = await getUserUuid();
+        const updatedReplies = await reviewService.fetchCommentReplies(review.id, userId || undefined);
+        
+        // Remove optimistic comment and replace state with fresh data
         setReplies(updatedReplies);
+        
+        // Reinitialize like state with real IDs (maintain all existing states)
+        const newLikes: Record<string, number> = {};
+        const newLiked: Record<string, boolean> = {};
+        updatedReplies.forEach((r) => {
+          if (r.id) {
+            newLikes[r.id] = r.commentLikes ?? 0;
+            newLiked[r.id] = r.userLiked ?? false;
+          }
+        });
+        setReplyLikes(newLikes);
+        setReplyUserLiked(newLiked);
+        
         setCommentCounts((prev) => ({
           ...prev,
           [review.databaseId]: (prev[review.databaseId] || 0) + 1,
@@ -920,15 +1022,15 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   if (typeof document === "undefined") return null;
 
   const content = (
-    <div className="swipeable-review-viewer-desktop" onClick={onClose}>
+    <div className="review-screen-desktop" onClick={onClose}>
       <div
-        className="swipeable-review-viewer-desktop__content"
+        className="review-screen-desktop__content"
         onClick={(e) => e.stopPropagation()}
         {...bindWheel()}
       >
         {/* Close button */}
         <button
-          className="swipeable-review-viewer-desktop__close"
+          className="review-screen-desktop__close"
           onClick={onClose}
           aria-label="Close"
         >
@@ -936,11 +1038,11 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
         </button>
 
         {/* Left side: Image Gallery */}
-        <div className="swipeable-review-viewer-desktop__gallery">
+        <div className="review-screen-desktop__gallery">
           {/* Previous image button */}
           {hasMultipleImages && currentImageIndex > 0 && (
             <button
-              className="swipeable-review-viewer-desktop__image-nav swipeable-review-viewer-desktop__image-nav--prev"
+              className="review-screen-desktop__image-nav review-screen-desktop__image-nav--prev"
               onClick={() => handleImageNavigation("prev")}
               aria-label="Previous image"
             >
@@ -949,18 +1051,18 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           )}
 
           {/* Main image */}
-          <div className="swipeable-review-viewer-desktop__image-container">
+          <div className="review-screen-desktop__image-container">
             <FallbackImage
               src={currentImage}
               alt={stripTags(currentReview.reviewMainTitle || "Review")}
               fill
-              className="swipeable-review-viewer-desktop__image"
+              className="review-screen-desktop__image"
               priority
             />
 
             {/* Image counter */}
             {hasMultipleImages && (
-              <div className="swipeable-review-viewer-desktop__image-counter">
+              <div className="review-screen-desktop__image-counter">
                 {currentImageIndex + 1} / {reviewImages.length}
               </div>
             )}
@@ -969,7 +1071,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           {/* Next image button */}
           {hasMultipleImages && currentImageIndex < reviewImages.length - 1 && (
             <button
-              className="swipeable-review-viewer-desktop__image-nav swipeable-review-viewer-desktop__image-nav--next"
+              className="review-screen-desktop__image-nav review-screen-desktop__image-nav--next"
               onClick={() => handleImageNavigation("next")}
               aria-label="Next image"
             >
@@ -979,17 +1081,17 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
 
           {/* Scroll hint (only show on first review) */}
           {currentIndex === 0 && (
-            <div className="swipeable-review-viewer-desktop__scroll-hint">
+            <div className="review-screen-desktop__scroll-hint">
               Scroll to see more reviews
             </div>
           )}
         </div>
 
         {/* Right side: Content & Comments */}
-        <div className="swipeable-review-viewer-desktop__sidebar">
+        <div className="review-screen-desktop__sidebar">
           {/* User info header */}
-          <div className="swipeable-review-viewer-desktop__header">
-            <div className="swipeable-review-viewer-desktop__user-info">
+          <div className="review-screen-desktop__header">
+            <div className="review-screen-desktop__user-info">
               {currentReview.author?.node?.databaseId ? (
                 user?.id &&
                 String(user.id) === String(currentReview.author?.node?.databaseId) ? (
@@ -999,7 +1101,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                       alt={currentReview.author?.node?.name || "User"}
                       width={40}
                       height={40}
-                      className="swipeable-review-viewer-desktop__avatar swipeable-review-viewer-desktop__avatar--own"
+                      className="review-screen-desktop__avatar review-screen-desktop__avatar--own"
                       type={FallbackImageType.Icon}
                     />
                   </Link>
@@ -1010,7 +1112,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                       alt={currentReview.author?.node?.name || "User"}
                       width={40}
                       height={40}
-                      className="swipeable-review-viewer-desktop__avatar"
+                      className="review-screen-desktop__avatar"
                       type={FallbackImageType.Icon}
                     />
                   </Link>
@@ -1020,7 +1122,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                     alt={currentReview.author?.node?.name || "User"}
                     width={40}
                     height={40}
-                    className="swipeable-review-viewer-desktop__avatar"
+                    className="review-screen-desktop__avatar"
                     type={FallbackImageType.Icon}
                   />
                 )
@@ -1030,21 +1132,20 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                   alt="User"
                   width={40}
                   height={40}
-                  className="swipeable-review-viewer-desktop__avatar"
+                  className="review-screen-desktop__avatar"
                   type={FallbackImageType.Icon}
                 />
               )}
 
-              <div className="swipeable-review-viewer-desktop__user-details">
-                <div className="swipeable-review-viewer-desktop__user-header">
-                  <h3 className="swipeable-review-viewer-desktop__username">
+              <div className="review-screen-desktop__user-details">
+                <div className="review-screen-desktop__user-header">
+                  <h3 className="review-screen-desktop__username">
                     {currentReview.author?.node?.name || currentReview.author?.name || "Unknown User"}
                   </h3>
                   {/* Follow/Unfollow Button - Hide if viewing your own post */}
                   {shouldShowFollowButton && currentReview.author?.node?.databaseId && (
                     <FollowButton
                       isFollowing={isFollowing[currentReview.author.node.databaseId] ?? false}
-                      isLoading={followLoading[currentReview.author.node.databaseId] ?? false}
                       onToggle={handleFollowToggle}
                       size="sm"
                     />
@@ -1068,24 +1169,24 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
           </div>
 
           {/* Review content */}
-          <div className="swipeable-review-viewer-desktop__content-area">
+          <div className="review-screen-desktop__content-area">
             {/* Title */}
             {currentReview.reviewMainTitle && (
-              <h2 className="swipeable-review-viewer-desktop__title">
+              <h2 className="review-screen-desktop__title">
                 {capitalizeWords(stripTags(currentReview.reviewMainTitle))}
               </h2>
             )}
 
             {/* Content */}
             {currentReview.content && (
-              <div className="swipeable-review-viewer-desktop__text-container">
-                <p className="swipeable-review-viewer-desktop__text">
+              <div className="review-screen-desktop__text-container">
+                <p className="review-screen-desktop__text">
                   {displayText}
                 </p>
                 {shouldTruncate && (
                   <button 
                     onClick={() => setIsTextExpanded(!isTextExpanded)}
-                    className="swipeable-review-viewer-desktop__see-more"
+                    className="review-screen-desktop__see-more"
                   >
                     {isTextExpanded ? "See Less" : "See More"}
                   </button>
@@ -1094,9 +1195,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
             )}
 
             {/* Rating and Location - Moved below content */}
-            <div className="swipeable-review-viewer-desktop__meta">
+            <div className="review-screen-desktop__meta">
               {currentReview.reviewStars && (
-                <div className="swipeable-review-viewer-desktop__rating">
+                <div className="review-screen-desktop__rating">
                   <FiStar className="inline w-3.5 h-3.5 mr-1" />
                   {currentReview.reviewStars}/5
                 </div>
@@ -1104,7 +1205,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
               {restaurantLocationData && (
                 <Link 
                   href={`/restaurants/${restaurantLocationData.slug}`}
-                  className="swipeable-review-viewer-desktop__restaurant"
+                  className="review-screen-desktop__restaurant"
                 >
                   <FiMapPin className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" />
                   <span className="hover:underline">{restaurantLocationData.title}</span>
@@ -1113,9 +1214,9 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
             </div>
 
             {/* Action buttons */}
-            <div className="swipeable-review-viewer-desktop__actions">
+            <div className="review-screen-desktop__actions">
               <button
-                className="swipeable-review-viewer-desktop__action-btn"
+                className="review-screen-desktop__action-btn"
                 onClick={() => handleLike(currentReview)}
               >
                 {isLiked ? (
@@ -1127,7 +1228,7 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
               </button>
 
               <button
-                className="swipeable-review-viewer-desktop__action-btn"
+                className="review-screen-desktop__action-btn"
                 onClick={() => setShowComments(!showComments)}
               >
                 <FiMessageCircle className="w-6 h-6" />
@@ -1136,14 +1237,14 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
             </div>
 
             {/* Comments section - Always visible */}
-            <div className="swipeable-review-viewer-desktop__comments">
-              <h3 className="swipeable-review-viewer-desktop__comments-title">
+            <div className="review-screen-desktop__comments">
+              <h3 className="review-screen-desktop__comments-title">
                 Comments ({commentCount})
               </h3>
                 
                 {/* Comment input */}
                 {user ? (
-                  <div className="swipeable-review-viewer-desktop__comment-input">
+                  <div className="review-screen-desktop__comment-input">
                     {isSubmittingComment ? (
                       <div className="flex-1 text-xs text-gray-500 italic">
                         Sending...
@@ -1156,31 +1257,33 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
-                              handleCommentSubmit();
+                              if (cooldown === 0 && !isSubmittingComment) {
+                                handleCommentSubmit();
+                              }
                             }
                           }}
-                          placeholder={
-                            cooldown > 0
-                              ? `Please wait ${cooldown}s before commenting again...`
-                              : "Add a comment..."
-                          }
-                          className="swipeable-review-viewer-desktop__comment-textarea"
+                          placeholder="Add a comment..."
+                          className="review-screen-desktop__comment-textarea"
                           rows={1}
-                          disabled={cooldown > 0}
                         />
                         <button
                           onClick={handleCommentSubmit}
                           disabled={!commentText.trim() || isSubmittingComment || cooldown > 0}
-                          className="swipeable-review-viewer-desktop__comment-send-btn"
+                          className="review-screen-desktop__comment-send-btn"
                           aria-label="Send comment"
+                          title={cooldown > 0 ? `Wait ${cooldown}s before commenting again` : "Send comment"}
                         >
-                          <FiSend className={`w-4 h-4 ${commentText.trim() ? 'text-blue-500' : 'text-gray-300'}`} />
+                          {cooldown > 0 ? (
+                            <span className="text-xs text-gray-400 font-medium">{cooldown}s</span>
+                          ) : (
+                            <FiSend className={`w-4 h-4 ${commentText.trim() ? 'text-blue-500' : 'text-gray-300'}`} />
+                          )}
                         </button>
                       </>
                     )}
                   </div>
                 ) : (
-                  <div className="swipeable-review-viewer-desktop__comment-login">
+                  <div className="review-screen-desktop__comment-login">
                     <p className="text-sm text-gray-500 text-center">
                       <button
                         onClick={() => toast.error("Please sign in to comment")}
@@ -1194,23 +1297,28 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
                 )}
               
               {isLoadingReplies ? (
-                <div className="swipeable-review-viewer-desktop__comments-skeleton">
+                <div className="review-screen-desktop__comments-skeleton">
                   <ReplySkeleton count={3} />
                 </div>
               ) : replies.length > 0 ? (
-                  <div className="swipeable-review-viewer-desktop__comments-list">
+                  <div className="review-screen-desktop__comments-list">
                     {replies.map((reply, index) => (
                       <ReplyItem
                         key={reply.id || `reply-${index}-${reply.databaseId}`}
-                        reply={reply}
-                        onLike={() => {}}
+                        reply={{
+                          ...reply,
+                          // Override with our tracked state for instant updates
+                          commentLikes: replyLikes[reply.id || ''] ?? reply.commentLikes ?? 0,
+                          userLiked: replyUserLiked[reply.id || ''] ?? reply.userLiked ?? false,
+                        }}
+                        onLike={handleCommentLike}
                         onProfileClick={() => {}}
-                        isLoading={false}
+                        isLoading={replyLikeLoading[reply.id || ''] ?? false}
                       />
                     ))}
                   </div>
                 ) : (
-                <p className="swipeable-review-viewer-desktop__comments-empty">
+                <p className="review-screen-desktop__comments-empty">
                   No comments yet. Be the first to comment!
                 </p>
               )}
@@ -1243,5 +1351,5 @@ const SwipeableReviewViewerDesktop: React.FC<SwipeableReviewViewerDesktopProps> 
   return createPortal(content, document.body);
 };
 
-export default SwipeableReviewViewerDesktop;
+export default ReviewScreenDesktop;
 

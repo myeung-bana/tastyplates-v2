@@ -5,13 +5,13 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import ReviewCard2 from "./ReviewCard2";
 import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 import { useIsMobile } from "@/utils/deviceUtils";
-import SwipeableReviewViewer from "./SwipeableReviewViewer";
-import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
+import ReviewScreen from "./ReviewScreen";
+import ReviewScreenDesktop from "./ReviewScreenDesktop";
 import { GraphQLReview } from "@/types/graphql";
 
 type TabType = 'trending' | 'foryou';
@@ -22,17 +22,11 @@ const Reviews = () => {
   const { showSignin } = useAuthModal();
   const isMobile = useIsMobile();
   
-  // Trending reviews state
+  // Trending reviews state - simplified to show only 8 reviews
   const [trendingReviews, setTrendingReviews] = useState<ReviewedDataProps[]>([]);
-  const [hasNextPage, setHasNextPage] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [cursor, setCursor] = useState<string | null>(null); // Phase 2: Cursor pagination
-  const LIMIT = 8;
-  const LOAD_MORE_LIMIT = 16;
-  const observerRef = useRef<HTMLDivElement | null>(null);
+  const LIMIT = 8; // Fixed at 8 reviews
   const [initialLoaded, setInitialLoaded] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isInitialFetchRef = useRef(false);
   
   // Full-screen viewer state
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -51,46 +45,20 @@ const Reviews = () => {
   const currentReviews = activeTab === 'trending' ? trendingReviews : forYouReviews;
   const currentLoading = activeTab === 'trending' ? loading : forYouLoading;
   const currentInitialLoading = activeTab === 'trending' ? !initialLoaded : forYouInitialLoading;
-  const currentHasMore = activeTab === 'trending' ? hasNextPage : forYouHasMore;
 
-  const fetchTrendingReviews = useCallback(async (
-    limit = LIMIT,
-    currentCursor: string | null = null
-  ) => {
-    if (loading || !hasNextPage) return;
-    
-    // Cancel previous request if it exists (only for pagination, not initial load)
-    if (abortControllerRef.current && currentCursor !== null) {
-      abortControllerRef.current.abort();
-    }
-    
-    // Create new AbortController for this request
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    
-    // Track if this is the initial fetch
-    const isInitialFetch = currentCursor === null;
-    if (isInitialFetch) {
-      isInitialFetchRef.current = true;
-    }
+  // Simplified fetch - only loads 8 reviews, no pagination
+  const fetchTrendingReviews = useCallback(async () => {
+    if (loading) return;
     
     setLoading(true);
     
     try {
-      // Fetch reviews with cursor pagination (Phase 2 - Fast!)
+      // Fetch only 8 reviews
       const response = await reviewV2Service.getAllReviews({
-        limit,
-        cursor: currentCursor || undefined,
-        signal: abortController.signal
+        limit: LIMIT
       });
-      
-      // Check if request was aborted after fetch completes
-      if (abortController.signal.aborted) {
-        return;
-      }
 
       if (!response.reviews || response.reviews.length === 0) {
-        setHasNextPage(false);
         setLoading(false);
         return;
       }
@@ -126,113 +94,27 @@ const Reviews = () => {
         return reviewV2;
       });
 
-      // Transform to ReviewedDataProps (same as profile tab)
+      // Transform to ReviewedDataProps
       const transformedReviews = reviewV2Items.map((reviewV2) => {
         return transformReviewV2ToReviewedDataProps(reviewV2);
       });
 
-      setTrendingReviews((prev) => {
-        if (isInitialFetch) {
-          return transformedReviews;
-        }
-        const all = [...prev, ...transformedReviews];
-        // Remove duplicates
-        const uniqueMap = new Map(all.map((r) => [r.id, r]));
-        return Array.from(uniqueMap.values());
-      });
-
-      // Phase 2: Store cursor for next page
-      setCursor(response.cursor || null);
-      setHasNextPage(response.hasMore || false);
-      
-      // Mark initial fetch as complete
-      if (isInitialFetch) {
-        isInitialFetchRef.current = false;
-      }
-    } catch (error) {
-      // Ignore abort errors (request was intentionally canceled)
-      if (error instanceof Error && error.name === 'AbortError') {
-        // Mark initial fetch as complete if it was aborted
-        if (isInitialFetch) {
-          isInitialFetchRef.current = false;
-        }
-        return;
-      }
-      // Only update state if request wasn't aborted
-      if (!abortController.signal.aborted) {
-        setHasNextPage(false);
-        setLoading(false);
-        // Mark initial fetch as complete on error
-        if (isInitialFetch) {
-          isInitialFetchRef.current = false;
-        }
-      }
+      // Set only 8 reviews, no pagination
+      setTrendingReviews(transformedReviews);
+    } catch (error: any) {
+      console.error('Error fetching trending reviews:', error);
     } finally {
-      // Only clear loading state if this request wasn't aborted
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [loading, hasNextPage]);
+  }, [loading]);
 
-  const loadMoreTrending = useCallback(async () => {
-    if (loading || !hasNextPage) return;
-    await fetchTrendingReviews(LOAD_MORE_LIMIT, cursor);
-  }, [loading, hasNextPage, cursor, fetchTrendingReviews]);
-
-  // Load trending reviews on mount or when switching to trending tab
+  // Load trending reviews on mount - simple, no pagination
   useEffect(() => {
-    // Only fetch if we're on trending tab and haven't loaded yet
     if (activeTab === 'trending' && !initialLoaded) {
-      setTrendingReviews([]);
-      setCursor(null); // Phase 2: Reset cursor
-      setHasNextPage(true);
       setInitialLoaded(true);
-      
-      // Fetch reviews - don't await, let it run
-      // The initial fetch will not be aborted by cleanup
-      fetchTrendingReviews(LIMIT, null); // Phase 2: Pass null cursor for first page
+      fetchTrendingReviews();
     }
-    
-    // No cleanup here - we don't want to abort the initial fetch
-    // Cleanup will be handled by the tab switching effect below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, initialLoaded]); // Removed fetchTrendingReviews from deps to prevent re-render loop
-  
-  // Separate effect to handle tab switching cleanup
-  useEffect(() => {
-    // When switching away from trending, clean up any pending requests
-    // But only if it's not the initial fetch
-    if (activeTab !== 'trending') {
-      if (abortControllerRef.current && !isInitialFetchRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      // DON'T clear reviews - preserve them for when user switches back
-      // This provides better UX and avoids unnecessary re-fetching
-    }
-  }, [activeTab]);
-
-  // Infinite scroll with IntersectionObserver
-  useEffect(() => {
-    if (!observerRef.current || currentInitialLoading) return;
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && currentHasMore && !currentLoading) {
-          if (activeTab === 'trending') {
-          loadMoreTrending();
-          } else if (activeTab === 'foryou' && user) {
-            loadMoreForYou();
-          }
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
-    
-    observer.observe(observerRef.current);
-    return () => observer.disconnect();
-  }, [activeTab, currentHasMore, currentLoading, currentInitialLoading, loadMoreTrending, loadMoreForYou, user]);
+  }, [activeTab, initialLoaded, fetchTrendingReviews]);
 
   const handleTabClick = (tab: TabType) => {
     if (tab === 'foryou' && !user) {
@@ -318,7 +200,7 @@ const Reviews = () => {
           </div>
         </div>
 
-        {/* Simple Reviews Grid - Infinite Scroll */}
+        {/* Simple Reviews Grid - Fixed 8 reviews */}
         {currentReviews.length > 0 ? (
           <>
             <div className="mt-4">
@@ -337,27 +219,6 @@ const Reviews = () => {
                   />
                 ))}
               </div>
-              
-              {/* Infinite scroll trigger */}
-              <div ref={observerRef} className="h-4" />
-              
-              {/* Loading indicator at bottom */}
-              {currentLoading && (
-                <div className="py-6 flex justify-center">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                    {Array.from({ length: 4 }, (_, i) => (
-                      <ReviewCardSkeleton key={`loading-skeleton-${i}`} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* End message */}
-              {!currentHasMore && !currentLoading && (
-                <div className="flex justify-center text-center py-6">
-                  <p className="text-gray-400 text-sm">No more reviews to load.</p>
-                </div>
-              )}
             </div>
           </>
         ) : currentLoading || currentInitialLoading ? (
@@ -385,14 +246,14 @@ const Reviews = () => {
 
         {/* Full-screen viewer (rendered via portal to document.body) */}
         {isMobile ? (
-          <SwipeableReviewViewer
+          <ReviewScreen
             reviews={currentReviews as unknown as GraphQLReview[]}
             initialIndex={viewerIndex}
             isOpen={viewerOpen}
             onClose={() => setViewerOpen(false)}
           />
         ) : (
-          <SwipeableReviewViewerDesktop
+          <ReviewScreenDesktop
             reviews={currentReviews as unknown as GraphQLReview[]}
             initialIndex={viewerIndex}
             isOpen={viewerOpen}

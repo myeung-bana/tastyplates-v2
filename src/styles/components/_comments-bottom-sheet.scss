@@ -1,7 +1,7 @@
 .comments-bottom-sheet {
   position: fixed;
   inset: 0;
-  z-index: 10001; // Above SwipeableReviewViewer (10000)
+  z-index: 10001; // Above ReviewScreen (10000)
   font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
 
   &__backdrop {

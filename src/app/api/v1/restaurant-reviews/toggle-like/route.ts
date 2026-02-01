@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Combined query: check if liked + read current denormalized likes_count (used to detect broken triggers)
-    const checkStartTime = Date.now();
     const checkResult = await hasuraQuery(
       `query CheckReviewLikeAndCount($reviewId: uuid!, $userId: uuid!) {
         user_like: restaurant_review_likes(
@@ -67,10 +66,6 @@ export async function POST(request: NextRequest) {
       }`,
       { reviewId: review_id, userId: user_id }
     );
-    const checkDuration = Date.now() - checkStartTime;
-    // #region agent log
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:45',message:'Check like status + likes_count',data:{review_id,user_id,checkDuration,hasErrors:!!checkResult.errors,errors:checkResult.errors,isLiked:((checkResult.data?.user_like?.length??0)>0),beforeLikesCount:checkResult.data?.review?.likes_count},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'C'})+'\n');
-    // #endregion
 
     if (checkResult.errors) {
       console.error('GraphQL errors:', checkResult.errors);
@@ -86,12 +81,8 @@ export async function POST(request: NextRequest) {
 
     const isLiked = (checkResult.data?.user_like?.length ?? 0) > 0;
     const beforeLikesCount = checkResult.data?.review?.likes_count ?? null;
-    // #region agent log
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:56',message:'Current like status',data:{review_id,user_id,isLiked},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})+'\n');
-    // #endregion
     let result;
 
-    const mutationStartTime = Date.now();
     if (isLiked) {
       // Unlike: Delete the like
       result = await hasuraMutation(DELETE_REVIEW_LIKE, {
@@ -105,10 +96,6 @@ export async function POST(request: NextRequest) {
         userId: user_id
       });
     }
-    const mutationDuration = Date.now() - mutationStartTime;
-    // #region agent log
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:71',message:'Mutation result',data:{review_id,user_id,isLiked,action:isLiked?'delete':'insert',mutationDuration,hasErrors:!!result.errors,errors:result.errors,affectedRows:result.data?.delete_restaurant_review_likes?.affected_rows||result.data?.insert_restaurant_review_likes_one?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})+'\n');
-    // #endregion
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
@@ -125,7 +112,6 @@ export async function POST(request: NextRequest) {
     // Read likes_count from denormalized field (trigger automatically updated it)
     // Performance: O(1) index lookup vs O(n) aggregate scan - ~95% faster!
     // The trigger update_review_likes_count() automatically maintains this field
-    const queryStartTime = Date.now();
     const countQuery = await hasuraQuery(
       `query GetReviewLikesCount($reviewId: uuid!) {
         restaurant_reviews_by_pk(id: $reviewId) {
@@ -134,10 +120,6 @@ export async function POST(request: NextRequest) {
       }`,
       { reviewId: review_id }
     );
-    const queryDuration = Date.now() - queryStartTime;
-    // #region agent log
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:103',message:'Likes count query result (denormalized)',data:{review_id,queryDuration,hasErrors:!!countQuery.errors,errors:countQuery.errors,likesCount:countQuery.data?.restaurant_reviews_by_pk?.likes_count},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C,E'})+'\n');
-    // #endregion
 
     if (countQuery.errors) {
       console.error('Error fetching likes count:', countQuery.errors);
@@ -153,11 +135,6 @@ export async function POST(request: NextRequest) {
     const didNotChange = didExpectCountChange && afterLikesCount === beforeLikesCount;
 
     if (didNotChange) {
-      // #region agent log
-      fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:132',message:'likes_count did not change after toggle - using aggregate fallback',data:{review_id,user_id,action,beforeLikesCount,afterLikesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})+'\n');
-      // #endregion
-
-      const aggStart = Date.now();
       const aggQuery = await hasuraQuery(
         `query GetReviewLikesCountAgg($reviewId: uuid!) {
           restaurant_review_likes_aggregate(where: { review_id: { _eq: $reviewId } }) {
@@ -166,19 +143,13 @@ export async function POST(request: NextRequest) {
         }`,
         { reviewId: review_id }
       );
-      const aggDuration = Date.now() - aggStart;
       const aggCount = aggQuery.data?.restaurant_review_likes_aggregate?.aggregate?.count ?? 0;
-
-      // #region agent log
-      fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:147',message:'Aggregate likesCount fallback result',data:{review_id,aggDuration,hasErrors:!!aggQuery.errors,errors:aggQuery.errors,aggCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})+'\n');
-      // #endregion
 
       likesCount = aggCount;
 
       // Best-effort self-heal: update denormalized likes_count so future reads are fast.
       try {
-        const healStart = Date.now();
-        const healResult = await hasuraMutation(
+        await hasuraMutation(
           `mutation HealLikesCount($reviewId: uuid!, $likesCount: Int!) {
             update_restaurant_reviews_by_pk(
               pk_columns: { id: $reviewId }
@@ -187,17 +158,10 @@ export async function POST(request: NextRequest) {
           }`,
           { reviewId: review_id, likesCount: aggCount }
         );
-        const healDuration = Date.now() - healStart;
-        // #region agent log
-        fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:166',message:'Self-heal likes_count attempted',data:{review_id,healDuration,hasErrors:!!healResult.errors,errors:healResult.errors},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})+'\n');
-        // #endregion
       } catch (e) {
         // ignore
       }
     }
-    // #region agent log
-    fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:185',message:'Response prepared',data:{review_id,user_id,liked:!isLiked,action,likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})+'\n');
-    // #endregion
 
     return NextResponse.json({
       success: true,
@@ -270,12 +234,6 @@ export async function GET(request: NextRequest) {
 
     // If user_like exists but likes_count is 0, triggers are likely broken. Fallback once.
     if (isLiked && likesCount === 0) {
-      // #region agent log
-      const fs = require('fs');
-      const logPath = '/Users/museryeung/Documents/dev/tastyplates-v2/.cursor/debug.log';
-      fs.appendFileSync(logPath, JSON.stringify({location:'toggle-like/route.ts:224',message:'GET fallback to aggregate because isLiked=true but likes_count=0',data:{review_id,user_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'E'})+'\n');
-      // #endregion
-
       const aggQuery = await hasuraQuery(
         `query GetReviewLikesCountAgg($reviewId: uuid!) {
           restaurant_review_likes_aggregate(where: { review_id: { _eq: $reviewId } }) {

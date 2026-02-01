@@ -1,6 +1,6 @@
 import { useState } from "react";
-import SwipeableReviewViewer from "@/components/review/SwipeableReviewViewer";
-import SwipeableReviewViewerDesktop from "@/components/review/SwipeableReviewViewerDesktop";
+import ReviewScreen from "@/components/review/ReviewScreen";
+import ReviewScreenDesktop from "@/components/review/ReviewScreenDesktop";
 import "@/styles/pages/_reviews.scss";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { GraphQLReview } from "@/types/graphql";
@@ -27,14 +27,14 @@ const Photos = ({ index, data, image }: PhotosProps) => {
   return (
     <div className="review-card relative overflow-hidden" style={{ height: "180px" }}>
       {isMobile ? (
-        <SwipeableReviewViewer
+        <ReviewScreen
           reviews={reviewsArray}
           initialIndex={0}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
       ) : (
-        <SwipeableReviewViewerDesktop
+        <ReviewScreenDesktop
           reviews={reviewsArray}
           initialIndex={0}
           isOpen={isModalOpen}

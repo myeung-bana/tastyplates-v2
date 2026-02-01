@@ -159,12 +159,14 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
   React.useEffect(() => {
     if (isOpen && data?.id) {
       setIsLoadingReplies(true);
-      reviewService.fetchCommentReplies(data.id)
+      // Pass userId to check which comments the user has liked
+      const userId = user?.id ? String(user.id) : undefined;
+      reviewService.fetchCommentReplies(data.id, userId)
         .then(setReplies)
         .catch(error => console.error('Error fetching replies:', error))
         .finally(() => setIsLoadingReplies(false));
     }
-  }, [isOpen, data?.id]);
+  }, [isOpen, data?.id, user?.id]);
 
   // Cooldown timer
   React.useEffect(() => {
@@ -358,7 +360,8 @@ const ReviewBottomSheet: React.FC<ReviewModalProps> = ({
         console.log('✅ Comment approved successfully with status:', res.status);
         toast.success(commentedSuccess);
         // Remove only the optimistic reply, then merge server replies (avoid duplicates)
-        const updatedReplies = await reviewService.fetchCommentReplies(data.id);
+        const userId = user?.id ? String(user.id) : undefined;
+        const updatedReplies = await reviewService.fetchCommentReplies(data.id, userId);
         setReplies(prev => {
           // Remove optimistic reply
           const withoutOptimistic = prev.filter(r => !('isOptimistic' in r) || !r.isOptimistic);

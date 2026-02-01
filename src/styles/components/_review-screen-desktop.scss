@@ -1,4 +1,4 @@
-.swipeable-review-viewer-desktop {
+.review-screen-desktop {
   position: fixed;
   top: 0; // Full-screen covering navbar
   left: 0;
@@ -550,7 +550,7 @@
 
 // Responsive adjustments
 @media (max-width: 1200px) {
-  .swipeable-review-viewer-desktop {
+  .review-screen-desktop {
     &__sidebar {
       width: 360px;
     }
@@ -562,7 +562,7 @@
 }
 
 @media (max-width: 1024px) {
-  .swipeable-review-viewer-desktop {
+  .review-screen-desktop {
     &__sidebar {
       width: 320px;
     }

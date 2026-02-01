@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import SwipeableReviewViewer from "@/components/review/SwipeableReviewViewer";
+import ReviewScreen from "@/components/review/ReviewScreen";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { transformReviewV2ToGraphQLReview } from "@/utils/reviewTransformers";
 import { GraphQLReview } from "@/types/graphql";
@@ -229,7 +229,7 @@ function ReviewsViewerContent() {
   // Reuse existing viewer for look & feel. We keep the mounted list small and re-center as you swipe.
   return (
     <>
-      <SwipeableReviewViewer
+      <ReviewScreen
         reviews={windowReviews}
         initialIndex={windowIndex}
         isOpen={true}

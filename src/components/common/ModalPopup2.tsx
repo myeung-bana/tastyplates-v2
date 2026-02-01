@@ -59,9 +59,11 @@ const ReviewDetailModal: React.FC<ReviewModalProps> = ({
 
   useEffect(() => {
     if (isOpen && data?.id) {
-      reviewService.fetchCommentReplies(data.id as string).then(setReplies);
+      // Pass userId to check which comments the user has liked
+      const userId = user?.id ? String(user.id) : undefined;
+      reviewService.fetchCommentReplies(data.id as string, userId).then(setReplies);
     }
-  }, [isOpen, data?.id]);
+  }, [isOpen, data?.id, user?.id]);
 
   useEffect(() => {
     // Only run this once the modal is open, we have a session token,

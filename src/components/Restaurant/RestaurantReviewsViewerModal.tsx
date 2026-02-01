@@ -110,7 +110,9 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
     if (!reviewId || loadingFirstComments[reviewId]) return;
     setLoadingFirstComments((prev) => ({ ...prev, [reviewId]: true }));
     try {
-      const replies = await reviewService.fetchCommentReplies(reviewId);
+      // Pass userId to check which comments the user has liked
+      const userId = user?.id ? String(user.id) : undefined;
+      const replies = await reviewService.fetchCommentReplies(reviewId, userId);
       const firstComment = replies && replies.length > 0 ? replies[0] : null;
       setFirstComments((prev) => ({ ...prev, [reviewId]: firstComment ?? null }));
       if (replies) {
@@ -533,8 +535,10 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
               [selectedReview.databaseId]: count,
             }));
             if (count > 0 && !firstComments[selectedReview.id || ""]) {
+              // Pass userId to check which comments the user has liked
+              const userId = user?.id ? String(user.id) : undefined;
               reviewService
-                .fetchCommentReplies(selectedReview.id || "")
+                .fetchCommentReplies(selectedReview.id || "", userId)
                 .then((replies) => {
                   if (replies && replies.length > 0) {
                     setFirstComments((prev) => ({

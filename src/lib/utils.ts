@@ -347,3 +347,17 @@ export const parseProfileUrl = (userParam: string): string | null => {
     return !isNaN(userId) && userId > 0 ? String(userId) : null;
   }
 };
+
+/**
+ * Formats like count to compact notation (e.g., 1234 -> 1.2k, 1234567 -> 1.2M)
+ * Max 3 digits before conversion to k/M notation
+ */
+export function formatLikeCount(count: number): string {
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+  return count.toString();
+}

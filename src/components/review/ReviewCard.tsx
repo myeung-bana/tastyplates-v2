@@ -1,7 +1,7 @@
 // ReviewCard.tsx
 import Image from "next/image";
-import SwipeableReviewViewer from "./SwipeableReviewViewer";
-import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
+import ReviewScreen from "./ReviewScreen";
+import ReviewScreenDesktop from "./ReviewScreenDesktop";
 import { capitalizeWords, PAGE, stripTags } from "@/lib/utils";
 import {
   ReviewCardProps,
@@ -36,14 +36,14 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
   return (
     <div className="review-card !border-none font-neusans" style={{ width: `${width || 300}px` }}>
       {isMobile ? (
-        <SwipeableReviewViewer
+        <ReviewScreen
           reviews={reviewsArray}
           initialIndex={0}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
       ) : (
-        <SwipeableReviewViewerDesktop
+        <ReviewScreenDesktop
           reviews={reviewsArray}
           initialIndex={0}
           isOpen={isModalOpen}

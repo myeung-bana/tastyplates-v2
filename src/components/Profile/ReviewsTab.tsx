@@ -7,6 +7,9 @@ import { restaurantUserService } from '@/app/api/v1/services/restaurantUserServi
 import { transformReviewV2ToReviewedDataProps } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { GraphQLReview } from '@/types/graphql';
+import { useIsMobile } from '@/utils/deviceUtils';
+import ReviewScreen from '../review/ReviewScreen';
+import ReviewScreenDesktop from '../review/ReviewScreenDesktop';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,6 +26,11 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
   const [hasNextPage, setHasNextPage] = useState(true);
   const [offset, setOffset] = useState(0);
   const LIMIT = 50; // Load more reviews at once for profile page
+  
+  // Responsive viewer state
+  const isMobile = useIsMobile();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const fetchReviews = useCallback(async (
     limit = LIMIT,
@@ -189,10 +197,17 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
     };
   }, [targetUserId, fetchReviews]);
 
-  // Convert reviews to GraphQLReview format for SwipeableViewers
+  // Convert reviews to GraphQLReview format for viewers
   const reviewsAsGraphQL = reviews.map(r => r as unknown as GraphQLReview);
 
+  // Handle opening the inline viewer
+  const handleOpenViewer = useCallback((index: number) => {
+    setViewerIndex(index);
+    setViewerOpen(true);
+  }, []);
+
   return (
+    <>
     <TabContentGrid
       items={reviews}
       loading={reviewsLoading}
@@ -203,7 +218,7 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
             data={restaurant}
             reviews={reviewsAsGraphQL}
             reviewIndex={index >= 0 ? index : 0}
-            viewerSource={{ src: 'user', userId: targetUserId, status }}
+            onOpenViewer={handleOpenViewer}
             {...props}
           />
         );
@@ -214,6 +229,24 @@ const ReviewsTab: React.FC<ReviewsTabProps> = ({ targetUserId, status, onReviewC
       skeletonKeyPrefix="review-skeleton"
       gridClassName="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
     />
+    
+    {/* Responsive inline viewer */}
+    {isMobile ? (
+      <ReviewScreen
+        reviews={reviewsAsGraphQL}
+        initialIndex={viewerIndex}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
+    ) : (
+      <ReviewScreenDesktop
+        reviews={reviewsAsGraphQL}
+        initialIndex={viewerIndex}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
+    )}
+    </>
   );
 };
 

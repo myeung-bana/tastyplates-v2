@@ -409,7 +409,7 @@ export const GET_REVIEW_REPLIES = `
         deleted_at: { _is_null: true }
         status: { _eq: "approved" }
       }
-      order_by: { created_at: asc }
+      order_by: { created_at: desc }
       limit: $limit
       offset: $offset
     ) {

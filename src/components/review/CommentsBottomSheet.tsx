@@ -373,6 +373,11 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     };
 
     setReplies((prev) => [optimisticReply, ...prev]);
+    
+    // Initialize like state for optimistic comment
+    setReplyLikes((prev) => ({ ...prev, [optimisticReply.id]: 0 }));
+    setReplyUserLiked((prev) => ({ ...prev, [optimisticReply.id]: false }));
+    
     setCommentText("");
 
     try {
@@ -403,12 +408,27 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
       if (res.status && isSuccess(res.status)) {
         toast.success(commentedSuccess);
-        // Fetch updated replies to get the actual reply with proper ID
+        // Fetch updated replies with userId to get proper like status (now newest first)
+        const userUuid = await getUserUuid();
         const updatedReplies = await reviewService.fetchCommentReplies(
-          review.id
+          review.id,
+          userUuid ?? undefined
         );
-        // Replace optimistic reply with fetched replies
+        // Replace optimistic reply with fetched replies (newest first from API)
         setReplies(updatedReplies);
+        
+        // Reinitialize like state with real IDs
+        const newLikes: Record<string, number> = {};
+        const newUserLiked: Record<string, boolean> = {};
+        updatedReplies.forEach((r) => {
+          if (r.id) {
+            newLikes[r.id] = r.commentLikes ?? 0;
+            newUserLiked[r.id] = r.userLiked ?? false;
+          }
+        });
+        setReplyLikes(newLikes);
+        setReplyUserLiked(newUserLiked);
+        
         if (onCommentCountChangeRef.current) {
           onCommentCountChangeRef.current(updatedReplies.length);
         }

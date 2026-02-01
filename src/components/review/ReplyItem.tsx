@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { GraphQLReview } from "@/types/graphql";
-import { capitalizeWords, stripTags, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, stripTags, generateProfileUrl, formatLikeCount } from "@/lib/utils";
 import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
@@ -98,7 +98,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
               )}
               {reply.commentLikes > 0 && (
                 <span className="reply-item__like-count">
-                  {reply.commentLikes}
+                  {formatLikeCount(reply.commentLikes)}
                 </span>
               )}
             </button>

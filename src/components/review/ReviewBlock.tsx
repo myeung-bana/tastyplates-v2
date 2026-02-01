@@ -15,8 +15,8 @@ import { useFirebaseSession } from "@/hooks/useFirebaseSession";
 import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
-import SwipeableReviewViewer from "./SwipeableReviewViewer";
-import SwipeableReviewViewerDesktop from "./SwipeableReviewViewerDesktop";
+import ReviewScreen from "./ReviewScreen";
+import ReviewScreenDesktop from "./ReviewScreenDesktop";
 import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
@@ -571,7 +571,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
         
         return isMobile ? (
-          <SwipeableReviewViewer
+          <ReviewScreen
             reviews={reviewsArray}
             initialIndex={0}
             isOpen={isModalOpen}
@@ -581,7 +581,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
             }}
           />
         ) : (
-          <SwipeableReviewViewerDesktop
+          <ReviewScreenDesktop
             reviews={reviewsArray}
             initialIndex={0}
             isOpen={isModalOpen}
