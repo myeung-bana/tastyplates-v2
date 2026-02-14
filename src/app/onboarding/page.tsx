@@ -131,6 +131,19 @@ const OnboardingContent = () => {
     return null;
   }
 
+  // Don't flash onboarding content when we're redirecting (onboarding already complete)
+  const redirectingHome = !loading && user && nhostUser && user.onboarding_complete === true;
+  if (redirectingHome) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex-1 w-full flex justify-center py-8 pt-20">
+          <div className="w-full flex justify-center items-center min-h-[200px]">Loading...</div>
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import "@/styles/pages/_auth.scss";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { restaurantUserService, UpdateRestaurantUserRequest } from "@/app/api/v1/services/restaurantUserService";
@@ -201,8 +202,10 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       // Clear registration data from localStorage
       localStorage.removeItem(REGISTRATION_KEY);
       
-      // Session will be automatically refreshed by useNhostSession hook
-      // Force a page reload to ensure fresh data
+      // Signal that onboarding just completed so OnboardingRedirect won't send user back
+      // (session may still have stale onboarding_complete: false until refetch)
+      sessionStorage.setItem("onboarding_just_completed", "1");
+      
       setMessage(registrationSuccess);
       localStorage.setItem(WELCOME_KEY, welcomeProfile);
       setMessageType(responseStatus.success);

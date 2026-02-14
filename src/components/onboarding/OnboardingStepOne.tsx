@@ -223,7 +223,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
       // Try to fetch user data again to get palates and match them
       const matchPalatesFromAPI = async () => {
         try {
-          const userId = String(user.id);
+          const userId = String(user.user_id);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data && response.data.palates) {
