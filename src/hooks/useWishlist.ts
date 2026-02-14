@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { nhost } from '@/lib/nhost';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import customToast from '@/utils/toast';
 import { 
@@ -19,7 +20,7 @@ export const useWishlist = ({
   initialSavedStatus = false,
   onWishlistChange 
 }: UseWishlistOptions) => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const [saved, setSaved] = useState(initialSavedStatus);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -28,14 +29,19 @@ export const useWishlist = ({
   const restaurantService = new RestaurantService();
 
   const checkFavoriteStatus = useCallback(async () => {
-    if (!firebaseUser || !restaurantSlug) return;
+    if (!nhostUser || !restaurantSlug) return;
     
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost access token for authentication
+      const accessToken = nhost.auth.getAccessToken();
+      if (!accessToken) {
+        console.error('No access token available');
+        return;
+      }
+
       const response = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurantSlug, action: "check" },
-        idToken
+        accessToken
       );
       
       // Check if response has the expected structure
@@ -46,10 +52,10 @@ export const useWishlist = ({
     } catch (error) {
       console.error("Error checking favorite status:", error);
     }
-  }, [firebaseUser, restaurantSlug, restaurantService]);
+  }, [nhostUser, restaurantSlug, restaurantService]);
 
   const toggleFavorite = useCallback(async () => {
-    if (!user || !firebaseUser) {
+    if (!user || !nhostUser) {
       window.location.href = '/signin';
       return;
     }
@@ -58,12 +64,16 @@ export const useWishlist = ({
     setError(null);
 
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost access token for authentication
+      const accessToken = nhost.auth.getAccessToken();
+      if (!accessToken) {
+        throw new Error('No access token available');
+      }
+
       const action = saved ? "remove" : "add";
       const response = await restaurantService.createFavoriteListing(
         { restaurant_slug: restaurantSlug, action },
-        idToken
+        accessToken
       );
       
       // Check if response has the expected structure
@@ -91,7 +101,7 @@ export const useWishlist = ({
     } finally {
       setLoading(false);
     }
-  }, [saved, user, firebaseUser, restaurantSlug, restaurantService, onWishlistChange]);
+  }, [saved, user, nhostUser, restaurantSlug, restaurantService, onWishlistChange]);
 
   useEffect(() => {
     if (user && !initialized) {

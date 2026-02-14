@@ -16,7 +16,7 @@ import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { logOutSuccessfull } from "@/constants/messages";
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
 import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TASTYPLATES_LOGO_WHITE } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -28,7 +28,7 @@ import NavbarSearchBar from "../navigation/NavbarSearchBar";
 import LocationButton from "../navigation/LocationButton";
 import MobileMenu from "./MobileMenu";
 import { useProfileData } from "@/hooks/useProfileData";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -54,30 +54,30 @@ const navigationItems = [
 ];
 
 export default function Navbar(props: Record<string, unknown>) {
-  const { user, firebaseUser, loading } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const router = useRouter();
   const pathname = usePathname();
   
   // Fetch current user profile data for authenticated users
   // Only fetch if user is authenticated and has a valid ID
-  const currentUserId = user?.id || null;
+  const currentUserId = user?.user_id || null;
   const shouldFetchProfile = !loading && !!user && !!currentUserId;
   const { userData } = useProfileData(shouldFetchProfile ? currentUserId : '');
   
   // Debug: Log session state for troubleshooting
   useEffect(() => {
-    if (!loading && user && firebaseUser) {
-      const userId = user.id;
-      console.log('[Navbar] Firebase session authenticated:', {
+    if (!loading && user && nhostUser) {
+      const userId = user.user_id;
+      console.log('[Navbar] Nhost session authenticated:', {
         userId: userId,
-        email: user.email,
-        displayName: user.display_name,
-        hasProfileImage: !!user.profile_image,
+        email: nhostUser.email,
+        displayName: nhostUser.displayName,
+        hasProfileImage: !!nhostUser.avatarUrl || !!user.profile_image,
       });
     } else if (!loading && !user) {
-      console.log('[Navbar] Firebase session unauthenticated');
+      console.log('[Navbar] Nhost session unauthenticated');
     }
-  }, [user, firebaseUser, loading]);
+  }, [user, nhostUser, loading]);
   
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
@@ -92,12 +92,12 @@ export default function Navbar(props: Record<string, unknown>) {
 
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase
-      await firebaseAuthService.signOut();
-      console.log('[Navbar] Firebase sign out successful');
+      // Sign out from Nhost
+      await nhostAuthService.signOut();
+      console.log('[Navbar] Nhost sign out successful');
     } catch (error) {
-      console.error('[Navbar] Firebase sign out error:', error);
-      // Continue with logout even if Firebase signout fails
+      console.error('[Navbar] Nhost sign out error:', error);
+      // Continue with logout even if Nhost signout fails
     }
     
     // Clear all cookies and localStorage
@@ -370,7 +370,7 @@ export default function Navbar(props: Record<string, unknown>) {
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] overflow-hidden ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link 
-                          href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.id ? `/profile/${user.id}` : PROFILE)} 
+                          href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.user_id ? `/profile/${user.user_id}` : PROFILE)} 
                           className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors first:rounded-t-2xl'
                         >
                           My Profile

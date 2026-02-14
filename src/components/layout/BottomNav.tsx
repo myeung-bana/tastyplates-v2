@@ -12,7 +12,7 @@ import { HOME, RESTAURANTS, PROFILE, TASTYSTUDIO_ADD_REVIEW } from "@/constants/
 import { useAuthModal } from "../auth/AuthModalWrapper";
 import { useProfileData } from "@/hooks/useProfileData";
 import { DEFAULT_USER_ICON } from "@/constants/images";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -34,14 +34,14 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { user, loading } = useFirebaseSession();
+  const { user, loading } = useNhostSession();
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { showSignin } = useAuthModal();
   
   // Fetch current user profile data for authenticated users
-  const currentUserId = user?.id || null;
+  const currentUserId = user?.user_id || null;
   const { userData } = useProfileData(currentUserId || '');
 
   // Check if mobile on mount and resize

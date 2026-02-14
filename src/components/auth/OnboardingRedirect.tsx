@@ -2,17 +2,18 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { ONBOARDING_ONE } from "@/constants/pages";
 
 /**
  * OnboardingRedirect - Redirects users to /onboarding if onboarding_complete is false
  * This component should be placed in the root layout to check on every page load
+ * Works with Nhost authentication
  */
 export default function OnboardingRedirect() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useFirebaseSession();
+  const { user, loading } = useNhostSession();
 
   useEffect(() => {
     // Don't redirect while loading or if user is not authenticated

@@ -9,7 +9,7 @@ import { imageSizeLimit, imageMBLimit, aboutMeMaxLimit } from "@/constants/valid
 import { responseStatus } from "@/constants/response";
 import { PROFILE } from "@/constants/pages";
 import toast from "react-hot-toast";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { REGISTRATION_KEY, WELCOME_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
 
@@ -20,7 +20,7 @@ interface OnboardingStepTwoProps {
 
 const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, currentStep }) => {
   const router = useRouter();
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const [aboutMe, setAboutMe] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,9 +56,10 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       const parsedData = storedData ? JSON.parse(storedData) : {};
 
       // Try to fetch from API if we have a user ID
-      if (user?.id) {
+      if (user?.user_id) {
         try {
-          const userId = String(user.id);
+          const userId = String(user.user_id);
+          console.log('[OnboardingStepTwo] Fetching user_profile for user_id:', userId);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data) {
@@ -83,7 +84,8 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
             }
           }
         } catch (error) {
-          console.error('Error loading user data from API:', error);
+          console.error('[OnboardingStepTwo] Error loading user_profile from API:', error);
+          console.log('[OnboardingStepTwo] User profile may not exist yet - will be created on submit');
           // Fall back to localStorage if API fails
           if (parsedData.aboutMe) setAboutMe(parsedData.aboutMe);
           if (parsedData.profileImage) setProfileImage(parsedData.profileImage);
@@ -96,7 +98,7 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
     };
 
     loadUserData();
-  }, [user?.id]);
+  }, [user?.user_id]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setProfileError(null);
@@ -132,15 +134,15 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       return;
     }
 
-    // Get user ID from Firebase session (UUID from Hasura) - required for Firebase auth users
-    if (!user?.id) {
+    // Get user ID from Nhost session (UUID from Hasura) - required for Nhost auth users
+    if (!user?.user_id) {
       toast.error('Session expired. Please log in again.');
       setIsLoading(false);
       router.push('/login');
       return;
     }
 
-    const userId = String(user.id); // UUID from Hasura
+    const userId = String(user.user_id); // UUID from Hasura
 
     try {
       // Get data from OnboardingStepOne (stored in localStorage)
@@ -199,7 +201,7 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       // Clear registration data from localStorage
       localStorage.removeItem(REGISTRATION_KEY);
       
-      // Session will be automatically refreshed by useFirebaseSession hook
+      // Session will be automatically refreshed by useNhostSession hook
       // Force a page reload to ensure fresh data
       setMessage(registrationSuccess);
       localStorage.setItem(WELCOME_KEY, welcomeProfile);

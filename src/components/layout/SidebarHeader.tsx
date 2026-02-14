@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter } from "next/navigation";
 import { 
   FiEdit3, 
@@ -18,7 +18,7 @@ import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME, TAST
 import { logOutSuccessfull } from "@/constants/messages";
 import { LOGOUT_KEY } from "@/constants/session";
 import { LOCATION_HIERARCHY } from "@/constants/location";
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 
 interface SidebarHeaderProps {
@@ -35,17 +35,17 @@ interface SidebarItem {
 
 export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
   const pathname = usePathname();
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      // Sign out from Firebase
-      await firebaseAuthService.signOut();
-      console.log('[SidebarHeader] Firebase sign out successful');
+      // Sign out from Nhost
+      await nhostAuthService.signOut();
+      console.log('[SidebarHeader] Nhost sign out successful');
     } catch (error) {
-      console.error('[SidebarHeader] Firebase sign out error:', error);
-      // Continue with logout even if Firebase signout fails
+      console.error('[SidebarHeader] Nhost sign out error:', error);
+      // Continue with logout even if Nhost signout fails
     }
     
     // Clear all cookies and localStorage

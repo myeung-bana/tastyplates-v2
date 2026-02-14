@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
 interface UseProfileDataReturn {
@@ -17,7 +17,7 @@ interface UseProfileDataReturn {
 
 // Support username, UUID (string), and legacy numeric IDs
 export const useProfileData = (targetUserIdentifier: string | number): UseProfileDataReturn => {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [nameLoading, setNameLoading] = useState(true);
   const [aboutMeLoading, setAboutMeLoading] = useState(true);
@@ -31,9 +31,9 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     if (!user || !targetUserIdentifier) return false;
     
     // Compare by ID (UUID) if available
-    if (user.id) {
+    if (user.user_id) {
       const identifierStr = String(targetUserIdentifier);
-      const userIdStr = String(user.id);
+      const userIdStr = String(user.user_id);
       
       // Direct ID match
       if (identifierStr === userIdStr) return true;
@@ -44,7 +44,7 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     }
     
     return false;
-  }, [user?.id, user?.username, targetUserIdentifier]);
+  }, [user?.user_id, user?.username, targetUserIdentifier]);
 
   useEffect(() => {
     const fetchPublicUserData = async () => {
@@ -199,7 +199,7 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     if (!user || !userData) return isViewingOwnProfile;
     
     // Compare by ID
-    if (user.id && userData.id && String(user.id) === String(userData.id)) {
+    if (user.user_id && userData.id && String(user.user_id) === String(userData.id)) {
       return true;
     }
     
@@ -209,7 +209,7 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     }
     
     return false;
-  }, [user?.id, user?.username, userData?.id, userData?.username, isViewingOwnProfile]);
+  }, [user?.user_id, user?.username, userData?.id, userData?.username, isViewingOwnProfile]);
 
   // Function to refresh follower and following counts
   const refreshCounts = useCallback(async () => {

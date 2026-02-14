@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { nhost } from '@/lib/nhost';
 import { FollowService } from '@/services/follow/followService';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { responseStatusCode as code } from '@/constants/response';
@@ -24,7 +25,7 @@ const isUUID = (value: string | number | null): boolean => {
 };
 
 export const useFollowData = (targetUserId: string | number | null): UseFollowDataReturn => {
-  const { firebaseUser } = useFirebaseSession();
+  const { nhostUser } = useNhostSession();
   const [followers, setFollowers] = useState<Record<string, unknown>[]>([]);
   const [following, setFollowing] = useState<Record<string, unknown>[]>([]);
   const [followersLoading, setFollowersLoading] = useState(true);
@@ -132,10 +133,14 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
   }, [loadFollowData]);
 
   const handleFollow = useCallback(async (id: string) => {
-    if (!firebaseUser) return;
+    if (!nhostUser) return;
     
-    // Get Firebase ID token for authentication
-    const idToken = await firebaseUser.getIdToken();
+    // Get Nhost access token for authentication
+    const accessToken = nhost.auth.getAccessToken();
+    if (!accessToken) {
+      console.error('No access token available');
+      return;
+    }
     
     // Check if ID is UUID format
     const isUUIDFormat = isUUID(id);
@@ -147,7 +152,7 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
+            'Authorization': `Bearer ${accessToken}`
           },
           body: JSON.stringify({ user_id: id })
         });
@@ -180,7 +185,7 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
       const userIdNum = Number(id);
       if (isNaN(userIdNum)) return;
       
-      const response = await followService.followUser(userIdNum, idToken);
+      const response = await followService.followUser(userIdNum, accessToken);
       if (response.status === code.success) {
         localStorage.removeItem(FOLLOWING_KEY(targetUserId));
         localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
@@ -190,13 +195,17 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
         await refreshFollowData();
       }
     }
-  }, [firebaseUser, targetUserId, refreshFollowData]);
+  }, [nhostUser, targetUserId, refreshFollowData]);
 
   const handleUnfollow = useCallback(async (id: string) => {
-    if (!firebaseUser) return;
+    if (!nhostUser) return;
     
-    // Get Firebase ID token for authentication
-    const idToken = await firebaseUser.getIdToken();
+    // Get Nhost access token for authentication
+    const accessToken = nhost.auth.getAccessToken();
+    if (!accessToken) {
+      console.error('No access token available');
+      return;
+    }
     
     // Check if ID is UUID format
     const isUUIDFormat = isUUID(id);
@@ -208,7 +217,7 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
+            'Authorization': `Bearer ${accessToken}`
           },
           body: JSON.stringify({ user_id: id })
         });
@@ -252,7 +261,7 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
       const userIdNum = Number(id);
       if (isNaN(userIdNum)) return;
       
-      const response = await followService.unfollowUser(userIdNum, idToken);
+      const response = await followService.unfollowUser(userIdNum, accessToken);
       if (response.status === code.success) {
         localStorage.removeItem(FOLLOWING_KEY(targetUserId));
         localStorage.removeItem(FOLLOWERS_KEY(targetUserId));
@@ -262,7 +271,7 @@ export const useFollowData = (targetUserId: string | number | null): UseFollowDa
         await refreshFollowData();
       }
     }
-  }, [firebaseUser, targetUserId, refreshFollowData]);
+  }, [nhostUser, targetUserId, refreshFollowData]);
 
   // Reset follow data when targetUserId changes
   useEffect(() => {

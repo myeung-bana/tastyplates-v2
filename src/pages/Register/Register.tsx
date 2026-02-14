@@ -1,11 +1,12 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserService } from '@/services/user/userService';
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import Spinner from "@/components/common/LoadingSpinner";
 import Cookies from "js-cookie";
 import { removeAllCookies } from "@/utils/removeAllCookies";
@@ -17,7 +18,7 @@ import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import { IRegisterData } from "@/interfaces/user/user";
 
-// Note: Type definitions for Google Identity Services are in Login.tsx to avoid duplicate declarations
+// Using Nhost Authentication with Google OAuth and email/password
 
 interface RegisterPageProps {
   onOpenSignin?: () => void;
@@ -29,7 +30,9 @@ const userService = new UserService()
 const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  // Using Firebase authentication - no NextAuth session needed
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const hasRedirected = useRef(false);
+  // Using Nhost authentication
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +45,31 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
+
+  // Check if user is already authenticated - redirect to onboarding or home
+  useEffect(() => {
+    // Prevent infinite redirect loops
+    if (hasRedirected.current) return;
+    
+    if (!sessionLoading && user && nhostUser) {
+      console.log('[Register] User already authenticated, redirecting...');
+      hasRedirected.current = true;
+      
+      // Check if user needs onboarding
+      if (!user.onboarding_complete) {
+        router.push(ONBOARDING_ONE);
+      } else {
+        router.push(HOME);
+      }
+    }
+  }, [user, nhostUser, sessionLoading, router]);
+
+  // Reset redirect flag on unmount (for modals)
+  useEffect(() => {
+    return () => {
+      hasRedirected.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const registrationData = localStorage.getItem(REGISTRATION_KEY);
@@ -121,19 +149,24 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     }
 
     try {
-      // Use Firebase authentication for registration
-      const result = await firebaseAuthService.registerWithEmail(email, password);
+      // Use Nhost authentication for registration
+      const username = email.split('@')[0];
+      const result = await nhostAuthService.registerWithEmail(email, password, {
+        username,
+        displayName: username,
+      });
       
-      if (result.success && result.firebase_uuid && result.user) {
-        // User is created in Hasura by firebaseAuthService
-        // Firebase session is automatically set
+      if (result.success && result.session && result.user) {
+        // User is created in auth.users by Nhost automatically
+        // user_profiles is created by nhostAuthService
+        // Nhost session is automatically set
         
         // Store onboarding data
         const onboardingData = {
           email: result.user.email || email,
-          username: result.user.displayName || email.split('@')[0],
-          firebase_uuid: result.firebase_uuid,
-          id: result.firebase_uuid,
+          username: username,
+          user_id: result.user.id,
+          id: result.user.id,
           isPartialRegistration: true,
         };
         
@@ -152,9 +185,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const toggleShowPassword = () => setShowPassword(!showPassword);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
-  // generateRandomPassword removed - Firebase handles authentication
-
-  // handleGoogleRestRegistration removed - Firebase handles user creation automatically
+  // Nhost handles authentication - no manual password generation needed
 
   const signUpWithGoogle = async () => {
     try {
@@ -162,36 +193,15 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       setIsLoading(true);
       localStorage.removeItem(REGISTRATION_KEY);
       
-      const result = await firebaseAuthService.signInWithGoogle();
+      // Nhost Google sign-in uses OAuth redirect flow
+      // User will be redirected to Google, then back to the app
+      // Store intent to continue to onboarding after OAuth redirect
+      sessionStorage.setItem('post_oauth_redirect', ONBOARDING_ONE);
       
-      if (result.success && result.firebase_uuid && result.user) {
-        // User is created in Hasura by firebaseAuthService
-        // Firebase session is automatically set
-        // Add delay to ensure user is fully available in Hasura
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Store onboarding data
-        const onboardingData = {
-          email: result.user.email || '',
-          username: result.user.displayName || result.user.email?.split('@')[0] || '',
-          firebase_uuid: result.firebase_uuid,
-          id: result.firebase_uuid,
-          isPartialRegistration: true,
-        };
-        
-        localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
-        
-        // Refresh router to update server components
-        router.refresh();
-        
-        // Small delay to ensure Firebase session propagates
-        setTimeout(() => {
-          router.push(ONBOARDING_ONE);
-        }, 300);
-      } else {
-        setError(result.error || 'Google registration failed');
-        setIsLoading(false);
-      }
+      await nhostAuthService.signInWithGoogle(window.location.origin + ONBOARDING_ONE);
+      
+      // Note: Execution won't reach here as user will be redirected
+      // Onboarding data will be set up after redirect in the onboarding page
     } catch (error: any) {
       console.error('Google sign-up error:', error);
       setError(error.message || unexpectedError);
@@ -201,7 +211,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   return (
     <div className="auth flex flex-col justify-center items-start">
-      {/* OAuth flow message removed - using Firebase authentication */}
+      {/* Using Nhost OAuth authentication */}
       {showContinueModal ? (
         <div className="auth__container !max-w-[488px] w-full">
           <div className="auth__card !py-8 !rounded-3xl">

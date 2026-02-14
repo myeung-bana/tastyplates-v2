@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import Navbar from "@/components/layout/Navbar";
 import OnboardingStepOne from "@/components/onboarding/OnboardingStepOne";
 import OnboardingStepTwo from "@/components/onboarding/OnboardingStepTwo";
@@ -7,13 +7,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { HOME, ONBOARDING_ONE } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import Cookies from "js-cookie";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 
 // Component that uses useSearchParams - must be wrapped in Suspense
 const OnboardingContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
+  const hasRedirected = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -35,22 +36,28 @@ const OnboardingContent = () => {
   useEffect(() => {
     if (!hasMounted) return;
     
-    // Wait for Firebase session to finish loading before making decisions
+    // Prevent infinite redirect loops
+    if (hasRedirected.current) return;
+    
+    // Wait for Nhost session to finish loading before making decisions
     if (loading) {
-      console.log('[Onboarding] Firebase session is loading, waiting...');
+      console.log('[Onboarding] Nhost session is loading, waiting...');
       return; // Don't redirect while loading
     }
     
-    // Check if user is logged in with Firebase
-    if (user?.id) {
-      console.log('[Onboarding] User authenticated:', {
-        userId: user.id,
-        onboarding_complete: user.onboarding_complete
+    // Check if user is logged in with Nhost
+    if (user && nhostUser) {
+      console.log('[Onboarding] Nhost user authenticated, checking user_profile:', {
+        user_id: user.user_id,
+        username: user.username,
+        onboarding_complete: user.onboarding_complete,
+        profile_source: 'user_profiles table'
       });
       
       // If onboarding is already complete, redirect to home
       if (user.onboarding_complete === true) {
         console.log('[Onboarding] Onboarding complete, redirecting to home');
+        hasRedirected.current = true;
         router.replace(HOME);
         return;
       }
@@ -88,9 +95,17 @@ const OnboardingContent = () => {
     // Allow access if it's a partial registration (user needs to complete profile)
     if (!storedData && googleAuth !== 'true' && !isOAuthUser && !isPartialRegistration) {
       console.log('[Onboarding] No session and no registration data, redirecting to home');
+      hasRedirected.current = true;
       router.replace(HOME);
     }
-  }, [router, hasMounted, user, loading]);
+  }, [router, hasMounted, user, nhostUser, loading]);
+
+  // Reset redirect flag on unmount
+  useEffect(() => {
+    return () => {
+      hasRedirected.current = false;
+    };
+  }, []);
 
   const handleNext = () => {
     if (currentStep < 2) {

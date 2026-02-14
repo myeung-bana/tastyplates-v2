@@ -14,7 +14,7 @@ import { Key } from "@react-types/shared";
 import { genderOptions, pronounOptions } from "@/constants/formOptions";
 import Cookies from "js-cookie";
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useCuisines } from "@/hooks/useCuisines";
 import {
   birthdateRequired,
@@ -49,7 +49,7 @@ interface OnboardingStepOneProps {
 }
 
 const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentStep }) => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [name, setName] = useState("");
@@ -82,13 +82,20 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
     const parsedData = storedData ? JSON.parse(storedData) : {};
 
       // Try to fetch from API if we have a user ID
-      if (user?.id) {
+      if (user?.user_id) {
         try {
-          const userId = String(user.id);
+          const userId = String(user.user_id);
+          console.log('[OnboardingStepOne] Fetching user_profile for user_id:', userId);
           const response = await restaurantUserService.getUserById(userId);
           
           if (response.success && response.data) {
             const userData = response.data;
+            console.log('[OnboardingStepOne] User profile loaded:', {
+              user_id: userId,
+              username: userData.username,
+              has_profile: !!userData,
+              onboarding_complete: userData.onboarding_complete
+            });
             
             // Pre-fill fields from API, but only if not already set in localStorage
             // This allows localStorage to take precedence (for partial saves)
@@ -169,7 +176,8 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
             }
           }
         } catch (error) {
-          console.error('Error loading user data:', error);
+          console.error('[OnboardingStepOne] Error loading user_profile from API:', error);
+          console.log('[OnboardingStepOne] User profile may not exist yet - this is normal for new Nhost users');
           // Fall back to localStorage/cookies if API fails
           if (parsedData.username) setName(parsedData.username);
           else setName(Cookies.get('username') || "");
@@ -204,14 +212,14 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
     };
 
     loadUserData();
-  }, [hasMounted, user?.id, hasLoadedUserData]);
+  }, [hasMounted, user?.user_id, hasLoadedUserData]);
 
   // Re-match palates when cuisineOptions become available
   useEffect(() => {
     if (!hasLoadedUserData || cuisinesLoading || cuisineOptions.length === 0) return;
     
     // If we have selected palates but they might not be matched yet
-    if (selectedPalates.size > 0 && user?.id) {
+    if (selectedPalates.size > 0 && user?.user_id) {
       // Try to fetch user data again to get palates and match them
       const matchPalatesFromAPI = async () => {
         try {
@@ -254,7 +262,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
       
       matchPalatesFromAPI();
     }
-  }, [cuisineOptions, cuisinesLoading, hasLoadedUserData, user?.id]);
+  }, [cuisineOptions, cuisinesLoading, hasLoadedUserData, user?.user_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

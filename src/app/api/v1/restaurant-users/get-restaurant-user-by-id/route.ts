@@ -1,40 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
-
-// Fallback query without relationships (in case they don't exist)
-const GET_RESTAURANT_USER_BY_ID_FALLBACK = `
-  query GetRestaurantUserById($id: uuid!) {
-    restaurant_users_by_pk(id: $id) {
-      id
-      firebase_uuid
-      username
-      email
-      display_name
-      user_nicename
-      password_hash
-      is_google_user
-      google_auth
-      google_token
-      auth_method
-      profile_image
-      about_me
-      birthdate
-      gender
-      pronoun
-      address
-      zip_code
-      latitude
-      longitude
-      palates
-      language_preference
-      onboarding_complete
-      created_at
-      updated_at
-      deleted_at
-    }
-  }
-`;
+import { GET_USER_PROFILE_BY_ID } from '@/app/graphql/UserProfiles/userProfilesQueries';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,73 +28,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try querying with relationships first
-    let result = await hasuraQuery(GET_RESTAURANT_USER_BY_ID, { id });
+    // Query Nhost user_profiles only
+    console.log('[getUserById] Querying user_profiles table for user_id:', id);
+    const result = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
     
-    // Check if error is about missing relationships (followers/following)
-    const hasRelationshipError = result.errors?.some((err: any) => 
-      err.message?.includes('followers') || 
-      err.message?.includes('following') ||
-      err.message?.includes('not found') ||
-      err.message?.includes('Cannot query field')
-    );
+    const userProfile = result.data?.user_profiles_by_pk;
     
-    if (hasRelationshipError) {
-      console.warn('Relationships not available, using fallback query without followers/following');
-      // If relationships don't exist, use fallback query without them
-      result = await hasuraQuery(GET_RESTAURANT_USER_BY_ID_FALLBACK, { id });
-    }
-
-    if (result.errors) {
-      console.error('GraphQL errors:', result.errors);
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.errors[0]?.message || 'Operation failed',
-          details: result.errors
-        },
-        { status: 500 }
-      );
-    }
-
-    const user = result.data?.restaurant_users_by_pk;
-
-    if (!user) {
+    if (!userProfile || !userProfile.user) {
+      console.log('[getUserById] User not found in user_profiles');
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // Calculate follower and following counts from arrays
-    // If relationships don't exist, default to 0
-    let followersCount = 0;
-    let followingCount = 0;
-    
-    try {
-      // Count followers array (users who follow this user)
-      if (Array.isArray(user.followers)) {
-        followersCount = user.followers.length;
-      }
-      
-      // Count following array (users this user is following)
-      if (Array.isArray(user.following)) {
-        followingCount = user.following.length;
-      }
-    } catch (error) {
-      // If relationships don't exist, counts remain 0
-      console.warn('Could not get follower/following counts, defaulting to 0:', error);
-    }
+    console.log('[getUserById] Found user in user_profiles table:', {
+      user_id: id,
+      username: userProfile.username,
+      has_auth_user: !!userProfile.user
+    });
 
-    // Remove relationship arrays from user object before returning (we only need counts)
-    const { followers, following, ...userData } = user;
+    // Transform Nhost schema to RestaurantUser format for backward compatibility
+    const { user, ...profileData } = userProfile;
+    
+    const transformedUser = {
+      id: user.id,
+      firebase_uuid: user.id, // Use Nhost user ID as firebase_uuid for compatibility
+      username: profileData.username,
+      email: user.email,
+      display_name: user.displayName || profileData.username,
+      user_nicename: profileData.username,
+      is_google_user: user.metadata?.provider === 'google' || false,
+      google_auth: user.metadata?.provider === 'google' || false,
+      auth_method: user.metadata?.provider || 'password',
+      profile_image: user.avatarUrl ? { url: user.avatarUrl } : null,
+      about_me: profileData.about_me,
+      birthdate: profileData.birthdate,
+      gender: profileData.gender,
+      pronoun: profileData.pronoun,
+      palates: profileData.palates,
+      language_preference: user.locale || 'en',
+      onboarding_complete: profileData.onboarding_complete || false,
+      created_at: profileData.created_at || user.createdAt,
+      updated_at: profileData.updated_at,
+    };
 
     return NextResponse.json({
       success: true,
       data: {
-        ...userData,
-        followers_count: followersCount,
-        following_count: followingCount
+        ...transformedUser,
+        followers_count: 0, // TODO: Implement followers count for Nhost
+        following_count: 0  // TODO: Implement following count for Nhost
       }
     });
 

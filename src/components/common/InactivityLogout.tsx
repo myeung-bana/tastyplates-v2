@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { useNhostSession } from "@/hooks/useNhostSession";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import toast from "react-hot-toast";
 import { Inactive } from "@/constants/messages";
@@ -13,7 +13,7 @@ import { LAST_ACTIVE_KEY } from "@/constants/session";
 const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
 
 export default function InactivityLogout() {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -25,12 +25,12 @@ export default function InactivityLogout() {
 
     const handleLogout = async () => {
       try {
-        // Sign out from Firebase first
-        await firebaseAuthService.signOut();
-        console.log('[InactivityLogout] Firebase sign out successful');
+        // Sign out from Nhost first
+        await nhostAuthService.signOut();
+        console.log('[InactivityLogout] Nhost sign out successful due to inactivity');
       } catch (error) {
-        console.error('[InactivityLogout] Firebase sign out error:', error);
-        // Continue with logout even if Firebase signout fails
+        console.error('[InactivityLogout] Nhost sign out error:', error);
+        // Continue with logout even if Nhost signout fails
       }
       
       // Clear all cookies and localStorage

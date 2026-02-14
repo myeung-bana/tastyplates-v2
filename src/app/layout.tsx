@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/global.scss";
 import SessionWrapper from "@/components/auth/SessionWrapper";
+import NhostProviderWrapper from "@/components/auth/NhostProviderWrapper";
 import { Toaster } from 'react-hot-toast';
 import { FollowProvider } from "@/components/FollowContext";
 import { LocationProvider } from "@/contexts/LocationContext";
@@ -87,29 +88,31 @@ export default function RootLayout({
             },
           }}
         />
-        <UploadProvider>
-          <FollowProvider>
-            <LocationProvider>
-              <SessionWrapper>
-                <OAuthCallbackHandler />
-                <OnboardingRedirect />
-                <LanguageProvider>
-                  <InactivityLogout />
-                  <AuthModalWrapper>
-                    <div className="min-h-screen bg-white flex flex-col">
-                      <MobileTopBar />
-                      <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
-                        {children}
-                      </main>
-                      <ConditionalFooter />
-                      <BottomNav />
-                    </div>
-                  </AuthModalWrapper>
-                </LanguageProvider>
-              </SessionWrapper>
-            </LocationProvider>
-          </FollowProvider>
-        </UploadProvider>
+        <NhostProviderWrapper>
+          <UploadProvider>
+            <FollowProvider>
+              <LocationProvider>
+                <SessionWrapper>
+                  <OAuthCallbackHandler />
+                  <OnboardingRedirect />
+                  <LanguageProvider>
+                    <InactivityLogout />
+                    <AuthModalWrapper>
+                      <div className="min-h-screen bg-white flex flex-col">
+                        <MobileTopBar />
+                        <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
+                          {children}
+                        </main>
+                        <ConditionalFooter />
+                        <BottomNav />
+                      </div>
+                    </AuthModalWrapper>
+                  </LanguageProvider>
+                </SessionWrapper>
+              </LocationProvider>
+            </FollowProvider>
+          </UploadProvider>
+        </NhostProviderWrapper>
       </body>
     </html>
   );

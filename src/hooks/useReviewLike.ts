@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { nhost } from '@/lib/nhost';
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 import { ReviewService } from '@/services/Reviews/reviewService';
 import toast from 'react-hot-toast';
@@ -32,7 +33,7 @@ export function useReviewLike({
   initialCount = 0,
   onAuthRequired,
 }: UseReviewLikeOptions): UseReviewLikeReturn {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,18 +43,23 @@ export function useReviewLike({
   const getUserUuid = useCallback(async (): Promise<string | null> => {
     if (userUuidCache.current) return userUuidCache.current;
     
-    if (!user?.id || !firebaseUser) return null;
+    if (!user?.user_id || !nhostUser) return null;
 
-    const userIdStr = String(user.id);
+    const userIdStr = String(user.user_id);
     if (UUID_REGEX.test(userIdStr)) {
       userUuidCache.current = userIdStr;
       return userIdStr;
     }
 
     try {
-      const idToken = await firebaseUser.getIdToken();
+      const accessToken = nhost.auth.getAccessToken();
+      if (!accessToken) {
+        console.error("No access token available");
+        return null;
+      }
+
       const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-        headers: { 'Authorization': `Bearer ${idToken}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
       if (response.ok) {
@@ -68,13 +74,13 @@ export function useReviewLike({
     }
 
     return null;
-  }, [user?.id, firebaseUser]);
+  }, [user?.user_id, nhostUser]);
 
   const toggleLike = useCallback(async () => {
     if (isLoading) return;
 
     // Check authentication
-    if (!user || !firebaseUser) {
+    if (!user || !nhostUser) {
       if (onAuthRequired) {
         onAuthRequired();
       } else {
@@ -117,14 +123,17 @@ export function useReviewLike({
         }
       } else {
         // Legacy numeric ID - use old endpoint
-        const idToken = await firebaseUser.getIdToken();
+        const accessToken = nhost.auth.getAccessToken();
+        if (!accessToken) {
+          throw new Error("No access token available");
+        }
         
         if (currentLiked) {
-          const response = await reviewService.unlikeComment(reviewIdStr, idToken);
+          const response = await reviewService.unlikeComment(reviewIdStr, accessToken);
           setIsLiked(response.userLiked);
           setLikesCount(response.likesCount);
         } else {
-          const response = await reviewService.likeComment(reviewIdStr, idToken);
+          const response = await reviewService.likeComment(reviewIdStr, accessToken);
           setIsLiked(response.userLiked);
           setLikesCount(response.likesCount);
         }
@@ -148,7 +157,7 @@ export function useReviewLike({
     } finally {
       setIsLoading(false);
     }
-  }, [reviewId, isLiked, likesCount, isLoading, user, firebaseUser, getUserUuid, onAuthRequired]);
+  }, [reviewId, isLiked, likesCount, isLoading, user, nhostUser, getUserUuid, onAuthRequired]);
 
   return {
     isLiked,

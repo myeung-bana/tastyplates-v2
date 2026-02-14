@@ -5,14 +5,15 @@ import { responseStatusCode as code, jwtAuthInvalidCode } from "@/constants/resp
 import { SESSION_EXPIRED_KEY } from "@/constants/session";
 import { HttpResponse } from "@/interfaces/httpResponse";
 import { removeAllCookies } from "@/utils/removeAllCookies";
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
 
 const handleUnauthorized = async () => {
     try {
-        // Sign out from Firebase
-        await firebaseAuthService.signOut();
+        // Sign out from Nhost
+        await nhostAuthService.signOut();
+        console.log('[HttpMethods] Nhost sign out due to unauthorized request');
     } catch (error) {
-        console.error('Error signing out from Firebase:', error);
+        console.error('[HttpMethods] Error signing out from Nhost:', error);
     }
     
     removeAllCookies();
@@ -124,17 +125,18 @@ export default class HttpMethods {
                 }
 
                 // For public GET requests, handle JWT auth errors
-                // Check if user is authenticated via Firebase
+                // Check if user is authenticated via Nhost
                 if (typeof window !== 'undefined') {
                     try {
-                        const { auth } = await import('@/lib/firebase');
-                        const currentUser = auth.currentUser;
-                        if (currentUser && jsonData?.code == jwtAuthInvalidCode) {
+                        const { nhost } = await import('@/lib/nhost');
+                        const isAuthenticated = nhost.auth.isAuthenticated();
+                        if (isAuthenticated && jsonData?.code == jwtAuthInvalidCode) {
+                            console.log('[HttpMethods] JWT auth invalid, signing out user');
                             await handleUnauthorized();
                         }
-                    } catch (firebaseError) {
-                        // Firebase not available, skip unauthorized handling
-                        console.warn('Firebase auth not available:', firebaseError);
+                    } catch (nhostError) {
+                        // Nhost not available, skip unauthorized handling
+                        console.warn('[HttpMethods] Nhost auth not available:', nhostError);
                     }
                 }
                 

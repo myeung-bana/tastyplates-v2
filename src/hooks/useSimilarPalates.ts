@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { normalizePalates, hasMatchingPalates, calculatePalateSimilarity } from '@/utils/palateUtils';
 import { GraphQLReview } from '@/types/graphql';
 
@@ -75,7 +75,7 @@ export interface SimilarPalatesResult<T> {
  * ```
  */
 export function useSimilarPalates<T>(options: SimilarPalatesOptions<T>): SimilarPalatesResult<T> {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const {
     items,
     getPalates,
@@ -151,7 +151,7 @@ export function useSimilarPalates<T>(options: SimilarPalatesOptions<T>): Similar
  * ```
  */
 export function useSimilarPalatesReviews(reviews: GraphQLReview[]) {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   
   return useSimilarPalates({
     items: reviews,
@@ -172,7 +172,7 @@ export function useSimilarPalatesReviews(reviews: GraphQLReview[]) {
  * ```
  */
 export function useSimilarPalatesUsers<T extends { palates?: any }>(users: T[]) {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   
   return useSimilarPalates({
     items: users,

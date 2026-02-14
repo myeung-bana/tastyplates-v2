@@ -1,7 +1,23 @@
-// restaurantUserService.ts - Frontend service for restaurant_users API
+// restaurantUserService.ts - Frontend service for user data API
+// 
+// MIGRATION NOTE: This service is transitioning from `restaurant_users` table
+// to Nhost's `auth.users` + `user_profiles` tables:
+// - auth.users: Nhost-managed authentication data (email, displayName, avatarUrl, etc.)
+// - user_profiles: Custom application data (username, about_me, birthdate, palates, etc.)
+//
+// The API routes handle both old and new schemas for backward compatibility.
 
 import { Restaurant } from '@/utils/restaurantTransformers';
 
+/**
+ * RestaurantUser interface - Compatibility layer for user data
+ * 
+ * This interface represents user data from either:
+ * 1. Legacy `restaurant_users` table (Firebase-based)
+ * 2. New Nhost `auth.users` + `user_profiles` tables (Nhost-based)
+ * 
+ * The API automatically transforms Nhost data to match this format.
+ */
 export interface RestaurantUser {
   id: string;
   firebase_uuid: string;

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "@/styles/pages/_auth.scss";
 import { FcGoogle } from "react-icons/fc";
 import { useRouter } from 'next/navigation';
@@ -11,9 +11,10 @@ import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, pass
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
 import { validEmail } from "@/lib/utils";
-import { firebaseAuthService } from "@/services/auth/firebaseAuthService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
+import { useNhostSession } from "@/hooks/useNhostSession";
 
-// Google Identity Services types removed - using Firebase Authentication
+// Using Nhost Authentication with Google OAuth and email/password
 
 interface LoginPageProps {
   onOpenSignup?: () => void;
@@ -23,6 +24,8 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword, onLoginSuccess }) => {
   const router = useRouter();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const hasRedirected = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -31,16 +34,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   // Unified login success handler for both manual and OAuth flows
-  // Firebase handles session automatically via onAuthStateChanged
+  // Nhost handles session automatically
   const handleLoginSuccess = async () => {
     try {
       // Close modal if callback provided
       onLoginSuccess?.();
       // Refresh router to update server components
       router.refresh();
-      // Small delay to ensure Firebase session propagates
+      // Small delay to ensure Nhost session propagates
       setTimeout(() => {
         router.push(HOME);
       }, 300);
@@ -51,6 +56,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       router.refresh();
     }
   };
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    // Prevent infinite redirect loops
+    if (hasRedirected.current) return;
+    
+    if (!sessionLoading && user && nhostUser) {
+      console.log('[Login] User already authenticated, redirecting...');
+      hasRedirected.current = true;
+      handleLoginSuccess();
+    }
+  }, [user, nhostUser, sessionLoading]);
+
+  // Reset redirect flag on unmount (for modals)
+  useEffect(() => {
+    return () => {
+      hasRedirected.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Clean up any old Google OAuth cookies
@@ -87,6 +111,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+    setShowResendVerification(false);
     setIsLoading(true);
 
     const err = validateEmail(email);
@@ -102,16 +127,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
 
     try {
-      // Use Firebase authentication - Firebase handles session automatically
-      const result = await firebaseAuthService.signInWithEmail(email, password);
+      // Use Nhost authentication - Nhost handles session automatically
+      const result = await nhostAuthService.signInWithEmail(email, password);
       
-      if (result.success && result.firebase_uuid && result.user) {
-        // Firebase session is automatically set
+      if (result.success && result.session) {
+        // Nhost session is automatically set
         // Just handle UI success
         await handleLoginSuccess();
       } else {
-        setMessage(result.error || loginFailed);
+        const errorMsg = result.error || loginFailed;
+        setMessage(errorMsg);
         setMessageType(responseStatus.error);
+        
+        // Check if error is related to email verification
+        const isVerificationError = errorMsg.toLowerCase().includes('verified') || 
+                                     errorMsg.toLowerCase().includes('verify');
+        setShowResendVerification(isVerificationError);
+        
         setIsLoading(false);
       }
     } catch (error) {
@@ -121,28 +153,49 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     }
   };
 
-  // Google Identity Services script loading removed - using Firebase instead
+  const handleResendVerification = async () => {
+    if (!email || !validEmail(email)) {
+      setMessage('Please enter a valid email address first.');
+      setMessageType(responseStatus.error);
+      return;
+    }
+
+    setIsResendingVerification(true);
+    setMessage('');
+
+    try {
+      const result = await nhostAuthService.resendVerificationEmail(email);
+      
+      if (result.success) {
+        setMessage(result.error || 'Verification email sent! Please check your inbox.');
+        setMessageType(responseStatus.success);
+        setShowResendVerification(false);
+      } else {
+        setMessage(result.error || 'Failed to resend verification email. Please try again.');
+        setMessageType(responseStatus.error);
+      }
+    } catch (error) {
+      setMessage((error as { message?: string })?.message || 'Failed to resend verification email.');
+      setMessageType(responseStatus.error);
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
+  // Google OAuth using Nhost's built-in provider
 
   const loginWithGoogle = async () => {
     try {
       setMessage('');
       setIsLoading(true);
       
-      const result = await firebaseAuthService.signInWithGoogle();
+      // Nhost Google sign-in uses OAuth redirect flow
+      // User will be redirected to Google, then back to the app
+      // The session will be established automatically on return
+      await nhostAuthService.signInWithGoogle(window.location.origin + HOME);
       
-      if (result.success && result.firebase_uuid && result.user) {
-        // Increase delay to ensure user is fully available in Hasura
-        // Firebase creates user, then Hasura creates user, then we need to wait for consistency
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Firebase session is automatically set via onAuthStateChanged
-        // Just handle UI success
-        await handleLoginSuccess();
-      } else {
-        setMessage(result.error || 'Google sign in failed');
-        setMessageType(responseStatus.error);
-        setIsLoading(false);
-      }
+      // Note: Execution won't reach here as user will be redirected
+      // Session handling happens automatically after redirect back
     } catch (error: any) {
       console.error('Google login error:', error);
       setMessage(error.message || googleLoginFailed);
@@ -244,13 +297,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
             </form>
           {/* </div> */}
           {message && (
-            <div
-              className={`mt-4 text-center px-4 py-2 rounded-xl font-normal text-sm font-neusans ${messageType == responseStatus.success
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-                }`}
-              dangerouslySetInnerHTML={{ __html: message }}
-            />
+            <div className="mt-4 space-y-2">
+              <div
+                className={`text-center px-4 py-2 rounded-xl font-normal text-sm font-neusans ${messageType == responseStatus.success
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+                  }`}
+                dangerouslySetInnerHTML={{ __html: message }}
+              />
+              {showResendVerification && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResendingVerification}
+                  className="w-full py-2 px-4 text-sm font-normal text-[#ff7c0a] hover:text-[#e66d08] border border-[#ff7c0a] hover:border-[#e66d08] rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-neusans"
+                >
+                  {isResendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                </button>
+              )}
+            </div>
           )}
         </div>
         <hr className="border-t border-[#CACACA]" />

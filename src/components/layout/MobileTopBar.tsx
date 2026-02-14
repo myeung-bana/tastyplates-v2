@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { FiSearch, FiMenu } from "react-icons/fi";
 import { RESTAURANTS, HOME } from "@/constants/pages";
 import { TASTYPLATES_LOGO_COLOUR } from "@/constants/images";
@@ -16,7 +16,7 @@ interface MobileTopBarProps {
 
 const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
   const pathname = usePathname();
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
 
