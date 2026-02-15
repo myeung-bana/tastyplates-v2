@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_ALL_RESTAURANT_USERS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { CHECK_USERNAME_EXISTS } from '@/app/graphql/UserProfiles/userProfilesQueries';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,16 +14,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if username exists in Hasura
-    const where = {
-      username: { _eq: username },
-      deleted_at: { _is_null: true } // Only check non-deleted users
-    };
-
-    const result = await hasuraQuery(GET_ALL_RESTAURANT_USERS, {
-      where,
-      limit: 1
-    });
+    // Check if username exists in user_profiles table (Nhost)
+    const result = await hasuraQuery(CHECK_USERNAME_EXISTS, { username });
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
@@ -37,8 +29,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const users = result.data?.restaurant_users || [];
-    const exists = users.length > 0;
+    const profiles = result.data?.user_profiles || [];
+    const exists = profiles.length > 0;
 
     return NextResponse.json({
       success: true,

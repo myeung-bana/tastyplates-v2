@@ -6,7 +6,7 @@ import ReviewCard2 from "./ReviewCard2";
 import ReviewCardSkeleton from "../ui/Skeleton/ReviewCardSkeleton";
 import "@/styles/pages/_reviews.scss";
 import { useState, useEffect, useCallback } from "react";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useFollowingReviewsGraphQL } from "@/hooks/useFollowingReviewsGraphQL";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 import { useIsMobile } from "@/utils/deviceUtils";
@@ -18,7 +18,7 @@ type TabType = 'trending' | 'foryou';
 
 const Reviews = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trending');
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const { showSignin } = useAuthModal();
   const isMobile = useIsMobile();
   

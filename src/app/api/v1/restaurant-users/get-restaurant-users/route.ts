@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
     const search = searchParams.get('search');
-    const firebase_uuid = searchParams.get('firebase_uuid');
+    const user_id = searchParams.get('user_id'); // Changed from firebase_uuid
     const email = searchParams.get('email');
     const username = searchParams.get('username');
     const include_deleted = searchParams.get('include_deleted') === 'true';
@@ -26,14 +26,16 @@ export async function GET(request: NextRequest) {
       where._or = [
         { username: { _ilike: `%${search}%` } },
         { email: { _ilike: `%${search}%` } },
-        { display_name: { _ilike: `%${search}%` } },
-        { firebase_uuid: { _ilike: `%${search}%` } }
+        { display_name: { _ilike: `%${search}%` } }
+        // Removed firebase_uuid search as UUIDs don't make sense for partial matching
       ];
     }
 
     // Specific filters
-    if (firebase_uuid) {
-      where.firebase_uuid = { _eq: firebase_uuid };
+    if (user_id) {
+      // Note: This queries restaurant_users which still uses 'id' field
+      // TODO: Migrate to user_profiles table which uses 'user_id' field
+      where.id = { _eq: user_id };
     }
     if (email) {
       where.email = { _eq: email };

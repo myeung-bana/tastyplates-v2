@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { GraphQLReview } from '@/types/graphql';
@@ -14,14 +14,15 @@ interface UseFollowingReviewsGraphQLReturn {
 }
 
 export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowingReviewsGraphQLReturn => {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const [reviews, setReviews] = useState<GraphQLReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const userId = user?.id ? String(user.id) : '';
+  // Nhost user.user_id is always a UUID
+  const userId = user?.user_id ? String(user.user_id) : '';
   const isUuidUserId = !!userId && UUID_REGEX.test(userId);
 
   const LIMIT = 4;

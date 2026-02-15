@@ -3,119 +3,25 @@ import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_USER_DRAFT_REVIEWS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
 import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-
-/**
- * Initialize Firebase Admin SDK
- */
-function initializeFirebaseAdmin(): boolean {
-  if (getApps().length > 0) {
-    return true;
-  }
-
-  try {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    
-    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-      return false;
-    }
-    
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: privateKey,
-      }),
-    });
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin SDK:', error);
-    return false;
-  }
-}
+import { verifyNhostToken } from '@/lib/nhost-server-auth';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
   try {
-    // Initialize Firebase Admin
-    const isInitialized = initializeFirebaseAdmin();
-    if (!isInitialized) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication service unavailable' },
-        { status: 500 }
-      );
-    }
-
-    const auth = getAuth();
-    let firebaseUid: string | null = null;
-
-    // Try to get token from Authorization header
+    // Verify Nhost token and get user ID directly
     const authHeader = request.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const idToken = authHeader.split('Bearer ')[1];
-      try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        firebaseUid = decodedToken.uid;
-      } catch (error) {
-        console.error('Failed to verify ID token:', error);
-      }
-    }
-
-    // If no Authorization header, try session cookie
-    if (!firebaseUid) {
-      const sessionCookie = request.cookies.get('__session')?.value;
-      if (sessionCookie) {
-        try {
-          const decodedToken = await auth.verifySessionCookie(sessionCookie);
-          firebaseUid = decodedToken.uid;
-        } catch (error) {
-          console.error('Failed to verify session cookie:', error);
-        }
-      }
-    }
-
-    // If still no Firebase UID, user is not authenticated
-    if (!firebaseUid) {
+    const tokenResult = await verifyNhostToken(authHeader);
+    
+    if (!tokenResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
+        { success: false, error: tokenResult.error || 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    // Get user UUID from Hasura using firebase_uuid
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
-    const userApiUrl = `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUid)}`;
-    
-    const userResponse = await fetch(userApiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!userResponse.ok) {
-      const errorData = await userResponse.json().catch(() => ({}));
-      if (userResponse.status === 404) {
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      throw new Error(errorData.error || `Failed to fetch user: ${userResponse.statusText}`);
-    }
-
-    const userData = await userResponse.json();
-    if (!userData.success || !userData.data?.id) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const author_id = userData.data.id;
+    const author_id = tokenResult.userId!;
 
     if (!UUID_REGEX.test(author_id)) {
       return NextResponse.json(

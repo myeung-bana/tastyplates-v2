@@ -7,7 +7,8 @@ import { GraphQLReview } from "@/types/graphql";
 import { FiX, FiMessageCircle, FiHeart, FiChevronLeft, FiChevronRight, FiStar, FiMapPin, FiSend } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
+import { nhost } from "@/lib/nhost";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { useFollowContext } from "../FollowContext";
@@ -51,64 +52,23 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const { setFollowState } = useFollowContext();
-  
-  // Cache user UUID to avoid repeated fetches (performance optimization)
-  const userUuidRef = useRef<string | null>(null);
   
   // Cache UUID regex (performance optimization)
   const UUID_REGEX = useMemo(() => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, []);
   
-  // Helper to get Firebase ID token for API calls
-  const getFirebaseToken = useCallback(async () => {
-    // Use firebaseUser directly for more reliable authentication
-    if (!firebaseUser) return null;
-    try {
-      return await firebaseUser.getIdToken();
-    } catch (error) {
-      console.error('Error getting Firebase token:', error);
-    }
-    return null;
-  }, [firebaseUser]);
+  // Helper to get Nhost access token for API calls
+  const getNhostToken = useCallback(async () => {
+    const session = nhost.auth.getSession();
+    return session?.accessToken || null;
+  }, []);
   
-  // Helper to get user UUID once and cache it (performance optimization for likes)
+  // Helper to get user UUID directly from Nhost session
   const getUserUuid = useCallback(async (): Promise<string | null> => {
-    // Return cached UUID if available
-    if (userUuidRef.current) {
-      return userUuidRef.current;
-    }
-
-    if (!user?.id || !firebaseUser) return null;
-
-    const userIdStr = String(user.id);
-    
-    if (UUID_REGEX.test(userIdStr)) {
-      userUuidRef.current = userIdStr;
-      return userIdStr;
-    }
-
-    try {
-      const fetchStartTime = Date.now();
-      const idToken = await firebaseUser.getIdToken();
-      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      const fetchDuration = Date.now() - fetchStartTime;
-
-      if (response.ok) {
-        const userData = await response.json();
-        if (userData.success && userData.data?.id) {
-          userUuidRef.current = userData.data.id;
-          return userData.data.id;
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user UUID:", error);
-    }
-
-    return null;
-  }, [user?.id, firebaseUser, UUID_REGEX]);
+    if (!user?.user_id) return null;
+    return user.user_id;
+  }, [user?.user_id]);
   
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -193,7 +153,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
 
   // Check like status and count when component opens or current review changes (with caching and debouncing)
   useEffect(() => {
-    if (!isOpen || !user || !firebaseUser || reviews.length === 0) return;
+    if (!isOpen || !user || reviews.length === 0) return;
     
     // Debounce to prevent rapid successive calls
     const timeoutId = setTimeout(async () => {
@@ -222,9 +182,10 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         const fetchStartTime = Date.now();
         
         // Get like status and count using the GET endpoint (now optimized with single query)
-        const idToken = await firebaseUser.getIdToken();
+        const token = await getNhostToken();
+        if (!token) return;
         const statusResponse = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
-          headers: { 'Authorization': `Bearer ${idToken}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         const fetchDuration = Date.now() - fetchStartTime;
@@ -252,7 +213,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     }, 150); // 150ms debounce to prevent rapid calls
     
     return () => clearTimeout(timeoutId);
-  }, [isOpen, currentIndex, reviews, user, firebaseUser, getUserUuid, UUID_REGEX]);
+  }, [isOpen, currentIndex, reviews, user, getUserUuid, getNhostToken, UUID_REGEX]);
 
   // Combined effect: Reset states and handle navbar when modal opens/closes (performance optimization)
   useEffect(() => {
@@ -303,7 +264,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     }
 
     // Fetch follow state for current review using new API v1 endpoint
-    getFirebaseToken().then(async (token) => {
+    getNhostToken().then(async (token) => {
       if (!token) return;
       
       try {
@@ -329,7 +290,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
       }
     });
-  }, [currentIndex, isOpen, user, reviews, setFollowState, getFirebaseToken]);
+  }, [currentIndex, isOpen, user, reviews, setFollowState, getNhostToken]);
 
   // Fetch comment counts only for visible reviews
   useEffect(() => {
@@ -445,7 +406,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   // Handle like/unlike - Optimized with cached user UUID
   const handleLike = useCallback(
     async (review: GraphQLReview) => {
-      if (!user || !firebaseUser) {
+      if (!user) {
         toast.error("Please sign in to like reviews");
         return;
       }
@@ -505,13 +466,13 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         toast.error("Failed to update like. Please try again.");
       }
     },
-    [user, firebaseUser, userLiked, likesCount, getUserUuid, UUID_REGEX]
+    [user, userLiked, likesCount, getUserUuid, UUID_REGEX]
   );
 
   // Handle comment/reply like - Same pattern as review likes
   const handleCommentLike = useCallback(
     async (reply: GraphQLReview) => {
-      if (!user || !firebaseUser) {
+      if (!user) {
         toast.error("Please sign in to like comments");
         return;
       }
@@ -555,7 +516,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         toast.error("Failed to like comment. Please try again.");
       }
     },
-    [user, firebaseUser, replyUserLiked, replyLikes, getUserUuid, UUID_REGEX]
+    [user, replyUserLiked, replyLikes, getUserUuid, UUID_REGEX]
   );
 
   // Navigate between images in current review
@@ -618,7 +579,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     setFollowState(authorDatabaseId, newFollowState);
     
     try {
-      const token = await getFirebaseToken();
+      const token = await getNhostToken();
       if (!token) {
         toast.error("Authentication required");
         // Revert on error
@@ -664,7 +625,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       console.error("Follow/unfollow error:", error);
       toast.error(errorOccurred);
     }
-  }, [user, currentIndex, reviews, setFollowState, getFirebaseToken]);
+  }, [user, currentIndex, reviews, setFollowState, getNhostToken]);
 
   // Navigate between reviews
   const navigateReview = useCallback((direction: "up" | "down") => {
@@ -762,7 +723,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     setCommentText("");
 
     try {
-      const token = await getFirebaseToken();
+      const token = await getNhostToken();
       if (!token) {
         toast.error("Authentication required");
         setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
@@ -842,7 +803,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     } finally {
       setIsSubmittingComment(false);
     }
-  }, [commentText, isSubmittingComment, cooldown, user, reviews, currentIndex, getFirebaseToken]);
+  }, [commentText, isSubmittingComment, cooldown, user, reviews, currentIndex, getNhostToken]);
 
   // Wheel gesture handler (two-finger scroll or mouse wheel)
   const bindWheel = useWheel(

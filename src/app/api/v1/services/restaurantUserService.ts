@@ -19,11 +19,14 @@ import { Restaurant } from '@/utils/restaurantTransformers';
  * The API automatically transforms Nhost data to match this format.
  */
 export interface RestaurantUser {
-  id: string;
-  firebase_uuid: string;
+  id: string; // Nhost user UUID (primary identifier)
+  user_id?: string; // Alias for id (same value)
+  firebase_uuid?: string; // DEPRECATED - maintained for backward compatibility only
   username: string;
   email: string;
   display_name?: string;
+  displayName?: string; // Nhost camelCase version
+  avatarUrl?: string; // Nhost avatar URL (replaces profile_image)
   user_nicename?: string;
   password_hash?: string;
   is_google_user?: boolean;
@@ -82,9 +85,9 @@ export interface FollowListResponse {
 }
 
 export interface CreateRestaurantUserRequest {
-  firebase_uuid: string;
+  user_id: string; // Nhost user UUID (required)
   username: string;
-  email: string;
+  email?: string; // Optional - email is in auth.users, not user_profiles
   display_name?: string;
   password_hash?: string;
   is_google_user?: boolean;
@@ -195,7 +198,7 @@ class RestaurantUserService {
     limit?: number;
     offset?: number;
     search?: string;
-    firebase_uuid?: string;
+    user_id?: string; // Changed from firebase_uuid
     email?: string;
     username?: string;
     include_deleted?: boolean;
@@ -204,7 +207,7 @@ class RestaurantUserService {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.offset) queryParams.append('offset', params.offset.toString());
     if (params?.search) queryParams.append('search', params.search);
-    if (params?.firebase_uuid) queryParams.append('firebase_uuid', params.firebase_uuid);
+    if (params?.user_id) queryParams.append('user_id', params.user_id); // Changed from firebase_uuid
     if (params?.email) queryParams.append('email', params.email);
     if (params?.username) queryParams.append('username', params.username);
     if (params?.include_deleted) queryParams.append('include_deleted', 'true');
@@ -242,28 +245,27 @@ class RestaurantUserService {
     return response.json();
   }
 
+  /**
+   * @deprecated This method is deprecated as of the Nhost migration (Feb 2026)
+   * 
+   * Firebase UUID lookup is no longer needed with Nhost authentication.
+   * The user ID is available directly from the JWT token.
+   * 
+   * Use getUserById() instead with the Nhost user_id.
+   * 
+   * @param firebase_uuid - Firebase UUID (no longer used)
+   * @throws Error indicating the method is deprecated
+   */
   async getUserByFirebaseUuid(firebase_uuid: string): Promise<RestaurantUserResponse> {
-    try {
-      const response = await fetch(`${this.baseUrl}/get-restaurant-user-by-firebase-uuid?firebase_uuid=${firebase_uuid}`);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const error = new Error(errorData.error || `Failed to fetch user: ${response.statusText}`) as any;
-        error.status = response.status;
-        error.data = errorData;
-        throw error;
-      }
-
-      return response.json();
-    } catch (error: any) {
-      // Re-throw with additional context
-      if (error instanceof Error && !error.status) {
-        const enhancedError = error as any;
-        enhancedError.status = 500;
-        throw enhancedError;
-      }
-      throw error;
-    }
+    console.warn('⚠️ getUserByFirebaseUuid is DEPRECATED. Use getUserById() instead.');
+    console.warn('Migration guide: With Nhost, user ID is available directly from JWT token.');
+    
+    // Return error response indicating deprecation
+    return {
+      success: false,
+      data: {} as any,
+      error: 'This method is deprecated. Use getUserById() with Nhost user_id instead.'
+    } as any;
   }
 
   async createUser(data: CreateRestaurantUserRequest): Promise<RestaurantUserResponse> {

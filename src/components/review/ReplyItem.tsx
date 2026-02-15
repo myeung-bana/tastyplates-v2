@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { GraphQLReview } from "@/types/graphql";
 import { capitalizeWords, stripTags, generateProfileUrl, formatLikeCount } from "@/lib/utils";
@@ -24,7 +24,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
   onProfileClick,
   isLoading
 }) => {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
 
   return (
     <div className="reply-item">
@@ -32,7 +32,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         {reply.author?.node?.id ? (
           user ? (
             <Link
-              href={String(user.id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id, reply.author.node.username)}
+              href={String(user.user_id) === String(reply.author.node.id) ? PROFILE : generateProfileUrl(reply.author.node.id, reply.author.node.username)}
               passHref
             >
               <FallbackImage

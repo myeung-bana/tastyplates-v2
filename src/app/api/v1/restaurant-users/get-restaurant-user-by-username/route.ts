@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_RESTAURANT_USER_BY_USERNAME } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
+import { GET_USER_PROFILE_BY_USERNAME } from '@/app/graphql/UserProfiles/userProfilesQueries';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Query user by username
-    const result = await hasuraQuery(GET_RESTAURANT_USER_BY_USERNAME, { username });
+    // Query user by username from user_profiles table (Nhost)
+    const result = await hasuraQuery(GET_USER_PROFILE_BY_USERNAME, { username });
 
     if (result.errors) {
       console.error('GraphQL errors:', result.errors);
@@ -40,45 +40,51 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const users = result.data?.restaurant_users || [];
-    const user = users[0];
+    const profiles = result.data?.user_profiles || [];
+    const profile = profiles[0];
 
-    if (!user) {
+    if (!profile) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // Calculate follower and following counts (default to 0 if relationships don't exist)
-    let followersCount = 0;
-    let followingCount = 0;
-    
-    try {
-      // Count followers array (users who follow this user)
-      if (Array.isArray(user.followers)) {
-        followersCount = user.followers.length;
-      }
+    // Build response combining user_profiles + auth.users data
+    const userData = {
+      // Use user_id as the primary identifier (UUID)
+      id: profile.user_id,
+      user_id: profile.user_id,
       
-      // Count following array (users this user is following)
-      if (Array.isArray(user.following)) {
-        followingCount = user.following.length;
-      }
-    } catch (error) {
-      // If relationships don't exist, counts remain 0
-      console.warn('Could not get follower/following counts, defaulting to 0:', error);
-    }
-
-    // Remove relationship arrays from user object before returning (we only need counts)
-    const { followers, following, ...userData } = user;
+      // From user_profiles table
+      username: profile.username,
+      about_me: profile.about_me,
+      birthdate: profile.birthdate,
+      gender: profile.gender,
+      palates: profile.palates,
+      onboarding_complete: profile.onboarding_complete,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+      
+      // From auth.users table (via relationship)
+      email: profile.user?.email,
+      display_name: profile.user?.displayName,
+      displayName: profile.user?.displayName,
+      avatarUrl: profile.user?.avatarUrl,
+      profile_image: profile.user?.avatarUrl, // Compatibility mapping
+      emailVerified: profile.user?.emailVerified,
+      phoneNumber: profile.user?.phoneNumber,
+      locale: profile.user?.locale,
+      metadata: profile.user?.metadata,
+      
+      // Follower/following counts (TODO: implement proper counts from relationships table)
+      followers_count: 0,
+      following_count: 0
+    };
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...userData,
-        followers_count: followersCount,
-        following_count: followingCount
-      }
+      data: userData
     });
 
   } catch (error) {

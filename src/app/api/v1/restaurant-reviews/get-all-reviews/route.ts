@@ -1,76 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_ALL_REVIEWS, GET_ALL_REVIEWS_CURSOR } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_ALL_REVIEWS_BASIC } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_USER_PROFILES_BY_IDS } from '@/app/graphql/UserProfiles/userProfilesQueries';
 import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQueries';
-import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 import { GRAPHQL_LIMITS } from '@/constants/graphql';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// Helper to parse cursor (format: "2024-01-15T10:30:00Z_uuid123")
-function parseCursor(cursor: string | null): { timestamp: string; id: string } | null {
-  if (!cursor) return null;
-  const parts = cursor.split('_');
-  if (parts.length !== 2) return null;
-  return { timestamp: parts[0], id: parts[1] };
-}
-
-// Helper to encode cursor from review
-function encodeCursor(review: any): string {
-  return `${review.created_at}_${review.id}`;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const t0 = Date.now();
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '16');
-    
-    // Support both cursor and offset pagination (backwards compatible)
-    const cursor = searchParams.get('cursor');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const useCursor = !!cursor; // Use cursor pagination if cursor param exists
 
     // Get version for all reviews
     const tVersion0 = Date.now();
     const version = await getVersion('v:reviews:all');
     const tVersion = Date.now() - tVersion0;
     
-    // Cache key with version (different keys for cursor vs offset)
-    const cacheKey = useCursor 
-      ? `reviews:all:v${version}:limit=${limit}:cursor=${cursor}`
-      : `reviews:all:v${version}:limit=${limit}:offset=${offset}`;
+    // Cache key with version
+    const cacheKey = `reviews:all:nhost:v${version}:limit=${limit}:offset=${offset}`;
     
     let tHasuraReviews = 0;
+    let tHasuraProfiles = 0;
     let tHasuraRestaurants = 0;
-    let tHasuraAuthors = 0;
 
     const tCache0 = Date.now();
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
       300, // 300 seconds (5 minutes) TTL for better performance
       async () => {
-        const tReviews0 = Date.now();
+        const tQuery0 = Date.now();
         
-        let result;
-        if (useCursor) {
-          // Cursor-based pagination (Phase 2 - Fast!)
-          const parsedCursor = parseCursor(cursor);
-          result = await hasuraQuery(GET_ALL_REVIEWS_CURSOR, {
-            limit: Math.min(limit + 1, 101), // Fetch limit+1 to check if more exist
-            cursorTimestamp: parsedCursor?.timestamp || null,
-            cursorId: parsedCursor?.id || null
-          });
-        } else {
-          // Offset-based pagination (Legacy - slower for deep pagination)
-          result = await hasuraQuery(GET_ALL_REVIEWS, {
-            limit: Math.min(limit, 100), // Cap at 100
-            offset
-          });
-        }
-        tHasuraReviews = Date.now() - tReviews0;
+        // Fetch reviews without relationships (works immediately)
+        const result = await hasuraQuery(GET_ALL_REVIEWS_BASIC, {
+          limit: Math.min(limit, 100),
+          offset
+        });
+        
+        tHasuraReviews = Date.now() - tQuery0;
 
         if (result.errors) {
           console.error('GraphQL errors:', result.errors);
@@ -80,27 +51,40 @@ export async function GET(request: NextRequest) {
         let reviews = result.data?.restaurant_reviews || [];
         const total = result.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
 
-        // For cursor pagination, check if we have more results
-        let hasMore = false;
-        let nextCursor = null;
-        if (useCursor && reviews.length > limit) {
-          hasMore = true;
-          reviews = reviews.slice(0, limit); // Remove the extra item we fetched
-          const lastReview = reviews[reviews.length - 1];
-          nextCursor = encodeCursor(lastReview);
-        } else if (useCursor) {
-          hasMore = reviews.length === limit; // If we got exactly limit, there might be more
-          if (reviews.length > 0) {
-            const lastReview = reviews[reviews.length - 1];
-            nextCursor = encodeCursor(lastReview);
+        // Get unique author IDs and restaurant UUIDs
+        const authorIds = [...new Set(reviews.map((r: any) => r.author_id).filter(Boolean))];
+        const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
+
+        // Batch fetch user profiles with auth data (using existing relationship)
+        let profilesMap = new Map();
+        if (authorIds.length > 0) {
+          try {
+            const tProfiles0 = Date.now();
+            const profilesResult = await hasuraQuery(GET_USER_PROFILES_BY_IDS, {
+              user_ids: authorIds,
+              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
+            });
+            tHasuraProfiles = Date.now() - tProfiles0;
+
+            if (!profilesResult.errors && profilesResult.data?.user_profiles) {
+              profilesMap = new Map(
+                profilesResult.data.user_profiles.map((profile: any) => [
+                  profile.user_id,
+                  {
+                    username: profile.username,
+                    palates: profile.palates,
+                    avatarUrl: profile.user?.avatarUrl,
+                    displayName: profile.user?.displayName
+                  }
+                ])
+              );
+            }
+          } catch (error) {
+            console.error('Error fetching user profiles:', error);
           }
         }
 
-        // Get unique restaurant UUIDs and author IDs
-        const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
-        const authorIds = [...new Set(reviews.map((r: any) => r.author_id).filter(Boolean))];
-
-        // Fetch all restaurants in a SINGLE batch query (optimized from N+1)
+        // Batch fetch restaurants
         let restaurantMap = new Map();
         if (restaurantUuids.length > 0) {
           try {
@@ -115,87 +99,49 @@ export async function GET(request: NextRequest) {
               restaurantMap = new Map(
                 restaurantsResult.data.restaurants.map((restaurant: any) => [
                   restaurant.uuid,
-                  {
-                    uuid: restaurant.uuid,
-                    id: restaurant.id,
-                    title: restaurant.title || '',
-                    slug: restaurant.slug || '',
-                    featured_image_url: restaurant.featured_image_url || ''
-                  }
+                  restaurant
                 ])
               );
-            } else {
-              console.warn('Failed to fetch restaurants:', restaurantsResult.errors);
             }
           } catch (error) {
-            console.error('Error fetching restaurants batch:', error);
+            console.error('Error fetching restaurants:', error);
           }
         }
 
-        // Fetch all authors in a single batch query (already optimized)
-        let authorMap = new Map();
-        if (authorIds.length > 0) {
-          try {
-            const tAuthors0 = Date.now();
-            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds,
-              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
-            });
-            tHasuraAuthors = Date.now() - tAuthors0;
+        // Enrich reviews with author and restaurant data
+        const enrichedReviews = reviews.map((review: any) => {
+          const profile = profilesMap.get(review.author_id);
+          const restaurant = restaurantMap.get(review.restaurant_uuid);
 
-            if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
-              const users = authorsResult.data.restaurant_users;
-              authorMap = new Map(
-                users.map((user: any) => [
-                  user.id,
-                  {
-                    id: user.id,
-                    username: user.username || '',
-                    display_name: user.display_name || user.username || '',
-                    profile_image: user.profile_image,
-                    palates: user.palates
-                  }
-                ])
-              );
-            } else {
-              console.warn('Failed to fetch authors:', authorsResult.errors);
-            }
-          } catch (error) {
-            console.error('Error fetching authors batch:', error);
+          return {
+            ...review,
+            author: {
+              id: review.author_id,
+              username: profile?.username || 'Unknown',
+              display_name: profile?.displayName || profile?.username || 'Unknown',
+              profile_image: profile?.avatarUrl || null,
+              palates: profile?.palates || []
+            },
+            restaurant: restaurant ? {
+              uuid: restaurant.uuid,
+              id: restaurant.id,
+              title: restaurant.title || '',
+              slug: restaurant.slug || '',
+              featured_image_url: restaurant.featured_image_url || null
+            } : null
+          };
+        });
+
+        return {
+          success: true,
+          data: enrichedReviews,
+          meta: {
+            total,
+            limit,
+            offset,
+            hasMore: (offset + limit) < total
           }
-        }
-
-        // Attach author and restaurant data to all reviews
-        reviews = reviews.map((review: any) => ({
-          ...review,
-          author: authorMap.get(review.author_id) || null,
-          restaurant: restaurantMap.get(review.restaurant_uuid) || null
-        }));
-
-        // Return response with cursor or offset metadata
-        if (useCursor) {
-          return {
-            success: true,
-            data: reviews,
-            meta: {
-              total,
-              limit,
-              cursor: nextCursor,
-              hasMore
-            }
-          };
-        } else {
-          return {
-            success: true,
-            data: reviews,
-            meta: {
-              total,
-              limit,
-              offset,
-              hasMore: (offset + limit) < total
-            }
-          };
-        }
+        };
       }
     );
     const tCache = Date.now() - tCache0;
@@ -204,17 +150,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
-        'X-Pagination-Type': useCursor ? 'cursor' : 'offset', // Track pagination type
         ...(isDev ? { 'X-Cache-Key': cacheKey } : {}),
         'Server-Timing': [
           `version;dur=${tVersion}`,
           `cache;dur=${tCache}`,
           `hasura_reviews;dur=${hit ? 0 : tHasuraReviews}`,
+          `hasura_profiles;dur=${hit ? 0 : tHasuraProfiles}`,
           `hasura_restaurants;dur=${hit ? 0 : tHasuraRestaurants}`,
-          `hasura_authors;dur=${hit ? 0 : tHasuraAuthors}`,
           `total;dur=${tTotal}`
         ].join(', '),
-        // HTTP caching for CDN and browsers (5 minutes, stale-while-revalidate for 10 minutes)
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
         'CDN-Cache-Control': 'public, s-maxage=300',
         'Vercel-CDN-Cache-Control': 'public, s-maxage=300'

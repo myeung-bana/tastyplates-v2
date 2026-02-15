@@ -34,7 +34,7 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { user, loading } = useNhostSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -169,12 +169,11 @@ const BottomNav: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-700'
               }`}
             >
-              {item.isAvatar && (getProfileImageUrl(userData?.profile_image) || 
-                                 getProfileImageUrl(user?.profile_image)) ? (
+              {item.isAvatar ? (
                 <img
                   src={
+                    (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
                     getProfileImageUrl(userData?.profile_image) ||
-                    getProfileImageUrl(user?.profile_image) ||
                     DEFAULT_USER_ICON
                   }
                   alt="Profile"

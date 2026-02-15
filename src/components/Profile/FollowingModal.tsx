@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -32,7 +32,7 @@ const FollowingModal: React.FC<FollowingModalProps> = ({ open, onClose, userId, 
   const [localFollowing, setLocalFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
-  const { user } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
 
   // Fetch following when modal opens
   useEffect(() => {

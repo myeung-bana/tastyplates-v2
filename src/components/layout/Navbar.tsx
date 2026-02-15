@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 // import { useSearchParams } from 'next/navigation';
 import "@/styles/components/_navbar.scss";
 import "@/styles/components/_hero.scss";
@@ -17,11 +17,11 @@ import Cookies from "js-cookie";
 import toast from 'react-hot-toast';
 import { logOutSuccessfull } from "@/constants/messages";
 import { nhostAuthService } from "@/services/auth/nhostAuthService";
-import { HOME, LISTING, LISTING_EXPLANATION, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
+import { HOME, PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TASTYPLATES_LOGO_WHITE } from "@/constants/images";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import PasswordUpdatedModal from "../ui/Modal/PasswordUpdatedModal";
-import { LOGOUT_KEY, LOGIN_BACK_KEY, LOGIN_KEY, WELCOME_KEY, SESSION_EXPIRED_KEY, UPDATE_PASSWORD_KEY } from "@/constants/session";
+import { LOGOUT_KEY, LOGIN_BACK_KEY, WELCOME_KEY, SESSION_EXPIRED_KEY, UPDATE_PASSWORD_KEY } from "@/constants/session";
 import CustomModal from "../ui/Modal/Modal";
 import { MdArrowBackIos } from "react-icons/md";
 import NavbarSearchBar from "../navigation/NavbarSearchBar";
@@ -72,7 +72,7 @@ export default function Navbar(props: Record<string, unknown>) {
         userId: userId,
         email: nhostUser.email,
         displayName: nhostUser.displayName,
-        hasProfileImage: !!nhostUser.avatarUrl || !!user.profile_image,
+        avatarUrl: nhostUser.avatarUrl,
       });
     } else if (!loading && !user) {
       console.log('[Navbar] Nhost session unauthenticated');
@@ -89,25 +89,34 @@ export default function Navbar(props: Record<string, unknown>) {
   const [isOpenSignin, setIsOpenSignin] = useState(false);
   const [isOpenPasswordUpdate, setIsOpenPasswordUpdate] = useState(false);
   const [navBg, setNavBg] = useState(false);
+  
+  // Track previous auth state to detect login/logout
+  const prevAuthState = useRef<boolean | null>(null);
 
   const handleLogout = async () => {
     try {
+      // Set logout message BEFORE clearing (will be shown by useEffect)
+      localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
+      
       // Sign out from Nhost
       await nhostAuthService.signOut();
       console.log('[Navbar] Nhost sign out successful');
+      
+      // Clear data but preserve logout message
+      const logoutMsg = localStorage.getItem(LOGOUT_KEY);
+      removeAllCookies();
+      localStorage.clear();
+      if (logoutMsg) {
+        localStorage.setItem(LOGOUT_KEY, logoutMsg);
+      }
+
+      // Redirect to home
+      router.push(HOME);
+      router.refresh();
     } catch (error) {
       console.error('[Navbar] Nhost sign out error:', error);
-      // Continue with logout even if Nhost signout fails
+      toast.error('Failed to log out. Please try again.');
     }
-    
-    // Clear all cookies and localStorage
-    removeAllCookies();
-    localStorage.clear();
-    localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
-
-    // Redirect to home
-    router.push(HOME);
-    router.refresh();
   };
 
   const changeNavBg = () => {
@@ -115,51 +124,66 @@ export default function Navbar(props: Record<string, unknown>) {
   };
 
 
+  // Simplified toast notification system for Nhost authentication
   useEffect(() => {
-    const loginMessage = localStorage?.getItem(LOGIN_BACK_KEY) ?? "";
-    const logOutMessage = localStorage?.getItem(LOGOUT_KEY) ?? "";
-    const googleMessage = Cookies.get(LOGIN_KEY) ?? "";
-    const welcomeMessage = localStorage?.getItem(WELCOME_KEY) ?? "";
-    const sessionExpiredMessage = localStorage?.getItem(SESSION_EXPIRED_KEY) ?? "";
-    const openPasswordUpdateModal = localStorage?.getItem(UPDATE_PASSWORD_KEY) ?? "";
-
-    if ((loginMessage || logOutMessage || googleMessage)) {
-      if (!welcomeMessage) {
-        toast.success(loginMessage || logOutMessage || googleMessage, {
-          duration: 3000, // 3 seconds
-        });
+    // Skip if still loading
+    if (loading) return;
+    
+    const isAuthenticated = !loading && !!user && !!nhostUser;
+    
+    // Detect auth state changes
+    if (prevAuthState.current !== null) {
+      // User just logged in
+      if (!prevAuthState.current && isAuthenticated) {
+        const welcomeMessage = localStorage.getItem(WELCOME_KEY);
+        if (welcomeMessage) {
+          toast.success(welcomeMessage, { duration: 3000 });
+          localStorage.removeItem(WELCOME_KEY);
+        } else {
+          const loginMessage = localStorage.getItem(LOGIN_BACK_KEY);
+          if (loginMessage) {
+            toast.success(loginMessage, { duration: 3000 });
+            localStorage.removeItem(LOGIN_BACK_KEY);
+          } else {
+            toast.success('Welcome back!', { duration: 3000 });
+          }
+        }
       }
-
-      removeAllCookies([LOGIN_KEY]);
-      localStorage.removeItem(LOGIN_BACK_KEY);
-      localStorage.removeItem(LOGOUT_KEY);
+      
+      // User just logged out
+      if (prevAuthState.current && !isAuthenticated) {
+        const logoutMessage = localStorage.getItem(LOGOUT_KEY);
+        if (logoutMessage) {
+          toast.success(logoutMessage, { duration: 3000 });
+          localStorage.removeItem(LOGOUT_KEY);
+        }
+      }
     }
-
+    
+    // Update tracked state
+    prevAuthState.current = isAuthenticated;
+    
+    // Handle session expired
+    const sessionExpiredMessage = localStorage.getItem(SESSION_EXPIRED_KEY);
     if (sessionExpiredMessage) {
-      toast.error(sessionExpiredMessage, {
-        duration: 3000, // 3 seconds
-      });
+      toast.error(sessionExpiredMessage, { duration: 3000 });
       localStorage.removeItem(SESSION_EXPIRED_KEY);
     }
-
-
+    
+    // Handle password update modal
+    const openPasswordUpdateModal = localStorage.getItem(UPDATE_PASSWORD_KEY);
     if (openPasswordUpdateModal) {
       setIsOpenPasswordUpdate(true);
       localStorage.removeItem(UPDATE_PASSWORD_KEY);
     }
+  }, [user, nhostUser, loading]);
 
-    // Clean up OAuth callback cookies after successful authentication
-    const oauthFromModal = Cookies.get('oauth_from_modal');
-    if (oauthFromModal === 'true' && user) {
-      Cookies.remove('oauth_from_modal');
-      Cookies.remove('oauth_callback_url');
-    }
-
+  useEffect(() => {
     window.addEventListener("scroll", changeNavBg);
     return () => {
       window.removeEventListener("scroll", changeNavBg);
     };
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     const googleErrorType = Cookies.get('googleErrorType');
@@ -354,12 +378,12 @@ export default function Navbar(props: Record<string, unknown>) {
                       <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
                           src={
-                            // Priority order: profile_image from API > userData > default
+                            // Priority order: Nhost avatarUrl > custom profile_image > default
+                            (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
                             getProfileImageUrl(userData?.profile_image) ||
-                            getProfileImageUrl(user?.profile_image) ||
                             DEFAULT_USER_ICON
                           }
-                          alt={user?.display_name || user?.username || "Profile"}
+                          alt={nhostUser?.displayName || user?.username || "Profile"}
                           width={36}
                           height={36}
                           className="w-full h-full object-cover rounded-full"
@@ -400,6 +424,8 @@ export default function Navbar(props: Record<string, unknown>) {
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
           isAuthenticated={!loading && !!user}
+          user={user}
+          nhostUser={nhostUser}
           onOpenSignin={() => setIsOpenSignin(true)}
           onOpenSignup={() => setIsOpenSignup(true)}
         />

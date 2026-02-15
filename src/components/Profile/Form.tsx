@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { useCuisines } from "@/hooks/useCuisines";
 import { CuisineOption } from "@/utils/cuisineUtils";
@@ -334,7 +334,7 @@ const FormContent = memo(({
 
 const Form = () => {
   const router = useRouter();
-  const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aboutMe, setAboutMe] = useState("");
@@ -349,9 +349,9 @@ const Form = () => {
   const [tempImageSrc, setTempImageSrc] = useState("");
   const hasInitialized = useRef(false); // Track if we've initialized form state to prevent flickering
 
-  // Use the existing useProfileData hook - get current user ID from Firebase session
-  // Use user.id directly (should be UUID string)
-  const currentUserId = user?.id || null;
+  // Use the existing useProfileData hook - get current user ID from Nhost session
+  // Use user.user_id directly (should be UUID string)
+  const currentUserId = user?.user_id || null;
   const {
     userData,
     loading: isLoadingData,
@@ -515,8 +515,8 @@ const Form = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // ✅ VALIDATION: Check if user and firebaseUser exist
-    if (!user || !firebaseUser) {
+    // ✅ VALIDATION: Check if user and nhostUser exist
+    if (!user || !nhostUser) {
       console.error('❌ Profile Form: No user found');
       toast.error('Session not found. Please log in again.');
       setIsLoading(false);
@@ -544,14 +544,14 @@ const Form = () => {
     }
 
     try {
-      // Get user UUID from Firebase session
+      // Get user UUID from Nhost session
       if (!user?.id) {
         toast.error('User ID not found. Please sign in again.');
         setIsLoading(false);
         return;
       }
 
-      const userId = user.id as string;
+      const userId = user.user_id as string;
 
       // Upload profile image to S3 if a new image was selected
       let profileImageUrl: string | undefined = undefined;
@@ -585,18 +585,24 @@ const Form = () => {
       if (aboutMe?.trim()) updateData.about_me = aboutMe;
       if (palatesArray) updateData.palates = palatesArray; // Send as array for JSONB
 
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost access token for authentication
+      const { nhost } = await import('@/lib/nhost');
+      const session = nhost.auth.getSession();
+      const accessToken = session?.accessToken;
+      
+      if (!accessToken) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
 
       // Use new API v1 endpoint
-      const response = await restaurantUserService.updateUser(userId, updateData, idToken);
+      const response = await restaurantUserService.updateUser(userId, updateData, accessToken);
 
       if (!response.success) {
         const errorMessage = (response as any).error || 'Failed to update profile';
         throw new Error(errorMessage);
       }
 
-      // Session will be automatically refreshed by useFirebaseSession hook
+      // Session will be automatically refreshed by useNhostSession hook
       // Refresh router to update server components with new session data
       router.refresh();
 
@@ -657,11 +663,11 @@ const Form = () => {
     console.log('🔍 Profile Form - Session status changed:', {
       sessionLoading,
       hasUser: !!user,
-      hasFirebaseUser: !!firebaseUser,
-      userId: user?.id,
-      userEmail: user?.email
+      hasNhostUser: !!nhostUser,
+      userId: user?.user_id,
+      userEmail: nhostUser?.email
     });
-  }, [sessionLoading, user, firebaseUser]);
+  }, [sessionLoading, user, nhostUser]);
 
   // Update form state when userData is loaded from useProfileData hook
   // Initialize immediately with available data, update palates when cuisines load

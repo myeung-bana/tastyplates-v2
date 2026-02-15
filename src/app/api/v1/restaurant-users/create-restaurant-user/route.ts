@@ -1,3 +1,19 @@
+/**
+ * PARTIALLY DEPRECATED ENDPOINT
+ * 
+ * With Nhost authentication, user creation happens automatically via:
+ * 1. Nhost Auth: Creates entry in auth.users table
+ * 2. nhostAuthService: Creates entry in user_profiles table
+ * 
+ * This endpoint should only be used for creating user_profiles entries
+ * for users that already exist in auth.users.
+ * 
+ * New user registration flow:
+ * - Use nhostAuthService.registerWithEmail() or signInWithGoogle()
+ * - These methods handle both auth.users and user_profiles creation
+ * 
+ * @deprecated For full user registration - use nhostAuthService instead
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation } from '@/app/graphql/hasura-server-client';
 import { CREATE_RESTAURANT_USER } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
@@ -6,7 +22,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      firebase_uuid,
+      firebase_uuid, // DEPRECATED - use user_id
+      user_id, // New Nhost UUID
       username,
       email,
       display_name,
@@ -29,10 +46,13 @@ export async function POST(request: NextRequest) {
       user_nicename
     } = body;
 
+    // Support both old (firebase_uuid) and new (user_id) for backward compatibility
+    const userId = user_id || firebase_uuid;
+
     // Validation
-    if (!firebase_uuid) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'Firebase UUID is required' },
+        { success: false, error: 'User ID (user_id) is required' },
         { status: 400 }
       );
     }
@@ -44,16 +64,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: 'Email is required' },
-        { status: 400 }
-      );
-    }
+    // Note: With Nhost, this endpoint should ideally create user_profiles entries,
+    // not restaurant_users entries. For now, maintaining backward compatibility.
+    console.warn('⚠️ create-restaurant-user: Consider using nhostAuthService for new user creation');
 
     // Build user object with only provided fields
     const userObject: any = {
-      firebase_uuid,
+      firebase_uuid: userId, // Map to firebase_uuid for backward compatibility
       username,
       email,
       ...(display_name && { display_name }),

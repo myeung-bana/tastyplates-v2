@@ -1,87 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { FOLLOW_USER, CHECK_FOLLOW_STATUS, GET_FOLLOWERS_COUNT, GET_FOLLOWING_COUNT } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { verifyNhostToken } from '@/lib/nhost-server-auth';
 import { rateLimitOrThrow, followRateLimit } from '@/lib/redis-ratelimit';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function initializeFirebaseAdmin(): boolean {
-  if (getApps().length > 0) return true;
-  
-  try {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-      return false;
-    }
-    
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: privateKey,
-      }),
-    });
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin SDK:', error);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const isInitialized = initializeFirebaseAdmin();
-    if (!isInitialized) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
+    // Verify Nhost token and get user ID directly
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const tokenResult = await verifyNhostToken(authHeader);
+    
+    if (!tokenResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Authorization token required' },
+        { success: false, error: tokenResult.error || 'Authorization token required' },
         { status: 401 }
       );
     }
 
-    const idToken = authHeader.replace('Bearer ', '');
-    let decodedToken;
-    try {
-      const auth = getAuth();
-      decodedToken = await auth.verifyIdToken(idToken);
-    } catch (error) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    const firebaseUid = decodedToken.uid;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
-    const userResponse = await fetch(
-      `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUid)}`
-    );
-
-    if (!userResponse.ok) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const userData = await userResponse.json();
-    if (!userData.success || !userData.data) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const followerId = userData.data.id;
+    const followerId = tokenResult.userId!;
     
     // Rate limiting: 10 requests / 10s per user
     const rateLimitResult = await rateLimitOrThrow(followerId, followRateLimit);

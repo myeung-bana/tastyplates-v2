@@ -261,18 +261,51 @@ class NhostAuthService {
    */
   async signInWithEmail(email: string, password: string): Promise<NhostAuthResult> {
     try {
-      console.log('[NhostAuth] Signing in:', { email });
-
-      const { session, error } = await nhost.auth.signIn({
-        email,
-        password
+      console.log('[NhostAuth] Starting sign-in...', { 
+        email, 
+        emailValid: !!email && email.includes('@'),
+        hasPassword: !!password,
+        passwordLength: password?.length,
+        nhostConfigured: !!nhost
       });
+
+      // Validate inputs before sending
+      if (!email || !email.trim()) {
+        console.error('[NhostAuth] Email is empty');
+        return {
+          success: false,
+          error: 'Email is required'
+        };
+      }
+
+      if (!password) {
+        console.error('[NhostAuth] Password is empty');
+        return {
+          success: false,
+          error: 'Password is required'
+        };
+      }
+
+      // Nhost email/password sign-in
+      const signInPayload = {
+        email: email.trim(),
+        password: password
+      };
+      
+      console.log('[NhostAuth] Calling nhost.auth.signIn with:', {
+        email: signInPayload.email,
+        hasPassword: !!signInPayload.password,
+        passwordLength: signInPayload.password.length
+      });
+
+      const { session, error } = await nhost.auth.signIn(signInPayload);
 
       if (error) {
         // Enhanced error logging with full error object
         console.error('[NhostAuth] Sign in error:', error);
         console.error('[NhostAuth] Error type:', typeof error);
         console.error('[NhostAuth] Error keys:', Object.keys(error));
+        console.error('[NhostAuth] Error stringified:', JSON.stringify(error, null, 2));
         
         // SPECIAL CASE: User is already signed in - treat as success!
         if (error.error === 'already-signed-in' || error.message?.includes('already signed in')) {

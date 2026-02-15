@@ -6,7 +6,7 @@ import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
@@ -34,7 +34,7 @@ const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo,
   const isMobile = useIsMobile();
   const router = useRouter();
 
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
 
   const currentIndex = typeof reviewIndex === 'number' ? reviewIndex : 0;
 

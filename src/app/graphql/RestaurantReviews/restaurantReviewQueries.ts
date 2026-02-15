@@ -552,6 +552,132 @@ export const GET_ALL_REVIEWS_CURSOR = `
   }
 `;
 
+// GET ALL REVIEWS - Basic query without relationships (works without Hasura relationship setup)
+export const GET_ALL_REVIEWS_BASIC = `
+  query GetAllReviewsBasic(
+    $limit: Int
+    $offset: Int
+  ) {
+    restaurant_reviews(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      author_id
+      content
+      created_at
+      hashtags
+      images
+      is_featured
+      is_pinned
+      likes_count
+      mentions
+      palates
+      rating
+      recognitions
+      restaurant_uuid
+      status
+      title
+      updated_at
+      views_count
+      published_at
+      replies_count
+    }
+    
+    restaurant_reviews_aggregate(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// GET ALL REVIEWS WITH NHOST AUTHOR DATA (OPTIMIZED - SINGLE QUERY)
+// NOTE: Requires Hasura relationships to be set up first:
+// - AuthorProfile: restaurant_reviews.author_id -> user_profiles.user_id
+// - AuthorUser: restaurant_reviews.author_id -> users.id (auth schema)
+// - ReviewRestaurant: restaurant_reviews.restaurant_uuid -> restaurants.uuid
+export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS = `
+  query GetAllReviewsWithNhostAuthors(
+    $limit: Int
+    $offset: Int
+  ) {
+    restaurant_reviews(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      author_id
+      content
+      created_at
+      hashtags
+      images
+      is_featured
+      is_pinned
+      likes_count
+      mentions
+      palates
+      rating
+      recognitions
+      restaurant_uuid
+      status
+      title
+      updated_at
+      views_count
+      
+      AuthorProfile {
+        username
+      }
+      
+      AuthorUser {
+        avatarUrl
+      }
+      
+      ReviewRestaurant {
+        title
+        uploaded_images
+        uuid
+        slug
+        published_at
+        phone
+        palates
+        id
+        address
+      }
+    }
+    
+    restaurant_reviews_aggregate(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 // GET REVIEWS BY AUTHORS WITH CURSOR (for following feed)
 export const GET_REVIEWS_BY_AUTHORS_CURSOR = `
   query GetReviewsByAuthorsCursor(

@@ -237,10 +237,12 @@ export function transformReviewV2ToReviewedDataProps(review: ReviewV2): Reviewed
     sourceUrl: typeof img === 'string' ? img : (img.url || img.sourceUrl || '')
   }));
 
-  // Get author info
+  // Get author info - prioritize Nhost avatarUrl (direct URL)
   const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
   const authorAvatar = review.author?.profile_image 
-    ? (getProfileImageUrl(review.author.profile_image) || DEFAULT_USER_ICON)
+    ? (typeof review.author.profile_image === 'string' 
+        ? review.author.profile_image 
+        : getProfileImageUrl(review.author.profile_image) || DEFAULT_USER_ICON)
     : DEFAULT_USER_ICON;
 
   // Get restaurant info

@@ -1,3 +1,16 @@
+/**
+ * @deprecated This hook is deprecated as of the Nhost migration (Feb 2026)
+ * 
+ * With Nhost, user data is now fetched via GraphQL relationships in review queries.
+ * Reviews include AuthorProfile and AuthorUser data automatically.
+ * 
+ * Migration:
+ * - Reviews: Use review.author, review.AuthorProfile, review.AuthorUser
+ * - Direct user lookup: Use GraphQL query with user_profiles + auth.users relationships
+ * 
+ * This hook remains for backward compatibility but should not be used in new code.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { DEFAULT_USER_ICON } from '@/constants/images';
@@ -35,8 +48,10 @@ const userDataCache = new Map<string, { data: UserData | null; timestamp: number
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Lightweight hook to fetch basic user data from restaurant_users table
- * Used for review components that need display_name, username, and profile_image
+ * @deprecated Lightweight hook to fetch basic user data from restaurant_users table
+ * 
+ * DEPRECATION NOTICE: This hook is deprecated. Use GraphQL relationships instead.
+ * Reviews now include author data via AuthorProfile and AuthorUser relationships.
  * 
  * @param userId - UUID string from restaurant_users.id or undefined
  * @returns UserData with display_name, username, and profile_image URL
@@ -48,6 +63,14 @@ export const useUserData = (userId: string | undefined): UseUserDataReturn => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // Log deprecation warning
+    if (userId && process.env.NODE_ENV === 'development') {
+      console.warn(
+        '⚠️ useUserData is DEPRECATED. Use GraphQL relationships instead.\n' +
+        'Reviews now include author data via AuthorProfile and AuthorUser.\n' +
+        'See: GET_ALL_REVIEWS_WITH_NHOST_AUTHORS query'
+      );
+    }
     // Reset state if userId is undefined
     if (!userId) {
       setUserData(null);

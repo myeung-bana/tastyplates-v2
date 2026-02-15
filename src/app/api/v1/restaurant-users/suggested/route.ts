@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { verifyNhostToken } from '@/lib/nhost-server-auth';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
@@ -68,37 +68,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '6', 10);
 
-    // Get the current user's Firebase UID from the Authorization header
+    // Get the current user's ID from Nhost token
     const authHeader = request.headers.get('Authorization');
     let currentUserId: string | null = null;
 
-    if (authHeader?.startsWith('Bearer ')) {
-      const idToken = authHeader.substring(7);
-      
+    if (authHeader) {
       try {
-        const admin = getFirebaseAdmin();
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const firebaseUid = decodedToken.uid;
-
-        // Get the user's UUID from Hasura
-        const userQuery = `
-          query GetUserByFirebaseUid($firebase_uid: String!) {
-            restaurant_users(where: { firebase_uid: { _eq: $firebase_uid } }, limit: 1) {
-              id
-            }
-          }
-        `;
-
-        const userResult = await hasuraQuery<{ restaurant_users: Array<{ id: string }> }>(
-          userQuery,
-          { firebase_uid: firebaseUid }
-        );
-
-        if (userResult.data?.restaurant_users?.[0]?.id) {
-          currentUserId = userResult.data.restaurant_users[0].id;
+        const tokenResult = await verifyNhostToken(authHeader);
+        if (tokenResult.success) {
+          currentUserId = tokenResult.userId!;
         }
       } catch (error) {
-        console.error('Error verifying token or fetching user:', error);
+        console.error('Error verifying Nhost token:', error);
         // Continue without excluding the current user
       }
     }

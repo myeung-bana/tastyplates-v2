@@ -28,7 +28,8 @@ interface ProfileHeaderProps {
   onFollow: (id: string) => Promise<void>;
   onUnfollow: (id: string) => Promise<void>;
   session?: any; // Optional for backward compatibility
-  currentUser?: any; // Current user from useFirebaseSession
+  currentUser?: any; // Current user from Nhost session
+  nhostUser?: any; // Nhost auth.users data
   targetUserId: string | number;
   isFollowing: boolean;
   followLoading: boolean;
@@ -104,11 +105,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onUnfollow,
   session,
   currentUser,
+  nhostUser,
   targetUserId,
   isFollowing,
   followLoading
 }) => {
-  // Extract profile image URL from JSONB format
+  // Extract profile image URL - prioritize nhostUser.avatarUrl for Nhost users
   const profileImageUrl = getProfileImageUrl(userData?.profile_image);
   const displayName = getDisplayName(userData);
   const palatesArray = getPalatesArray(userData?.palates);
@@ -153,6 +155,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-shrink-0">
           <FallbackImage
             src={
+              // Priority: Nhost avatarUrl > custom profile_image > legacy sources > default
+              (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
               profileImageUrl ||
               (currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
               (session?.user?.image as string) ||

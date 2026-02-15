@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { Tab, Tabs } from "@heroui/tabs";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import toast from "react-hot-toast";
 import { WELCOME_KEY } from "@/constants/session";
 import "@/styles/pages/_restaurants.scss";
@@ -26,7 +26,7 @@ interface ProfileProps {
 const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
   // Use targetUserIdentifier if provided, otherwise fall back to targetUserId for backward compatibility
   const identifier = targetUserIdentifier || (targetUserId ? String(targetUserId) : undefined);
-  const { user, loading } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [userReviewCount, setUserReviewCount] = useState(0);
@@ -97,24 +97,24 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     );
   }, []);
 
-  // Get Firebase ID token for API calls
-  const getFirebaseToken = useCallback(async () => {
-    if (!user?.firebase_uuid) return null;
+  // Get Nhost access token for API calls
+  const getNhostToken = useCallback(async () => {
+    if (!user?.user_id) return null;
     try {
-      const { auth } = await import('@/lib/firebase');
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        return await currentUser.getIdToken();
+      const { nhost } = await import('@/lib/nhost');
+      const session = nhost.auth.getSession();
+      if (session?.accessToken) {
+        return session.accessToken;
       }
     } catch (error) {
-      console.error('Error getting Firebase token:', error);
+      console.error('Error getting Nhost token:', error);
     }
     return null;
-  }, [user?.firebase_uuid]);
+  }, [user?.user_id]);
 
   // Custom follow/unfollow handlers for profile header - simplified to only use UUID
   const handleProfileFollow = useCallback(async (id: string) => {
-    const token = await getFirebaseToken();
+    const token = await getNhostToken();
     if (!token || !userData?.id) return;
     
     const userIdToFollow = userData.id as string;
@@ -147,10 +147,10 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [userData?.id, getFirebaseToken, refreshFollowData, refreshProfileCounts]);
+  }, [userData?.id, getNhostToken, refreshFollowData, refreshProfileCounts]);
 
   const handleProfileUnfollow = useCallback(async (id: string) => {
-    const token = await getFirebaseToken();
+    const token = await getNhostToken();
     if (!token || !userData?.id) return;
     
     const userIdToUnfollow = userData.id as string;
@@ -183,7 +183,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     } finally {
       setFollowLoading(false);
     }
-  }, [userData?.id, getFirebaseToken, refreshFollowData, refreshProfileCounts]);
+  }, [userData?.id, getNhostToken, refreshFollowData, refreshProfileCounts]);
 
   // Welcome message effect
   useEffect(() => {
@@ -205,7 +205,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
       }
 
       try {
-        const token = await getFirebaseToken();
+        const token = await getNhostToken();
         if (!token) {
           setIsFollowing(false);
           return;
@@ -240,7 +240,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     checkFollowingStatus();
-  }, [user, userData?.id, isViewingOwnProfile, getFirebaseToken]);
+  }, [user, userData?.id, isViewingOwnProfile, getNhostToken]);
 
   // Debug logging for userData changes
   useEffect(() => {
@@ -413,6 +413,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
           onFollow={handleProfileFollow}
           onUnfollow={handleProfileUnfollow}
           currentUser={user}
+          nhostUser={nhostUser}
           targetUserId={userData?.id as string || ''}
           isFollowing={isFollowing}
           followLoading={followLoading}

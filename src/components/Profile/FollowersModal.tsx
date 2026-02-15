@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { palateFlagMap } from "@/utils/palateFlags";
 import Link from "next/link";
 import Image from "next/image";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { PROFILE } from "@/constants/pages";
 import { capitalizeWords, generateProfileUrl } from "@/lib/utils";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
@@ -32,7 +32,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, userId, 
   const [localFollowers, setLocalFollowers] = useState<Follower[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMap, setLoadingMap] = useState<{ [id: string]: boolean }>({});
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
 
   // Fetch followers when modal opens
   useEffect(() => {
@@ -44,24 +44,11 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, userId, 
           const [followersResponse, followingResponse] = await Promise.all([
             restaurantUserService.getFollowersList(userId),
             // Fetch current user's following list to check if they're following each follower
-            user && firebaseUser 
+            user?.user_id
               ? (async () => {
                   try {
-                    const token = await firebaseUser.getIdToken();
-                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-                    const currentUserResponse = await fetch(
-                      `${baseUrl}/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid?firebase_uuid=${encodeURIComponent(firebaseUser.uid)}`,
-                      {
-                        headers: {
-                          'Authorization': `Bearer ${token}`
-                        }
-                      }
-                    );
-                    const currentUserData = await currentUserResponse.json();
-                    if (currentUserData.success && currentUserData.data?.id) {
-                      return restaurantUserService.getFollowingList(currentUserData.data.id);
-                    }
-                    return { success: false, data: [] };
+                    // Use Nhost user_id directly (no need to fetch by Firebase UUID)
+                    return restaurantUserService.getFollowingList(user.user_id);
                   } catch (error) {
                     console.error('Error fetching current user following list:', error);
                     return { success: false, data: [] };
@@ -79,7 +66,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, userId, 
             // Set isFollowing status based on current user's following list
             const followersWithStatus = followers.map(follower => ({
               ...follower,
-              isFollowing: user?.id && String(user.id) === String(follower.id) 
+              isFollowing: user?.user_id && String(user.user_id) === String(follower.id) 
                 ? false // Can't follow yourself
                 : followingList.includes(follower.id)
             }));
@@ -102,7 +89,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({ open, onClose, userId, 
       // Clear data when modal closes
       setLocalFollowers([]);
     }
-  }, [open, userId, user, firebaseUser]);
+  }, [open, userId, user]);
 
   const handleToggleFollow = async (id: string, isFollowing: boolean) => {
     setLoadingMap((prev) => ({ ...prev, [id]: true }));

@@ -9,7 +9,7 @@ import {
 import { GraphQLReview } from "@/types/graphql";
 import { useState } from "react";
 import Link from "next/link"; // Import Link
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import SignupModal from "../auth/SignupModal";
 import SigninModal from "../auth/SigninModal";
 import { PROFILE } from "@/constants/pages";
@@ -28,7 +28,7 @@ const ReviewCard = ({ data, width }: ReviewCardProps) => {
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null); // 'signup' | 'signin' | null
   const isMobile = useIsMobile();
 
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
 
   // Create single-item reviews array
   const reviewsArray = [data as unknown as GraphQLReview];

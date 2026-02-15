@@ -11,7 +11,8 @@ import { GraphQLReview } from "@/types/graphql";
 import "@/styles/pages/_restaurant-details.scss";
 import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
+import { nhost } from "@/lib/nhost";
 import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
@@ -25,7 +26,7 @@ import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_H
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
 import PalateTags from "../ui/PalateTags/PalateTags";
-import { useUserData } from '@/hooks/useUserData';
+// useUserData is deprecated - author data now comes from review relationships
 import { useRef, useCallback } from "react";
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 
@@ -142,7 +143,7 @@ const reviewService = new ReviewService();
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ReviewBlock = ({ review }: ReviewBlockProps) => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const [loading, setLoading] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
@@ -164,11 +165,22 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     { id: 4, name: "Best Service", icon: HELMET },
   ];
 
-  // Helper to get user UUID (cached)
+  // Helper to get user UUID from Nhost session
   const getUserUuid = useCallback(async (): Promise<string | null> => {
-    if (!user?.id || !firebaseUser) return null;
-    
-    // Check if user.id is already a UUID
+    if (!user?.user_id) return null;
+    return user.user_id;
+  }, [user?.user_id]);
+
+  // Helper to get Nhost token
+  const getNhostToken = useCallback(async (): Promise<string | null> => {
+    const session = nhost.auth.getSession();
+    return session?.accessToken || null;
+  }, []);
+
+  // Legacy Firebase code removed - all migrated to Nhost
+  const getUserUuidLegacy_Removed = useCallback(async (): Promise<string | null> => {
+    // This legacy code is no longer used
+    if (!user?.user_id) return null;
     if (UUID_REGEX.test(user.id)) {
       userUuidRef.current = user.id;
       return user.id;
@@ -180,10 +192,11 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     }
     
     try {
-      const idToken = await firebaseUser.getIdToken();
-      // Prefer the dedicated endpoint (faster + consistent with other components)
-      const response = await fetch(`/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid`, {
-        headers: { 'Authorization': `Bearer ${idToken}` },
+      const token = await getNhostToken();
+      if (!token) return null;
+      // Use updated endpoint with user ID
+      const response = await fetch(`/api/v1/restaurant-users/get-restaurant-user-by-id?id=${userIdStr}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -198,12 +211,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     }
 
     return null;
-  }, [user?.id, firebaseUser]);
+  }, [user?.user_id, getNhostToken]);
 
   // Log initial review data
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:158',message:'ReviewBlock mounted with initial data',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,initialUserLiked:review.userLiked,initialCommentLikes:review.commentLikes,hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:158',message:'ReviewBlock mounted with initial data',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,initialUserLiked:review.userLiked,initialCommentLikes:review.commentLikes,hasUser:!!user,hasNhostUser:!!nhostUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
   }, []);
 
@@ -220,7 +233,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
 
   // Fetch actual like status from API when component mounts (for UUID reviews)
   useEffect(() => {
-    if (!user || !firebaseUser || !review?.id) return;
+    if (!user || !review?.id) return;
     
     const reviewId = review.id;
     const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
@@ -240,9 +253,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
         fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:185',message:'Fetching like status on mount',data:{reviewId,userId,reviewDatabaseId:review.databaseId,initialUserLiked:userLiked,initialLikesCount:likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         
-        const idToken = await firebaseUser.getIdToken();
+        const token = await getNhostToken();
+        if (!token) return;
         const statusResponse = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
-          headers: { 'Authorization': `Bearer ${idToken}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         const fetchDuration = Date.now() - fetchStartTime;
@@ -276,15 +290,15 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     };
     
     fetchLikeStatus();
-  }, [user, firebaseUser, review?.id, getUserUuid]); // Run when auth becomes available / review changes
+  }, [user, review?.id, getUserUuid]); // Run when auth becomes available / review changes
 
   const toggleLike = async () => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:165',message:'toggleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,loading,hasUser:!!user,hasFirebaseUser:!!firebaseUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:165',message:'toggleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,loading,hasUser:!!user,hasNhostUser:!!nhostUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
     // #endregion
     if (loading) return;
 
-    if (!user || !firebaseUser) {
+    if (!user) {
       setIsShowSignin(true);
       return;
     }
@@ -302,8 +316,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     setLikesCount(currentLiked ? currentCount - 1 : currentCount + 1);
 
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost token for authentication
+      const token = await getNhostToken();
+      if (!token) {
+        toast.error('Unable to authenticate. Please sign in again.');
+        return;
+      }
       
       // Use review.id (UUID) if available, otherwise fall back to databaseId
       const reviewId = review.id || String(review.databaseId);
@@ -377,8 +395,11 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   // Generate profile URL: use UUID if available, otherwise use numeric ID
   const profileUrl = authorUuid ? generateProfileUrl(authorUuid) : generateProfileUrl(review.authorId);
 
-  // Fetch user data from restaurant_users if UUID is available and review data is incomplete
-  const { userData: fetchedUserData, loading: userDataLoading } = useUserData(
+  // Author data now comes from review relationships - no need for separate fetch
+  const fetchedUserData = null; // useUserData is deprecated
+  const userDataLoading = false;
+  const skipUserDataFetch = true; // Skip deprecated user data fetch
+  const authorUuidForFetch = skipUserDataFetch ? undefined : (
     authorUuid && (review.user === "Unknown User" || !review.user || review.userImage === DEFAULT_USER_ICON)
       ? authorUuid
       : undefined

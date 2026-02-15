@@ -9,6 +9,8 @@ interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
   isAuthenticated: boolean;
+  user?: { user_id: string; username?: string } | null;
+  nhostUser?: { displayName?: string; avatarUrl?: string } | null;
   onOpenSignin: () => void;
   onOpenSignup: () => void;
 }
@@ -22,6 +24,8 @@ export default function MobileMenu({
   isOpen,
   onClose,
   isAuthenticated,
+  user,
+  nhostUser,
   onOpenSignin,
   onOpenSignup,
 }: MobileMenuProps) {
@@ -101,7 +105,7 @@ export default function MobileMenu({
             {isAuthenticated && (
               <>
                 <Link
-                  href={PROFILE}
+                  href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.user_id ? `/profile/${user.user_id}` : PROFILE)}
                   onClick={onClose}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-base transition-all duration-200 ${
                     pathname === PROFILE || pathname?.startsWith("/profile/")

@@ -170,6 +170,7 @@ export const CHECK_USERNAME_EXISTS = `
   }
 `;
 
+
 // GET USER PROFILES BY IDS - Get multiple profiles by their IDs
 export const GET_USER_PROFILES_BY_IDS = `
   query GetUserProfilesByIds($user_ids: [uuid!]!, $limit: Int = 100) {

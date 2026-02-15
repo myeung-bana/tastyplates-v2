@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { GraphQLReview } from "@/types/graphql";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
+import { nhost } from "@/lib/nhost";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { FiX, FiSend } from "react-icons/fi";
 import ReplyItem from "./ReplyItem";
@@ -33,7 +34,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   onClose,
   onCommentCountChange,
 }) => {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const [replies, setReplies] = useState<GraphQLReview[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -78,10 +79,22 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }
   } : null;
 
+  // Get Nhost user UUID directly
   const getUserUuid = useCallback(async (): Promise<string | null> => {
-    if (!user?.id || !firebaseUser) return null;
+    if (!user?.user_id) return null;
+    return user.user_id;
+  }, [user?.user_id]);
 
-    const userIdStr = String(user.id);
+  // Get Nhost access token
+  const getNhostToken = useCallback(async (): Promise<string | null> => {
+    const session = nhost.auth.getSession();
+    return session?.accessToken || null;
+  }, []);
+
+  // Legacy getUserUuid code removed
+  const getUserUuidLegacy = useCallback(async (): Promise<string | null> => {
+    if (!user?.user_id) return null;
+    const userIdStr = String(user.user_id);
     if (UUID_REGEX.test(userIdStr)) {
       userUuidRef.current = userIdStr;
       return userIdStr;
@@ -90,9 +103,10 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     if (userUuidRef.current) return userUuidRef.current;
 
     try {
-      const idToken = await firebaseUser.getIdToken();
-      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-        headers: { 'Authorization': `Bearer ${idToken}` },
+      const token = await getNhostToken();
+      if (!token) return null;
+      const response = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-id?id=' + userIdStr, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
@@ -105,7 +119,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       // ignore
     }
     return null;
-  }, [user?.id, firebaseUser]);
+  }, [user?.user_id, getNhostToken]);
 
   // Keep ref updated
   useEffect(() => {
@@ -160,13 +174,17 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
   // Handle reply like
   const handleReplyLike = useCallback(async (reply: GraphQLReview) => {
-    if (!firebaseUser) {
+    if (!user) {
       toast.error("Please sign in to like comments");
       return;
     }
 
-    // Get Firebase ID token for authentication
-    const idToken = await firebaseUser.getIdToken();
+    // Get Nhost token for authentication
+    const token = await getNhostToken();
+    if (!token) {
+      toast.error('Please sign in to like comments');
+      return;
+    }
 
     const replyId = reply.id || String(reply.databaseId);
     if (!UUID_REGEX.test(String(reply.id || ''))) {
@@ -210,7 +228,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setReplyLoading((prev) => ({ ...prev, [replyId]: false }));
     }
-  }, [firebaseUser, replyUserLiked, replyLikes]);
+  }, [user, replyUserLiked, replyLikes, getNhostToken]);
 
   // Cooldown timer
   useEffect(() => {
@@ -312,7 +330,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
-    if (!user || !firebaseUser) {
+    if (!user) {
       toast.error("Please sign in to comment");
       return;
     }
@@ -381,8 +399,12 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     setCommentText("");
 
     try {
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost token for authentication
+      const token = await getNhostToken();
+      if (!token) {
+        toast.error('Please sign in to post comments');
+        return;
+      }
       
       const payload = {
         content: optimisticReply.content,
@@ -452,7 +474,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [commentText, isLoading, cooldown, user, firebaseUser, review, onCommentCountChange]);
+  }, [commentText, isLoading, cooldown, user, review, onCommentCountChange, getNhostToken]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
