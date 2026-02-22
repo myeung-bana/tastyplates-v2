@@ -33,7 +33,17 @@
       "@styles/*": [
         "./src/styles/*"
       ]
-    }
+    },
+    "types": [
+      "node",
+      "react",
+      "react-dom",
+      "react-modal",
+      "react-slick",
+      "js-cookie",
+      "lodash.debounce",
+      "next"
+    ]
   },
   "include": [
     "next-env.d.ts",

@@ -21,6 +21,18 @@ interface UserProfileData {
 
 class NhostAuthService {
   /**
+   * Guard: ensure Nhost client is available (e.g. not during build/SSR).
+   * Use at the start of any method that calls nhost.auth or nhost.graphql.
+   */
+  private guardNhost(): boolean {
+    if (!nhost) {
+      console.warn('[NhostAuth] Nhost client not ready (e.g. build/SSR). Skipping.');
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Map Nhost error messages to user-friendly messages
    * Enhanced to handle various error structures and verification issues
    */
@@ -109,6 +121,7 @@ class NhostAuthService {
    * Called after successful Nhost auth registration
    */
   private async createUserProfile(userData: UserProfileData): Promise<boolean> {
+    if (!this.guardNhost()) return false;
     try {
       const mutation = `
         mutation InsertUserProfile($object: user_profiles_insert_input!) {
@@ -144,6 +157,7 @@ class NhostAuthService {
    * Check if user profile exists
    */
   private async getUserProfile(userId: string): Promise<any> {
+    if (!this.guardNhost()) return null;
     try {
       const query = `
         query GetUserProfile($user_id: uuid!) {
@@ -184,6 +198,9 @@ class NhostAuthService {
       metadata?: Record<string, any>;
     }
   ): Promise<NhostAuthResult> {
+    if (!this.guardNhost()) {
+      return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
+    }
     try {
       console.log('[NhostAuth] Registering user:', { email });
 
@@ -260,6 +277,9 @@ class NhostAuthService {
    * Enhanced error handling for verification and authentication issues
    */
   async signInWithEmail(email: string, password: string): Promise<NhostAuthResult> {
+    if (!this.guardNhost()) {
+      return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
+    }
     try {
       console.log('[NhostAuth] Starting sign-in...', { 
         email, 
@@ -414,6 +434,7 @@ class NhostAuthService {
    * Enhanced error handling
    */
   async signInWithGoogle(redirectTo?: string): Promise<void> {
+    if (!this.guardNhost()) return;
     try {
       console.log('[NhostAuth] Initiating Google sign-in with redirect to:', redirectTo || window.location.origin);
       
@@ -481,6 +502,7 @@ class NhostAuthService {
    * Sign out
    */
   async signOut(): Promise<void> {
+    if (!this.guardNhost()) return;
     try {
       console.log('[NhostAuth] Signing out');
       await nhost.auth.signOut();
@@ -494,6 +516,7 @@ class NhostAuthService {
    * Get current user session
    */
   getSession(): NhostSession | null {
+    if (!this.guardNhost()) return null;
     return nhost.auth.getSession();
   }
 
@@ -501,6 +524,7 @@ class NhostAuthService {
    * Get current authenticated user
    */
   getUser() {
+    if (!this.guardNhost()) return null;
     return nhost.auth.getUser();
   }
 
@@ -508,6 +532,7 @@ class NhostAuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
+    if (!this.guardNhost()) return false;
     return nhost.auth.isAuthenticated();
   }
 
@@ -529,6 +554,9 @@ class NhostAuthService {
    * Use this when user hasn't received or cannot find their verification email
    */
   async resendVerificationEmail(email: string): Promise<NhostAuthResult> {
+    if (!this.guardNhost()) {
+      return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
+    }
     console.log('[NhostAuth] Resending verification email to:', email);
     
     try {

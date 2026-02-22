@@ -28,6 +28,8 @@ export interface RatingMetrics {
   searchCount: number;
   myPreferenceRating: number;
   myPreferenceCount: number;
+  authenticRating: number;
+  authenticCount: number;
 }
 
 /**
@@ -154,22 +156,69 @@ export function calculateMyPreferenceRating(reviews: GraphQLReview[], userPalate
 }
 
 /**
+ * Calculate authentic rating: average score from users whose palate matches the restaurant's cuisine.
+ * E.g. users with "Korean" palate reviewing a restaurant with cuisine "Korean".
+ * @param reviews - Array of all reviews for the restaurant
+ * @param restaurantPalates - Restaurant's cuisine/palates (e.g. from restaurant.palates.nodes.map(n => n.name))
+ * @returns Authentic rating and count
+ */
+export function calculateAuthenticRating(
+  reviews: GraphQLReview[],
+  restaurantPalates: string | string[] | any[] | null | undefined
+): { rating: number; count: number } {
+  if (!reviews || reviews.length === 0 || !restaurantPalates) {
+    return { rating: 0, count: 0 };
+  }
+
+  const matchingReviews = reviews.filter((review) =>
+    hasMatchingPalates(restaurantPalates, review.palates || null)
+  );
+
+  if (matchingReviews.length === 0) {
+    return { rating: 0, count: 0 };
+  }
+
+  const validReviews = matchingReviews.filter((review) => {
+    const rating = parseFloat(String(review.reviewStars || "0"));
+    return !isNaN(rating) && rating > 0;
+  });
+
+  if (validReviews.length === 0) {
+    return { rating: 0, count: 0 };
+  }
+
+  const totalRating = validReviews.reduce((sum, review) => {
+    return sum + parseFloat(String(review.reviewStars || "0"));
+  }, 0);
+
+  const averageRating = totalRating / validReviews.length;
+
+  return {
+    rating: Math.round(averageRating * 100) / 100,
+    count: validReviews.length,
+  };
+}
+
+/**
  * Calculate all rating metrics for a restaurant
  * @param restaurantReviews - Reviews for the specific restaurant
  * @param allReviews - All reviews in the system (for search rating calculation)
  * @param searchTerm - The search term from URL parameters
  * @param userPalates - Current user's palate string (pipe-separated) or array
+ * @param restaurantPalates - Restaurant's cuisine/palates for authentic score (e.g. restaurant.palates.nodes.map(n => n.name))
  * @returns Combined rating metrics
  */
 export function calculateRatingMetrics(
   restaurantReviews: GraphQLReview[],
   allReviews: GraphQLReview[],
   searchTerm: string | null,
-  userPalates: string | string[] | any | null = null
+  userPalates: string | string[] | any | null = null,
+  restaurantPalates: string | string[] | any[] | null | undefined = null
 ): RatingMetrics {
   const overall = calculateOverallRating(restaurantReviews);
   const search = searchTerm ? calculateSearchRating(allReviews, searchTerm) : { rating: 0, count: 0 };
   const myPreference = userPalates ? calculateMyPreferenceRating(restaurantReviews, userPalates) : { rating: 0, count: 0 };
+  const authentic = restaurantPalates ? calculateAuthenticRating(restaurantReviews, restaurantPalates) : { rating: 0, count: 0 };
 
   return {
     overallRating: overall.rating,
@@ -177,7 +226,9 @@ export function calculateRatingMetrics(
     searchRating: search.rating,
     searchCount: search.count,
     myPreferenceRating: myPreference.rating,
-    myPreferenceCount: myPreference.count
+    myPreferenceCount: myPreference.count,
+    authenticRating: authentic.rating,
+    authenticCount: authentic.count,
   };
 }
 

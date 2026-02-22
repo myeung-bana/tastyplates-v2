@@ -69,7 +69,9 @@ export default function RestaurantDetail() {
     searchRating: 0,
     searchCount: 0,
     myPreferenceRating: 0,
-    myPreferenceCount: 0
+    myPreferenceCount: 0,
+    authenticRating: 0,
+    authenticCount: 0
   });
   const [communityRecognitionMetrics, setCommunityRecognitionMetrics] = useState<CommunityRecognitionMetrics>({
     mustRevisit: 0,
@@ -115,11 +117,13 @@ export default function RestaurantDetail() {
   useEffect(() => {
     if (restaurant && reviews.length > 0) {
       const userPalates = user?.palates || null;
+      const restaurantPalates = restaurant?.palates?.nodes?.map((n: { name: string }) => n.name) ?? null;
       const metrics = calculateRatingMetrics(
         reviews,
         reviews,
         palatesParam,
-        userPalates
+        userPalates,
+        restaurantPalates
       );
       setRatingMetrics(metrics);
 

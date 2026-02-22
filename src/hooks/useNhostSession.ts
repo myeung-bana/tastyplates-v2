@@ -37,6 +37,8 @@ interface NhostSession {
   user: UserProfile | null;
   nhostUser: NhostUser | null;
   loading: boolean;
+  /** True as soon as Nhost has a session (no wait for profile). Use for instant logged-in UI. */
+  authReady: boolean;
   error: string | null;
 }
 
@@ -91,6 +93,10 @@ export function useNhostSession(): NhostSession {
       }
 
       // STEP 5: Only NOW fetch the profile (we're sure user is authenticated)
+      if (!nhost) {
+        setProfileLoading(false);
+        return;
+      }
       console.log('[useNhostSession] Fetching profile for authenticated user:', nhostUser.id);
       setProfileLoading(true);
       setError(null);
@@ -158,10 +164,13 @@ export function useNhostSession(): NhostSession {
     fetchUserProfile();
   }, [isAuthenticated, isLoading, nhostUser]);
 
+  const authReady = !isLoading && !!isAuthenticated && !!nhostUser?.id;
+
   return {
     user,
     nhostUser: nhostUser as NhostUser | null,
     loading: isLoading || profileLoading,
+    authReady,
     error
   };
 }

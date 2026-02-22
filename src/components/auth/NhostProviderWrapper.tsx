@@ -9,13 +9,12 @@ interface NhostProviderWrapperProps {
 }
 
 /**
- * Client-side wrapper for Nhost Provider
- * Must be a client component to use Nhost hooks
+ * Client-side wrapper for Nhost Provider.
+ * Only wraps with NhostProvider when nhost client exists (browser); during build nhost is null.
  */
 export default function NhostProviderWrapper({ children }: NhostProviderWrapperProps) {
-  return (
-    <NhostProvider nhost={nhost}>
-      {children}
-    </NhostProvider>
-  );
+  if (!nhost) {
+    return <>{children}</>;
+  }
+  return <NhostProvider nhost={nhost}>{children}</NhostProvider>;
 }

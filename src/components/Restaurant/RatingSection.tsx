@@ -73,6 +73,30 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
               </div>
             </div>
 
+            <div className="w-px bg-[#CACACA] self-stretch my-2"></div>
+
+            {/* Authentic Score */}
+            <div className="flex flex-col items-center min-w-[140px]">
+              <h3 className="font-neusans font-semibold text-sm mb-1">Authentic Score</h3>
+              <div className="flex flex-col items-center">
+                <div className="relative inline-block mb-2">
+                  <span className="font-neusans text-gray-800 text-2xl font-bold">
+                    {displayRating(ratingMetrics.authenticRating)}
+                  </span>
+                  <div className="absolute -bottom-1 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                    <span className="text-[9px] font-bold text-white">
+                      {formatCount(ratingMetrics.authenticCount)}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] text-gray-500 text-center leading-tight">
+                  How authentic<br />this restaurant is
+                </span>
+              </div>
+            </div>
+
+            <div className="w-px bg-[#CACACA] self-stretch my-2"></div>
+
             {/* My Preference - Only show when user is logged in */}
             {user && userPalates && (
               <>
@@ -145,6 +169,30 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
             </span>
           </div>
         </div>
+
+        <div className="h-[85%] border-l border-[#CACACA]"></div>
+
+        {/* Authentic Score */}
+        <div className="rating-column font-neusans">
+          <h3 className="font-neusans font-semibold text-sm mb-1">Authentic Score</h3>
+          <div className="flex flex-col items-center">
+            <div className="relative inline-block mb-3">
+              <span className="font-neusans text-gray-800 text-4xl font-bold">
+                {displayRating(ratingMetrics.authenticRating)}
+              </span>
+              <div className="absolute -bottom-1 -right-5 flex items-center justify-center w-6 h-6 rounded-full bg-[#ff7c0a]">
+                <span className="text-[10px] font-bold text-white">
+                  {formatCount(ratingMetrics.authenticCount)}
+                </span>
+              </div>
+            </div>
+            <span className="text-xs text-gray-500">
+              How authentic this restaurant is
+            </span>
+          </div>
+        </div>
+
+        <div className="h-[85%] border-l border-[#CACACA]"></div>
 
         {/* My Preference - Only show when user is logged in */}
         {user && userPalates && (

@@ -54,30 +54,28 @@ const navigationItems = [
 ];
 
 export default function Navbar(props: Record<string, unknown>) {
-  const { user, nhostUser, loading } = useNhostSession();
+  const { user, nhostUser, loading, authReady } = useNhostSession();
   const router = useRouter();
   const pathname = usePathname();
   
-  // Fetch current user profile data for authenticated users
-  // Only fetch if user is authenticated and has a valid ID
-  const currentUserId = user?.user_id || null;
-  const shouldFetchProfile = !loading && !!user && !!currentUserId;
+  // Fetch profile as soon as we have a session (nhostUser.id); don't wait for profile in hook
+  const currentUserId = user?.user_id || nhostUser?.id || null;
+  const shouldFetchProfile = authReady && !!currentUserId;
   const { userData } = useProfileData(shouldFetchProfile ? currentUserId : '');
   
   // Debug: Log session state for troubleshooting
   useEffect(() => {
-    if (!loading && user && nhostUser) {
-      const userId = user.user_id;
-      console.log('[Navbar] Nhost session authenticated:', {
-        userId: userId,
+    if (authReady && nhostUser) {
+      console.log('[Navbar] Nhost session ready:', {
+        userId: user?.user_id ?? nhostUser.id,
         email: nhostUser.email,
         displayName: nhostUser.displayName,
         avatarUrl: nhostUser.avatarUrl,
       });
-    } else if (!loading && !user) {
+    } else if (!loading && !authReady) {
       console.log('[Navbar] Nhost session unauthenticated');
     }
-  }, [user, nhostUser, loading]);
+  }, [user, nhostUser, loading, authReady]);
   
   const { isLandingPage = false, hasSearchBar = false, hasSearchBarMobile = false } = props as {
     isLandingPage?: boolean;
@@ -125,10 +123,9 @@ export default function Navbar(props: Record<string, unknown>) {
 
 
   // Simplified toast notification system for Nhost authentication
+  // Use full profile (user) for "just logged in" so we only toast when an explicit message was set
   useEffect(() => {
-    // Skip if still loading
     if (loading) return;
-    
     const isAuthenticated = !loading && !!user && !!nhostUser;
     
     // Detect auth state changes
@@ -144,9 +141,8 @@ export default function Navbar(props: Record<string, unknown>) {
           if (loginMessage) {
             toast.success(loginMessage, { duration: 3000 });
             localStorage.removeItem(LOGIN_BACK_KEY);
-          } else {
-            toast.success('Welcome back!', { duration: 3000 });
           }
+          // No generic "Welcome back!" – only show toast when login/registration set a message
         }
       }
       
@@ -268,7 +264,7 @@ export default function Navbar(props: Record<string, unknown>) {
               {/* Center Search Bar */}
               <div className="navbar__center">
                 <NavbarSearchBar 
-                  isAuthenticated={!loading && !!user} 
+                  isAuthenticated={authReady} 
                   isTransparent={isLandingPage && !navBg}
                 />
               </div>
@@ -276,9 +272,8 @@ export default function Navbar(props: Record<string, unknown>) {
               {/* Navigation Menu - Always show Explore, Following only for authenticated users */}
               <div className="navbar__menu justify-start">
                 {navigationItems.map((item) => {
-                  // Show all items if authenticated, only Explore if not authenticated
-                  const isAuthenticated = !loading && !!user;
-                  if (!isAuthenticated && item.name !== "Explore") return null;
+                  // Show all items when session is ready, only Explore when not
+                  if (!authReady && item.name !== "Explore") return null;
                   
                   const isActive = pathname === item.href || (item.href !== RESTAURANTS && pathname?.startsWith(item.href));
                   
@@ -296,10 +291,9 @@ export default function Navbar(props: Record<string, unknown>) {
               </div>
             </div>
             <div className="navbar__auth">
-              {/* Use Firebase session for authentication check */}
+              {/* Show logged-in UI as soon as session is ready (authReady), before profile loads */}
               {(() => {
-                const isAuthenticated = !loading && !!user;
-                if (!isAuthenticated && validatePage) {
+                if (!authReady && validatePage) {
                   return (
                     <div className="w-9 h-9 rounded-full overflow-hidden">
                       <Image
@@ -312,7 +306,7 @@ export default function Navbar(props: Record<string, unknown>) {
                     </div>
                   );
                 }
-                if (!isAuthenticated) {
+                if (!authReady) {
                   return (
                 <>
                   {/* Location Button - Left of Log In */}
@@ -394,7 +388,7 @@ export default function Navbar(props: Record<string, unknown>) {
                     content={
                       <div className={`bg-white text-sm flex flex-col rounded-2xl text-[#494D5D] min-w-[200px] overflow-hidden ${!isLandingPage || navBg ? 'border border-[#CACACA]' : 'border-none'}`}>
                         <Link 
-                          href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.user_id ? `/profile/${user.user_id}` : PROFILE)} 
+                          href={user?.username ? `/profile/${encodeURIComponent(user.username)}` : (user?.user_id ? `/profile/${user.user_id}` : (nhostUser?.id ? `/profile/${nhostUser.id}` : PROFILE))} 
                           className='font-neusans text-left pl-3.5 pr-12 py-3.5 hover:bg-[#ff7c0a]/10 transition-colors first:rounded-t-2xl'
                         >
                           My Profile
@@ -423,7 +417,7 @@ export default function Navbar(props: Record<string, unknown>) {
         <MobileMenu
           isOpen={isOpen}
           onClose={() => setIsOpen(false)}
-          isAuthenticated={!loading && !!user}
+          isAuthenticated={authReady}
           user={user}
           nhostUser={nhostUser}
           onOpenSignin={() => setIsOpenSignin(true)}

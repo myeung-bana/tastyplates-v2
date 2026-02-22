@@ -10,7 +10,6 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
-import { LOGIN_BACK_KEY } from "@/constants/session";
 import { validEmail } from "@/lib/utils";
 import { nhostAuthService } from "@/services/auth/nhostAuthService";
 import { useNhostSession } from "@/hooks/useNhostSession";
@@ -42,9 +41,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   // Nhost handles session automatically
   const handleLoginSuccess = async () => {
     try {
-      // Set login success message for Navbar toast
-      localStorage.setItem(LOGIN_BACK_KEY, 'Welcome back!');
-      
       // Close modal if callback provided
       onLoginSuccess?.();
       // Refresh router to update server components
@@ -341,3 +337,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
 };
 
 export default LoginPage;
+
+// Force dynamic render so this page is not statically prerendered (requires NhostProvider at runtime).
+export async function getServerSideProps() {
+  return { props: {} };
+}

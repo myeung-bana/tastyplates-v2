@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/global.scss";
 import SessionWrapper from "@/components/auth/SessionWrapper";
-import NhostProviderWrapper from "@/components/auth/NhostProviderWrapper";
+import NhostProviderWrapperDynamic from "@/components/auth/NhostProviderWrapperDynamic";
 import { Toaster } from 'react-hot-toast';
 import { FollowProvider } from "@/components/FollowContext";
 import { LocationProvider } from "@/contexts/LocationContext";
@@ -88,7 +88,7 @@ export default function RootLayout({
             },
           }}
         />
-        <NhostProviderWrapper>
+        <NhostProviderWrapperDynamic>
           <UploadProvider>
             <FollowProvider>
               <LocationProvider>
@@ -112,7 +112,7 @@ export default function RootLayout({
               </LocationProvider>
             </FollowProvider>
           </UploadProvider>
-        </NhostProviderWrapper>
+        </NhostProviderWrapperDynamic>
       </body>
     </html>
   );
