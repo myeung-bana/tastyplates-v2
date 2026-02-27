@@ -19,6 +19,11 @@ interface UserProfileData {
   onboarding_complete: boolean;
 }
 
+type UserProfileLookupResult =
+  | { status: 'ok'; profile: any }
+  | { status: 'not_found'; profile: null }
+  | { status: 'error'; profile: null; error: any };
+
 class NhostAuthService {
   /**
    * Guard: ensure Nhost client is available (e.g. not during build/SSR).
@@ -154,14 +159,20 @@ class NhostAuthService {
   }
 
   /**
-   * Check if user profile exists
+   * Check if user profile exists (uses list query; by_pk may not be exposed for user role).
    */
-  private async getUserProfile(userId: string): Promise<any> {
-    if (!this.guardNhost()) return null;
+  private async getUserProfile(userId: string): Promise<UserProfileLookupResult> {
+    if (!this.guardNhost()) {
+      return {
+        status: 'error',
+        profile: null,
+        error: new Error('Nhost client not ready'),
+      };
+    }
     try {
       const query = `
         query GetUserProfile($user_id: uuid!) {
-          user_profiles_by_pk(user_id: $user_id) {
+          user_profiles(where: { user_id: { _eq: $user_id } }, limit: 1) {
             user_id
             username
             about_me
@@ -177,10 +188,34 @@ class NhostAuthService {
         user_id: userId
       });
 
-      return result.data?.user_profiles_by_pk || null;
+      if (result.error) {
+        console.warn('[NhostAuth] Error fetching user profile:', result.error);
+        return {
+          status: 'error',
+          profile: null,
+          error: result.error,
+        };
+      }
+
+      const profile = result.data?.user_profiles?.[0] ?? null;
+      if (!profile) {
+        return {
+          status: 'not_found',
+          profile: null,
+        };
+      }
+
+      return {
+        status: 'ok',
+        profile,
+      };
     } catch (error) {
       console.error('[NhostAuth] Error fetching user profile:', error);
-      return null;
+      return {
+        status: 'error',
+        profile: null,
+        error,
+      };
     }
   }
 
@@ -341,8 +376,8 @@ class NhostAuthService {
             });
             
             // Check if user profile exists, create if not
-            const profile = await this.getUserProfile(currentSession.user.id);
-            if (!profile) {
+            const profileLookup = await this.getUserProfile(currentSession.user.id);
+            if (profileLookup.status === 'not_found') {
               console.log('[NhostAuth] User profile not found, creating...');
               const username = this.generateUsernameFromEmail(currentSession.user.email || email);
               const created = await this.createUserProfile({
@@ -354,6 +389,8 @@ class NhostAuthService {
               if (!created) {
                 console.warn('[NhostAuth] User profile creation failed, but auth succeeded');
               }
+            } else if (profileLookup.status === 'error') {
+              console.warn('[NhostAuth] Skipping profile creation because profile lookup failed:', profileLookup.error);
             }
             
             return {
@@ -398,8 +435,8 @@ class NhostAuthService {
       });
 
       // Check if user profile exists, create if not
-      const profile = await this.getUserProfile(session.user.id);
-      if (!profile) {
+      const profileLookup = await this.getUserProfile(session.user.id);
+      if (profileLookup.status === 'not_found') {
         console.log('[NhostAuth] User profile not found, creating...');
         const username = this.generateUsernameFromEmail(email);
         const created = await this.createUserProfile({
@@ -411,6 +448,8 @@ class NhostAuthService {
         if (!created) {
           console.warn('[NhostAuth] User profile creation failed, but auth succeeded');
         }
+      } else if (profileLookup.status === 'error') {
+        console.warn('[NhostAuth] Skipping profile creation because profile lookup failed:', profileLookup.error);
       }
 
       return {
@@ -444,8 +483,8 @@ class NhostAuthService {
         const currentSession = nhost.auth.getSession();
         if (currentSession?.user) {
           // Ensure profile exists
-          const profile = await this.getUserProfile(currentSession.user.id);
-          if (!profile && currentSession.user.email) {
+          const profileLookup = await this.getUserProfile(currentSession.user.id);
+          if (profileLookup.status === 'not_found' && currentSession.user.email) {
             console.log('[NhostAuth] Creating missing user profile...');
             const username = this.generateUsernameFromEmail(currentSession.user.email);
             await this.createUserProfile({
@@ -453,6 +492,8 @@ class NhostAuthService {
               username,
               onboarding_complete: false,
             });
+          } else if (profileLookup.status === 'error') {
+            console.warn('[NhostAuth] Skipping profile creation because profile lookup failed:', profileLookup.error);
           }
         }
         // Don't redirect, just return - user is already authenticated

@@ -102,38 +102,35 @@ export function useNhostSession(): NhostSession {
       setError(null);
 
       try {
-        // Fetch user profile from user_profiles table
-        const query = `
-          query GetUserProfile($user_id: uuid!) {
-            user_profiles_by_pk(user_id: $user_id) {
-              user_id
-              username
-              about_me
-              birthdate
-              gender
-              palates
-              onboarding_complete
-              created_at
-              updated_at
-            }
-          }
-        `;
+        // Fetch profile via server API (server can use Hasura admin access safely).
+        const response = await fetch(
+          `/api/v1/restaurant-users/get-restaurant-user-by-id?id=${encodeURIComponent(nhostUser.id)}`
+        );
+        const payload = await response.json().catch(() => ({} as any));
 
-        const result = await nhost.graphql.request(query, {
-          user_id: nhostUser.id
-        });
-
-        if (result.error) {
-          console.error('[useNhostSession] GraphQL error fetching profile:', result.error);
-          // Only set error if we're still authenticated
+        if (!response.ok || !payload?.success) {
+          console.error('[useNhostSession] API error fetching profile:', payload?.error || response.statusText);
           if (isAuthenticated && nhostUser) {
-            setError('Failed to fetch user profile');
+            setError('User profile temporarily unavailable');
           }
           setUser(null);
           return;
         }
 
-        const profile = result.data?.user_profiles_by_pk;
+        const profileData = payload?.data;
+        const profile: UserProfile | null = profileData
+          ? {
+              user_id: profileData.user_id || profileData.id || nhostUser.id,
+              username: profileData.username,
+              about_me: profileData.about_me,
+              birthdate: profileData.birthdate,
+              gender: profileData.gender,
+              palates: profileData.palates,
+              onboarding_complete: profileData.onboarding_complete,
+              created_at: profileData.created_at,
+              updated_at: profileData.updated_at,
+            }
+          : null;
 
         if (!profile) {
           // Profile doesn't exist - this might be a new user
