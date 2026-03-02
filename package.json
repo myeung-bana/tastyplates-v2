@@ -26,7 +26,7 @@
     "@heroui/system": "^2.4.13",
     "@heroui/tabs": "^2.2.14",
     "@heroui/theme": "^2.4.13",
-    "@nhost/nextjs": "^3.2.0",
+    "@nhost/nextjs": "^2.3.1",
     "@nhost/react": "^3.4.0",
     "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-select": "^2.2.5",

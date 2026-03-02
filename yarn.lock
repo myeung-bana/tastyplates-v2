@@ -3189,7 +3189,7 @@
     graphql "16.8.1"
     xstate "^4.38.3"
 
-"@nhost/nextjs@^3.2.0":
+"@nhost/nextjs@^2.3.1":
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/@nhost/nextjs/-/nextjs-2.3.1.tgz#cbb08f72ccf4f6d0f0eb170baf634e287ef86811"
   integrity sha512-HbBp1+nrtPuNkGwOxSLWuTFesOxnr4Ad8XFuU87Tmw6r4cp/fYDgrGHX+6m9V0CX0xdWd1RlW6adubIgRqSlIw==
