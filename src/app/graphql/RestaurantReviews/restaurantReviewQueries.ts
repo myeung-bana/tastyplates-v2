@@ -62,6 +62,20 @@ export const GET_REVIEWS_BY_RESTAURANT = `
       published_at
       author_id
       restaurant_uuid
+      is_pinned
+      is_featured
+      views_count
+      updated_at
+
+      AuthorProfile {
+        user_id
+        username
+        palates
+        user {
+          avatarUrl
+          email
+        }
+      }
     }
     restaurant_reviews_aggregate(
       where: {
@@ -449,166 +463,10 @@ export const CHECK_REVIEW_LIKES_BATCH = `
   }
 `;
 
-// GET ALL REVIEWS (for trending/feed)
-export const GET_ALL_REVIEWS = `
-  query GetAllReviews(
-    $limit: Int
-    $offset: Int
-  ) {
-    restaurant_reviews(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-      order_by: [{ created_at: desc }, { id: desc }]
-      limit: $limit
-      offset: $offset
-    ) {
-      id
-      title
-      content
-      rating
-      images
-      palates
-      hashtags
-      mentions
-      recognitions
-      likes_count
-      replies_count
-      status
-      created_at
-      published_at
-      author_id
-      restaurant_uuid
-    }
-    restaurant_reviews_aggregate(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-    ) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
-
-// GET ALL REVIEWS WITH CURSOR PAGINATION (New - Phase 2)
-export const GET_ALL_REVIEWS_CURSOR = `
-  query GetAllReviewsCursor(
-    $limit: Int!
-    $cursorTimestamp: timestamptz
-    $cursorId: uuid
-  ) {
-    restaurant_reviews(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-        _or: [
-          { created_at: { _lt: $cursorTimestamp } }
-          {
-            _and: [
-              { created_at: { _eq: $cursorTimestamp } }
-              { id: { _lt: $cursorId } }
-            ]
-          }
-        ]
-      }
-      order_by: [{ created_at: desc }, { id: desc }]
-      limit: $limit
-    ) {
-      id
-      title
-      content
-      rating
-      images
-      palates
-      hashtags
-      mentions
-      recognitions
-      likes_count
-      replies_count
-      status
-      created_at
-      published_at
-      author_id
-      restaurant_uuid
-    }
-    restaurant_reviews_aggregate(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-    ) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
-
-// GET ALL REVIEWS - Basic query without relationships (works without Hasura relationship setup)
-export const GET_ALL_REVIEWS_BASIC = `
-  query GetAllReviewsBasic(
-    $limit: Int
-    $offset: Int
-  ) {
-    restaurant_reviews(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-      order_by: [{ created_at: desc }, { id: desc }]
-      limit: $limit
-      offset: $offset
-    ) {
-      id
-      author_id
-      content
-      created_at
-      hashtags
-      images
-      is_featured
-      is_pinned
-      likes_count
-      mentions
-      palates
-      rating
-      recognitions
-      restaurant_uuid
-      status
-      title
-      updated_at
-      views_count
-      published_at
-      replies_count
-    }
-    
-    restaurant_reviews_aggregate(
-      where: {
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-    ) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
-
-// GET ALL REVIEWS WITH NHOST AUTHOR DATA (OPTIMIZED - SINGLE QUERY)
-// NOTE: Requires Hasura relationships to be set up first:
-// - AuthorProfile: restaurant_reviews.author_id -> user_profiles.user_id
-// - AuthorUser: restaurant_reviews.author_id -> users.id (auth schema)
-// - ReviewRestaurant: restaurant_reviews.restaurant_uuid -> restaurants.uuid
+// GET ALL REVIEWS WITH NHOST AUTHOR DATA (OPTIMIZED)
+// AuthorProfile (user_profiles) -> user (auth.users) confirmed working in Hasura console.
+// username fallback: profile.user.email prefix when profile.username is missing.
+// Restaurants are batch-fetched separately.
 export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS = `
   query GetAllReviewsWithNhostAuthors(
     $limit: Int
@@ -642,25 +500,17 @@ export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS = `
       title
       updated_at
       views_count
-      
+      published_at
+      replies_count
+
       AuthorProfile {
+        user_id
         username
-      }
-      
-      AuthorUser {
-        avatarUrl
-      }
-      
-      ReviewRestaurant {
-        title
-        uploaded_images
-        uuid
-        slug
-        published_at
-        phone
         palates
-        id
-        address
+        user {
+          avatarUrl
+          email
+        }
       }
     }
     
@@ -678,115 +528,3 @@ export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS = `
   }
 `;
 
-// GET REVIEWS BY AUTHORS WITH CURSOR (for following feed)
-export const GET_REVIEWS_BY_AUTHORS_CURSOR = `
-  query GetReviewsByAuthorsCursor(
-    $authorIds: [uuid!]!
-    $limit: Int!
-    $cursorTimestamp: timestamptz
-    $cursorId: uuid
-  ) {
-    restaurant_reviews(
-      where: {
-        author_id: { _in: $authorIds }
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-        _or: [
-          { created_at: { _lt: $cursorTimestamp } }
-          {
-            _and: [
-              { created_at: { _eq: $cursorTimestamp } }
-              { id: { _lt: $cursorId } }
-            ]
-          }
-        ]
-      }
-      order_by: [{ created_at: desc }, { id: desc }]
-      limit: $limit
-    ) {
-      id
-      title
-      content
-      rating
-      images
-      palates
-      hashtags
-      mentions
-      recognitions
-      likes_count
-      replies_count
-      status
-      created_at
-      published_at
-      author_id
-      restaurant_uuid
-    }
-    restaurant_reviews_aggregate(
-      where: {
-        author_id: { _in: $authorIds }
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        status: { _eq: "approved" }
-      }
-    ) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
-
-// GET USER REVIEWS WITH CURSOR
-export const GET_USER_REVIEWS_CURSOR = `
-  query GetUserReviewsCursor(
-    $authorId: uuid!
-    $limit: Int!
-    $cursorTimestamp: timestamptz
-    $cursorId: uuid
-  ) {
-    restaurant_reviews(
-      where: {
-        author_id: { _eq: $authorId }
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-        _or: [
-          { created_at: { _lt: $cursorTimestamp } }
-          {
-            _and: [
-              { created_at: { _eq: $cursorTimestamp } }
-              { id: { _lt: $cursorId } }
-            ]
-          }
-        ]
-      }
-      order_by: [{ created_at: desc }, { id: desc }]
-      limit: $limit
-    ) {
-      id
-      title
-      content
-      rating
-      images
-      palates
-      hashtags
-      likes_count
-      status
-      created_at
-      published_at
-      author_id
-      restaurant_uuid
-    }
-    restaurant_reviews_aggregate(
-      where: {
-        author_id: { _eq: $authorId }
-        deleted_at: { _is_null: true }
-        parent_review_id: { _is_null: true }
-      }
-    ) {
-      aggregate {
-        count
-      }
-    }
-  }
-`;

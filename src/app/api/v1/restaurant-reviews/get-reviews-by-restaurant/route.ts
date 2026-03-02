@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_REVIEWS_BY_RESTAURANT } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
-import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
-import { GRAPHQL_LIMITS } from '@/constants/graphql';
+
+/** Derive a display name from an email address (part before @). */
+function emailToDisplayName(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const local = email.split('@')[0];
+  return local || null;
+}
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest) {
     const version = await getVersion(`v:restaurant:${restaurant_uuid}:reviews`);
     
     // Cache key with restaurant UUID and version
-    const cacheKey = `reviews:restaurant:${restaurant_uuid}:v${version}:limit=${limit}:offset=${offset}`;
+    const cacheKey = `reviews:restaurant:${restaurant_uuid}:authorprofile_v1:v${version}:limit=${limit}:offset=${offset}`;
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
@@ -81,46 +86,29 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Fetch author data separately for all unique authors
-        const authorIds = [...new Set(reviews.map((r: any) => r.author_id).filter(Boolean))];
-        
-        // Fetch all authors in a single batch query (more efficient)
-        let authorMap = new Map();
-        if (authorIds.length > 0) {
-          try {
-            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds,
-              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
-            });
+        // Map author data directly from the AuthorProfile relationship (user_profiles → auth.users)
+        reviews = reviews.map((review: any) => {
+          const authorProfile = review.AuthorProfile;
 
-            if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
-              const users = authorsResult.data.restaurant_users;
-              authorMap = new Map(
-                users.map((user: any) => [
-                  user.id,
-                  {
-                    id: user.id,
-                    username: user.username || '',
-                    display_name: user.display_name || user.username || '',
-                    profile_image: user.profile_image,
-                    palates: user.palates || null
-                  }
-                ])
-              );
-            } else {
-              console.warn('Failed to fetch authors:', authorsResult.errors);
-            }
-          } catch (error) {
-            console.error('Error fetching authors batch:', error);
-          }
-        }
+          const username =
+            authorProfile?.username ||
+            emailToDisplayName(authorProfile?.user?.email) ||
+            'Unknown';
 
-        // Attach author and restaurant data to all reviews
-        reviews = reviews.map((review: any) => ({
-          ...review,
-          author: authorMap.get(review.author_id) || null,
-          restaurant: restaurantData
-        }));
+          const profileImage = authorProfile?.user?.avatarUrl ?? null;
+
+          return {
+            ...review,
+            author: {
+              id: review.author_id,
+              username,
+              display_name: username,
+              profile_image: profileImage,
+              palates: Array.isArray(authorProfile?.palates) ? authorProfile.palates : []
+            },
+            restaurant: restaurantData
+          };
+        });
 
         return {
           success: true,

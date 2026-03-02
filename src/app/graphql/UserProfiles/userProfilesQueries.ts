@@ -2,9 +2,11 @@
 // This table extends auth.users with custom application-specific fields
 
 // GET USER PROFILE BY ID - Get user profile with auth.users data
+// Uses list query because user_id is not the table PK (PK is uuid).
+// Variable uses bpchar to match Hasura scalar for user_id column.
 export const GET_USER_PROFILE_BY_ID = `
-  query GetUserProfileById($user_id: uuid!) {
-    user_profiles_by_pk(user_id: $user_id) {
+  query GetUserProfileById($user_id: bpchar!) {
+    user_profiles(where: { user_id: { _eq: $user_id } }, limit: 1) {
       user_id
       username
       about_me
@@ -186,6 +188,20 @@ export const GET_USER_PROFILES_BY_IDS = `
         displayName
         avatarUrl
       }
+    }
+  }
+`;
+
+// Fallback: profiles only (no auth.users relationship). Use when relationship is not exposed.
+export const GET_USER_PROFILES_BY_IDS_BASIC = `
+  query GetUserProfilesByIdsBasic($user_ids: [uuid!]!, $limit: Int = 100) {
+    user_profiles(
+      where: { user_id: { _in: $user_ids } }
+      limit: $limit
+    ) {
+      user_id
+      username
+      palates
     }
   }
 `;

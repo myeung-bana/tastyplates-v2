@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     console.log('[getUserById] Querying user_profiles table for user_id:', id);
     const result = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
     
-    const userProfile = result.data?.user_profiles_by_pk;
+    const userProfile = result.data?.user_profiles?.[0] ?? null;
     
     if (!userProfile || !userProfile.user) {
       console.log('[getUserById] User not found in user_profiles');

@@ -62,42 +62,22 @@ export function useNhostSession(): NhostSession {
 
   useEffect(() => {
     async function fetchUserProfile() {
-      // STEP 1: Log current auth state for debugging
-      console.log('[useNhostSession] Auth state check:', { 
-        isAuthenticated, 
-        isLoading, 
-        hasNhostUser: !!nhostUser,
-        nhostUserId: nhostUser?.id 
-      });
+      if (isLoading) return;
 
-      // STEP 2: If still loading auth status, don't do anything yet
-      if (isLoading) {
-        console.log('[useNhostSession] Auth status loading, waiting...');
-        return;
-      }
-
-      // STEP 3: If explicitly not authenticated, clear everything silently
       if (!isAuthenticated) {
-        console.log('[useNhostSession] Not authenticated, clearing profile');
         setUser(null);
         setError(null);
         setProfileLoading(false);
         return;
       }
 
-      // STEP 4: If authenticated but no user object yet, wait for it
-      if (!nhostUser || !nhostUser.id) {
-        console.log('[useNhostSession] Authenticated but no user object yet, waiting...');
-        // Don't set error - just wait for user object to populate
-        return;
-      }
+      if (!nhostUser || !nhostUser.id) return;
 
-      // STEP 5: Only NOW fetch the profile (we're sure user is authenticated)
       if (!nhost) {
         setProfileLoading(false);
         return;
       }
-      console.log('[useNhostSession] Fetching profile for authenticated user:', nhostUser.id);
+
       setProfileLoading(true);
       setError(null);
 
@@ -143,7 +123,6 @@ export function useNhostSession(): NhostSession {
           return;
         }
 
-        console.log('[useNhostSession] Profile loaded successfully:', profile.username);
         setUser(profile);
         setError(null);
       } catch (err) {
