@@ -116,11 +116,22 @@ export const GET_USER_REVIEWS = `
       palates
       hashtags
       likes_count
+      replies_count
       status
       created_at
       published_at
       author_id
       restaurant_uuid
+
+      AuthorProfile {
+        user_id
+        username
+        palates
+        user {
+          avatarUrl
+          email
+        }
+      }
     }
     restaurant_reviews_aggregate(
       where: {
@@ -213,11 +224,22 @@ export const GET_USER_REVIEWS_BY_STATUS = `
       palates
       hashtags
       likes_count
+      replies_count
       status
       created_at
       published_at
       author_id
       restaurant_uuid
+
+      AuthorProfile {
+        user_id
+        username
+        palates
+        user {
+          avatarUrl
+          email
+        }
+      }
     }
     restaurant_reviews_aggregate(
       where: {

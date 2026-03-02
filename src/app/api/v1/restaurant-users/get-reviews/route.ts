@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_USER_REVIEWS, GET_USER_REVIEWS_BY_STATUS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
-import { GET_RESTAURANT_USER_BY_ID } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { GET_RESTAURANT_BY_UUID } from '@/app/graphql/Restaurants/restaurantQueries';
+
+/** Derive a display name from an email address (part before @). */
+function emailToDisplayName(email: string | null | undefined): string | null {
+  if (!email) return null;
+  return email.split('@')[0] || null;
+}
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -63,28 +68,6 @@ export async function GET(request: NextRequest) {
     const reviews = result.data?.restaurant_reviews || [];
     const total = result.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
 
-    // Fetch author data separately since the relationship isn't configured in Hasura
-    // All reviews have the same author_id (user_id), so fetch once and attach to all reviews
-    let authorData = null;
-    try {
-      const authorResult = await hasuraQuery(GET_RESTAURANT_USER_BY_ID, {
-        id: user_id
-      });
-
-      if (!authorResult.errors && authorResult.data?.restaurant_users_by_pk) {
-        const user = authorResult.data.restaurant_users_by_pk;
-        authorData = {
-          id: user.id,
-          username: user.username || '',
-          display_name: user.display_name || user.username || '',
-          profile_image: user.profile_image
-        };
-      }
-    } catch (error) {
-      console.warn('Failed to fetch author data:', error);
-      // Continue without author data - will use defaults in transformer
-    }
-
     // Fetch restaurant data for each unique restaurant_uuid
     // Collect unique restaurant UUIDs
     const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
@@ -119,23 +102,31 @@ export async function GET(request: NextRequest) {
         .map((r: any) => [r.uuid, r])
     );
 
-    // Attach author and restaurant data to each review
-    const reviewsWithData = reviews.map((review: any) => ({
-      ...review,
-      author: authorData || {
-        id: user_id,
-        username: '',
-        display_name: '',
-        profile_image: null
-      },
-      restaurant: restaurantMap.get(review.restaurant_uuid) || {
-        uuid: review.restaurant_uuid || '',
-        id: null,
-        title: '',
-        slug: '',
-        featured_image_url: ''
-      }
-    }));
+    // Map author from AuthorProfile relationship (user_profiles → auth.users)
+    const reviewsWithData = reviews.map((review: any) => {
+      const authorProfile = review.AuthorProfile;
+      const username =
+        authorProfile?.username ||
+        emailToDisplayName(authorProfile?.user?.email) ||
+        'Unknown';
+      return {
+        ...review,
+        author: {
+          id: review.author_id,
+          username,
+          display_name: username,
+          profile_image: authorProfile?.user?.avatarUrl ?? null,
+          palates: Array.isArray(authorProfile?.palates) ? authorProfile.palates : []
+        },
+        restaurant: restaurantMap.get(review.restaurant_uuid) || {
+          uuid: review.restaurant_uuid || '',
+          id: null,
+          title: '',
+          slug: '',
+          featured_image_url: ''
+        }
+      };
+    });
 
     return NextResponse.json({
       success: true,

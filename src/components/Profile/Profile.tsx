@@ -392,14 +392,14 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
 
   return (
     <div className="w-full min-h-screen bg-white">
-      {profileDataLoading ? (
+      {(profileDataLoading || nameLoading || aboutMeLoading || palatesLoading) && !userData ? (
         <ProfileHeaderSkeleton />
       ) : (
         <ProfileHeader
           userData={userData}
-          nameLoading={nameLoading}
-          aboutMeLoading={aboutMeLoading}
-          palatesLoading={palatesLoading}
+          nameLoading={false}
+          aboutMeLoading={false}
+          palatesLoading={false}
           userReviewCount={userReviewCount}
           followers={followers}
           following={following}

@@ -192,7 +192,10 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     };
 
     fetchPublicUserData();
-  }, [targetUserIdentifier, user]);
+  // user is intentionally excluded: it's only needed for isViewingOwnProfile (computed via useMemo),
+  // not for the API fetch. Including it caused a double-fetch and visible flicker on every page load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUserIdentifier]);
   
   // Update isViewingOwnProfile after userData is loaded (for username comparison)
   const actualIsViewingOwnProfile = useMemo(() => {

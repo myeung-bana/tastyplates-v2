@@ -155,12 +155,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-shrink-0">
           <FallbackImage
             src={
-              // Priority: Nhost avatarUrl > custom profile_image > legacy sources > default
-              (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
-              profileImageUrl ||
-              (currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
-              (session?.user?.image as string) ||
-              DEFAULT_USER_ICON
+              // When viewing own profile: nhostUser.avatarUrl is most up-to-date (post-update)
+              // When viewing another user's profile: use their userData.profile_image (from auth.users.avatarUrl)
+              (isViewingOwnProfile && nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '')
+                ? nhostUser.avatarUrl
+                : profileImageUrl ||
+                  (isViewingOwnProfile && currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
+                  DEFAULT_USER_ICON
             }
             alt={displayName || "User"}
             width={150}
