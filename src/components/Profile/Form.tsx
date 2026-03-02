@@ -545,7 +545,7 @@ const Form = () => {
 
     try {
       // Get user UUID from Nhost session
-      if (!user?.id) {
+      if (!user?.user_id) {
         toast.error('User ID not found. Please sign in again.');
         setIsLoading(false);
         return;
@@ -557,12 +557,10 @@ const Form = () => {
       let profileImageUrl: string | undefined = undefined;
       if (profileImageFile) {
         try {
-          toast.loading('Uploading profile image...', { id: 'upload-profile-image' });
           profileImageUrl = await uploadFileToS3(profileImageFile);
-          toast.success('Profile image uploaded successfully!', { id: 'upload-profile-image' });
         } catch (uploadError) {
           const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload image';
-          toast.error(`Failed to upload image: ${errorMessage}`, { id: 'upload-profile-image' });
+          toast.error(`Failed to upload image: ${errorMessage}`);
           setIsLoading(false);
           return;
         }

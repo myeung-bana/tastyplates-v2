@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { UPDATE_USER_PROFILE, GET_USER_PROFILE_BY_ID } from '@/app/graphql/UserProfiles/userProfilesQueries';
+import { UPDATE_USER_PROFILE, UPDATE_USER_AVATAR, GET_USER_PROFILE_BY_ID } from '@/app/graphql/UserProfiles/userProfilesQueries';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest) {
     // Check if user exists in user_profiles
     console.log('[updateUser] Checking if user exists in user_profiles for user_id:', id);
     const checkResult = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
-    const userProfile = checkResult.data?.user_profiles_by_pk;
+    const userProfile = checkResult.data?.user_profiles?.[0];
     
     if (!userProfile) {
       console.log('[updateUser] User not found in user_profiles');
@@ -28,13 +28,28 @@ export async function PUT(request: NextRequest) {
     }
 
     console.log('[updateUser] User found in user_profiles - updating');
-    
-    // Update user_profiles table
+
+    // Update auth.users.avatarUrl via Hasura mutation (consistent with all other DB ops)
+    if (updateFields.profile_image) {
+      const avatarResult = await hasuraMutation(UPDATE_USER_AVATAR, {
+        userId: id,
+        avatarUrl: updateFields.profile_image,
+      });
+
+      if (avatarResult.errors) {
+        console.error('[updateUser] Failed to update avatarUrl:', avatarResult.errors);
+        // Non-fatal: continue to update user_profiles fields
+      } else {
+        console.log('[updateUser] avatarUrl updated in auth.users');
+      }
+    }
+
+    // Update user_profiles table (profile_image lives in auth.users, not here)
     console.log('[updateUser] Updating Nhost user_profiles');
-      
+
     // Build changes object with only user_profiles fields
     const profileChanges: any = {};
-    
+
     if (updateFields.username !== undefined) profileChanges.username = updateFields.username;
     if (updateFields.about_me !== undefined) profileChanges.about_me = updateFields.about_me;
     if (updateFields.birthdate !== undefined) profileChanges.birthdate = updateFields.birthdate;
@@ -42,15 +57,43 @@ export async function PUT(request: NextRequest) {
     if (updateFields.pronoun !== undefined) profileChanges.pronoun = updateFields.pronoun;
     if (updateFields.palates !== undefined) profileChanges.palates = updateFields.palates;
     if (updateFields.onboarding_complete !== undefined) profileChanges.onboarding_complete = updateFields.onboarding_complete;
+    // profile_image is intentionally excluded — avatar is stored in auth.users.avatarUrl
     
     // Add updated_at timestamp
     profileChanges.updated_at = new Date().toISOString();
 
-    if (Object.keys(profileChanges).length === 0) {
+    const hasProfileChanges = Object.keys(profileChanges).some(k => k !== 'updated_at');
+    if (!hasProfileChanges && !updateFields.profile_image) {
       return NextResponse.json(
-        { success: false, error: 'No user_profiles fields to update' },
+        { success: false, error: 'No fields to update' },
         { status: 400 }
       );
+    }
+
+    // If only the avatar changed, return early with success (no user_profiles mutation needed)
+    if (!hasProfileChanges && updateFields.profile_image) {
+      const userResult = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
+      const avatarOnlyProfile = userResult.data?.user_profiles?.[0];
+      if (avatarOnlyProfile?.user) {
+        const { user: authUser, ...profileData } = avatarOnlyProfile;
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: authUser.id,
+            firebase_uuid: authUser.id,
+            username: profileData.username,
+            email: authUser.email,
+            display_name: authUser.displayName || profileData.username,
+            about_me: profileData.about_me,
+            birthdate: profileData.birthdate,
+            gender: profileData.gender,
+            pronoun: profileData.pronoun,
+            palates: profileData.palates,
+            onboarding_complete: profileData.onboarding_complete,
+            updated_at: profileData.updated_at,
+          }
+        });
+      }
     }
 
     const result = await hasuraMutation(UPDATE_USER_PROFILE, {
@@ -70,7 +113,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updatedProfile = result.data?.update_user_profiles_by_pk;
+    const updatedProfile = result.data?.update_user_profiles?.returning?.[0];
 
     if (!updatedProfile) {
       return NextResponse.json(
@@ -81,7 +124,7 @@ export async function PUT(request: NextRequest) {
 
     // Fetch complete user data after update
     const userResult = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
-    const finalUserProfile = userResult.data?.user_profiles_by_pk;
+    const finalUserProfile = userResult.data?.user_profiles?.[0];
 
     if (finalUserProfile && finalUserProfile.user) {
       const { user, ...profileData } = finalUserProfile;

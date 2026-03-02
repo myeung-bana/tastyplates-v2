@@ -135,29 +135,33 @@ export const CREATE_USER_PROFILE = `
   }
 `;
 
-// UPDATE USER PROFILE
+// UPDATE USER PROFILE (by user_id; PK is uuid so use update_user_profiles + where)
 export const UPDATE_USER_PROFILE = `
-  mutation UpdateUserProfile($user_id: uuid!, $changes: user_profiles_set_input!) {
-    update_user_profiles_by_pk(pk_columns: { user_id: $user_id }, _set: $changes) {
-      user_id
-      username
-      about_me
-      birthdate
-      gender
-      pronoun
-      palates
-      onboarding_complete
-      updated_at
+  mutation UpdateUserProfile($user_id: bpchar!, $changes: user_profiles_set_input!) {
+    update_user_profiles(where: { user_id: { _eq: $user_id } }, _set: $changes) {
+      returning {
+        user_id
+        username
+        about_me
+        birthdate
+        gender
+        pronoun
+        palates
+        onboarding_complete
+        updated_at
+      }
     }
   }
 `;
 
-// DELETE USER PROFILE
+// DELETE USER PROFILE (by user_id; PK is uuid so use delete_user_profiles + where)
 export const DELETE_USER_PROFILE = `
-  mutation DeleteUserProfile($user_id: uuid!) {
-    delete_user_profiles_by_pk(user_id: $user_id) {
-      user_id
-      username
+  mutation DeleteUserProfile($user_id: bpchar!) {
+    delete_user_profiles(where: { user_id: { _eq: $user_id } }) {
+      returning {
+        user_id
+        username
+      }
     }
   }
 `;
@@ -188,6 +192,16 @@ export const GET_USER_PROFILES_BY_IDS = `
         displayName
         avatarUrl
       }
+    }
+  }
+`;
+
+// UPDATE AUTH USER AVATAR - Updates auth.users.avatarUrl via Hasura admin mutation
+export const UPDATE_USER_AVATAR = `
+  mutation UpdateUserAvatar($userId: uuid!, $avatarUrl: String) {
+    updateUser(pk_columns: { id: $userId }, _set: { avatarUrl: $avatarUrl }) {
+      id
+      avatarUrl
     }
   }
 `;
