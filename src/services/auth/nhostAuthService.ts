@@ -347,21 +347,9 @@ class NhostAuthService {
         password: password
       };
       
-      console.log('[NhostAuth] Calling nhost.auth.signIn with:', {
-        email: signInPayload.email,
-        hasPassword: !!signInPayload.password,
-        passwordLength: signInPayload.password.length
-      });
-
       const { session, error } = await nhost.auth.signIn(signInPayload);
 
       if (error) {
-        // Enhanced error logging with full error object
-        console.error('[NhostAuth] Sign in error:', error);
-        console.error('[NhostAuth] Error type:', typeof error);
-        console.error('[NhostAuth] Error keys:', Object.keys(error));
-        console.error('[NhostAuth] Error stringified:', JSON.stringify(error, null, 2));
-        
         // SPECIAL CASE: User is already signed in - treat as success!
         if (error.error === 'already-signed-in' || error.message?.includes('already signed in')) {
           console.log('[NhostAuth] User already signed in, getting current session...');
@@ -410,13 +398,10 @@ class NhostAuthService {
           };
         }
         
-        // For all OTHER errors, show user-friendly message
-        const userMessage = this.getNhostErrorMessage(error);
-        console.log('[NhostAuth] User-facing error message:', userMessage);
-        
+        // For all OTHER sign-in errors, show a generic credential message
         return {
           success: false,
-          error: userMessage
+          error: 'Invalid username or password. Please try again.'
         };
       }
 
@@ -472,8 +457,8 @@ class NhostAuthService {
    * Uses Nhost's built-in OAuth flow with redirect
    * Enhanced error handling
    */
-  async signInWithGoogle(redirectTo?: string): Promise<void> {
-    if (!this.guardNhost()) return;
+  async signInWithGoogle(redirectTo?: string): Promise<{ error?: string }> {
+    if (!this.guardNhost()) return {};
     try {
       console.log('[NhostAuth] Initiating Google sign-in with redirect to:', redirectTo || window.location.origin);
       
@@ -524,18 +509,16 @@ class NhostAuthService {
         console.error('[NhostAuth] Error keys:', Object.keys(error));
         
         const userMessage = this.getNhostErrorMessage(error);
-        console.log('[NhostAuth] User-facing error message:', userMessage);
-        
-        throw new Error(userMessage);
+        return { error: userMessage };
       }
 
       // Note: This method initiates a redirect, so execution won't continue here
       // The user will be redirected to Google's OAuth page
       console.log('[NhostAuth] Google OAuth redirect initiated successfully');
+      return {};
     } catch (error: any) {
       console.error('[NhostAuth] Unexpected Google sign-in error:', error);
-      console.error('[NhostAuth] Error stack:', error.stack);
-      throw error;
+      return { error: 'An unexpected error occurred. Please try again.' };
     }
   }
 
@@ -549,7 +532,7 @@ class NhostAuthService {
       await nhost.auth.signOut();
     } catch (error) {
       console.error('[NhostAuth] Error signing out:', error);
-      throw error;
+      // Swallow the error — callers proceed with local cleanup regardless
     }
   }
 

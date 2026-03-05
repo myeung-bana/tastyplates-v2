@@ -185,23 +185,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   // Google OAuth using Nhost's built-in provider
 
   const loginWithGoogle = async () => {
-    try {
-      setMessage('');
-      setIsLoading(true);
-      
-      // Nhost Google sign-in uses OAuth redirect flow
-      // User will be redirected to Google, then back to the app
-      // The session will be established automatically on return
-      await nhostAuthService.signInWithGoogle(window.location.origin + HOME);
-      
-      // Note: Execution won't reach here as user will be redirected
-      // Session handling happens automatically after redirect back
-    } catch (error: any) {
-      console.error('Google login error:', error);
-      setMessage(error.message || googleLoginFailed);
+    setMessage('');
+    setIsLoading(true);
+    
+    // Nhost Google sign-in uses OAuth redirect flow
+    // User will be redirected to Google, then back to the app
+    // The session will be established automatically on return
+    const result = await nhostAuthService.signInWithGoogle(window.location.origin + HOME);
+    
+    if (result?.error) {
+      setMessage(result.error);
       setMessageType(responseStatus.error);
       setIsLoading(false);
     }
+    // Note: On success, user is redirected — execution stops here
   };
 
   const toggleShowPassword = () => setShowPassword(!showPassword);

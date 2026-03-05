@@ -1,7 +1,7 @@
-@import "./base/variables";
-@import "./base/typography";
-@import "./pages/_settings";
-@import "./pages/_legal";
+@use "./base/variables" as *;
+@use "./base/typography" as *;
+@use "./pages/settings";
+@use "./pages/legal";
 
 @tailwind base;
 @tailwind components;

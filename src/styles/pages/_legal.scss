@@ -1,5 +1,7 @@
 // Centralized styling for markdown-rendered legal/content pages (terms, privacy, cookies, guidelines)
 // Applied via className="legal-content" on the page content wrapper.
+@use "../base/variables" as *;
+@use "../base/typography" as *;
 
 .legal-content {
   font-family: $font-neusans;

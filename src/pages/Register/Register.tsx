@@ -188,25 +188,22 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   // Nhost handles authentication - no manual password generation needed
 
   const signUpWithGoogle = async () => {
-    try {
-      setError("");
-      setIsLoading(true);
-      localStorage.removeItem(REGISTRATION_KEY);
-      
-      // Nhost Google sign-in uses OAuth redirect flow
-      // User will be redirected to Google, then back to the app
-      // Store intent to continue to onboarding after OAuth redirect
-      sessionStorage.setItem('post_oauth_redirect', ONBOARDING_ONE);
-      
-      await nhostAuthService.signInWithGoogle(window.location.origin + ONBOARDING_ONE);
-      
-      // Note: Execution won't reach here as user will be redirected
-      // Onboarding data will be set up after redirect in the onboarding page
-    } catch (error: any) {
-      console.error('Google sign-up error:', error);
-      setError(error.message || unexpectedError);
+    setError("");
+    setIsLoading(true);
+    localStorage.removeItem(REGISTRATION_KEY);
+    
+    // Nhost Google sign-in uses OAuth redirect flow
+    // User will be redirected to Google, then back to the app
+    // Store intent to continue to onboarding after OAuth redirect
+    sessionStorage.setItem('post_oauth_redirect', ONBOARDING_ONE);
+    
+    const result = await nhostAuthService.signInWithGoogle(window.location.origin + ONBOARDING_ONE);
+    
+    if (result?.error) {
+      setError(result.error);
       setIsLoading(false);
     }
+    // Note: On success, user is redirected — execution stops here
   };
 
   return (
