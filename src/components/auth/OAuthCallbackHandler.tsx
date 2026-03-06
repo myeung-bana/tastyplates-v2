@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
+import toast from "react-hot-toast";
 
 /**
  * OAuth callback handler for Nhost authentication
@@ -23,9 +24,27 @@ export default function OAuthCallbackHandler() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        // Check if we're returning from OAuth (Nhost puts tokens in URL hash or query params)
+        // Handle Nhost OAuth error redirects (e.g. ?error=internal-server-error)
+        const oauthError = searchParams?.get('error');
+        if (oauthError) {
+            toast.error('Google sign-in failed. Please try again.');
+            // Clean the error params from the URL without a page reload
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+        }
+
+        // Check if we're returning from a successful OAuth flow.
+        // Per Nhost docs, on success the URL contains ?refreshToken=
+        // NhostProvider automatically exchanges it for a session on mount.
+        const hasRefreshToken = !!searchParams?.get('refreshToken');
+        if (hasRefreshToken) {
+            // Clean the refreshToken from the URL immediately
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        // Check if we're returning from OAuth (Nhost puts ?refreshToken= on success)
         const isOAuthCallback = 
-            window.location.hash.includes('access_token') || 
+            hasRefreshToken ||
             searchParams?.get('type') === 'magicLink' ||
             Cookies.get('oauth_from_modal') === 'true';
         

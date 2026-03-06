@@ -482,7 +482,7 @@ class NhostAuthService {
           }
         }
         // Don't redirect, just return - user is already authenticated
-        return;
+        return {};
       }
       
       // Nhost handles the OAuth redirect flow automatically
@@ -500,13 +500,8 @@ class NhostAuthService {
         if (error.error === 'already-signed-in' || error.message?.includes('already signed in')) {
           console.log('[NhostAuth] Already signed in during Google OAuth, using current session');
           // Don't throw error - user is authenticated
-          return;
+          return {};
         }
-        
-        // Enhanced error logging for other errors
-        console.error('[NhostAuth] Google sign-in error:', error);
-        console.error('[NhostAuth] Error type:', typeof error);
-        console.error('[NhostAuth] Error keys:', Object.keys(error));
         
         const userMessage = this.getNhostErrorMessage(error);
         return { error: userMessage };
