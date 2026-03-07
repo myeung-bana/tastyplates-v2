@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 import { useLocation } from '@/contexts/LocationContext';
-import { LOCATION_HIERARCHY } from '@/constants/location';
 import LocationModal from './LocationModal';
 
 interface LocationButtonProps {
@@ -10,36 +9,24 @@ interface LocationButtonProps {
 }
 
 const LocationButton: React.FC<LocationButtonProps> = ({ isTransparent = false }) => {
-  const { selectedLocation } = useLocation();
+  const { selectedLocation, locationHierarchy } = useLocation();
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   // Helper function to get parent country's short code for cities
   const getParentCountryCode = (cityKey: string): string => {
-    for (const country of LOCATION_HIERARCHY.countries) {
+    for (const country of locationHierarchy.countries) {
       const city = country.cities.find(c => c.key === cityKey);
-      if (city) {
-        return country.shortLabel;
-      }
+      if (city) return country.shortLabel;
     }
     return '';
   };
 
   // Smart display logic - always show City, Country format
   const getDisplayText = () => {
-    // Special case: If Hong Kong city is selected, display as "Hong Kong, HK"
-    if (selectedLocation.type === 'city' && 
-        (selectedLocation.key === 'hong_kong_island' || 
-         selectedLocation.key === 'kowloon' || 
-         selectedLocation.key === 'new_territories')) {
-      return 'Hong Kong, HK';
-    }
-    
     if (selectedLocation.type === 'city') {
-      // For cities, show "City, Country" format (e.g., "Vancouver, CA")
       const countryCode = getParentCountryCode(selectedLocation.key);
       return `${selectedLocation.label}, ${countryCode}`;
     } else if (selectedLocation.type === 'country') {
-      // For countries, show "Country, CountryCode" format (e.g., "Canada, CA")
       return `${selectedLocation.label}, ${selectedLocation.shortLabel}`;
     }
     return selectedLocation.label;

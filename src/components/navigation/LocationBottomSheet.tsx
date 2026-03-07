@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FiArrowLeft, FiChevronRight, FiCheck } from 'react-icons/fi';
 import { useLocation } from '@/contexts/LocationContext';
-import { LOCATION_HIERARCHY, LocationOption } from '@/constants/location';
+import { LocationOption } from '@/constants/location';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
 interface LocationBottomSheetProps {
@@ -12,31 +12,21 @@ interface LocationBottomSheetProps {
 }
 
 const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClose }) => {
-  const { selectedLocation, setSelectedLocation } = useLocation();
+  const { selectedLocation, setSelectedLocation, locationHierarchy } = useLocation();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'countries' | 'cities'>('countries');
 
   // Helper function to get parent country's short code for cities
   const getParentCountryCode = (cityKey: string): string => {
-    for (const country of LOCATION_HIERARCHY.countries) {
+    for (const country of locationHierarchy.countries) {
       const city = country.cities.find(c => c.key === cityKey);
-      if (city) {
-        return country.shortLabel;
-      }
+      if (city) return country.shortLabel;
     }
     return '';
   };
 
   // Helper function to format location display
   const formatLocationDisplay = (location: LocationOption): string => {
-    // Special case: If Hong Kong city is selected, display as "Hong Kong, HK"
-    if (location.type === 'city' && 
-        (location.key === 'hong_kong_island' || 
-         location.key === 'kowloon' || 
-         location.key === 'new_territories')) {
-      return 'Hong Kong, HK';
-    }
-    
     if (location.type === 'city') {
       const countryCode = getParentCountryCode(location.key);
       return `${location.label}, ${countryCode}`;
@@ -47,29 +37,27 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
   };
 
   const handleCountrySelect = (countryKey: string) => {
-    // Special case: Hong Kong should be selectable directly as a unified region
-    if (countryKey === 'hongkong') {
-      const hongKongCountry = LOCATION_HIERARCHY.countries.find(c => c.key === 'hongkong');
-      if (hongKongCountry) {
-        // Create a country-level location option for Hong Kong
-        const hongKongLocation: LocationOption = {
-          key: hongKongCountry.key,
-          label: hongKongCountry.label,
-          shortLabel: hongKongCountry.shortLabel,
-          flag: hongKongCountry.flag,
-          currency: hongKongCountry.currency,
-          timezone: hongKongCountry.timezone,
-          type: 'country'
-        };
-        setSelectedLocation(hongKongLocation);
-        onClose();
-        setSelectedCountry(null);
-        setViewMode('countries');
-        return;
-      }
+    const country = locationHierarchy.countries.find(c => c.key === countryKey);
+    if (!country) return;
+
+    // Countries with no cities are directly selectable as a region
+    if (country.cities.length === 0) {
+      const countryLocation: LocationOption = {
+        key: country.key,
+        label: country.label,
+        shortLabel: country.shortLabel,
+        flag: country.flag,
+        currency: country.currency,
+        timezone: country.timezone,
+        type: 'country',
+      };
+      setSelectedLocation(countryLocation);
+      onClose();
+      setSelectedCountry(null);
+      setViewMode('countries');
+      return;
     }
-    
-    // For other countries, show city selection as normal
+
     setSelectedCountry(countryKey);
     setViewMode('cities');
   };
@@ -77,7 +65,6 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
   const handleCitySelect = (city: LocationOption) => {
     setSelectedLocation(city);
     onClose();
-    // Reset modal state
     setSelectedCountry(null);
     setViewMode('countries');
   };
@@ -89,7 +76,6 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
 
   const handleClose = () => {
     onClose();
-    // Reset modal state
     setSelectedCountry(null);
     setViewMode('countries');
   };
@@ -142,7 +128,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
         <div className="space-y-2 w-full">
           {viewMode === 'countries' ? (
             // Country Selection View
-            LOCATION_HIERARCHY.countries.map((country) => (
+            locationHierarchy.countries.map((country) => (
               <button
                 key={country.key}
                 onClick={() => handleCountrySelect(country.key)}
@@ -173,7 +159,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
             ))
           ) : (
             // City Selection View
-            selectedCountry && LOCATION_HIERARCHY.countries
+            selectedCountry && locationHierarchy.countries
               .find(c => c.key === selectedCountry)?.cities.map((city) => (
                 <button
                   key={city.key}
@@ -211,10 +197,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
 
   if (!mounted) return null;
 
-  // Render the BottomSheet directly to document.body using a portal
-  // This ensures it's not constrained by the sidebar's width
   return createPortal(bottomSheetContent, document.body);
 };
 
 export default LocationBottomSheet;
-

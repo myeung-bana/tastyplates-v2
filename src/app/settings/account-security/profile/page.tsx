@@ -1,58 +1,51 @@
 "use client";
 import React, { FormEvent, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { toast } from 'react-hot-toast';
 import SettingsLayout from "@/components/Settings/SettingsLayout";
-import { UserService } from '@/services/user/userService';
 import { genderOptions } from '@/constants/formOptions';
-import { 
-  birthdateLimit, 
-  birthdateRequired, 
-  emailOccurredError, 
-  invalidEmailFormat, 
-  emailRequired,
-  genderRequired 
+import {
+  birthdateLimit,
+  birthdateRequired,
+  genderRequired
 } from '@/constants/messages';
 import { ageLimit } from '@/constants/validation';
-import { emailExistCode, sessionProvider as provider } from '@/constants/response';
-import { formatDateForInput, validEmail } from '@/lib/utils';
+import { formatDateForInput } from '@/lib/utils';
 import CustomDatePicker from '@/components/common/CustomDatepicker';
 import { Button } from '@/components/ui/button';
 
-const userService = new UserService();
-
 const ProfileSettingsPage = () => {
   const router = useRouter();
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // Form state
+
   const [formData, setFormData] = useState({
     email: '',
     birthdate: '',
     gender: '',
   });
-  
-  // Error state
+
   const [errors, setErrors] = useState({
     email: '',
     birthdate: '',
     gender: '',
   });
 
-  // Initialize form with user data
+  // Initialize form once Nhost auth has resolved.
+  // Email comes from nhostUser (auth.users), birthdate/gender from user_profiles.
   useEffect(() => {
-    if (user) {
-      setFormData({
-        email: user.email || '',
-        birthdate: user.birthdate || '',
-        gender: user.gender || '',
-      });
-      setIsInitialized(true);
-    }
-  }, [user]);
+    if (loading) return;
+    if (!nhostUser) return;
+
+    setFormData({
+      email: nhostUser.email || '',
+      birthdate: formatDateForInput(user?.birthdate || ''),
+      gender: user?.gender || '',
+    });
+    setIsInitialized(true);
+  }, [loading, nhostUser, user]);
 
   const validateBirthdate = (birthdate: string) => {
     if (!birthdate) return birthdateRequired;
@@ -69,12 +62,6 @@ const ProfileSettingsPage = () => {
     return "";
   };
 
-  const validateEmail = (email: string) => {
-    if (!email) return emailRequired;
-    if (!validEmail(email)) return invalidEmailFormat;
-    return "";
-  };
-
   const validateGender = (gender: string) => {
     if (!gender) return genderRequired;
     return "";
@@ -82,8 +69,6 @@ const ProfileSettingsPage = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear error when user starts typing
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -93,7 +78,6 @@ const ProfileSettingsPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate all fields (email is always disabled, so skip validation)
     const newErrors = {
       email: '',
       birthdate: validateBirthdate(formData.birthdate),
@@ -102,53 +86,45 @@ const ProfileSettingsPage = () => {
 
     setErrors(newErrors);
 
-    // Check if there are any errors
-    const hasErrors = Object.values(newErrors).some(error => error !== '');
-    if (hasErrors) {
+    if (Object.values(newErrors).some(err => err !== '')) {
       setIsLoading(false);
       return;
     }
 
     try {
-      if (!user || !firebaseUser) {
+      if (!nhostUser) {
         toast.error('Please log in to update your profile');
-        return;
-      }
-
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
-
-      // Email is always disabled, so we don't update it
-      const updateData: Record<string, unknown> = {
-        birthdate: formData.birthdate,
-        gender: formData.gender,
-      };
-
-      const response = await userService.updateUserFields(
-        updateData,
-        idToken
-      );
-
-      if (response?.code === emailExistCode) {
-        setErrors(prev => ({ ...prev, email: response?.message || emailOccurredError }));
         setIsLoading(false);
         return;
       }
 
-      if (response?.data?.status === 200 || response?.status === 200) {
-        // Session will be automatically refreshed by useFirebaseSession hook
-        // Force a page reload to ensure fresh data
-        toast.success('Profile updated successfully!');
-        
-        // Navigate back to settings after a short delay
-        setTimeout(() => {
-          router.push('/settings');
-        }, 1500);
-      } else {
-        throw new Error('Failed to update profile');
+      const { nhost } = await import('@/lib/nhost');
+      const accessToken = nhost.auth.getSession()?.accessToken;
+      if (!accessToken) {
+        toast.error('Session expired. Please log in again.');
+        setIsLoading(false);
+        return;
       }
+
+      const response = await fetch('/api/v1/restaurant-users/update-restaurant-user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: nhostUser.id,
+          birthdate: formData.birthdate,
+          gender: formData.gender,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+
+      toast.success('Profile updated successfully!');
+      setTimeout(() => router.push('/settings'), 1500);
     } catch (error) {
-      console.error('Error updating profile:', error);
       toast.error('Failed to update profile. Please try again.');
     } finally {
       setIsLoading(false);
@@ -156,14 +132,11 @@ const ProfileSettingsPage = () => {
   };
 
   const handleCancel = () => {
-    // Reset form to original values
-    if (user) {
-      setFormData({
-        email: user.email || '',
-        birthdate: user.birthdate || '',
-        gender: user.gender || '',
-      });
-    }
+    setFormData({
+      email: nhostUser?.email || '',
+      birthdate: formatDateForInput(user?.birthdate || ''),
+      gender: user?.gender || '',
+    });
     setErrors({ email: '', birthdate: '', gender: '' });
     router.back();
   };
@@ -192,18 +165,16 @@ const ProfileSettingsPage = () => {
       <div className="settings-page">
         <div className="settings-page-content">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Email — read-only, tied to Nhost auth */}
             <div>
               <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Email Address
               </label>
               <input
                 type="email"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-300 bg-gray-50 cursor-not-allowed"
-                placeholder="Enter your email address"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl transition-all duration-200 focus:outline-none bg-gray-50 cursor-not-allowed"
                 value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                disabled={true}
+                disabled
                 readOnly
               />
               <p className="mt-1 text-xs text-gray-500 font-neusans">
@@ -211,15 +182,15 @@ const ProfileSettingsPage = () => {
               </p>
             </div>
 
-            {/* Birthdate Field */}
+            {/* Birthdate */}
             <div>
               <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Date of Birth
               </label>
               <CustomDatePicker
                 buttonClassName={`${
-                  errors.birthdate 
-                    ? "border-red-300 focus:border-red-400 focus:ring-red-100" 
+                  errors.birthdate
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-100"
                     : "border-gray-200 focus:border-orange-300 focus:ring-orange-100"
                 }`}
                 value={formData.birthdate}
@@ -232,15 +203,15 @@ const ProfileSettingsPage = () => {
               )}
             </div>
 
-            {/* Gender Field */}
+            {/* Gender */}
             <div>
               <label className="block text-sm text-gray-700 mb-2 font-neusans">
                 Gender
               </label>
               <select
                 className={`w-full px-4 py-3 border rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-100 ${
-                  errors.gender 
-                    ? "border-red-300 focus:border-red-400" 
+                  errors.gender
+                    ? "border-red-300 focus:border-red-400"
                     : "border-gray-200 focus:border-orange-300"
                 }`}
                 value={formData.gender}

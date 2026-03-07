@@ -1,7 +1,7 @@
 import Footer from "@/components/layout/Footer"
 import Navbar from "@/components/layout/Navbar";
 import { Suspense } from "react";
-import UpdatePassword from "@/pages/Login/UpdatePassword";
+import UpdatePasswordDynamic from "@/components/auth/UpdatePasswordDynamic";
 
 const ResetPasswordPage = () => {
   return (
@@ -9,7 +9,7 @@ const ResetPasswordPage = () => {
       <Suspense fallback={<div></div>}>
         <Navbar />
         <main className="flex-1 w-full flex justify-center py-8 pt-20">
-          <UpdatePassword />
+          <UpdatePasswordDynamic />
         </main>
         <Footer isShowLinks={false} />
       </Suspense>
