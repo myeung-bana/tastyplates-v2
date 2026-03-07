@@ -460,56 +460,16 @@ class NhostAuthService {
   async signInWithGoogle(redirectTo?: string): Promise<{ error?: string }> {
     if (!this.guardNhost()) return {};
     try {
-      console.log('[NhostAuth] Initiating Google sign-in with redirect to:', redirectTo || window.location.origin);
-      
-      // Check if user is already signed in
-      if (nhost.auth.isAuthenticated()) {
-        console.log('[NhostAuth] User already authenticated, skipping Google OAuth');
-        const currentSession = nhost.auth.getSession();
-        if (currentSession?.user) {
-          // Ensure profile exists
-          const profileLookup = await this.getUserProfile(currentSession.user.id);
-          if (profileLookup.status === 'not_found' && currentSession.user.email) {
-            console.log('[NhostAuth] Creating missing user profile...');
-            const username = this.generateUsernameFromEmail(currentSession.user.email);
-            await this.createUserProfile({
-              user_id: currentSession.user.id,
-              username,
-              onboarding_complete: false,
-            });
-          } else if (profileLookup.status === 'error') {
-            console.warn('[NhostAuth] Skipping profile creation because profile lookup failed:', profileLookup.error);
-          }
-        }
-        // Don't redirect, just return - user is already authenticated
-        return {};
-      }
-      
-      // Nhost handles the OAuth redirect flow automatically
-      // User will be redirected to Google, then back to the app
-      // The session will be established automatically on return
-      const { error } = await nhost.auth.signIn({
-        provider: 'google',
-        options: {
-          redirectTo: redirectTo || window.location.origin
-        }
-      });
+      // Use the provider URL directly so the browser always performs a full-page
+      // OAuth redirect, matching the documented Nhost flow.
+      const redirectTarget = redirectTo || window.location.origin;
+      const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || 'ygmkmxorcapgpimwerpc';
+      const region = process.env.NEXT_PUBLIC_NHOST_REGION || 'ap-southeast-1';
+      const providerUrl =
+        `https://${subdomain}.auth.${region}.nhost.run/v1/signin/provider/google` +
+        `?redirectTo=${encodeURIComponent(redirectTarget)}`;
 
-      if (error) {
-        // SPECIAL CASE: User is already signed in
-        if (error.error === 'already-signed-in' || error.message?.includes('already signed in')) {
-          console.log('[NhostAuth] Already signed in during Google OAuth, using current session');
-          // Don't throw error - user is authenticated
-          return {};
-        }
-        
-        const userMessage = this.getNhostErrorMessage(error);
-        return { error: userMessage };
-      }
-
-      // Note: This method initiates a redirect, so execution won't continue here
-      // The user will be redirected to Google's OAuth page
-      console.log('[NhostAuth] Google OAuth redirect initiated successfully');
+      window.location.assign(providerUrl);
       return {};
     } catch (error: any) {
       console.error('[NhostAuth] Unexpected Google sign-in error:', error);
@@ -566,6 +526,48 @@ class NhostAuthService {
       username = `user${Date.now()}`;
     }
     return username;
+  }
+
+  /**
+   * Send a password reset email via Nhost.
+   * Nhost will email a link that redirects back to redirectTo with ?refreshToken=
+   * establishing a temporary session so the user can call changePassword.
+   */
+  async sendPasswordResetEmail(email: string, redirectTo: string): Promise<NhostAuthResult> {
+    if (!this.guardNhost()) {
+      return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
+    }
+    try {
+      const { error } = await nhost.auth.resetPassword({
+        email,
+        options: { redirectTo },
+      });
+      if (error) {
+        return { success: false, error: this.getNhostErrorMessage(error) };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: 'Failed to send reset email. Please try again.' };
+    }
+  }
+
+  /**
+   * Change the currently authenticated user's password.
+   * Must be called after the reset-link session has been established.
+   */
+  async changePassword(newPassword: string): Promise<NhostAuthResult> {
+    if (!this.guardNhost()) {
+      return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
+    }
+    try {
+      const { error } = await nhost.auth.changePassword({ newPassword });
+      if (error) {
+        return { success: false, error: this.getNhostErrorMessage(error) };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: 'Failed to update password. Please try again.' };
+    }
   }
 
   /**

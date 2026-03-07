@@ -5,29 +5,43 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { passwordLimit, passwordsNotMatch } from "@/constants/messages";
 import { minimumPassword } from "@/constants/validation";
-import { UserService } from "@/services/user/userService";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
+import { useAuthenticationStatus } from "@nhost/nextjs";
 import { responseStatus } from "@/constants/response";
 import { HOME } from "@/constants/pages";
-import { UPDATE_PASSWORD_KEY } from "@/constants/session";
 
-const userService = new UserService()
-
+/**
+ * Nhost password reset flow:
+ * 1. User clicks the email link → Nhost redirects to /reset-password?refreshToken=...
+ * 2. NhostProvider automatically exchanges the refreshToken for a session on mount.
+ * 3. This page waits for that session to be ready, then lets the user set a new password
+ *    via nhost.auth.changePassword().
+ */
 const UpdatePassword = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
+  const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
-  const [passwordError, setPasswordError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
-  const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
+  // Once the NhostProvider has exchanged the refreshToken, clean the URL
+  useEffect(() => {
+    const hasRefreshToken = !!searchParams?.get('refreshToken');
+    if (hasRefreshToken && !authLoading) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams, authLoading]);
+
+  const toggleShowPassword = () => setShowPassword((v) => !v);
+  const toggleShowConfirmPassword = () => setShowConfirmPassword((v) => !v);
 
   const validatePasswords = () => {
     let isValid = true;
@@ -47,47 +61,24 @@ const UpdatePassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validatePasswords()) return;
+
     setIsLoading(true);
-
-    if (!validatePasswords()) {
-      setIsLoading(false);
-      return;
-    }
-
-    const result = await userService.resetPassword(searchParams?.get('token') as string, password);
+    const result = await nhostAuthService.changePassword(password);
     setIsLoading(false);
-    if (result.status) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(UPDATE_PASSWORD_KEY, 'true');
-      }
-      setTimeout(() => router.push(HOME), 1000);
+
+    if (result.success) {
+      setMessageType(responseStatus.success);
+      setMessage("Password updated successfully. Redirecting…");
+      setTimeout(() => router.push(HOME), 1500);
     } else {
-      setMessage(result.message || 'Something went wrong.');
       setMessageType(responseStatus.error);
+      setMessage(result.error || "Something went wrong. Please try again.");
     }
   };
 
-
-  useEffect(() => {
-    const verifyToken = async () => {
-      const token = searchParams?.get('token');
-      if (!token) {
-        setIsTokenValid(false);
-        return;
-      }
-
-      try {
-        const res = await userService.verifyResetToken(token);
-        setIsTokenValid(res?.status || false);
-      } catch {
-        setIsTokenValid(false);
-      }
-    };
-
-    verifyToken();
-  }, [searchParams]);
-
-  if (isTokenValid === null) {
+  // Waiting for Nhost to exchange the refreshToken
+  if (authLoading) {
     return (
       <div className="px-2 pt-8 sm:px-1 animate-pulse">
         <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto">
@@ -106,11 +97,14 @@ const UpdatePassword = () => {
     );
   }
 
-  if (isTokenValid === false) {
+  // No valid session — link is invalid or expired
+  if (!isAuthenticated) {
     return (
       <div className="px-2 pt-8 sm:px-1">
         <div className="auth__container w-full max-w-full sm:!max-w-[672px] mx-auto text-center">
-          <h1 className="text-sm font-semibold text-gray-600">This reset password request is invalid or has already expired.</h1>
+          <h1 className="text-sm font-semibold text-gray-600">
+            This reset password link is invalid or has already expired.
+          </h1>
         </div>
       </div>
     );
@@ -124,25 +118,24 @@ const UpdatePassword = () => {
           <form className="auth__form !gap-4 !py-3" onSubmit={handleSubmit}>
             <div className="auth__form-group">
               <label htmlFor="password" className="auth__label !font-bold">
-                Password
+                New Password
               </label>
               <div className="auth__input-group relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
                   className="auth__input !border-[#797979]"
-                  placeholder="Password"
+                  placeholder="New password"
                   disabled={isLoading}
                   value={password}
                   onFocus={(e) => e.target.removeAttribute('readonly')}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    setPassword(value);
-                    if (value == confirmPassword) { setConfirmPasswordError("") }
-                    if (value.length >= minimumPassword) { setPasswordError("") }
-                    if (value.length < minimumPassword) setPasswordError(passwordLimit(minimumPassword));
+                    const val = e.target.value;
+                    setPassword(val);
+                    if (val.length >= minimumPassword) setPasswordError("");
+                    if (val === confirmPassword) setConfirmPasswordError("");
                   }}
-                  readOnly // prevent autofill until focus
+                  readOnly
                 />
                 {showPassword ? (
                   <FiEye onClick={toggleShowPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
@@ -150,10 +143,9 @@ const UpdatePassword = () => {
                   <FiEyeOff onClick={toggleShowPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
               </div>
-              {passwordError && (
-                <div className="text-red-600 text-xs">{passwordError}</div>
-              )}
+              {passwordError && <div className="text-red-600 text-xs">{passwordError}</div>}
             </div>
+
             <div className="auth__form-group">
               <label htmlFor="confirmPassword" className="auth__label !font-bold">
                 Confirm Password
@@ -163,16 +155,17 @@ const UpdatePassword = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   id="confirmPassword"
                   className="auth__input !border-[#797979]"
-                  placeholder="Re-enter your Password"
+                  placeholder="Re-enter your password"
                   disabled={isLoading}
                   value={confirmPassword}
                   onFocus={(e) => e.target.removeAttribute('readonly')}
                   onChange={(e) => {
-                    setConfirmPassword(e.target.value)
-                    if (password == e.target.value) { setConfirmPasswordError("") }
-                    if (password != e.target.value) { setConfirmPasswordError(passwordsNotMatch) }
+                    const val = e.target.value;
+                    setConfirmPassword(val);
+                    if (password === val) setConfirmPasswordError("");
+                    else setConfirmPasswordError(passwordsNotMatch);
                   }}
-                  readOnly // prevent autofill until focus
+                  readOnly
                 />
                 {showConfirmPassword ? (
                   <FiEye onClick={toggleShowConfirmPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
@@ -180,24 +173,24 @@ const UpdatePassword = () => {
                   <FiEyeOff onClick={toggleShowConfirmPassword} className="auth__input-icon !text-[#31343F]" strokeWidth={2} />
                 )}
               </div>
-              {confirmPasswordError && (
-                <div className="text-red-600 text-xs">{confirmPasswordError}</div>
-              )}
+              {confirmPasswordError && <div className="text-red-600 text-xs">{confirmPasswordError}</div>}
             </div>
+
             <button
               type="submit"
               disabled={isLoading}
               className="auth__button !bg-[#ff7c0a] m-auto !rounded-xl text-sm hover:bg-[#e66d08] transition-all duration-200"
             >
-              {isLoading ? "Loading..." : "Update"}
+              {isLoading ? "Updating…" : "Update Password"}
             </button>
-            {/* Success/Error Message */}
+
             {message && (
               <div
-                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium mx-10 ${messageType === responseStatus.success
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-                  }`}
+                className={`mt-4 text-center px-4 py-2 rounded-xl font-medium mx-10 ${
+                  messageType === responseStatus.success
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
               >
                 {message}
               </div>

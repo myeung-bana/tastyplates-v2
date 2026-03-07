@@ -2,29 +2,25 @@
 import { useState } from "react";
 import "@/styles/pages/_auth.scss";
 import Spinner from "@/components/common/LoadingSpinner";
-import { UserService } from "@/services/user/userService";
 import { responseStatus } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
 import { emailRequired, invalidEmailFormat } from "@/constants/messages";
-import { RESET_EMAIL_KEY } from "@/constants/session";
+import { nhostAuthService } from "@/services/auth/nhostAuthService";
 
 interface ForgotPasswordPageProps {
     onSuccess?: () => void;
 }
 
-const userService = new UserService()
-
 const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
-    // Removed unused variable
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
     const [emailError, setEmailError] = useState<string>("");
 
-    const validateEmail = (email: string) => {
-        if (!email) return emailRequired;
-        if (!validEmail(email)) return invalidEmailFormat;
+    const validateEmail = (value: string) => {
+        if (!value) return emailRequired;
+        if (!validEmail(value)) return invalidEmailFormat;
         return "";
     };
 
@@ -38,29 +34,28 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setMessage('');
-        setIsLoading(true);
 
         const err = validateEmail(email);
         if (err) {
-            setIsLoading(false);
             setEmailError(err);
             return;
         }
 
-        const formData = new FormData();
-        formData.append('email', email);
-        formData.append('url', window.location.origin);
+        setIsLoading(true);
 
-        const res = await userService.sendForgotPasswordEmail(formData);
-        if (!res.status) {
-            setMessageType(responseStatus.error);
-        } else {
-            localStorage.setItem(RESET_EMAIL_KEY, email);
-            onSuccess?.();
-        }
+        const redirectTo = `${window.location.origin}/reset-password`;
+        const result = await nhostAuthService.sendPasswordResetEmail(email, redirectTo);
 
-        setMessage(res.message);
         setIsLoading(false);
+
+        if (result.success) {
+            setMessageType(responseStatus.success);
+            setMessage(`A link to reset your password has been sent to ${email}.`);
+            onSuccess?.();
+        } else {
+            setMessageType(responseStatus.error);
+            setMessage(result.error || 'Failed to send reset email. Please try again.');
+        }
     }
 
     return (
@@ -103,12 +98,14 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
                             </button>
                             {message && (
                                 <div
-                                    className={`mt-4 text-center px-4 py-2 rounded-xl font-normal font-neusans ${messageType == responseStatus.success
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
-                                        }`}
-                                    dangerouslySetInnerHTML={{ __html: message }}
-                                />
+                                    className={`mt-4 text-center px-4 py-2 rounded-xl font-normal font-neusans ${
+                                        messageType === responseStatus.success
+                                            ? "bg-green-100 text-green-700"
+                                            : "bg-red-100 text-red-700"
+                                    }`}
+                                >
+                                    {message}
+                                </div>
                             )}
                         </form>
                     </div>

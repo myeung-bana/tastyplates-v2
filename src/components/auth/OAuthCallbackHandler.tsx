@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter, useSearchParams } from "next/navigation";
-import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 
 /**
@@ -24,9 +23,19 @@ export default function OAuthCallbackHandler() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
+        const clearOAuthState = () => {
+            sessionStorage.removeItem("oauth_pending");
+            sessionStorage.removeItem("oauth_callback_url");
+            sessionStorage.removeItem("post_oauth_redirect");
+        };
+
+        const pendingOAuth = sessionStorage.getItem("oauth_pending") === "true";
+        const storedCallbackUrl = sessionStorage.getItem("oauth_callback_url");
+
         // Handle Nhost OAuth error redirects (e.g. ?error=internal-server-error)
         const oauthError = searchParams?.get('error');
         if (oauthError) {
+            clearOAuthState();
             toast.error('Google sign-in failed. Please try again.');
             // Clean the error params from the URL without a page reload
             window.history.replaceState({}, '', window.location.pathname);
@@ -35,18 +44,15 @@ export default function OAuthCallbackHandler() {
 
         // Check if we're returning from a successful OAuth flow.
         // Per Nhost docs, on success the URL contains ?refreshToken=
-        // NhostProvider automatically exchanges it for a session on mount.
+        // Wait until auth loading completes before cleaning the URL so the
+        // provider has a chance to exchange the token into a session.
         const hasRefreshToken = !!searchParams?.get('refreshToken');
-        if (hasRefreshToken) {
-            // Clean the refreshToken from the URL immediately
-            window.history.replaceState({}, '', window.location.pathname);
-        }
 
         // Check if we're returning from OAuth (Nhost puts ?refreshToken= on success)
         const isOAuthCallback = 
             hasRefreshToken ||
             searchParams?.get('type') === 'magicLink' ||
-            Cookies.get('oauth_from_modal') === 'true';
+            pendingOAuth;
         
         if (isOAuthCallback) {
             // Wait for Nhost session to be ready (authenticated or unauthenticated)
@@ -61,15 +67,15 @@ export default function OAuthCallbackHandler() {
                 hasOnboarding: user?.onboarding_complete,
             });
 
-            // Clean up OAuth cookies
-            Cookies.remove('oauth_from_modal');
-            
-            // Get callback URL or default redirect
-            const callbackUrl = Cookies.get('oauth_callback_url') || '/restaurants';
-            Cookies.remove('oauth_callback_url');
+            if (hasRefreshToken) {
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+
+            const callbackUrl = storedCallbackUrl || '/restaurants';
 
             // Check if user needs onboarding
             if (user && !user.onboarding_complete) {
+                clearOAuthState();
                 console.log('[OAuthCallbackHandler] Redirecting to onboarding');
                 router.push('/onboarding');
                 return;
@@ -77,14 +83,18 @@ export default function OAuthCallbackHandler() {
 
             // User is authenticated and has completed onboarding
             if (user && user.onboarding_complete) {
-                console.log('[OAuthCallbackHandler] Redirecting to:', callbackUrl);
-                router.push(callbackUrl);
+                clearOAuthState();
+                const resolvedCallbackUrl =
+                    callbackUrl.startsWith('/onboarding') ? '/restaurants' : callbackUrl;
+                console.log('[OAuthCallbackHandler] Redirecting to:', resolvedCallbackUrl);
+                router.push(resolvedCallbackUrl);
                 router.refresh();
                 return;
             }
 
             // If still not authenticated after OAuth, something went wrong
             if (!user && !nhostUser) {
+                clearOAuthState();
                 console.error('[OAuthCallbackHandler] OAuth callback but no user session');
                 router.push('/');
                 return;

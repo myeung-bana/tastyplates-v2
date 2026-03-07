@@ -187,6 +187,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   const loginWithGoogle = async () => {
     setMessage('');
     setIsLoading(true);
+    sessionStorage.setItem('oauth_pending', 'true');
+    sessionStorage.setItem('oauth_callback_url', HOME);
     
     // Nhost Google sign-in uses OAuth redirect flow
     // User will be redirected to Google, then back to the app
@@ -275,6 +277,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
               >
                 Continue
               </button>
+              {/* Google sign-in temporarily hidden — re-enable when OAuth config is ready
               <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2 font-neusans">
                 <hr className="w-full border-t border-[#494D5D]" />
                 or
@@ -290,6 +293,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                 <FcGoogle className="h-5 w-5 object-contain mr-2" />
                 <span className="font-normal font-neusans">Continue with Google</span>
               </button>
+              */}
               <p className="text-sm cursor-pointer text-center underline font-normal hover:opacity-90 font-neusans" onClick={() => { onOpenForgotPassword?.(); }}>Forgot Password?</p>
             </form>
           {/* </div> */}
