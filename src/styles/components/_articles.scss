@@ -1,0 +1,49 @@
+.articles {
+  padding: 2.5rem 0;
+
+  @media (max-width: 767px) {
+    padding: 1.5rem 0;
+  }
+
+  &__container {
+    max-width: 900px;
+    margin: 0 auto;
+
+    @media (max-width: 767px) {
+      padding: 0 0.75rem;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #1b1b1b;
+    margin: 0;
+    text-align: center;
+
+    @media (max-width: 767px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__see-all {
+    position: absolute;
+    right: 0;
+    font-size: 0.75rem;
+    color: #ff7c0a;
+    text-decoration: none;
+    font-family: "Neusans", sans-serif;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

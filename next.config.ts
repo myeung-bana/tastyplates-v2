@@ -89,6 +89,11 @@ const nextConfig: NextConfig = {
         hostname: "maps.gstatic.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
   },
   env: {

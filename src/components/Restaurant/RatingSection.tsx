@@ -1,5 +1,7 @@
 import { type RatingMetrics } from "@/utils/reviewUtils";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useAuthenticationStatus } from "@nhost/nextjs";
+import { useNhostSession } from "@/hooks/useNhostSession";
+import { FiLock } from "react-icons/fi";
 
 interface RatingSectionProps {
   ratingMetrics: RatingMetrics;
@@ -20,8 +22,9 @@ function displayRating(rating: number): string {
 }
 
 export default function RatingSection({ ratingMetrics, palatesParam }: RatingSectionProps) {
-  const { user } = useFirebaseSession();
-  const userPalates = user?.palates || null;
+  const { isAuthenticated } = useAuthenticationStatus();
+  const { user } = useNhostSession();
+  const userPalates = (user as any)?.palates || null;
 
   return (
     <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
@@ -58,17 +61,26 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
               <h3 className="font-neusans font-semibold text-sm mb-1">Search Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-2">
-                  <span className="font-neusans text-gray-800 text-2xl font-bold">
-                    {displayRating(ratingMetrics.searchRating)}
-                  </span>
-                  <div className="absolute -bottom-1 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
-                    <span className="text-[9px] font-bold text-white">
-                      {formatCount(ratingMetrics.searchCount)}
-                    </span>
-                  </div>
+                  {isAuthenticated ? (
+                    <>
+                      <span className="font-neusans text-gray-800 text-2xl font-bold">
+                        {displayRating(ratingMetrics.searchRating)}
+                      </span>
+                      <div className="absolute -bottom-1 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                        <span className="text-[9px] font-bold text-white">
+                          {formatCount(ratingMetrics.searchCount)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <FiLock className="w-7 h-7 text-gray-400" />
+                  )}
                 </div>
                 <span className="text-[10px] text-gray-500 text-center leading-tight">
-                  How much we<br/>think you&apos;d like
+                  {isAuthenticated
+                    ? <>How much we<br/>think you&apos;d like</>
+                    : <>Sign in to see<br/>your score</>
+                  }
                 </span>
               </div>
             </div>
@@ -155,17 +167,26 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
           <h3 className="font-neusans font-semibold text-sm mb-1">Search Score</h3>
           <div className="flex flex-col items-center">
             <div className="relative inline-block mb-3">
-              <span className="font-neusans text-gray-800 text-4xl font-bold">
-                {displayRating(ratingMetrics.searchRating)}
-              </span>
-              <div className="absolute -bottom-1 -right-5 flex items-center justify-center w-6 h-6 rounded-full bg-[#ff7c0a]">
-                <span className="text-[10px] font-bold text-white">
-                  {formatCount(ratingMetrics.searchCount)}
-                </span>
-              </div>
+              {isAuthenticated ? (
+                <>
+                  <span className="font-neusans text-gray-800 text-4xl font-bold">
+                    {displayRating(ratingMetrics.searchRating)}
+                  </span>
+                  <div className="absolute -bottom-1 -right-5 flex items-center justify-center w-6 h-6 rounded-full bg-[#ff7c0a]">
+                    <span className="text-[10px] font-bold text-white">
+                      {formatCount(ratingMetrics.searchCount)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <FiLock className="w-9 h-9 text-gray-400" />
+              )}
             </div>
             <span className="text-xs text-gray-500">
-              How much we think you&apos;d like
+              {isAuthenticated
+                ? "How much we think you\u2019d like"
+                : "Sign in to see your score"
+              }
             </span>
           </div>
         </div>

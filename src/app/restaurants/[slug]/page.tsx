@@ -117,7 +117,15 @@ export default function RestaurantDetail() {
   useEffect(() => {
     if (restaurant && reviews.length > 0) {
       const userPalates = user?.palates || null;
-      const restaurantPalates = restaurant?.palates?.nodes?.map((n: { name: string }) => n.name) ?? null;
+
+      // Combine both the restaurant's palates field and cuisines field so the
+      // authentic score works regardless of which JSONB column the admin populated.
+      const combinedRestaurantPalates = [
+        ...(restaurant?.palates?.nodes?.map((n: { name: string }) => n.name) ?? []),
+        ...(restaurant?.listingCategories?.nodes?.map((n: { name: string }) => n.name) ?? []),
+      ].filter(Boolean);
+      const restaurantPalates = combinedRestaurantPalates.length > 0 ? combinedRestaurantPalates : null;
+
       const metrics = calculateRatingMetrics(
         reviews,
         reviews,
