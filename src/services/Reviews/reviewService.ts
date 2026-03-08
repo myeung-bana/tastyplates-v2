@@ -113,63 +113,44 @@ export class ReviewService {
         }
     }
 
-    async likeComment(commentId: number | string, accessToken: string) {
+    async likeComment(commentId: number | string, accessToken: string, userId?: string) {
         try {
-            // Check if commentId is a UUID (new format) or numeric ID (legacy)
             const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             const isUUID = typeof commentId === 'string' && UUID_REGEX.test(commentId);
-            
+
             if (isUUID) {
-                // Use new API v1 endpoint - need to get user ID from token
-                // The endpoint will extract Firebase UUID from the Authorization token
-                const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-                
-                if (!userResponse.ok) {
-                    const errorData = await userResponse.json().catch(() => ({ error: 'Failed to get user information' }));
-                    throw new Error(errorData.error || `Failed to get user information: ${userResponse.statusText}`);
+                if (!userId) {
+                    throw new Error('User ID is required to like a comment');
                 }
-                
-                const userData = await userResponse.json();
-                if (!userData.success || !userData.data?.id) {
-                    throw new Error(userData.error || 'User not found');
-                }
-                
-                const userId = userData.data.id;
-                
-                // Use toggle-like endpoint
+
                 const response = await fetch('/api/v1/restaurant-reviews/toggle-like', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify({
                         review_id: commentId,
-                        user_id: userId
-                    })
+                        user_id: userId,
+                    }),
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Failed to toggle like' }));
                     throw new Error(errorData.error || 'Failed to toggle like');
                 }
-                
+
                 const result = await response.json();
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to toggle like');
                 }
-                
-                // Return in the expected format
+
                 return {
                     userLiked: result.data.liked ?? false,
-                    likesCount: result.data.likesCount ?? 0 // Use the count from API
+                    likesCount: result.data.likesCount ?? 0,
                 };
             } else {
-                // Legacy numeric ID - use old endpoint (for backward compatibility)
+                // Legacy numeric ID
                 const response = await reviewRepo.likeComment(Number(commentId), accessToken);
                 return response;
             }
@@ -179,63 +160,44 @@ export class ReviewService {
         }
     }
 
-    async unlikeComment(commentId: number | string, accessToken: string) {
+    async unlikeComment(commentId: number | string, accessToken: string, userId?: string) {
         try {
-            // Check if commentId is a UUID (new format) or numeric ID (legacy)
             const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             const isUUID = typeof commentId === 'string' && UUID_REGEX.test(commentId);
-            
+
             if (isUUID) {
-                // Use new API v1 endpoint - need to get user ID from token
-                // The endpoint will extract Firebase UUID from the Authorization token
-                const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-                
-                if (!userResponse.ok) {
-                    const errorData = await userResponse.json().catch(() => ({ error: 'Failed to get user information' }));
-                    throw new Error(errorData.error || `Failed to get user information: ${userResponse.statusText}`);
+                if (!userId) {
+                    throw new Error('User ID is required to unlike a comment');
                 }
-                
-                const userData = await userResponse.json();
-                if (!userData.success || !userData.data?.id) {
-                    throw new Error(userData.error || 'User not found');
-                }
-                
-                const userId = userData.data.id;
-                
-                // Use toggle-like endpoint (same endpoint for like/unlike)
+
                 const response = await fetch('/api/v1/restaurant-reviews/toggle-like', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify({
                         review_id: commentId,
-                        user_id: userId
-                    })
+                        user_id: userId,
+                    }),
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Failed to toggle like' }));
                     throw new Error(errorData.error || 'Failed to toggle like');
                 }
-                
+
                 const result = await response.json();
                 if (!result.success) {
                     throw new Error(result.error || 'Failed to toggle like');
                 }
-                
-                // Return in the expected format
+
                 return {
                     userLiked: result.data.liked ?? false,
-                    likesCount: result.data.likesCount ?? 0 // Use the count from API
+                    likesCount: result.data.likesCount ?? 0,
                 };
             } else {
-                // Legacy numeric ID - use old endpoint (for backward compatibility)
+                // Legacy numeric ID
                 const response = await reviewRepo.unlikeComment(Number(commentId), accessToken);
                 return response;
             }

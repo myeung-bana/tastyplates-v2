@@ -362,7 +362,6 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                 >
                   Continue
                 </button>
-                {/* Google sign-in temporarily hidden — re-enable when OAuth config is ready
                 <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2 font-neusans">
                   <hr className="w-full border-t border-[#494D5D]" />
                   or
@@ -378,7 +377,6 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                   <FcGoogle className="h-5 w-5 object-contain mr-2" />
                   <span className="font-normal font-neusans">Continue with Google</span>
                 </button>
-                */}
               </form>
               {error && (
                 <div

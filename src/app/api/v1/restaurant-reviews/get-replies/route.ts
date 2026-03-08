@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_REVIEW_REPLIES, GET_REVIEW_BY_ID, CHECK_REVIEW_LIKES_BATCH } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
-import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { ReviewV2 } from '@/app/api/v1/services/reviewV2Service';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
@@ -76,39 +75,6 @@ export async function GET(request: NextRequest) {
           console.warn('Could not fetch parent review for restaurant ID:', error);
         }
 
-        // Fetch author data in a SINGLE batch query (optimized from N+1)
-        const authorIds = [...new Set(replies.map((r: any) => r.author_id).filter(Boolean))];
-        
-        let authorMap = new Map();
-        if (authorIds.length > 0) {
-          try {
-            const authorsResult = await hasuraQuery(GET_RESTAURANT_USERS_BY_IDS, {
-              ids: authorIds,
-              limit: GRAPHQL_LIMITS.BATCH_USERS_MAX
-            });
-
-            if (!authorsResult.errors && authorsResult.data?.restaurant_users) {
-              const users = authorsResult.data.restaurant_users;
-              authorMap = new Map(
-                users.map((user: any) => [
-                  user.id,
-                  {
-                    id: user.id,
-                    username: user.username || '',
-                    display_name: user.display_name || user.username || 'Unknown User',
-                    profile_image: user.profile_image || null,
-                    palates: user.palates || null,
-                  }
-                ])
-              );
-            } else {
-              console.warn('Failed to fetch authors:', authorsResult.errors);
-            }
-          } catch (error) {
-            console.error('Error fetching authors batch:', error);
-          }
-        }
-
         // Fetch like status for all replies if user_id is provided
         const likedReviewIds = new Set<string>();
         if (user_id && replies.length > 0) {
@@ -137,18 +103,22 @@ export async function GET(request: NextRequest) {
           // Check if user liked this reply
           const userLiked = user_id ? likedReviewIds.has(reply.id) : false;
 
-          // Get author data from the map
-          const authorData = authorMap.get(reply.author_id);
+          // Resolve author from AuthorProfile relationship (user_profiles → auth.users)
+          const authorProfile = reply.AuthorProfile;
+          const username = authorProfile?.username
+            || authorProfile?.user?.email?.split('@')[0]
+            || 'Unknown';
+          const avatarUrl = authorProfile?.user?.avatarUrl ?? null;
 
           // Build ReviewV2 format
           const reviewV2: ReviewV2 = {
             id: reply.id,
-            restaurant_uuid: restaurantUuid, // Use restaurant_uuid from parent review
+            restaurant_uuid: restaurantUuid,
             author_id: reply.author_id,
             parent_review_id: parent_review_id,
             title: null,
             content: reply.content || '',
-            rating: 0, // Replies don't have ratings
+            rating: 0,
             images: null,
             palates: null,
             hashtags: null,
@@ -163,13 +133,13 @@ export async function GET(request: NextRequest) {
             updated_at: reply.updated_at || reply.created_at || new Date().toISOString(),
             published_at: reply.created_at || null,
             deleted_at: null,
-            author: authorData ? {
-              id: authorData.id,
-              username: authorData.username || '',
-              display_name: authorData.display_name || authorData.username || 'Unknown User',
-              profile_image: authorData.profile_image || null,
-              palates: authorData.palates || null,
-            } : undefined,
+            author: {
+              id: reply.author_id,
+              username,
+              display_name: username,
+              profile_image: avatarUrl,
+              palates: null,
+            },
             user_liked: userLiked,
           };
 

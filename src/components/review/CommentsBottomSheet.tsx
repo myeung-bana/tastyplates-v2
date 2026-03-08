@@ -204,13 +204,14 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }));
     setReplyLoading((prev) => ({ ...prev, [replyId]: true }));
 
+    const likeUserId = nhostUser?.id ?? undefined;
     try {
       if (isLiked) {
-        const resp = await reviewService.unlikeComment(reply.id, idToken);
+        const resp = await reviewService.unlikeComment(reply.id, token, likeUserId);
         setReplyUserLiked((prev) => ({ ...prev, [replyId]: resp.userLiked }));
         setReplyLikes((prev) => ({ ...prev, [replyId]: resp.likesCount }));
       } else {
-        const resp = await reviewService.likeComment(reply.id, idToken);
+        const resp = await reviewService.likeComment(reply.id, token, likeUserId);
         setReplyUserLiked((prev) => ({ ...prev, [replyId]: resp.userLiked }));
         setReplyLikes((prev) => ({ ...prev, [replyId]: resp.likesCount }));
       }
@@ -330,7 +331,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
-    if (!user) {
+    if (!nhostUser) {
       toast.error("Please sign in to comment");
       return;
     }
@@ -341,7 +342,8 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }
 
     setIsLoading(true);
-    const userName = user.display_name || user.username || user.email?.split('@')[0] || "You";
+    const userName = user?.username || nhostUser?.displayName || nhostUser?.email?.split('@')[0] || "You";
+    const avatarUrl = nhostUser?.avatarUrl || getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON;
     const now = new Date();
     const isoDate = now.toISOString();
     
@@ -355,20 +357,20 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       date: isoDate,
       content: commentText,
       reviewImages: [],
-      palates: typeof user.palates === 'string' 
+      palates: typeof user?.palates === 'string' 
         ? user.palates 
-        : Array.isArray(user.palates) 
+        : Array.isArray(user?.palates) 
           ? user.palates.join('|') 
           : "",
-      userAvatar: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+      userAvatar: avatarUrl,
       author: {
         name: userName,
         node: {
-          id: String(user.id || ""),
-          databaseId: 0, // Firebase users don't have numeric userId
+          id: String(nhostUser?.id || user?.id || ""),
+          databaseId: 0,
           name: userName,
           avatar: {
-            url: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+            url: avatarUrl,
           },
         },
       },
@@ -406,75 +408,97 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         return;
       }
       
-      const payload = {
-        content: optimisticReply.content,
-        restaurantId: review.commentedOn?.node?.databaseId,
-        parent: review.databaseId,
-        authorId: undefined, // Firebase users use UUID, not numeric userId
-      };
-      const res = await reviewService.postReview(
-        payload,
-        idToken
+      const authorId = nhostUser?.id;
+      if (!authorId) {
+        toast.error("Unable to post comment. Please sign in again.");
+        setIsLoading(false);
+        setReplies((prev) => prev.filter((r) => !r.id.startsWith("optimistic")));
+        return;
+      }
+
+      const res = await reviewService.createComment(
+        {
+          parent_review_id: review.id,
+          author_id: authorId,
+          content: optimisticReply.content,
+        },
+        token
       );
 
-      const isSuccess = (status: number | string) => {
-        if (typeof status === "number") {
-          return status >= 200 && status < 300;
-        }
-        if (typeof status === "string") {
-          const successStatuses = ["approved", "success", "created", "ok"];
-          return successStatuses.includes(status.toLowerCase());
-        }
-        return false;
-      };
-
-      if (res.status && isSuccess(res.status)) {
+      if (res.success) {
         toast.success(commentedSuccess);
-        // Fetch updated replies with userId to get proper like status (now newest first)
-        const userUuid = await getUserUuid();
-        const updatedReplies = await reviewService.fetchCommentReplies(
-          review.id,
-          userUuid ?? undefined
-        );
-        // Replace optimistic reply with fetched replies (newest first from API)
-        setReplies(updatedReplies);
-        
-        // Reinitialize like state with real IDs
-        const newLikes: Record<string, number> = {};
-        const newUserLiked: Record<string, boolean> = {};
-        updatedReplies.forEach((r) => {
-          if (r.id) {
-            newLikes[r.id] = r.commentLikes ?? 0;
-            newUserLiked[r.id] = r.userLiked ?? false;
-          }
-        });
-        setReplyLikes(newLikes);
-        setReplyUserLiked(newUserLiked);
-        
-        if (onCommentCountChangeRef.current) {
-          onCommentCountChangeRef.current(updatedReplies.length);
+
+        // Immediately update the optimistic reply with the real ID so likes work
+        const realId: string | undefined = res.data?.id;
+        if (realId) {
+          setReplies((prev) =>
+            prev.map((r) =>
+              r.id === optimisticReply.id ? { ...r, id: realId } : r
+            )
+          );
+          setReplyLikes((prev) => {
+            const next = { ...prev };
+            next[realId] = next[optimisticReply.id] ?? 0;
+            delete next[optimisticReply.id];
+            return next;
+          });
+          setReplyUserLiked((prev) => {
+            const next = { ...prev };
+            next[realId] = next[optimisticReply.id] ?? false;
+            delete next[optimisticReply.id];
+            return next;
+          });
         }
+
+        // Notify parent of new count immediately
+        if (onCommentCountChangeRef.current) {
+          onCommentCountChangeRef.current(
+            (replies.length) + (realId ? 0 : 1)
+          );
+        }
+
         setCooldown(5);
+
+        // Background refetch to sync authoritative list from API
+        getUserUuid().then((userUuid) => {
+          reviewService
+            .fetchCommentReplies(review.id, userUuid ?? undefined)
+            .then((updatedReplies) => {
+              setReplies(updatedReplies);
+              const newLikes: Record<string, number> = {};
+              const newUserLiked: Record<string, boolean> = {};
+              updatedReplies.forEach((r) => {
+                if (r.id) {
+                  newLikes[r.id] = r.commentLikes ?? 0;
+                  newUserLiked[r.id] = r.userLiked ?? false;
+                }
+              });
+              setReplyLikes(newLikes);
+              setReplyUserLiked(newUserLiked);
+              if (onCommentCountChangeRef.current) {
+                onCommentCountChangeRef.current(updatedReplies.length);
+              }
+            })
+            .catch(() => {
+              // Background sync failed — optimistic reply is already visible, no harm done
+            });
+        });
       } else {
         setReplies((prev) =>
-          prev.filter(
-            (r) => r.databaseId !== 0 || !r.id.startsWith("optimistic")
-          )
+          prev.filter((r) => r.id !== optimisticReply.id)
         );
         toast.error(errorOccurred);
       }
     } catch (error) {
       console.error("Comment submission error:", error);
       setReplies((prev) =>
-        prev.filter(
-          (r) => r.databaseId !== 0 || !r.id.startsWith("optimistic")
-        )
+        prev.filter((r) => r.id !== optimisticReply.id)
       );
       toast.error(errorOccurred);
     } finally {
       setIsLoading(false);
     }
-  }, [commentText, isLoading, cooldown, user, review, onCommentCountChange, getNhostToken]);
+  }, [commentText, isLoading, cooldown, nhostUser, user, review, replies.length, onCommentCountChange, getNhostToken, getUserUuid]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -542,7 +566,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         </div>
 
         {/* Comment Input */}
-        {user ? (
+        {nhostUser ? (
           <div className="comments-bottom-sheet__input-container">
             <div className="comments-bottom-sheet__input-wrapper">
               <input

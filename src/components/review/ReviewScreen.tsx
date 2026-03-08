@@ -616,8 +616,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
                   {/* User Info */}
                   <div className="review-screen__user-info">
                     {review.author?.node?.databaseId ? (
-                      user?.id &&
-                      String(user.id) === String(review.author?.node?.databaseId) ? (
+                      nhostUser?.id &&
+                      String(nhostUser.id) === String(review.author?.node?.databaseId) ? (
                         <Link href={PROFILE}>
                           <FallbackImage
                             src={review.userAvatar || DEFAULT_USER_ICON}

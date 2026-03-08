@@ -269,7 +269,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                   <div className="text-red-600 text-xs font-neusans">{passwordError}</div>
                 )}
               </div>
-              <p className="auth__terms font-neusans text-sm">By logging in, you agree to TastyPlate's <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
+              <p className="auth__terms font-neusans text-sm">By logging in, you agree to TastyPlate's <a className="auth__terms font-neusans text-sm" href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a className="auth__terms font-neusans text-sm" href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
               <button
                 type="submit"
                 disabled={isLoading}
@@ -277,7 +277,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
               >
                 Continue
               </button>
-              {/* Google sign-in temporarily hidden — re-enable when OAuth config is ready
               <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2 font-neusans">
                 <hr className="w-full border-t border-[#494D5D]" />
                 or
@@ -293,7 +292,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                 <FcGoogle className="h-5 w-5 object-contain mr-2" />
                 <span className="font-normal font-neusans">Continue with Google</span>
               </button>
-              */}
               <p className="text-sm cursor-pointer text-center underline font-normal hover:opacity-90 font-neusans" onClick={() => { onOpenForgotPassword?.(); }}>Forgot Password?</p>
             </form>
           {/* </div> */}

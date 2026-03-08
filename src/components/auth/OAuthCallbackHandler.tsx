@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useAuthenticationStatus } from "@nhost/nextjs";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -8,7 +9,7 @@ import toast from "react-hot-toast";
 /**
  * OAuth callback handler for Nhost authentication
  * Handles OAuth redirect callbacks and manages user onboarding flow
- * 
+ *
  * Nhost OAuth Flow:
  * 1. User clicks "Sign in with Google"
  * 2. Redirected to Google OAuth consent screen
@@ -19,8 +20,22 @@ import toast from "react-hot-toast";
  */
 export default function OAuthCallbackHandler() {
     const { user, nhostUser, loading } = useNhostSession();
+    // Direct access to Nhost's raw auth status to detect the SDK loading cycle
+    const { isLoading: nhostIsLoading, isAuthenticated } = useAuthenticationStatus();
     const router = useRouter();
     const searchParams = useSearchParams();
+
+    // Track whether Nhost has entered a loading state at least once since mount.
+    // When the page loads with ?refreshToken=, the SDK may briefly report
+    // isLoading=false before it starts processing the token. We must not
+    // treat that initial false as "definitely unauthenticated".
+    const hasSeenLoadingRef = useRef(false);
+
+    useEffect(() => {
+        if (nhostIsLoading) {
+            hasSeenLoadingRef.current = true;
+        }
+    }, [nhostIsLoading]);
 
     useEffect(() => {
         const clearOAuthState = () => {
@@ -37,70 +52,67 @@ export default function OAuthCallbackHandler() {
         if (oauthError) {
             clearOAuthState();
             toast.error('Google sign-in failed. Please try again.');
-            // Clean the error params from the URL without a page reload
             window.history.replaceState({}, '', window.location.pathname);
             return;
         }
 
-        // Check if we're returning from a successful OAuth flow.
         // Per Nhost docs, on success the URL contains ?refreshToken=
-        // Wait until auth loading completes before cleaning the URL so the
-        // provider has a chance to exchange the token into a session.
         const hasRefreshToken = !!searchParams?.get('refreshToken');
 
-        // Check if we're returning from OAuth (Nhost puts ?refreshToken= on success)
-        const isOAuthCallback = 
+        const isOAuthCallback =
             hasRefreshToken ||
             searchParams?.get('type') === 'magicLink' ||
             pendingOAuth;
-        
-        if (isOAuthCallback) {
-            // Wait for Nhost session to be ready (authenticated or unauthenticated)
-            if (loading) {
-                console.log('[OAuthCallbackHandler] Waiting for Nhost session...');
-                return;
-            }
 
-            console.log('[OAuthCallbackHandler] OAuth callback detected', {
-                isAuthenticated: !!user && !!nhostUser,
-                userId: user?.user_id,
-                hasOnboarding: user?.onboarding_complete,
-            });
+        if (!isOAuthCallback) return;
 
-            if (hasRefreshToken) {
-                window.history.replaceState({}, '', window.location.pathname);
-            }
+        // Wait for the Nhost session to be fully resolved before acting.
+        // `loading` covers both Nhost's internal isLoading and our profile fetch.
+        if (loading) {
+            return;
+        }
 
-            const callbackUrl = storedCallbackUrl || '/restaurants';
+        // Extra guard for the race condition: when ?refreshToken= is present
+        // the SDK may not have started processing it yet on the first render.
+        // Only proceed once the SDK has completed at least one loading cycle
+        // OR once it has confirmed authentication.
+        if (hasRefreshToken && !hasSeenLoadingRef.current && !isAuthenticated) {
+            return;
+        }
 
-            // Check if user needs onboarding
-            if (user && !user.onboarding_complete) {
+        if (hasRefreshToken) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        const callbackUrl = storedCallbackUrl || '/restaurants';
+
+        // nhostUser is available (Nhost auth identity confirmed)
+        if (nhostUser) {
+            // User needs to complete onboarding
+            if (!user?.onboarding_complete) {
                 clearOAuthState();
-                console.log('[OAuthCallbackHandler] Redirecting to onboarding');
                 router.push('/onboarding');
                 return;
             }
 
-            // User is authenticated and has completed onboarding
-            if (user && user.onboarding_complete) {
-                clearOAuthState();
-                const resolvedCallbackUrl =
-                    callbackUrl.startsWith('/onboarding') ? '/restaurants' : callbackUrl;
-                console.log('[OAuthCallbackHandler] Redirecting to:', resolvedCallbackUrl);
-                router.push(resolvedCallbackUrl);
-                router.refresh();
-                return;
-            }
-
-            // If still not authenticated after OAuth, something went wrong
-            if (!user && !nhostUser) {
-                clearOAuthState();
-                console.error('[OAuthCallbackHandler] OAuth callback but no user session');
-                router.push('/');
-                return;
-            }
+            // Fully authenticated and onboarded
+            clearOAuthState();
+            const resolvedCallbackUrl =
+                callbackUrl.startsWith('/onboarding') ? '/restaurants' : callbackUrl;
+            router.push(resolvedCallbackUrl);
+            router.refresh();
+            return;
         }
-    }, [user, nhostUser, loading, router, searchParams]);
+
+        // Reach here only when the SDK has confirmed unauthenticated state
+        // (loading=false, isAuthenticated=false, no nhostUser).
+        // Only treat as a genuine failure after the SDK has cycled through loading.
+        if (!nhostIsLoading && hasSeenLoadingRef.current) {
+            clearOAuthState();
+            toast.error('Google sign-in failed. Please try again.');
+            router.push('/');
+        }
+    }, [user, nhostUser, loading, nhostIsLoading, isAuthenticated, router, searchParams]);
 
     return null;
 }

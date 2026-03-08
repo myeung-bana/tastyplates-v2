@@ -455,6 +455,14 @@ export const GET_REVIEW_REPLIES = `
       created_at
       updated_at
       author_id
+      AuthorProfile {
+        user_id
+        username
+        user {
+          avatarUrl
+          email
+        }
+      }
     }
     restaurant_reviews_aggregate(
       where: {

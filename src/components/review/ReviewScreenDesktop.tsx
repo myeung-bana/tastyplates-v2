@@ -254,7 +254,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       return;
     }
     
-    const currentUserId = user?.id;
+    const currentUserId = nhostUser?.id;
     const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
 
     // Don't check follow state for own profile
@@ -563,7 +563,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       return;
     }
     
-    const currentUserId = user?.id;
+    const currentUserId = nhostUser?.id;
     const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
 
     // Don't allow following yourself
@@ -665,7 +665,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     setIsSubmittingComment(true);
 
     // Optimistically add reply at the top
-    const userName = user.display_name || user.username || user.email?.split('@')[0] || "You";
+    const userName = nhostUser?.displayName || user?.username || nhostUser?.email?.split('@')[0] || "You";
     
     // Create proper ISO timestamp for optimistic reply
     const now = new Date();
@@ -682,16 +682,16 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       content: commentText,
       reviewImages: [],
       palates: "",
-      userAvatar: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+      userAvatar: nhostUser?.avatarUrl || DEFAULT_USER_ICON,
       hashtags: [],
       author: {
         name: userName,
         node: {
-          id: String(user.id || ""),
-          databaseId: user.id ? parseInt(String(user.id)) : 0,
+          id: String(nhostUser?.id || ""),
+          databaseId: 0,
           name: userName,
           avatar: {
-            url: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
+            url: nhostUser?.avatarUrl || DEFAULT_USER_ICON,
           },
         },
       },
@@ -731,8 +731,8 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         return;
       }
       
-      // Get author UUID - user.id should already be a UUID
-      const authorId = user?.id;
+      // Get author UUID from Nhost auth user
+      const authorId = nhostUser?.id;
       if (!authorId) {
         toast.error('User not authenticated or invalid user ID');
         setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
@@ -803,7 +803,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     } finally {
       setIsSubmittingComment(false);
     }
-  }, [commentText, isSubmittingComment, cooldown, user, reviews, currentIndex, getNhostToken]);
+  }, [commentText, isSubmittingComment, cooldown, user, nhostUser, reviews, currentIndex, getNhostToken]);
 
   // Wheel gesture handler (two-finger scroll or mouse wheel)
   const bindWheel = useWheel(
@@ -929,15 +929,15 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
 
   // Memoize follow button visibility (performance optimization)
   const shouldShowFollowButton = useMemo(() => {
-    if (!currentReviewData || !user?.id || !currentReviewData.review.author?.node) return false;
+    if (!currentReviewData || !nhostUser?.id || !currentReviewData.review.author?.node) return false;
     
     const authorId = currentReviewData.review.author.node.id;
     const authorDatabaseId = currentReviewData.review.author.node.databaseId;
-    const userId = String(user.id);
+    const userId = String(nhostUser.id);
     const isOwnPost = userId === String(authorId) || userId === String(authorDatabaseId);
     
     return !isOwnPost;
-  }, [currentReviewData, user?.id]);
+  }, [currentReviewData, nhostUser?.id]);
 
   // Memoize restaurant location data (performance optimization)
   const restaurantLocationData = useMemo(() => {
@@ -1054,8 +1054,8 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
           <div className="review-screen-desktop__header">
             <div className="review-screen-desktop__user-info">
               {currentReview.author?.node?.databaseId ? (
-                user?.id &&
-                String(user.id) === String(currentReview.author?.node?.databaseId) ? (
+                nhostUser?.id &&
+                String(nhostUser.id) === String(currentReview.author?.node?.databaseId) ? (
                   <Link href={PROFILE}>
                     <FallbackImage
                       src={currentReview.userAvatar || DEFAULT_USER_ICON}

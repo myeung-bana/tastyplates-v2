@@ -10,7 +10,7 @@ import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { transformRestaurantV2ToRestaurant } from "@/utils/restaurantTransformers";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { useDebounce } from "use-debounce";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
 import { debounce } from "@/utils/debounce";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
@@ -104,7 +104,7 @@ const normalizeUserPalates = (palates: any): string[] => {
 };
 
 const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }: RestaurantPageProps = {}) => {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const { selectedLocation } = useLocation();
 
   // Helper function to get parent country's short code for cities
@@ -259,7 +259,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     }
     
     return sortedRestaurants.sort((a, b) => {
-      // MY PREFERENCE sorting (uses precomputed stats from API)
+      // MY PREFERENCE — uses precomputed palate-based stats from the preference API
       if (sortOption === 'MY_PREFERENCE') {
         const aPref = a.searchPalateStats?.avg ?? -1;
         const bPref = b.searchPalateStats?.avg ?? -1;
@@ -269,87 +269,51 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
         const bCount = b.searchPalateStats?.count ?? 0;
         if (aCount !== bCount) return bCount - aCount;
 
-        // Fallback to overall rating & review count
         const ratingDiff = (b.rating || 0) - (a.rating || 0);
         if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
         return (b.ratingsCount || 0) - (a.ratingsCount || 0);
       }
 
-      // PALATE-BASED SORTING (when palates are selected)
+      // EXPLICIT SORT OPTIONS — always respected regardless of palate selection
+      if (sortOption === 'ASC') {
+        return (a.rating || 0) - (b.rating || 0);
+      }
+      if (sortOption === 'DESC') {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (sortOption === 'NEWEST') {
+        return (b.databaseId || 0) - (a.databaseId || 0);
+      }
+
+      // SMART / DEFAULT — use palate-based ranking when palates are active
       if (selectedPalates && selectedPalates.length > 0) {
         const aPalateStats = a.searchPalateStats;
         const bPalateStats = b.searchPalateStats;
-        
-        // Check if restaurants have valid palate ratings
+
         const aHasValidPalateRating = aPalateStats && aPalateStats.count > 0 && aPalateStats.avg > 0;
         const bHasValidPalateRating = bPalateStats && bPalateStats.count > 0 && bPalateStats.avg > 0;
-        
-        // Strategy: 
-        // Tier 1: Restaurants WITH matching palate reviews (sorted by palate rating)
-        // Tier 2: Restaurants WITHOUT matching palate reviews (sorted by overall rating)
-        
+
         if (aHasValidPalateRating && bHasValidPalateRating) {
-          // Both have valid palate ratings - compare palate ratings
           const diff = bPalateStats.avg - aPalateStats.avg;
-          if (Math.abs(diff) > 0.01) return diff; // Use 0.01 threshold for float comparison
-          
-          // If palate ratings are equal, use review count as tiebreaker
-          if (bPalateStats.count !== aPalateStats.count) {
-            return bPalateStats.count - aPalateStats.count;
-          }
-          
-          // Final tiebreaker: overall rating
+          if (Math.abs(diff) > 0.01) return diff;
+          if (bPalateStats.count !== aPalateStats.count) return bPalateStats.count - aPalateStats.count;
           return (b.rating || 0) - (a.rating || 0);
         }
-        
-        if (aHasValidPalateRating && !bHasValidPalateRating) {
-          // A has palate rating, B doesn't - A comes first (Tier 1 > Tier 2)
-          return -1;
-        }
-        
-        if (!aHasValidPalateRating && bHasValidPalateRating) {
-          // B has palate rating, A doesn't - B comes first (Tier 1 > Tier 2)
-          return 1;
-        }
-        
-        // Neither has valid palate ratings (both Tier 2) - fall back to overall rating
+        if (aHasValidPalateRating && !bHasValidPalateRating) return -1;
+        if (!aHasValidPalateRating && bHasValidPalateRating) return 1;
+
+        // Neither has palate ratings — fall back to overall rating
         const ratingDiff = (b.rating || 0) - (a.rating || 0);
         if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
-        
-        // Final tiebreaker: total review count
         return (b.ratingsCount || 0) - (a.ratingsCount || 0);
       }
-      
-      // NO PALATE SELECTED - Sort by overall quality
-      // Priority order:
-      // 1. Overall rating (descending)
-      // 2. Number of reviews (more reviews = more reliable)
-      // 3. Recognition count (if available)
-      
-      if (sortOption === 'ASC') {
-        // Ascending order (lowest to highest)
-        return (a.rating || 0) - (b.rating || 0);
-      } else if (sortOption === 'DESC') {
-        // Descending order (highest to lowest)
-        return (b.rating || 0) - (a.rating || 0);
-      } else if (sortOption === 'NEWEST') {
-        // Server already returns newest first (created_at desc), so keep stable fallback:
-        // Prefer higher databaseId as a rough proxy if needed.
-        return (b.databaseId || 0) - (a.databaseId || 0);
-      } else {
-        // Default: Smart sorting by quality
-        const ratingDiff = (b.rating || 0) - (a.rating || 0);
-        
-        // Only use rating as primary if difference is significant (>0.1 stars)
-        if (Math.abs(ratingDiff) > 0.1) return ratingDiff;
-        
-        // If ratings are similar, prefer more reviewed restaurants
-        const reviewCountDiff = (b.ratingsCount || 0) - (a.ratingsCount || 0);
-        if (reviewCountDiff !== 0) return reviewCountDiff;
-        
-        // Final tiebreaker: recognition count (if available)
-        return (b.recognitionCount || 0) - (a.recognitionCount || 0);
-      }
+
+      // SMART default — no palates selected, sort by overall quality
+      const ratingDiff = (b.rating || 0) - (a.rating || 0);
+      if (Math.abs(ratingDiff) > 0.1) return ratingDiff;
+      const reviewCountDiff = (b.ratingsCount || 0) - (a.ratingsCount || 0);
+      if (reviewCountDiff !== 0) return reviewCountDiff;
+      return (b.recognitionCount || 0) - (a.recognitionCount || 0);
     });
   }, []);
 

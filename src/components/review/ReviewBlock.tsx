@@ -329,20 +329,13 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:187',message:'Before API call',data:{reviewId,currentLiked,hasIdToken:!!idToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       
+      const likeUserId = nhostUser?.id || await getUserUuid();
       let response: { userLiked: boolean; likesCount: number };
       const apiStartTime = Date.now();
       if (currentLiked) {
-        // Already liked, so unlike
-        response = await reviewService.unlikeComment(
-          reviewId,
-          idToken
-        );
+        response = await reviewService.unlikeComment(reviewId, idToken, likeUserId ?? undefined);
       } else {
-        // Not liked yet, so like
-        response = await reviewService.likeComment(
-          reviewId,
-          idToken
-        );
+        response = await reviewService.likeComment(reviewId, idToken, likeUserId ?? undefined);
       }
       const apiDuration = Date.now() - apiStartTime;
       // #region agent log
