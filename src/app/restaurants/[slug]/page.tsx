@@ -11,7 +11,7 @@ import RestaurantReviews from "@/components/Restaurant/RestaurantReviews";
 import RestaurantReviewsMobile from "@/components/Restaurant/RestaurantReviewsMobile";
 import RestaurantDetailSkeleton from "@/components/ui/Skeleton/RestaurantDetailSkeleton";
 import { useIsMobile } from "@/utils/deviceUtils";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter } from "next/navigation";
 import SignupModal from "@/components/auth/SignupModal";
 import SigninModal from "@/components/auth/SigninModal";
@@ -57,7 +57,7 @@ function getRestaurantImages(restaurant: Listing): string[] {
 // Main Component
 
 export default function RestaurantDetail() {
-  const { user } = useFirebaseSession();
+  const { nhostUser, user } = useNhostSession();
   const [isShowSignup, setIsShowSignup] = useState(false);
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [restaurant, setRestaurant] = useState<Listing | null>(null);
@@ -183,7 +183,7 @@ export default function RestaurantDetail() {
   }, [restaurant?.id, restaurant?.databaseId]);
 
   const addReview = () => {
-    if (!user) {
+    if (!nhostUser) {
       setIsShowSignin(true);
       return;
     }
