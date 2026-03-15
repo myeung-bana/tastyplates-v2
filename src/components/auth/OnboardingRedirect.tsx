@@ -16,12 +16,16 @@ const ONBOARDING_JUST_COMPLETED_KEY = "onboarding_just_completed";
 export default function OnboardingRedirect() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading } = useNhostSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const hasRedirectedToOnboarding = useRef(false);
 
   useEffect(() => {
     // Don't redirect while loading or if user is not authenticated
     if (loading || !user) {
+      return;
+    }
+    // Don't redirect to onboarding if user is not yet email-verified (VerificationRedirect handles them)
+    if (nhostUser && !nhostUser.emailVerified) {
       return;
     }
 
@@ -50,7 +54,7 @@ export default function OnboardingRedirect() {
       hasRedirectedToOnboarding.current = true;
       router.replace(ONBOARDING_ONE);
     }
-  }, [user, loading, pathname, router]);
+  }, [user, nhostUser, loading, pathname, router]);
 
   // Reset redirect ref when pathname changes so future navigations can redirect if needed
   useEffect(() => {

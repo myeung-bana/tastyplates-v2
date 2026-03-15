@@ -571,42 +571,68 @@ class NhostAuthService {
   }
 
   /**
-   * Resend verification email to user
-   * Use this when user hasn't received or cannot find their verification email
+   * User-friendly message when the email server (Nhost/SMTP) fails (e.g. 500).
+   * Shown on /user-verification when "Send verification email" fails due to server/config.
    */
-  async resendVerificationEmail(email: string): Promise<NhostAuthResult> {
+  private static readonly VERIFICATION_EMAIL_SERVER_ERROR_MESSAGE =
+    "We couldn't send the verification email right now. Please try again later or contact support.";
+
+  /**
+   * Resend verification email to user
+   * Use this when user hasn't received or cannot find their verification email.
+   * @param email - User's email address
+   * @param redirectTo - Optional URL where Nhost redirects after the user clicks the verification link (must be in Nhost Allowed Redirect URLs)
+   */
+  async resendVerificationEmail(email: string, redirectTo?: string): Promise<NhostAuthResult> {
     if (!this.guardNhost()) {
       return { success: false, error: 'Authentication is not ready. Please refresh the page.' };
     }
-    console.log('[NhostAuth] Resending verification email to:', email);
-    
+    console.log('[NhostAuth] Resending verification email to:', email, redirectTo ? { redirectTo } : '');
+
     try {
-      // Use Nhost's built-in method to resend verification email
-      // This works for users who already have accounts but haven't verified
       const { error } = await nhost.auth.sendVerificationEmail({
-        email: email,
+        email,
+        ...(redirectTo && { options: { redirectTo } }),
       });
-      
+
       if (error) {
         console.error('[NhostAuth] Resend verification error:', error);
-        console.error('[NhostAuth] Error type:', typeof error);
-        console.error('[NhostAuth] Error keys:', Object.keys(error));
+        const status = error?.status ?? error?.error?.status ?? null;
+        const message = (error?.message || error?.error?.message || error?.error || '').toString().toLowerCase();
+        const isServerError =
+          status === 500 ||
+          (typeof status === 'number' && status >= 500) ||
+          message.includes('500') ||
+          message.includes('internal server error') ||
+          message.includes('server error');
         return {
           success: false,
-          error: this.getNhostErrorMessage(error)
+          error: isServerError
+            ? NhostAuthService.VERIFICATION_EMAIL_SERVER_ERROR_MESSAGE
+            : this.getNhostErrorMessage(error),
         };
       }
-      
+
       console.log('[NhostAuth] Verification email resent successfully');
-      return { 
+      return {
         success: true,
-        error: 'Verification email sent! Please check your inbox and spam folder.'
+        error: 'Verification email sent! Please check your inbox and spam folder.',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('[NhostAuth] Resend verification exception:', error);
+      const status = error?.status ?? error?.error?.status ?? null;
+      const message = (error?.message || error?.error?.message || '').toString().toLowerCase();
+      const isServerError =
+        status === 500 ||
+        (typeof status === 'number' && status >= 500) ||
+        message.includes('500') ||
+        message.includes('internal server error') ||
+        message.includes('server error');
       return {
         success: false,
-        error: this.getNhostErrorMessage(error)
+        error: isServerError
+          ? NhostAuthService.VERIFICATION_EMAIL_SERVER_ERROR_MESSAGE
+          : this.getNhostErrorMessage(error),
       };
     }
   }

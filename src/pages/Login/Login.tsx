@@ -9,7 +9,7 @@ import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
 import { responseStatus } from "@/constants/response";
-import { HOME } from "@/constants/pages";
+import { HOME, USER_VERIFICATION } from "@/constants/pages";
 import { validEmail } from "@/lib/utils";
 import { nhostAuthService } from "@/services/auth/nhostAuthService";
 import { useNhostSession } from "@/hooks/useNhostSession";
@@ -65,9 +65,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     if (!sessionLoading && user && nhostUser) {
       console.log('[Login] User already authenticated, redirecting...');
       hasRedirected.current = true;
+      if (!nhostUser.emailVerified) {
+        router.push(USER_VERIFICATION);
+        return;
+      }
       handleLoginSuccess();
     }
-  }, [user, nhostUser, sessionLoading]);
+  }, [user, nhostUser, sessionLoading, router]);
 
   // Reset redirect flag on unmount (for modals)
   useEffect(() => {
@@ -131,8 +135,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
       const result = await nhostAuthService.signInWithEmail(email, password);
       
       if (result.success && result.session) {
-        // Nhost session is automatically set
-        // Just handle UI success
+        if (!result.session.user?.emailVerified) {
+          onLoginSuccess?.();
+          router.refresh();
+          router.push(USER_VERIFICATION);
+          setIsLoading(false);
+          return;
+        }
         await handleLoginSuccess();
       } else {
         const errorMsg = result.error || loginFailed;

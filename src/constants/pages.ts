@@ -1,6 +1,7 @@
 export const HOME = "/";
 export const LOGIN = "/login";
 export const REGISTER = "/register";
+export const USER_VERIFICATION = "/user-verification";
 export const ONBOARDING_ONE = "/onboarding";
 export const ONBOARDING_TWO = "/onboarding"; // Now both steps use the same route
 export const SETTINGS = "/settings";

@@ -14,7 +14,7 @@ import { minimumPassword } from "@/constants/validation";
 import { emailOccurredError, emailRequired, invalidEmailFormat, passwordLimit, passwordsNotMatch, unexpectedError } from "@/constants/messages";
 import { responseStatusCode as code, sessionType } from "@/constants/response";
 import { validEmail } from "@/lib/utils";
-import { HOME, ONBOARDING_ONE } from "@/constants/pages";
+import { HOME, ONBOARDING_ONE, USER_VERIFICATION } from "@/constants/pages";
 import { REGISTRATION_KEY } from "@/constants/session";
 import { IRegisterData } from "@/interfaces/user/user";
 
@@ -46,7 +46,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
   const [showContinueModal, setShowContinueModal] = useState(false);
 
-  // Check if user is already authenticated - redirect to onboarding or home
+  // Check if user is already authenticated - redirect to verification, onboarding, or home
   useEffect(() => {
     // Prevent infinite redirect loops
     if (hasRedirected.current) return;
@@ -55,7 +55,10 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       console.log('[Register] User already authenticated, redirecting...');
       hasRedirected.current = true;
       
-      // Check if user needs onboarding
+      if (!nhostUser.emailVerified) {
+        router.push(USER_VERIFICATION);
+        return;
+      }
       if (!user.onboarding_complete) {
         router.push(ONBOARDING_ONE);
       } else {
@@ -160,8 +163,11 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
         // User is created in auth.users by Nhost automatically
         // user_profiles is created by nhostAuthService
         // Nhost session is automatically set
-        
-        // Store onboarding data
+        if (!result.session.user?.emailVerified) {
+          router.push(USER_VERIFICATION);
+          setIsLoading(false);
+          return;
+        }
         const onboardingData = {
           email: result.user.email || email,
           username: username,
@@ -169,7 +175,6 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
           id: result.user.id,
           isPartialRegistration: true,
         };
-        
         localStorage.setItem(REGISTRATION_KEY, JSON.stringify(onboardingData));
         router.push(ONBOARDING_ONE);
       } else {

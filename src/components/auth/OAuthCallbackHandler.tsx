@@ -5,6 +5,7 @@ import { useAuthenticationStatus } from "@nhost/nextjs";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import { USER_VERIFICATION } from "@/constants/pages";
 
 /**
  * OAuth callback handler for Nhost authentication
@@ -88,6 +89,13 @@ export default function OAuthCallbackHandler() {
 
         // nhostUser is available (Nhost auth identity confirmed)
         if (nhostUser) {
+            // Email not verified yet — send to verification page first
+            if (!nhostUser.emailVerified) {
+                clearOAuthState();
+                router.push(USER_VERIFICATION);
+                return;
+            }
+
             // User needs to complete onboarding
             if (!user?.onboarding_complete) {
                 clearOAuthState();

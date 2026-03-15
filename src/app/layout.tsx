@@ -7,6 +7,7 @@ import { FollowProvider } from "@/components/FollowContext";
 import { LocationProvider } from "@/contexts/LocationContext";
 import InactivityLogout from "@/components/common/InactivityLogout";
 import OAuthCallbackHandler from "@/components/auth/OAuthCallbackHandler";
+import VerificationRedirect from "@/components/auth/VerificationRedirect";
 import OnboardingRedirect from "@/components/auth/OnboardingRedirect";
 import BottomNav from "@/components/layout/BottomNav";
 import MobileTopBar from "@/components/layout/MobileTopBar";
@@ -94,6 +95,7 @@ export default function RootLayout({
               <LocationProvider>
                 <SessionWrapper>
                   <OAuthCallbackHandler />
+                  <VerificationRedirect />
                   <OnboardingRedirect />
                   <LanguageProvider>
                     <InactivityLogout />
