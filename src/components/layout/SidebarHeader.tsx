@@ -48,10 +48,11 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       // Continue with logout even if Nhost signout fails
     }
     
-    // Clear all cookies and localStorage
+    // Clear all cookies, localStorage, and sessionStorage
     removeAllCookies();
     localStorage.clear();
     localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
+    sessionStorage.clear();
 
     // Redirect to home
     router.push(HOME);

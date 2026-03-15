@@ -9,7 +9,10 @@ import {
   LANGUAGE_COOKIE_EXPIRY,
   LanguageOption 
 } from '@/constants/languages';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
+
+const MVP_LOCALE_CODES = ['en', 'zh', 'ko'];
 
 interface LanguageContextType {
   selectedLanguage: LanguageOption;
@@ -20,38 +23,32 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Internal provider that uses Firebase session
+// Internal provider that uses Nhost session (auth.users.locale)
 const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useFirebaseSession();
+  const { user } = useNhostSession();
   const [selectedLanguage, setSelectedLanguageState] = useState<LanguageOption>(DEFAULT_LANGUAGE || SUPPORTED_LANGUAGES[0]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Priority: User session > localStorage > cookies > browser > default
+    // Priority: Nhost auth.users.locale (user.language_preference) > localStorage > cookies > browser > default 'en'
     const loadLanguage = async () => {
-      let languageCode = DEFAULT_LANGUAGE?.code || SUPPORTED_LANGUAGES[0].code;
+      let languageCode: string = DEFAULT_LANGUAGE?.code || 'en';
 
       try {
-        // 1. Check user session first (from Hasura user data)
         if (user?.language_preference) {
-          languageCode = user.language_preference;
-        } else {
-          // 2. Check localStorage (only in browser)
-          if (typeof window !== 'undefined') {
-            const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-            if (savedLanguage) {
-              languageCode = savedLanguage;
+          languageCode = MVP_LOCALE_CODES.includes(user.language_preference) ? user.language_preference : 'en';
+        } else if (typeof window !== 'undefined') {
+          const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+          if (savedLanguage && MVP_LOCALE_CODES.includes(savedLanguage)) {
+            languageCode = savedLanguage;
+          } else {
+            const cookieLanguage = Cookies.get(LANGUAGE_COOKIE_KEY);
+            if (cookieLanguage && MVP_LOCALE_CODES.includes(cookieLanguage)) {
+              languageCode = cookieLanguage;
             } else {
-              // 3. Check cookies
-              const cookieLanguage = Cookies.get(LANGUAGE_COOKIE_KEY);
-              if (cookieLanguage) {
-                languageCode = cookieLanguage;
-              } else {
-                // 4. Check browser language
-                const browserLanguage = navigator.language.split('-')[0];
-                if (SUPPORTED_LANGUAGES.some(lang => lang.code === browserLanguage)) {
-                  languageCode = browserLanguage;
-                }
+              const browserLanguage = navigator.language.split('-')[0];
+              if (MVP_LOCALE_CODES.includes(browserLanguage)) {
+                languageCode = browserLanguage;
               }
             }
           }
@@ -74,17 +71,13 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
     setSelectedLanguageState(language);
     
     try {
-      // Save to localStorage and cookies (only in browser)
       if (typeof window !== 'undefined') {
         localStorage.setItem(LANGUAGE_STORAGE_KEY, language.code);
         Cookies.set(LANGUAGE_COOKIE_KEY, language.code, { expires: LANGUAGE_COOKIE_EXPIRY });
-        
-        // Update document language attribute
         document.documentElement.lang = language.locale;
       }
       
-      // Update user language preference if logged in
-      if (user?.id) {
+      if (user?.user_id) {
         updateUserLanguagePreference(language.code);
       }
     } catch (error) {
@@ -93,19 +86,12 @@ const LanguageProviderInternal: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const updateUserLanguagePreference = async (languageCode: string) => {
-    if (!user?.id) return;
-
+    if (!user?.user_id) return;
+    const code = MVP_LOCALE_CODES.includes(languageCode) ? languageCode : 'en';
     try {
-      // Update via your existing user service
-      const { RestaurantUserService } = await import('@/app/api/v1/services/restaurantUserService');
-      const userService = new RestaurantUserService();
-      
-      await userService.updateUser(user.id, {
-        language_preference: languageCode,
+      await restaurantUserService.updateUser(user.user_id, {
+        language_preference: code,
       });
-
-      // Note: Firebase session will automatically update via onAuthStateChanged
-      // when user data is refetched
     } catch (error) {
       console.error('Failed to update user language preference:', error);
     }

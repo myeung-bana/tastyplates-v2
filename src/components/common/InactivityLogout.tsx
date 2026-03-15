@@ -33,9 +33,10 @@ export default function InactivityLogout() {
         // Continue with logout even if Nhost signout fails
       }
       
-      // Clear all cookies and localStorage
+      // Clear all cookies, localStorage, and sessionStorage
       removeAllCookies();
       localStorage.clear();
+      sessionStorage.clear();
       localStorage.removeItem(LAST_ACTIVE_KEY);
       
       // Redirect to home

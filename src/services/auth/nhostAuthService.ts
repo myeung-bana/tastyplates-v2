@@ -478,16 +478,34 @@ class NhostAuthService {
   }
 
   /**
-   * Sign out
+   * Clear session-related keys from sessionStorage so no stale OAuth/onboarding state.
+   * Called on signOut so that after logout the app has a clear "no session" state.
+   */
+  private clearSessionStorageOnLogout(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.removeItem('oauth_pending');
+      sessionStorage.removeItem('oauth_callback_url');
+      sessionStorage.removeItem('post_oauth_redirect');
+      sessionStorage.removeItem('onboarding_just_completed');
+    } catch {
+      // Ignore quota/private mode errors
+    }
+  }
+
+  /**
+   * Sign out from Nhost and clear session-related storage so the session is fully ended.
    */
   async signOut(): Promise<void> {
     if (!this.guardNhost()) return;
     try {
       console.log('[NhostAuth] Signing out');
       await nhost.auth.signOut();
+      this.clearSessionStorageOnLogout();
     } catch (error) {
       console.error('[NhostAuth] Error signing out:', error);
-      // Swallow the error — callers proceed with local cleanup regardless
+      // Still clear session storage so local state is consistent
+      this.clearSessionStorageOnLogout();
     }
   }
 

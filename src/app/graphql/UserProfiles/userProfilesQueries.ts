@@ -206,6 +206,16 @@ export const UPDATE_USER_AVATAR = `
   }
 `;
 
+// UPDATE AUTH USER LOCALE - Updates auth.users.locale (language preference)
+export const UPDATE_USER_LOCALE = `
+  mutation UpdateUserLocale($userId: uuid!, $locale: String) {
+    updateUser(pk_columns: { id: $userId }, _set: { locale: $locale }) {
+      id
+      locale
+    }
+  }
+`;
+
 // Fallback: profiles only (no auth.users relationship). Use when relationship is not exposed.
 export const GET_USER_PROFILES_BY_IDS_BASIC = `
   query GetUserProfilesByIdsBasic($user_ids: [uuid!]!, $limit: Int = 100) {

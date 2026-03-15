@@ -96,14 +96,15 @@ export default function Navbar(props: Record<string, unknown>) {
       // Set logout message BEFORE clearing (will be shown by useEffect)
       localStorage.setItem(LOGOUT_KEY, logOutSuccessfull);
       
-      // Sign out from Nhost
+      // Sign out from Nhost (also clears sessionStorage auth keys inside signOut)
       await nhostAuthService.signOut();
       console.log('[Navbar] Nhost sign out successful');
       
-      // Clear data but preserve logout message
+      // Clear all local data but preserve logout message
       const logoutMsg = localStorage.getItem(LOGOUT_KEY);
       removeAllCookies();
       localStorage.clear();
+      sessionStorage.clear();
       if (logoutMsg) {
         localStorage.setItem(LOGOUT_KEY, logoutMsg);
       }

@@ -12,6 +12,8 @@ interface UserProfile {
   onboarding_complete?: boolean;
   created_at?: string;
   updated_at?: string;
+  /** From auth.users.locale; MVP: 'en' | 'zh' | 'ko', default 'en' */
+  language_preference?: string;
 }
 
 interface NhostUser {
@@ -109,6 +111,7 @@ export function useNhostSession(): NhostSession {
               onboarding_complete: profileData.onboarding_complete,
               created_at: profileData.created_at,
               updated_at: profileData.updated_at,
+              language_preference: profileData.language_preference ?? 'en',
             }
           : null;
 

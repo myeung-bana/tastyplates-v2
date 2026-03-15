@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { UPDATE_USER_PROFILE, UPDATE_USER_AVATAR, GET_USER_PROFILE_BY_ID } from '@/app/graphql/UserProfiles/userProfilesQueries';
+import { UPDATE_USER_PROFILE, UPDATE_USER_AVATAR, UPDATE_USER_LOCALE, GET_USER_PROFILE_BY_ID } from '@/app/graphql/UserProfiles/userProfilesQueries';
 
 export async function PUT(request: NextRequest) {
   try {
@@ -53,6 +53,20 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Update auth.users.locale when language_preference is sent (MVP: en, zh, ko; default 'en')
+    const allowedLocaleCodes = ['en', 'zh', 'ko'];
+    if (updateFields.language_preference !== undefined) {
+      const locale = allowedLocaleCodes.includes(updateFields.language_preference)
+        ? updateFields.language_preference
+        : 'en';
+      const localeResult = await hasuraMutation(UPDATE_USER_LOCALE, { userId: id, locale });
+      if (localeResult.errors) {
+        console.error('[updateUser] Failed to update locale:', localeResult.errors);
+      } else {
+        console.log('[updateUser] locale updated in auth.users');
+      }
+    }
+
     // Update user_profiles table (profile_image lives in auth.users, not here)
     console.log('[updateUser] Updating Nhost user_profiles');
 
@@ -72,15 +86,16 @@ export async function PUT(request: NextRequest) {
     profileChanges.updated_at = new Date().toISOString();
 
     const hasProfileChanges = Object.keys(profileChanges).some(k => k !== 'updated_at');
-    if (!hasProfileChanges && !updateFields.profile_image) {
+    const hasAuthOnlyChanges = !!avatarUrlToSet || updateFields.language_preference !== undefined;
+    if (!hasProfileChanges && !updateFields.profile_image && !hasAuthOnlyChanges) {
       return NextResponse.json(
         { success: false, error: 'No fields to update' },
         { status: 400 }
       );
     }
 
-    // If only the avatar changed, return early with success (no user_profiles mutation needed)
-    if (!hasProfileChanges && updateFields.profile_image) {
+    // If only avatar and/or locale changed (no user_profiles fields), return early after auth updates
+    if (!hasProfileChanges && (updateFields.profile_image || updateFields.language_preference !== undefined)) {
       const userResult = await hasuraQuery(GET_USER_PROFILE_BY_ID, { user_id: id });
       const avatarOnlyProfile = userResult.data?.user_profiles?.[0];
       if (avatarOnlyProfile?.user) {
