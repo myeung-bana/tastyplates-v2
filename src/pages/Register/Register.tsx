@@ -156,7 +156,6 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
       const username = email.split('@')[0];
       const result = await nhostAuthService.registerWithEmail(email, password, {
         username,
-        displayName: username,
       });
       
       if (result.success && result.session && result.user) {

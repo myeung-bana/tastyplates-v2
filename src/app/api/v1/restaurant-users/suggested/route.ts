@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         const formattedUsers = suggestedUsers.map((user) => ({
           id: user.id,
           username: user.username,
-          name: user.display_name || user.username,
+          name: user.username,
           avatar: getProfileImageUrl(user.profile_image),
           reviewCount: user.review_count || 0,
           followerCount: user.follower_count || 0,

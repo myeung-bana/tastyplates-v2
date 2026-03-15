@@ -23,7 +23,8 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
   const router = useRouter();
   const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const [aboutMe, setAboutMe] = useState("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null); // Preview: base64 or URL
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null); // File for upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<(typeof responseStatus)[keyof typeof responseStatus] | null>(null);
@@ -109,12 +110,26 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
         setProfileError(profileImageSizeLimit(imageMBLimit));
         return;
       }
+      setProfileImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const uploadFileToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("/api/v1/upload/image", { method: "POST", body: formData });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Upload failed");
+    }
+    const data = await response.json();
+    if (!data.fileUrl) throw new Error("No file URL returned");
+    return data.fileUrl;
   };
 
   const handleImageClick = () => {
@@ -173,18 +188,17 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
       if (registrationData.username) updateData.username = registrationData.username;
       if (registrationData.language_preference) updateData.language_preference = registrationData.language_preference;
       
-      // Step 2 data (current form)
-      if (profileImage) {
-        // Handle profile image - convert base64 to JSONB format
-        // For now, store as JSONB with url and type
-        // In the future, you might want to upload to storage and use the URL
-        updateData.profile_image = typeof profileImage === 'string' 
-          ? { 
-              url: profileImage, 
-              type: profileImage.startsWith('data:') ? 'base64' : 'url',
-              alt_text: 'Profile picture'
-            }
-          : profileImage;
+      // Step 2 data (current form): upload profile image to S3 then set auth.users.avatarUrl via API
+      if (profileImageFile) {
+        try {
+          const fileUrl = await uploadFileToS3(profileImageFile);
+          updateData.profile_image = fileUrl;
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : "Failed to upload image";
+          toast.error(msg);
+          setIsLoading(false);
+          return;
+        }
       }
       
       if (aboutMe) updateData.about_me = aboutMe;
@@ -243,28 +257,31 @@ const OnboardingStepTwo: React.FC<OnboardingStepTwoProps> = ({ onPrevious, curre
           {/* Avatar section */}
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 overflow-hidden">
-                <div className="w-full h-full flex items-center justify-center">
-                  {profileImage ? (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 overflow-hidden border-2 border-gray-200 shrink-0 ring-1 ring-gray-200/80">
+                {profileImage ? (
+                  <div className="relative w-full h-full">
                     <Image
                       src={profileImage}
                       alt="Profile"
                       fill
                       className={`object-cover ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
                     />
-                  ) : (
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center rounded-full">
                     <svg
-                      width="60"
-                      height="60"
+                      width="48"
+                      height="48"
                       viewBox="0 0 96 94"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
-                      className={`scale-[1.5] translate-y-4 ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                      className={`text-[#31343F] ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                      aria-hidden
                     >
-                      <path d="M48 48C41.4 48 35.75 45.65 31.05 40.95C26.35 36.25 24 30.6 24 24C24 17.4 26.35 11.75 31.05 7.05C35.75 2.35 41.4 0 48 0C54.6 0 60.25 2.35 64.95 7.05C69.65 11.75 72 17.4 72 24C72 30.6 69.65 36.25 64.95 40.95C60.25 45.65 54.6 48 48 48ZM0 84V79.2C0 75.8 0.875 72.675 2.625 69.825C4.375 66.975 6.7 64.8 9.6 63.3C15.8 60.2 22.1 57.875 28.5 56.325C34.9 54.775 41.4 54 48 54C54.6 54 61.1 54.775 67.5 56.325C73.9 57.875 80.2 60.2 86.4 63.3C89.3 64.8 91.625 66.975 93.375 69.825C95.125 72.675 96 75.8 96 79.2V84C96 87.3 94.825 90.125 92.475 92.475C90.125 94.825 87.3 96 84 96H12C8.7 96 5.875 94.825 3.525 92.475C1.175 90.125 0 87.3 0 84Z" fill="#31343F" />
+                      <path d="M48 48C41.4 48 35.75 45.65 31.05 40.95C26.35 36.25 24 30.6 24 24C24 17.4 26.35 11.75 31.05 7.05C35.75 2.35 41.4 0 48 0C54.6 0 60.25 2.35 64.95 7.05C69.65 11.75 72 17.4 72 24C72 30.6 69.65 36.25 64.95 40.95C60.25 45.65 54.6 48 48 48ZM0 84V79.2C0 75.8 0.875 72.675 2.625 69.825C4.375 66.975 6.7 64.8 9.6 63.3C15.8 60.2 22.1 57.875 28.5 56.325C34.9 54.775 41.4 54 48 54C54.6 54 61.1 54.775 67.5 56.325C73.9 57.875 80.2 60.2 86.4 63.3C89.3 64.8 91.625 66.975 93.375 69.825C95.125 72.675 96 75.8 96 79.2V84C96 87.3 94.825 90.125 92.475 92.475C90.125 94.825 87.3 96 84 96H12C8.7 96 5.875 94.825 3.525 92.475C1.175 90.125 0 87.3 0 84Z" fill="currentColor" />
                     </svg>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
               <input
                 type="file"

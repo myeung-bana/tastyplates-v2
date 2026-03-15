@@ -79,7 +79,7 @@ export class FollowService {
       
       return users.map(user => ({
         id: user.id,
-        name: user.display_name || user.username,
+        name: user.username,
         cuisines: Array.isArray(user.palates) ? user.palates : (user.palates?.split('|').map(p => p.trim()).filter(p => p.length > 0) || []),
         image: user.profile_image || user.image || DEFAULT_USER_ICON,
         isFollowing: true,
@@ -103,7 +103,7 @@ export class FollowService {
       
       return users.map(user => ({
         id: user.id,
-        name: user.display_name || user.username,
+        name: user.username,
         cuisines: Array.isArray(user.palates) ? user.palates : (user.palates?.split('|').map(p => p.trim()).filter(p => p.length > 0) || []),
         image: user.profile_image || user.image || DEFAULT_USER_ICON,
         isFollowing: followingList.some(f => f.id === user.id),

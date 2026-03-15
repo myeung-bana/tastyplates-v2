@@ -75,7 +75,7 @@ const RestaurantReviewsViewerModal: React.FC<RestaurantReviewsViewerModalProps> 
     user: {
       id: uuidToNumericId(user.id),
       userId: uuidToNumericId(user.id),
-      name: user.display_name || user.username || "Unknown User",
+      name: user.username || "Unknown User",
       image: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
       palates: typeof user.palates === 'string' 
         ? user.palates 

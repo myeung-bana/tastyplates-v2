@@ -76,7 +76,7 @@ const ProfileSummary: React.FC = () => {
 
   // Extract profile image URL
   const profileImageUrl = getProfileImageUrl(userData?.profile_image);
-  const displayName = (userData?.display_name as string) || (userData?.username as string) || (user?.username as string) || 'User';
+  const displayName = (userData?.username as string) || (user?.username as string) || 'User';
 
   // Show loading state
   if (profileLoading || reviewCountLoading) {

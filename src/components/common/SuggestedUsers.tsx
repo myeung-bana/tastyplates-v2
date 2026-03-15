@@ -67,13 +67,13 @@ const SuggestedUsers: React.FC<SuggestedUsersProps> = ({ users, onUserFollowed }
                 <div className="relative w-16 h-16 mx-auto mb-3">
                   <Image
                     src={user.avatar || '/default-avatar.png'}
-                    alt={user.display_name}
+                    alt={user.username || (user as any).name}
                     fill
                     className="rounded-full object-cover"
                   />
                 </div>
                 <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate">
-                  {user.display_name}
+                  {user.username || (user as any).name}
                 </h3>
                 <p className="text-xs text-gray-500 mb-2">@{user.username}</p>
                 

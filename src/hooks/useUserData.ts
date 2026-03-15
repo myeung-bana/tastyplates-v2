@@ -109,7 +109,7 @@ export const useUserData = (userId: string | undefined): UseUserDataReturn => {
           
           const user: UserData = {
             id: response.data.id,
-            display_name: response.data.display_name || response.data.username || 'Unknown User',
+            display_name: response.data.username || 'Unknown User',
             username: response.data.username || 'Unknown User',
             profile_image: profileImageUrl,
           };

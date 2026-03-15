@@ -238,7 +238,7 @@ export function transformReviewV2ToReviewedDataProps(review: ReviewV2): Reviewed
   }));
 
   // Get author info - prioritize Nhost avatarUrl (direct URL)
-  const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+  const authorName = review.author?.username || 'Unknown User';
   const authorAvatar = review.author?.profile_image 
     ? (typeof review.author.profile_image === 'string' 
         ? review.author.profile_image 
@@ -334,7 +334,7 @@ export function transformReviewV2ToGraphQLReview(review: ReviewV2, restaurantDat
   // Get author info - ensure we have all required fields
   // Use author_id from review as primary source, fallback to author.id
   const authorId = review.author_id || review.author?.id || '';
-  const authorName = review.author?.display_name || review.author?.username || 'Unknown User';
+  const authorName = review.author?.username || 'Unknown User';
   const authorUsername = review.author?.username || '';
   const authorAvatar = review.author?.profile_image 
     ? (getProfileImageUrl(review.author.profile_image) || DEFAULT_USER_ICON)

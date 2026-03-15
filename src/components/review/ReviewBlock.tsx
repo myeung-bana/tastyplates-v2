@@ -401,7 +401,7 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   // Use fetched data as fallback if review data is incomplete
   const displayName = review.user && review.user !== "Unknown User" 
     ? review.user 
-    : (fetchedUserData?.display_name || "Unknown User");
+    : (fetchedUserData?.username || "Unknown User");
 
   const displayImage = review.userImage && review.userImage !== DEFAULT_USER_ICON
     ? review.userImage

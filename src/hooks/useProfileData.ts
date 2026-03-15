@@ -107,8 +107,9 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
           const mappedUser = {
             id: response.data.id,
             username: response.data.username,
-            display_name: response.data.display_name || response.data.username,
+            display_name: response.data.username,
             email: response.data.email,
+            avatarUrl: response.data.avatarUrl ?? null,
             about_me: response.data.about_me,
             palates: response.data.palates,
             profile_image: response.data.profile_image,

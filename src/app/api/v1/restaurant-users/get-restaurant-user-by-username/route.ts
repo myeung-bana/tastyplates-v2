@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
       
       // From auth.users table (via relationship)
       email: profile.user?.email,
-      display_name: profile.user?.displayName,
-      displayName: profile.user?.displayName,
+      display_name: profile.username,
+      displayName: profile.username,
       avatarUrl: profile.user?.avatarUrl,
       profile_image: profile.user?.avatarUrl, // Compatibility mapping
       emailVerified: profile.user?.emailVerified,

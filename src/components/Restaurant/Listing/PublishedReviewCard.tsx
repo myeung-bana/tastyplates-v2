@@ -39,7 +39,7 @@ const PublishedReviewCard = ({ review }: PublishedReviewCardProps) => {
   };
 
   // Get author name
-  const authorName = review.author?.display_name || review.author?.username || "Unknown User";
+  const authorName = review.author?.username || "Unknown User";
   const authorAvatar = review.author?.profile_image 
     ? (typeof review.author.profile_image === 'string' 
         ? review.author.profile_image 

@@ -56,11 +56,12 @@ export async function GET(request: NextRequest) {
       firebase_uuid: user.id, // Use Nhost user ID as firebase_uuid for compatibility
       username: profileData.username,
       email: user.email,
-      display_name: user.displayName || profileData.username,
+      display_name: profileData.username,
       user_nicename: profileData.username,
       is_google_user: user.metadata?.provider === 'google' || false,
       google_auth: user.metadata?.provider === 'google' || false,
       auth_method: user.metadata?.provider || 'password',
+      avatarUrl: user.avatarUrl ?? null,
       profile_image: user.avatarUrl ? { url: user.avatarUrl } : null,
       about_me: profileData.about_me,
       birthdate: profileData.birthdate,

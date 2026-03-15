@@ -18,7 +18,7 @@ import { useNhostSession } from "@/hooks/useNhostSession";
 import { useCuisines } from "@/hooks/useCuisines";
 import {
   birthdateRequired,
-  birthdateLimit,
+  birthdateInvalid,
   genderRequired,
   palateMaxLimit,
   usernameCheckError,
@@ -34,9 +34,9 @@ import {
   usernameNoConsecutiveSpecial,
   palateRequired,
 } from "@/constants/messages";
-import { ageLimit, palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
+import { palateLimit, userNameMaxLimit, userNameMinLimit } from "@/constants/validation";
 import CustomDatePicker from "@/components/common/CustomDatepicker";
-import { formatDateForInput, validateUsername } from "@/lib/utils";
+import { formatDateForInput, validateUsername, generateDefaultUsername } from "@/lib/utils";
 import { REGISTRATION_KEY } from "@/constants/session";
 import OnboardingStepIndicator from "@/components/onboarding/OnboardingStepIndicator";
 import { findCuisineOptionByKey, getCuisineKey } from "@/utils/cuisineUtils";
@@ -104,7 +104,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
             } else if (parsedData.username) {
               setName(parsedData.username);
             } else {
-              setName(Cookies.get('username') || "");
+              setName(Cookies.get('username') || generateDefaultUsername());
             }
 
             if (!parsedData.birthdate && userData.birthdate) {
@@ -180,7 +180,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
           console.log('[OnboardingStepOne] User profile may not exist yet - this is normal for new Nhost users');
           // Fall back to localStorage/cookies if API fails
           if (parsedData.username) setName(parsedData.username);
-          else setName(Cookies.get('username') || "");
+          else setName(Cookies.get('username') || generateDefaultUsername());
           if (parsedData.birthdate) setBirthdate(parsedData.birthdate);
           if (parsedData.gender) setGender(parsedData.gender);
           if (parsedData.customGender) setCustomGender(parsedData.customGender);
@@ -195,7 +195,7 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
       } else {
         // No session, use localStorage/cookies only
         if (parsedData.username) setName(parsedData.username);
-        else setName(Cookies.get('username') || "");
+        else setName(Cookies.get('username') || generateDefaultUsername());
         if (parsedData.birthdate) setBirthdate(parsedData.birthdate);
         if (parsedData.gender) setGender(parsedData.gender);
         if (parsedData.customGender) setCustomGender(parsedData.customGender);
@@ -308,23 +308,16 @@ const OnboardingStepOne: React.FC<OnboardingStepOneProps> = ({ onNext, currentSt
         return;
       }
 
-      // Birthdate validation
+      // Birthdate validation (required + valid date only; no age minimum)
       if (!birthdate) {
         setBirthdateError(birthdateRequired);
         setIsLoading(false);
         return;
       }
 
-      // Age validation
       const birth = new Date(birthdate);
-      const today = new Date();
-      const age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      const isBirthdayPassed = m > 0 || (m === 0 && today.getDate() >= birth.getDate());
-      const actualAge = isBirthdayPassed ? age : age - 1;
-      
-      if (isNaN(birth.getTime()) || actualAge < ageLimit) {
-        setBirthdateError(birthdateLimit(ageLimit));
+      if (isNaN(birth.getTime())) {
+        setBirthdateError(birthdateInvalid);
         setIsLoading(false);
         return;
       }

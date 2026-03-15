@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         return {
           id: user.id,
           username: user.username, // Include username for profile URLs
-          name: user.display_name || user.username,
+          name: user.username,
           cuisines: getPalatesArray(user.palates),
           image: getProfileImageUrl(user.profile_image),
           isFollowing: false // Will be determined by checking current user's following list if needed

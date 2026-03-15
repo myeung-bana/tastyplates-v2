@@ -74,6 +74,22 @@ export function formatDateForInput(dateString: string): string {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+/**
+ * Generate a default username like user_xxxxxxxx to avoid overlap.
+ * Uses crypto.getRandomValues when available for safer randomness.
+ */
+export function generateDefaultUsername(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let suffix = '';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const randomValues = crypto.getRandomValues(new Uint8Array(8));
+    for (let i = 0; i < 8; i++) suffix += chars[randomValues[i] % chars.length];
+  } else {
+    for (let i = 0; i < 8; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `user_${suffix}`;
+}
+
 export function capitalizeWords(str: string): string {
   return str
     .trim()

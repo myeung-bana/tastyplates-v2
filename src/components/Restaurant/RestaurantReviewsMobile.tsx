@@ -44,7 +44,7 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
     user: {
       id: uuidToNumericId(user.id),
       userId: uuidToNumericId(user.id),
-      name: user.display_name || user.username || "Unknown User",
+      name: user.username || "Unknown User",
       image: (() => {
         if (!user.profile_image) return DEFAULT_USER_ICON;
         if (typeof user.profile_image === 'string') return user.profile_image;

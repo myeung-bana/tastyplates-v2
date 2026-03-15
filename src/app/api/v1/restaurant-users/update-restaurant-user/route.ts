@@ -29,16 +29,25 @@ export async function PUT(request: NextRequest) {
 
     console.log('[updateUser] User found in user_profiles - updating');
 
-    // Update auth.users.avatarUrl via Hasura mutation (consistent with all other DB ops)
-    if (updateFields.profile_image) {
+    // Update auth.users.avatarUrl only when we have a proper URL (never base64 or invalid)
+    let avatarUrlToSet: string | null = null;
+    if (typeof updateFields.profile_image === 'string' && updateFields.profile_image.startsWith('http')) {
+      avatarUrlToSet = updateFields.profile_image;
+    } else if (
+      updateFields.profile_image &&
+      typeof updateFields.profile_image === 'object' &&
+      typeof (updateFields.profile_image as { url?: string }).url === 'string' &&
+      (updateFields.profile_image as { url: string }).url.startsWith('http')
+    ) {
+      avatarUrlToSet = (updateFields.profile_image as { url: string }).url;
+    }
+    if (avatarUrlToSet) {
       const avatarResult = await hasuraMutation(UPDATE_USER_AVATAR, {
         userId: id,
-        avatarUrl: updateFields.profile_image,
+        avatarUrl: avatarUrlToSet,
       });
-
       if (avatarResult.errors) {
         console.error('[updateUser] Failed to update avatarUrl:', avatarResult.errors);
-        // Non-fatal: continue to update user_profiles fields
       } else {
         console.log('[updateUser] avatarUrl updated in auth.users');
       }
@@ -83,7 +92,7 @@ export async function PUT(request: NextRequest) {
             firebase_uuid: authUser.id,
             username: profileData.username,
             email: authUser.email,
-            display_name: authUser.displayName || profileData.username,
+            display_name: profileData.username,
             about_me: profileData.about_me,
             birthdate: profileData.birthdate,
             gender: profileData.gender,
@@ -135,7 +144,7 @@ export async function PUT(request: NextRequest) {
         firebase_uuid: user.id,
         username: profileData.username,
         email: user.email,
-        display_name: user.displayName || profileData.username,
+        display_name: profileData.username,
         about_me: profileData.about_me,
         birthdate: profileData.birthdate,
         gender: profileData.gender,

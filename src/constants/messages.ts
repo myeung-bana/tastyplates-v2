@@ -13,6 +13,7 @@ export const usernameCannotEndWithSpecial = "Username cannot end with an undersc
 export const usernameCannotBeAllNumbers = "Username cannot be all numbers.";
 export const usernameNoConsecutiveSpecial = "Username cannot contain consecutive underscores or hyphens.";
 export const birthdateLimit = (age: number) => `Birthdate must be at least ${age} years old.`;
+export const birthdateInvalid = "Please enter a valid date of birth.";
 export const profileImageSizeLimit = (size: number) => `Profile image must be less than ${size}MB`;
 export const textLimit = (limit: number) => `The text must be ${limit} characters or less.`;
 export const passwordLimit = (limit: number, label: string = 'Password') => `${label} must be at least ${limit} characters.`;

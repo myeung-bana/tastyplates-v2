@@ -665,7 +665,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     setIsSubmittingComment(true);
 
     // Optimistically add reply at the top
-    const userName = nhostUser?.displayName || user?.username || nhostUser?.email?.split('@')[0] || "You";
+    const userName = user?.username || nhostUser?.email?.split('@')[0] || "You";
     
     // Create proper ISO timestamp for optimistic reply
     const now = new Date();

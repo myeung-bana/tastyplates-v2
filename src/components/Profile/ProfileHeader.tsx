@@ -83,7 +83,7 @@ const getPalatesArray = (palates: any): string[] => {
 // Helper function to get display name
 const getDisplayName = (userData: Record<string, unknown> | null): string => {
   if (!userData) return '';
-  return (userData.display_name as string) || (userData.username as string) || '';
+  return (userData.username as string) || '';
 };
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -117,7 +117,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   // Share profile handler
   const handleShareProfile = async () => {
-    const username = userData?.username || userData?.display_name || '';
+    const username = userData?.username || '';
     const profileUrl = `${window.location.origin}/profile/${username}`;
     
     // Check if Web Share API is available
@@ -155,11 +155,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex-shrink-0">
           <FallbackImage
             src={
-              // When viewing own profile: nhostUser.avatarUrl is most up-to-date (post-update)
-              // When viewing another user's profile: use their userData.profile_image (from auth.users.avatarUrl)
-              (isViewingOwnProfile && nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '')
+              (isViewingOwnProfile && nhostUser?.avatarUrl?.trim())
                 ? nhostUser.avatarUrl
-                : profileImageUrl ||
+                : (userData?.avatarUrl?.trim() ? userData.avatarUrl : profileImageUrl) ||
                   (isViewingOwnProfile && currentUser?.profile_image ? getProfileImageUrl(currentUser.profile_image) : null) ||
                   DEFAULT_USER_ICON
             }

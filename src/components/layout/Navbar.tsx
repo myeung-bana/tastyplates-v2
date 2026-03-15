@@ -69,7 +69,7 @@ export default function Navbar(props: Record<string, unknown>) {
       console.log('[Navbar] Nhost session ready:', {
         userId: user?.user_id ?? nhostUser.id,
         email: nhostUser.email,
-        displayName: nhostUser.displayName,
+        username: user?.username,
         avatarUrl: nhostUser.avatarUrl,
       });
     } else if (!loading && !authReady) {
@@ -372,12 +372,10 @@ export default function Navbar(props: Record<string, unknown>) {
                       <div className="w-9 h-9 rounded-full overflow-hidden">
                         <FallbackImage
                           src={
-                            // Priority order: Nhost avatarUrl > custom profile_image > default
-                            (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
-                            getProfileImageUrl(userData?.profile_image) ||
+                            (nhostUser?.avatarUrl?.trim() ? nhostUser.avatarUrl : userData?.avatarUrl?.trim() ? userData.avatarUrl : getProfileImageUrl(userData?.profile_image)) ||
                             DEFAULT_USER_ICON
                           }
-                          alt={nhostUser?.displayName || user?.username || "Profile"}
+                          alt={user?.username || "Profile"}
                           width={36}
                           height={36}
                           className="w-full h-full object-cover rounded-full"

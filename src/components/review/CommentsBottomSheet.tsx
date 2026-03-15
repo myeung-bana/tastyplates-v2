@@ -69,7 +69,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     user: {
       id: user.id,
       userId: user.id,
-      name: user.display_name || user.username || "Unknown User",
+      name: user.username || "Unknown User",
       image: getProfileImageUrl(user.profile_image) || DEFAULT_USER_ICON,
       palates: typeof user.palates === 'string' 
         ? user.palates 
@@ -342,7 +342,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     }
 
     setIsLoading(true);
-    const userName = user?.username || nhostUser?.displayName || nhostUser?.email?.split('@')[0] || "You";
+    const userName = user?.username || nhostUser?.email?.split('@')[0] || "You";
     const avatarUrl = nhostUser?.avatarUrl || getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON;
     const now = new Date();
     const isoDate = now.toISOString();
