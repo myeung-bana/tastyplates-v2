@@ -607,7 +607,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
               >
                 Sign in
               </button>
-              {" "}to add a comment
+              {" "}to like or comment
             </p>
           </div>
         )}

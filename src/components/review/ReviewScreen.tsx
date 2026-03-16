@@ -19,6 +19,8 @@ import CommentsBottomSheet from "@/components/review/CommentsBottomSheet";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import PalateTags from "../ui/PalateTags/PalateTags";
+import { useFollowContext } from "../FollowContext";
+import { FollowButton } from "@/components/ui/follow-button";
 import "@/styles/components/_review-screen.scss";
 
 interface ReviewScreenProps {
@@ -67,6 +69,11 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   const CACHE_TTL = 30000; // 30s
   /** Pending like toggles: prevents double-tap and shows disabled state */
   const [likePendingIds, setLikePendingIds] = useState<Set<string>>(new Set());
+  const { setFollowState, getFollowState } = useFollowContext();
+  const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
+  const followInFlightRef = useRef(false);
+  const followCheckCacheRef = useRef<Record<number, { isFollowing: boolean; ts: number }>>({});
+  const FOLLOW_CACHE_MS = 5 * 60 * 1000;
 
   // Used to re-bind observers when the *windowed* review list changes (not just its length).
   const reviewsKey = useMemo(
@@ -163,6 +170,67 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }, 0);
     return () => clearTimeout(t);
   }, [isOpen, initialIndex, reviews, user, getUserUuid, getNhostToken]);
+
+  // Follow state for active + adjacent reviews: seed from context/cache, then background fetch
+  useEffect(() => {
+    if (!isOpen || !user || reviews.length === 0) return;
+
+    const currentUserIdString = nhostUser?.id != null ? String(nhostUser.id) : "";
+
+    const syncFollowForReview = (review: GraphQLReview) => {
+      if (!review?.author?.node?.databaseId) return;
+      const authorDatabaseId = review.author.node.databaseId;
+      const authorUserIdRaw = review.userId ?? review.author?.node?.id ?? "";
+      const authorUserId = typeof authorUserIdRaw === "string" ? authorUserIdRaw : String(authorUserIdRaw ?? "");
+      const isUUID = authorUserId.length > 0 && UUID_REGEX.test(authorUserId);
+      if (!isUUID) {
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: false }));
+        return;
+      }
+      if (currentUserIdString && authorUserId === currentUserIdString) {
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: false }));
+        return;
+      }
+
+      const fromContext = getFollowState(authorDatabaseId);
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: fromContext }));
+
+      const cached = followCheckCacheRef.current[authorDatabaseId];
+      if (cached && Date.now() - cached.ts < FOLLOW_CACHE_MS) {
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: cached.isFollowing }));
+        setFollowState(authorDatabaseId, cached.isFollowing);
+        return;
+      }
+
+      getNhostToken().then(async (token) => {
+        if (!token) return;
+        try {
+          const response = await fetch("/api/v1/restaurant-users/check-follow-status", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ user_id: authorUserId }),
+          });
+          const result = await response.json();
+          const isFollowingValue = result.success && !!result.is_following;
+          setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingValue }));
+          setFollowState(authorDatabaseId, isFollowingValue);
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingValue, ts: Date.now() };
+        } catch (err) {
+          console.error("Error fetching follow state:", err);
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: fromContext, ts: Date.now() };
+        }
+      });
+    };
+
+    const indices = [activeIndex, activeIndex - 1, activeIndex + 1].filter((i) => i >= 0 && i < reviews.length);
+    indices.forEach((i) => {
+      const r = reviews[i];
+      if (r) syncFollowForReview(r);
+    });
+  }, [activeIndex, isOpen, user, reviews, setFollowState, getFollowState, getNhostToken, nhostUser?.id]);
 
   // Helper function to fetch first comment for a review
   const fetchFirstCommentForReview = useCallback(async (reviewId: string, databaseId: number) => {
@@ -457,6 +525,78 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken]);
 
+  const handleFollowToggle = useCallback(
+    async (review: GraphQLReview, isFollowingState: boolean) => {
+      if (followInFlightRef.current) return;
+      if (!user) {
+        toast.error("Please sign in to follow users");
+        return;
+      }
+      if (!review?.author?.node?.databaseId) {
+        toast.error("Unable to follow this user");
+        return;
+      }
+      const authorDatabaseId = review.author.node.databaseId;
+      const authorUserIdRaw = review.userId ?? review.author?.node?.id ?? "";
+      const authorUserId = typeof authorUserIdRaw === "string" ? authorUserIdRaw : String(authorUserIdRaw ?? "");
+      const isUUID = authorUserId.length > 0 && UUID_REGEX.test(authorUserId);
+      if (!isUUID) {
+        toast.error("Follow requires a valid user. Please refresh.");
+        return;
+      }
+      const currentUserIdString = nhostUser?.id != null ? String(nhostUser.id) : "";
+      if (currentUserIdString && authorUserId === currentUserIdString) return;
+
+      const newFollowState = !isFollowingState;
+      followInFlightRef.current = true;
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: newFollowState }));
+      setFollowState(authorDatabaseId, newFollowState);
+
+      try {
+        const token = await getNhostToken();
+        if (!token) {
+          toast.error("Authentication required");
+          setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+          setFollowState(authorDatabaseId, isFollowingState);
+          return;
+        }
+        const endpoint = isFollowingState
+          ? "/api/v1/restaurant-users/unfollow"
+          : "/api/v1/restaurant-users/follow";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ user_id: authorUserId }),
+        });
+        if (!response.ok) {
+          const errorData: { error?: string } = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to update follow");
+        }
+        const result = await response.json();
+        if (result.success) {
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: newFollowState, ts: Date.now() };
+        } else {
+          setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+          setFollowState(authorDatabaseId, isFollowingState);
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingState, ts: Date.now() };
+          toast.error(result.error || "Failed to update follow");
+        }
+      } catch (error) {
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+        setFollowState(authorDatabaseId, isFollowingState);
+        followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingState, ts: Date.now() };
+        console.error("Follow/unfollow error:", error);
+        toast.error("Failed to update follow");
+      } finally {
+        followInFlightRef.current = false;
+      }
+    },
+    [user, setFollowState, getNhostToken, nhostUser?.id]
+  );
+
   // Handle comment/reply like - Same pattern as review likes
   const handleCommentLike = useCallback(
     async (reply: GraphQLReview) => {
@@ -675,11 +815,23 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
                             </Link>
                           )}
                         </div>
-                        {review.date && (
-                          <span className="review-screen__timestamp">
-                            {formatRelativeTime(review.date)}
-                          </span>
-                        )}
+                        <div className="review-screen__user-header-right">
+                          {nhostUser?.id &&
+                            review.author?.node?.databaseId &&
+                            String(nhostUser.id) !== String(review.author.node.id) &&
+                            String(nhostUser.id) !== String(review.author.node.databaseId) && (
+                              <FollowButton
+                                isFollowing={isFollowing[review.author.node.databaseId] ?? false}
+                                onToggle={(isFollowingState) => handleFollowToggle(review, isFollowingState)}
+                                size="sm"
+                              />
+                            )}
+                          {review.date && (
+                            <span className="review-screen__timestamp">
+                              {formatRelativeTime(review.date)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

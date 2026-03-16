@@ -54,7 +54,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   onClose,
 }) => {
   const { user, nhostUser } = useNhostSession();
-  const { setFollowState } = useFollowContext();
+  const { setFollowState, getFollowState } = useFollowContext();
   
   // Cache UUID regex (performance optimization)
   const UUID_REGEX = useMemo(() => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, []);
@@ -84,6 +84,9 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const [cooldown, setCooldown] = useState(0);
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const [isFollowing, setIsFollowing] = useState<Record<number, boolean>>({});
+  const followInFlightRef = useRef(false);
+  const followCheckCacheRef = useRef<Record<number, { isFollowing: boolean; ts: number }>>({});
+  const FOLLOW_CACHE_MS = 5 * 60 * 1000; // 5 min
   // Comment like state (similar to review likes)
   const [replyLikes, setReplyLikes] = useState<Record<string, number>>({});
   const [replyUserLiked, setReplyUserLiked] = useState<Record<string, boolean>>({});
@@ -234,61 +237,65 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     };
   }, [isOpen, initialIndex]);
 
-  // Check follow state when review changes
+  // Follow state: seed from context/cache first (instant), then fetch in background
   useEffect(() => {
     if (!isOpen || !user) return;
-    
+
     const review = reviews[currentIndex];
     if (!review?.author?.node?.databaseId) return;
 
-    // Try to get UUID from review.userId first, then fall back to databaseId
-    const authorUserId = review.userId || review.author?.node?.databaseId;
+    const authorDatabaseId = review.author.node.databaseId;
+    const authorUserIdRaw = review.userId ?? review.author?.node?.id ?? "";
+    const authorUserId = typeof authorUserIdRaw === "string" ? authorUserIdRaw : String(authorUserIdRaw ?? "");
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isUUID = typeof authorUserId === 'string' && UUID_REGEX.test(authorUserId);
-    
-    // Skip follow check if we don't have a UUID (legacy numeric IDs)
+    const isUUID = authorUserId.length > 0 && UUID_REGEX.test(authorUserId);
+
     if (!isUUID) {
-      setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: false }));
       return;
     }
-    
-    const currentUserId = nhostUser?.id;
-    const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
 
-    // Don't check follow state for own profile
+    const currentUserIdString = nhostUser?.id != null ? String(nhostUser.id) : "";
     if (currentUserIdString && authorUserId === currentUserIdString) {
-      setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: false }));
       return;
     }
 
-    // Fetch follow state for current review using new API v1 endpoint
+    // 1) Instant: seed from context (we may have already followed in this session)
+    const fromContext = getFollowState(authorDatabaseId);
+    setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: fromContext }));
+
+    // 2) Use cache if fresh to avoid re-fetch when switching back to same author
+    const cached = followCheckCacheRef.current[authorDatabaseId];
+    if (cached && Date.now() - cached.ts < FOLLOW_CACHE_MS) {
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: cached.isFollowing }));
+      setFollowState(authorDatabaseId, cached.isFollowing);
+      return;
+    }
+
+    // 3) Background fetch to confirm
     getNhostToken().then(async (token) => {
       if (!token) return;
-      
       try {
-        // Use new Hasura API endpoint for UUIDs
-        const response = await fetch('/api/v1/restaurant-users/check-follow-status', {
-          method: 'POST',
+        const response = await fetch("/api/v1/restaurant-users/check-follow-status", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ user_id: authorUserId })
+          body: JSON.stringify({ user_id: authorUserId }),
         });
-        
         const result = await response.json();
-        if (result.success) {
-          setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: !!result.is_following }));
-          setFollowState(review.author.node.databaseId, !!result.is_following);
-        } else {
-          setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
-        }
+        const isFollowingValue = result.success && !!result.is_following;
+        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingValue }));
+        setFollowState(authorDatabaseId, isFollowingValue);
+        followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingValue, ts: Date.now() };
       } catch (err) {
         console.error("Error fetching follow state:", err);
-        setIsFollowing((prev) => ({ ...prev, [review.author.node.databaseId]: false }));
+        followCheckCacheRef.current[authorDatabaseId] = { isFollowing: fromContext, ts: Date.now() };
       }
     });
-  }, [currentIndex, isOpen, user, reviews, setFollowState, getNhostToken]);
+  }, [currentIndex, isOpen, user, reviews, setFollowState, getFollowState, getNhostToken]);
 
   // Fetch comment counts only for visible reviews
   useEffect(() => {
@@ -471,93 +478,90 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     [reviews, currentIndex]
   );
 
-  // Handle follow/unfollow - Optimistic UI updates for instant feel (like the like button)
-  const handleFollowToggle = useCallback(async (isFollowingState: boolean) => {
-    if (!user) {
-      setIsShowSignin(true);
-      return;
-    }
-
-    const review = reviews[currentIndex];
-    if (!review?.author?.node?.databaseId) {
-      toast.error(authorIdMissing);
-      return;
-    }
-
-    // Try to get UUID from review.userId first, then fall back to databaseId
-    const authorUserId = review.userId || review.author?.node?.databaseId;
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isUUID = typeof authorUserId === 'string' && UUID_REGEX.test(authorUserId);
-    
-    // Skip follow/unfollow if we don't have a UUID (legacy numeric IDs)
-    if (!isUUID) {
-      toast.error("Follow functionality requires user UUID. Please refresh the page.");
-      return;
-    }
-    
-    const currentUserId = nhostUser?.id;
-    const currentUserIdString = typeof currentUserId === 'string' ? currentUserId : String(currentUserId);
-
-    // Don't allow following yourself
-    if (currentUserIdString && authorUserId === currentUserIdString) {
-      return;
-    }
-
-    const authorDatabaseId = review.author.node.databaseId;
-    const newFollowState = !isFollowingState;
-    
-    // Optimistic update - change UI immediately
-    setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: newFollowState }));
-    setFollowState(authorDatabaseId, newFollowState);
-    
-    try {
-      const token = await getNhostToken();
-      if (!token) {
-        toast.error("Authentication required");
-        // Revert on error
-        setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
-        setFollowState(authorDatabaseId, isFollowingState);
+  // Handle follow/unfollow - Optimistic UI, no success toast (seamless like like button)
+  const handleFollowToggle = useCallback(
+    async (isFollowingState: boolean) => {
+      if (followInFlightRef.current) return;
+      if (!user) {
+        setIsShowSignin(true);
         return;
       }
-      
-      // Use new Hasura API endpoints for UUIDs
-      const endpoint = isFollowingState
-        ? '/api/v1/restaurant-users/unfollow'
-        : '/api/v1/restaurant-users/follow';
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ user_id: authorUserId })
-      });
-      
-      if (!response.ok) {
-        const errorData: { error?: string } = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to ${isFollowingState ? 'unfollow' : 'follow'} user`);
+
+      const review = reviews[currentIndex];
+      if (!review?.author?.node?.databaseId) {
+        toast.error(authorIdMissing);
+        return;
       }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Confirm the state (usually matches optimistic update)
-        toast.success(newFollowState ? "Following user!" : "Unfollowed user!");
-      } else {
-        // Revert on API error
+
+      // API requires author's UUID; use userId (set by transformer) or author.node.id (never databaseId - it's numeric)
+      const authorUserIdRaw = review.userId ?? review.author?.node?.id ?? "";
+      const authorUserId = typeof authorUserIdRaw === "string" ? authorUserIdRaw : String(authorUserIdRaw ?? "");
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = authorUserId.length > 0 && UUID_REGEX.test(authorUserId);
+
+      if (!isUUID) {
+        toast.error("Follow functionality requires user UUID. Please refresh the page.");
+        return;
+      }
+
+      const currentUserIdString = nhostUser?.id != null ? String(nhostUser.id) : "";
+      if (currentUserIdString && authorUserId === currentUserIdString) return;
+
+      const authorDatabaseId = review.author.node.databaseId;
+      const newFollowState = !isFollowingState;
+
+      followInFlightRef.current = true;
+      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: newFollowState }));
+      setFollowState(authorDatabaseId, newFollowState);
+
+      try {
+        const token = await getNhostToken();
+        if (!token) {
+          toast.error("Authentication required");
+          setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+          setFollowState(authorDatabaseId, isFollowingState);
+          return;
+        }
+
+        const endpoint = isFollowingState
+          ? "/api/v1/restaurant-users/unfollow"
+          : "/api/v1/restaurant-users/follow";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ user_id: authorUserId }),
+        });
+
+        if (!response.ok) {
+          const errorData: { error?: string } = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to ${isFollowingState ? "unfollow" : "follow"} user`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: newFollowState, ts: Date.now() };
+          // No success toast - seamless like like button
+        } else {
+          setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
+          setFollowState(authorDatabaseId, isFollowingState);
+          followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingState, ts: Date.now() };
+          toast.error(result.error || errorOccurred);
+        }
+      } catch (error) {
         setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
         setFollowState(authorDatabaseId, isFollowingState);
-        toast.error(result.error || errorOccurred);
+        followCheckCacheRef.current[authorDatabaseId] = { isFollowing: isFollowingState, ts: Date.now() };
+        console.error("Follow/unfollow error:", error);
+        toast.error(errorOccurred);
+      } finally {
+        followInFlightRef.current = false;
       }
-    } catch (error) {
-      // Revert on error
-      setIsFollowing((prev) => ({ ...prev, [authorDatabaseId]: isFollowingState }));
-      setFollowState(authorDatabaseId, isFollowingState);
-      console.error("Follow/unfollow error:", error);
-      toast.error(errorOccurred);
-    }
-  }, [user, currentIndex, reviews, setFollowState, getNhostToken]);
+    },
+    [user, currentIndex, reviews, setFollowState, getNhostToken, nhostUser?.id]
+  );
 
   // Navigate between reviews
   const navigateReview = useCallback((direction: "up" | "down") => {
@@ -1185,7 +1189,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
                       >
                         Sign in
                       </button>
-                      {" "}to add a comment
+                      {" "}to like or comment
                     </p>
                   </div>
                 )}
