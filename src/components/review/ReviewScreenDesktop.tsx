@@ -1111,8 +1111,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
               <button
                 className="review-screen-desktop__action-btn"
                 onClick={() => reviewLike.toggleLike()}
-                disabled={reviewLike.isLoading}
-                aria-busy={reviewLike.isLoading}
+                type="button"
               >
                 {reviewLike.isLiked ? (
                   <AiFillHeart className="w-6 h-6 text-red-500" />

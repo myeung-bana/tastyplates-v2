@@ -794,8 +794,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
                     <button
                       className="review-screen__action-btn"
                       onClick={() => handleLike(review)}
-                      disabled={likePendingIds.has(review.id || String(review.databaseId))}
-                      aria-busy={likePendingIds.has(review.id || String(review.databaseId))}
+                      type="button"
                     >
                       {reviewIsLiked ? (
                         <AiFillHeart className="w-6 h-6 text-red-500" />

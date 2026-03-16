@@ -10,8 +10,8 @@ import { rateLimitOrThrow, likeRateLimit } from '@/lib/redis-ratelimit';
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Future: reduce latency by using one Postgres function (check + insert/delete + update likes_count)
-// in a single transaction instead of 2–3 Hasura round-trips. See documentation/enhancements/like-button-review-enhancements.md.
+// Priority 4 (like-button-review-enhancements): minimize round-trips.
+// We do 2 round-trips: (1) check + read count, (2) insert/delete. Count is computed from before + action (no 3rd read).
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,66 +112,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read likes_count from denormalized field (trigger automatically updated it)
-    // Performance: O(1) index lookup vs O(n) aggregate scan - ~95% faster!
-    // The trigger update_review_likes_count() automatically maintains this field
-    const countQuery = await hasuraQuery(
-      `query GetReviewLikesCount($reviewId: uuid!) {
-        restaurant_reviews_by_pk(id: $reviewId) {
-          likes_count
-        }
-      }`,
-      { reviewId: review_id }
-    );
-
-    if (countQuery.errors) {
-      console.error('Error fetching likes count:', countQuery.errors);
-    }
-
-    let likesCount = countQuery.data?.restaurant_reviews_by_pk?.likes_count ?? 0;
-
-    // Fallback: if likes_count didn't change after a successful toggle, triggers are likely not running.
-    // In that case, compute aggregate count ONCE and self-heal likes_count for future fast reads.
+    // Compute new count from before + action (Priority 4: avoid extra round-trip to read count).
+    // Trigger still updates restaurant_reviews.likes_count in DB for other readers.
+    const before = beforeLikesCount ?? 0;
+    const likesCount = Math.max(0, isLiked ? before - 1 : before + 1);
     const action = isLiked ? 'unliked' : 'liked';
-    const afterLikesCount = likesCount;
-    const didExpectCountChange = beforeLikesCount !== null;
-    const didNotChange = didExpectCountChange && afterLikesCount === beforeLikesCount;
-
-    if (didNotChange) {
-      const aggQuery = await hasuraQuery(
-        `query GetReviewLikesCountAgg($reviewId: uuid!) {
-          restaurant_review_likes_aggregate(where: { review_id: { _eq: $reviewId } }) {
-            aggregate { count }
-          }
-        }`,
-        { reviewId: review_id }
-      );
-      const aggCount = aggQuery.data?.restaurant_review_likes_aggregate?.aggregate?.count ?? 0;
-
-      likesCount = aggCount;
-
-      // Best-effort self-heal: update denormalized likes_count so future reads are fast.
-      try {
-        await hasuraMutation(
-          `mutation HealLikesCount($reviewId: uuid!, $likesCount: Int!) {
-            update_restaurant_reviews_by_pk(
-              pk_columns: { id: $reviewId }
-              _set: { likes_count: $likesCount }
-            ) { id }
-          }`,
-          { reviewId: review_id, likesCount: aggCount }
-        );
-      } catch (e) {
-        // ignore
-      }
-    }
 
     return NextResponse.json({
       success: true,
       data: {
-        liked: !isLiked, // New like status
+        liked: !isLiked,
         action,
-        likesCount: likesCount // Return the actual count from database
+        likesCount
       }
     });
 

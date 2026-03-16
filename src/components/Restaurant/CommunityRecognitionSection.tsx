@@ -1,6 +1,11 @@
 import React from "react";
 import Image from "next/image";
-import { FLAG, HELMET, CASH, PHONE } from "@/constants/images";
+import {
+  COMMUNITY_MUST_REVISIT,
+  COMMUNITY_INSTA_WORTHY,
+  COMMUNITY_VALUE_FOR_MONEY,
+  COMMUNITY_GOOD_SERVICE,
+} from "@/constants/images";
 import { CommunityRecognitionMetrics } from "@/utils/reviewUtils";
 
 interface CommunityRecognitionSectionProps {
@@ -24,30 +29,30 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   };
   
   const recognitionItems = [
-    { 
-      icon: FLAG, 
-      value: recognitionMetrics.mustRevisit, 
+    {
+      icon: COMMUNITY_MUST_REVISIT,
+      value: recognitionMetrics.mustRevisit,
       label: "Must Revisit",
-      description: "Users will come back"
+      description: "Users will come back",
     },
-    { 
-      icon: PHONE, 
-      value: recognitionMetrics.instaWorthy, 
+    {
+      icon: COMMUNITY_INSTA_WORTHY,
+      value: recognitionMetrics.instaWorthy,
       label: "Insta-Worthy",
-      description: "Great for the gram"
+      description: "Great for the gram",
     },
-    { 
-      icon: CASH, 
-      value: recognitionMetrics.valueForMoney, 
+    {
+      icon: COMMUNITY_VALUE_FOR_MONEY,
+      value: recognitionMetrics.valueForMoney,
       label: "Value for Money",
-      description: "Worth every penny"
+      description: "Worth every penny",
     },
-    { 
-      icon: HELMET, 
-      value: recognitionMetrics.bestService, 
+    {
+      icon: COMMUNITY_GOOD_SERVICE,
+      value: recognitionMetrics.bestService,
       label: "Best Service",
-      description: "Users come back happy"
-    }
+      description: "Users come back happy",
+    },
   ];
 
   return (

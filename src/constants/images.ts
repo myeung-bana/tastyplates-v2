@@ -12,6 +12,12 @@ export const FLAG = "/flag.svg";
 export const PHONE = "/phone.svg";
 export const CASH = "/cash.svg";
 export const HELMET = "/helmet.svg";
+
+// Community recognition icons (PNG)
+export const COMMUNITY_MUST_REVISIT = "/icons/must-revisit.png";
+export const COMMUNITY_INSTA_WORTHY = "/icons/insta-worthy.png";
+export const COMMUNITY_VALUE_FOR_MONEY = "/icons/value-for-money.png";
+export const COMMUNITY_GOOD_SERVICE = "/icons/good-service.png";
 export const FACEBOOK = "/facebook.svg";
 export const INSTAGRAM = "/instagram.svg";
 export const TWITTER = "/x.svg";

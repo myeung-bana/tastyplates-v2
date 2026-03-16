@@ -157,6 +157,8 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
   // Cache user UUID to avoid redundant API calls
   const userUuidRef = useRef<string | null>(null);
   const fetchedLikeStatusRef = useRef<Set<string>>(new Set());
+  const likeInFlightRef = useRef(false);
+  const LOADING_COOLDOWN_MS = 220;
 
   const tags = [
     { id: 1, name: "Must Revisit", icon: FLAG },
@@ -296,46 +298,47 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:165',message:'toggleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,loading,hasUser:!!user,hasNhostUser:!!nhostUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
     // #endregion
-    if (loading) return;
+    if (likeInFlightRef.current) return;
 
     if (!user) {
       setIsShowSignin(true);
       return;
     }
 
+    likeInFlightRef.current = true;
     setLoading(true);
-    
+
     const currentLiked = userLiked;
     const currentCount = likesCount;
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:175',message:'Current state before optimistic update',data:{currentLiked,currentCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
-    
-    // Optimistic update
+
+    // Optimistic update immediately (comments-style: UI first, API in background)
     setUserLiked(!currentLiked);
     setLikesCount(currentLiked ? currentCount - 1 : currentCount + 1);
 
+    const cooldownTimer = setTimeout(() => setLoading(false), LOADING_COOLDOWN_MS);
+
     try {
-      // Get Nhost token for authentication
       const token = await getNhostToken();
       if (!token) {
         toast.error('Unable to authenticate. Please sign in again.');
         return;
       }
-      
-      // Use review.id (UUID) if available, otherwise fall back to databaseId
+
       const reviewId = review.id || String(review.databaseId);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:187',message:'Before API call',data:{reviewId,currentLiked,hasIdToken:!!idToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:187',message:'Before API call',data:{reviewId,currentLiked,hasIdToken:!!token},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
-      
+
       const likeUserId = nhostUser?.id || await getUserUuid();
       let response: { userLiked: boolean; likesCount: number };
       const apiStartTime = Date.now();
       if (currentLiked) {
-        response = await reviewService.unlikeComment(reviewId, idToken, likeUserId ?? undefined);
+        response = await reviewService.unlikeComment(reviewId, token, likeUserId ?? undefined);
       } else {
-        response = await reviewService.likeComment(reviewId, idToken, likeUserId ?? undefined);
+        response = await reviewService.likeComment(reviewId, token, likeUserId ?? undefined);
       }
       const apiDuration = Date.now() - apiStartTime;
       // #region agent log
@@ -347,19 +350,18 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:204',message:'State updated from API',data:{responseUserLiked:response.userLiked,responseLikesCount:response.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
       // #endregion
-      
-      // NO SUCCESS TOAST - smooth like modern social media
     } catch (error) {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewBlock.tsx:208',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error instanceof Error?error.message:String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
-      // Revert on error
       setUserLiked(currentLiked);
       setLikesCount(currentCount);
       console.error(error);
       toast.error(updateLikeFailed);
     } finally {
+      clearTimeout(cooldownTimer);
       setLoading(false);
+      likeInFlightRef.current = false;
     }
   };
 
@@ -556,14 +558,12 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
       <div className="review-block__actions">
         <button
           onClick={toggleLike}
-          disabled={loading}
+          type="button"
           aria-pressed={userLiked}
           aria-label={userLiked ? "Unlike review" : "Like review"}
           className="review-block__action-btn"
         >
-          {loading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-[2px] border-red-400 border-t-transparent"></div>
-          ) : userLiked ? (
+          {userLiked ? (
             <AiFillHeart className="w-5 h-5 text-red-500" />
           ) : (
             <FiHeart className="w-5 h-5" />

@@ -24,10 +24,12 @@ interface UseReviewLikeReturn {
   toggleLike: () => Promise<void>;
 }
 
+const LOADING_COOLDOWN_MS = 220; // Brief lock to prevent double-tap; button feels instant like comments
+
 /**
  * Unified hook for review like/unlike functionality
  * Handles both UUID (new API) and numeric (legacy) review IDs
- * Features: optimistic updates, caching, no success toasts
+ * Features: optimistic updates, short cooldown (no long block), background sync, revert on error
  */
 export function useReviewLike({
   reviewId,
@@ -41,6 +43,7 @@ export function useReviewLike({
   const [likesCount, setLikesCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
   const userUuidCache = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
 
   // Sync from parent when initial values change (e.g. switching reviews or feed data)
   useEffect(() => {
@@ -86,7 +89,7 @@ export function useReviewLike({
   }, [user?.user_id, nhostUser]);
 
   const toggleLike = useCallback(async () => {
-    if (isLoading) return;
+    if (inFlightRef.current) return;
 
     // Check authentication
     if (!user || !nhostUser) {
@@ -98,40 +101,41 @@ export function useReviewLike({
       return;
     }
 
+    inFlightRef.current = true;
     setIsLoading(true);
 
     // Store current state for potential revert
     const currentLiked = isLiked;
     const currentCount = likesCount;
 
-    // Optimistic update
+    // Optimistic update immediately (like comments: UI updates before API)
     setIsLiked(!currentLiked);
     setLikesCount(currentLiked ? currentCount - 1 : currentCount + 1);
+
+    // Short cooldown only; don't block button for full request (comments-style)
+    const cooldownTimer = setTimeout(() => setIsLoading(false), LOADING_COOLDOWN_MS);
 
     try {
       const reviewIdStr = String(reviewId);
       const isUUID = UUID_REGEX.test(reviewIdStr);
 
       if (isUUID) {
-        // Use new API v1 endpoint (single toggle call)
         const userId = await getUserUuid();
         if (!userId) {
           throw new Error("Unable to get user ID");
         }
 
         const result = await reviewV2Service.toggleLike(reviewIdStr, userId);
-        
-        // Confirm the liked status + count from API
+
         setIsLiked(result.liked);
         setLikesCount(result.likesCount ?? 0);
         onConfirm?.(result.liked, result.likesCount ?? 0, reviewIdStr);
       } else {
-        // Legacy numeric ID - use old endpoint
         const accessToken = nhost.auth.getAccessToken();
         if (!accessToken) {
           throw new Error("No access token available");
         }
-        
+
         if (currentLiked) {
           const response = await reviewService.unlikeComment(reviewIdStr, accessToken);
           setIsLiked(response.userLiked);
@@ -144,26 +148,24 @@ export function useReviewLike({
           onConfirm?.(response.userLiked, response.likesCount, reviewIdStr);
         }
       }
-
-      // NO SUCCESS TOAST - smooth like modern social media
     } catch (error: any) {
-      // Revert on error
       setIsLiked(currentLiked);
       setLikesCount(currentCount);
-      
+
       console.error("Error toggling like:", error);
-      
-      // Only show toast on error
-      const errorMessage = error?.message || '';
-      if (errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE')) {
+
+      const errorMessage = error?.message || "";
+      if (errorMessage.includes("JSON") || errorMessage.includes("<!DOCTYPE")) {
         toast.error("Failed to update like. Please try again.");
       } else {
         toast.error("Failed to update like");
       }
     } finally {
+      clearTimeout(cooldownTimer);
       setIsLoading(false);
+      inFlightRef.current = false;
     }
-  }, [reviewId, isLiked, likesCount, isLoading, user, nhostUser, getUserUuid, onAuthRequired, onConfirm]);
+  }, [reviewId, isLiked, likesCount, user, nhostUser, getUserUuid, onAuthRequired, onConfirm]);
 
   return {
     isLiked,
