@@ -87,6 +87,7 @@ export const GET_RESTAURANTS_LIST = `
       palates
       categories
       is_main_location
+      created_at
       updated_at
       published_at
     }

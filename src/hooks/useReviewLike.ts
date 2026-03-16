@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNhostSession } from '@/hooks/useNhostSession';
 import { nhost } from '@/lib/nhost';
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
@@ -13,6 +13,8 @@ interface UseReviewLikeOptions {
   initialLiked?: boolean;
   initialCount?: number;
   onAuthRequired?: () => void;
+  /** Called after server confirms like state so parent (e.g. list) can sync. reviewId is the id that was toggled. */
+  onConfirm?: (liked: boolean, likesCount: number, reviewId?: string) => void;
 }
 
 interface UseReviewLikeReturn {
@@ -32,12 +34,19 @@ export function useReviewLike({
   initialLiked = false,
   initialCount = 0,
   onAuthRequired,
+  onConfirm,
 }: UseReviewLikeOptions): UseReviewLikeReturn {
   const { user, nhostUser } = useNhostSession();
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [likesCount, setLikesCount] = useState(initialCount);
   const [isLoading, setIsLoading] = useState(false);
   const userUuidCache = useRef<string | null>(null);
+
+  // Sync from parent when initial values change (e.g. switching reviews or feed data)
+  useEffect(() => {
+    setIsLiked(initialLiked);
+    setLikesCount(initialCount);
+  }, [reviewId, initialLiked, initialCount]);
 
   // Helper to get user UUID (cached for performance)
   const getUserUuid = useCallback(async (): Promise<string | null> => {
@@ -115,12 +124,7 @@ export function useReviewLike({
         // Confirm the liked status + count from API
         setIsLiked(result.liked);
         setLikesCount(result.likesCount ?? 0);
-        
-        // If server disagrees with our optimistic flip, revert to server truth
-        if (result.liked !== !currentLiked) {
-          setIsLiked(result.liked);
-          setLikesCount(result.likesCount ?? currentCount);
-        }
+        onConfirm?.(result.liked, result.likesCount ?? 0, reviewIdStr);
       } else {
         // Legacy numeric ID - use old endpoint
         const accessToken = nhost.auth.getAccessToken();
@@ -132,10 +136,12 @@ export function useReviewLike({
           const response = await reviewService.unlikeComment(reviewIdStr, accessToken);
           setIsLiked(response.userLiked);
           setLikesCount(response.likesCount);
+          onConfirm?.(response.userLiked, response.likesCount, reviewIdStr);
         } else {
           const response = await reviewService.likeComment(reviewIdStr, accessToken);
           setIsLiked(response.userLiked);
           setLikesCount(response.likesCount);
+          onConfirm?.(response.userLiked, response.likesCount, reviewIdStr);
         }
       }
 
@@ -157,7 +163,7 @@ export function useReviewLike({
     } finally {
       setIsLoading(false);
     }
-  }, [reviewId, isLiked, likesCount, isLoading, user, nhostUser, getUserUuid, onAuthRequired]);
+  }, [reviewId, isLiked, likesCount, isLoading, user, nhostUser, getUserUuid, onAuthRequired, onConfirm]);
 
   return {
     isLiked,

@@ -197,6 +197,55 @@ export const GET_REVIEWS_BY_AUTHORS = `
   }
 `;
 
+// Cursor-based following feed: (created_at, id) < cursor
+export const GET_REVIEWS_BY_AUTHORS_CURSOR = `
+  query GetReviewsByAuthorsCursor(
+    $authorIds: [uuid!]!
+    $limit: Int!
+    $cursorCreatedAt: timestamptz!
+    $cursorId: uuid!
+  ) {
+    restaurant_reviews(
+      where: {
+        _and: [
+          { author_id: { _in: $authorIds } }
+          { deleted_at: { _is_null: true } }
+          { parent_review_id: { _is_null: true } }
+          { status: { _eq: "approved" } }
+          {
+            _or: [
+              { created_at: { _lt: $cursorCreatedAt } }
+              { _and: [
+                { created_at: { _eq: $cursorCreatedAt } }
+                { id: { _lt: $cursorId } }
+              ]}
+            ]
+          }
+        ]
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
+    ) {
+      id
+      title
+      content
+      rating
+      images
+      palates
+      hashtags
+      mentions
+      recognitions
+      likes_count
+      replies_count
+      status
+      created_at
+      published_at
+      author_id
+      restaurant_uuid
+    }
+  }
+`;
+
 // GET USER'S REVIEWS WITH STATUS FILTER
 export const GET_USER_REVIEWS_BY_STATUS = `
   query GetUserReviewsByStatus(
@@ -511,6 +560,79 @@ export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS = `
       order_by: [{ created_at: desc }, { id: desc }]
       limit: $limit
       offset: $offset
+    ) {
+      id
+      author_id
+      content
+      created_at
+      hashtags
+      images
+      is_featured
+      is_pinned
+      likes_count
+      mentions
+      palates
+      rating
+      recognitions
+      restaurant_uuid
+      status
+      title
+      updated_at
+      views_count
+      published_at
+      replies_count
+
+      AuthorProfile {
+        user_id
+        username
+        palates
+        user {
+          avatarUrl
+          email
+        }
+      }
+    }
+    
+    restaurant_reviews_aggregate(
+      where: {
+        deleted_at: { _is_null: true }
+        parent_review_id: { _is_null: true }
+        status: { _eq: "approved" }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+// Cursor-based variant: no offset, use where (created_at, id) < cursor for next page.
+export const GET_ALL_REVIEWS_WITH_NHOST_AUTHORS_CURSOR = `
+  query GetAllReviewsWithNhostAuthorsCursor(
+    $limit: Int!
+    $cursorCreatedAt: timestamptz!
+    $cursorId: uuid!
+  ) {
+    restaurant_reviews(
+      where: {
+        _and: [
+          { deleted_at: { _is_null: true } }
+          { parent_review_id: { _is_null: true } }
+          { status: { _eq: "approved" } }
+          {
+            _or: [
+              { created_at: { _lt: $cursorCreatedAt } }
+              { _and: [
+                { created_at: { _eq: $cursorCreatedAt } }
+                { id: { _lt: $cursorId } }
+              ]}
+            ]
+          }
+        ]
+      }
+      order_by: [{ created_at: desc }, { id: desc }]
+      limit: $limit
     ) {
       id
       author_id

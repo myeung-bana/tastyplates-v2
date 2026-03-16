@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
 import { GET_FOLLOWING_LIST } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
-import { GET_REVIEWS_BY_AUTHORS } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_REVIEWS_BY_AUTHORS, GET_REVIEWS_BY_AUTHORS_CURSOR } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQueries';
 import { GET_RESTAURANT_USERS_BY_IDS } from '@/app/graphql/RestaurantUsers/restaurantUsersQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 import { GRAPHQL_LIMITS } from '@/constants/graphql';
+import { decodeReviewCursor, encodeReviewCursor } from '@/lib/cursor-pagination';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,8 +16,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10) || 10, GRAPHQL_LIMITS.API_MAX);
+    const offsetParam = searchParams.get('offset');
+    const cursorParam = searchParams.get('cursor');
+    const decodedCursor = cursorParam ? decodeReviewCursor(cursorParam) : null;
+    const useCursorPagination = !!decodedCursor;
+    const offset = useCursorPagination ? 0 : parseInt(offsetParam || '0', 10);
 
     if (!userId) {
       return NextResponse.json(
@@ -34,7 +39,9 @@ export async function GET(request: NextRequest) {
 
     // Get version for this user's following feed
     const version = await getVersion(`v:reviews:following:${userId}`);
-    const cacheKey = `reviews:following:${userId}:v${version}:limit=${limit}:offset=${offset}`;
+    const cacheKey = useCursorPagination && cursorParam
+      ? `reviews:following:${userId}:v${version}:limit=${limit}:cursor=${cursorParam}`
+      : `reviews:following:${userId}:v${version}:limit=${limit}:offset=${offset}`;
 
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
@@ -95,19 +102,33 @@ export async function GET(request: NextRequest) {
         // Cap following IDs to prevent huge queries on free tier
         const cappedFollowingIds = followingIds.slice(0, GRAPHQL_LIMITS.BATCH_FOLLOWING_MAX);
 
-        // Fetch reviews for followed authors
-        const reviewsRes = await hasuraQuery(GET_REVIEWS_BY_AUTHORS, {
-          authorIds: cappedFollowingIds,
-          limit: Math.min(limit, GRAPHQL_LIMITS.API_MAX),
-          offset,
-        });
+        let reviews: any[];
+        let total: number;
 
-        if (reviewsRes.errors) {
-          throw new Error(reviewsRes.errors[0]?.message || 'Failed to fetch following feed');
+        if (useCursorPagination && decodedCursor) {
+          const reviewsRes = await hasuraQuery(GET_REVIEWS_BY_AUTHORS_CURSOR, {
+            authorIds: cappedFollowingIds,
+            limit,
+            cursorCreatedAt: decodedCursor.created_at,
+            cursorId: decodedCursor.id,
+          });
+          if (reviewsRes.errors) {
+            throw new Error(reviewsRes.errors[0]?.message || 'Failed to fetch following feed');
+          }
+          reviews = reviewsRes.data?.restaurant_reviews || [];
+          total = 0;
+        } else {
+          const reviewsRes = await hasuraQuery(GET_REVIEWS_BY_AUTHORS, {
+            authorIds: cappedFollowingIds,
+            limit,
+            offset,
+          });
+          if (reviewsRes.errors) {
+            throw new Error(reviewsRes.errors[0]?.message || 'Failed to fetch following feed');
+          }
+          reviews = reviewsRes.data?.restaurant_reviews || [];
+          total = reviewsRes.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
         }
-
-        let reviews = reviewsRes.data?.restaurant_reviews || [];
-        const total = reviewsRes.data?.restaurant_reviews_aggregate?.aggregate?.count || 0;
 
         // Enrich with restaurant + author data (batch)
         const restaurantUuids = [...new Set(reviews.map((r: any) => r.restaurant_uuid).filter(Boolean))];
@@ -172,14 +193,19 @@ export async function GET(request: NextRequest) {
           restaurant: restaurantMap.get(review.restaurant_uuid) || null,
         }));
 
+        const last = reviews[reviews.length - 1];
+        const nextCursor = last ? encodeReviewCursor(last.created_at, last.id) : null;
+        const hasMore = useCursorPagination ? reviews.length === limit : (offset + limit) < total;
+
         return {
           success: true,
           data: reviews,
           meta: {
-            total,
+            total: useCursorPagination ? undefined : total,
             limit,
-            offset,
-            hasMore: (offset + limit) < total,
+            ...(offset !== undefined && !useCursorPagination && { offset }),
+            cursor: nextCursor ?? undefined,
+            hasMore,
           },
         };
       }

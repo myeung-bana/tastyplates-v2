@@ -8,6 +8,7 @@ import { FiX, FiMessageCircle, FiHeart, FiChevronLeft, FiChevronRight, FiStar, F
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useNhostSession } from "@/hooks/useNhostSession";
+import { useReviewLike } from "@/hooks/useReviewLike";
 import { nhost } from "@/lib/nhost";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
@@ -151,68 +152,65 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
   const CACHE_TTL = 30000; // 30 seconds cache
 
-  // Check like status and count when component opens or current review changes (with caching and debouncing)
+  // Current review for like hook (one review at a time in desktop viewer)
+  const currentReviewForLike = reviews[currentIndex];
+  const reviewLike = useReviewLike({
+    reviewId: currentReviewForLike?.id ?? "",
+    initialLiked: currentReviewForLike ? (userLiked[currentReviewForLike.databaseId] ?? false) : false,
+    initialCount: currentReviewForLike ? (likesCount[currentReviewForLike.databaseId] ?? 0) : 0,
+    onConfirm: useCallback((liked: boolean, count: number, reviewId?: string) => {
+      if (!reviewId) return;
+      const r = reviews.find((rev) => rev.id === reviewId || String(rev.databaseId) === reviewId);
+      if (r) {
+        setUserLiked((prev) => ({ ...prev, [r.databaseId]: liked }));
+        setLikesCount((prev) => ({ ...prev, [r.databaseId]: count }));
+      }
+    }, [reviews]),
+  });
+
+  // Background sync: fetch like status after paint (no blocking, no debounce before first paint)
   useEffect(() => {
     if (!isOpen || !user || reviews.length === 0) return;
-    
-    // Debounce to prevent rapid successive calls
-    const timeoutId = setTimeout(async () => {
-      const review = reviews[currentIndex];
-      if (!review?.id) return;
-      
-      const reviewId = review.id;
-      const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
-      if (!isReviewUUID) return;
-      
+    const review = reviews[currentIndex];
+    if (!review?.id) return;
+    const reviewId = review.id;
+    if (typeof reviewId !== "string" || !UUID_REGEX.test(reviewId)) return;
+
+    const run = async () => {
       try {
         const userId = await getUserUuid();
         if (!userId) return;
-        
-        // Check cache with correct userId (from getUserUuid, not user?.id)
         const cacheKey = `${reviewId}_${userId}`;
         const cached = likeStatusCacheRef.current[cacheKey];
         const now = Date.now();
-        
-        if (cached && (now - cached.timestamp) < CACHE_TTL) {
+        if (cached && now - cached.timestamp < CACHE_TTL) {
           setUserLiked((prev) => ({ ...prev, [review.databaseId]: cached.isLiked }));
           setLikesCount((prev) => ({ ...prev, [review.databaseId]: cached.count }));
           return;
         }
-        
-        const fetchStartTime = Date.now();
-        
-        // Get like status and count using the GET endpoint (now optimized with single query)
         const token = await getNhostToken();
         if (!token) return;
-        const statusResponse = await fetch(`/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const fetchDuration = Date.now() - fetchStartTime;
-        
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          if (statusData.success && statusData.data) {
-            const isLiked = statusData.data.liked ?? false;
-            const currentCount = statusData.data.likesCount ?? 0;
-            
-            // Cache the result with correct key
-            likeStatusCacheRef.current[cacheKey] = {
-              isLiked,
-              count: currentCount,
-              timestamp: Date.now()
-            };
-            
-            setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
-            setLikesCount((prev) => ({ ...prev, [review.databaseId]: currentCount }));
-          }
-        }
-        } catch (error) {
-        console.error('Error checking like status:', error);
+        const res = await fetch(
+          `/api/v1/restaurant-reviews/toggle-like?review_id=${reviewId}&user_id=${userId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.success || !data?.data) return;
+        likeStatusCacheRef.current[cacheKey] = {
+          isLiked: data.data.liked ?? false,
+          count: data.data.likesCount ?? 0,
+          timestamp: Date.now(),
+        };
+        setUserLiked((prev) => ({ ...prev, [review.databaseId]: data.data.liked }));
+        setLikesCount((prev) => ({ ...prev, [review.databaseId]: data.data.likesCount }));
+      } catch (e) {
+        console.error("Error syncing like status:", e);
       }
-    }, 150); // 150ms debounce to prevent rapid calls
-    
-    return () => clearTimeout(timeoutId);
+    };
+
+    const t = setTimeout(run, 0);
+    return () => clearTimeout(t);
   }, [isOpen, currentIndex, reviews, user, getUserUuid, getNhostToken, UUID_REGEX]);
 
   // Combined effect: Reset states and handle navbar when modal opens/closes (performance optimization)
@@ -402,72 +400,6 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       friction: 30,
     },
   }));
-
-  // Handle like/unlike - Optimized with cached user UUID
-  const handleLike = useCallback(
-    async (review: GraphQLReview) => {
-      if (!user) {
-        toast.error("Please sign in to like reviews");
-        return;
-      }
-
-      // Use review.id (UUID) if available, otherwise fall back to databaseId (numeric)
-      const reviewId = review.id || String(review.databaseId);
-      const isReviewUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
-
-      if (!isReviewUUID) {
-        toast.error("Like functionality requires review UUID. Please refresh the page.");
-        return;
-      }
-
-      // Get user UUID (cached for performance)
-      const userIdStartTime = Date.now();
-      const userId = await getUserUuid();
-      const userIdDuration = Date.now() - userIdStartTime;
-      if (!userId) {
-        toast.error("Unable to get user ID. Please try again.");
-        return;
-      }
-
-      const reviewDatabaseId = review.databaseId;
-      const currentLiked = userLiked[reviewDatabaseId] ?? false;
-      const currentLikes = likesCount[reviewDatabaseId] ?? 0;
-
-      // Optimistic update
-      const newLiked = !currentLiked;
-      const newCount = currentLiked ? currentLikes - 1 : currentLikes + 1;
-      
-      setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: newLiked }));
-      setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: newCount }));
-
-      try {
-        const apiStartTime = Date.now();
-        // Call new API v1 endpoint
-        const result = await reviewV2Service.toggleLike(reviewId, userId);
-        const apiDuration = Date.now() - apiStartTime;
-        
-        // Update cache with correct userId
-        const cacheKey = `${reviewId}_${userId}`;
-        likeStatusCacheRef.current[cacheKey] = {
-          isLiked: result.liked,
-          count: result.likesCount,
-          timestamp: Date.now()
-        };
-        
-        // Confirm the liked status and count from API
-        setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: result.liked }));
-        setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: result.likesCount }));
-      } catch (error) {
-        // Revert both on error
-        setUserLiked((prev) => ({ ...prev, [reviewDatabaseId]: currentLiked }));
-        setLikesCount((prev) => ({ ...prev, [reviewDatabaseId]: currentLikes }));
-        
-        console.error("Like error:", error);
-        toast.error("Failed to update like. Please try again.");
-      }
-    },
-    [user, userLiked, likesCount, getUserUuid, UUID_REGEX]
-  );
 
   // Handle comment/reply like - Same pattern as review likes
   const handleCommentLike = useCallback(
@@ -1174,18 +1106,20 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
               )}
             </div>
 
-            {/* Action buttons */}
+            {/* Action buttons - current review like uses useReviewLike (lock + optimistic) */}
             <div className="review-screen-desktop__actions">
               <button
                 className="review-screen-desktop__action-btn"
-                onClick={() => handleLike(currentReview)}
+                onClick={() => reviewLike.toggleLike()}
+                disabled={reviewLike.isLoading}
+                aria-busy={reviewLike.isLoading}
               >
-                {isLiked ? (
+                {reviewLike.isLiked ? (
                   <AiFillHeart className="w-6 h-6 text-red-500" />
                 ) : (
                   <FiHeart className="w-6 h-6" />
                 )}
-                <span className="font-medium">{likes}</span>
+                <span className="font-medium">{reviewLike.likesCount}</span>
               </button>
 
               <button

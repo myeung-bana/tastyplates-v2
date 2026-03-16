@@ -57,10 +57,12 @@ This document covers **feed and review-viewer performance**: the 4-phase optimiz
 
 ### What was done
 
-- Migration SQL added
-- Cursor-based GraphQL queries
-- `get-all-reviews/route.ts` and `reviewV2Service` updated
-- `Reviews.tsx` updated; backward compatible with cursor and offset
+- Migration SQL added (`database/migrations/cursor_pagination_indexes.sql`)
+- Cursor-based GraphQL queries: `GET_ALL_REVIEWS_WITH_NHOST_AUTHORS_CURSOR`, `GET_REVIEWS_BY_AUTHORS_CURSOR`
+- **get-all-reviews**: accepts `cursor` (opaque); returns `meta.cursor` (next page) and `meta.hasMore`; backward compatible with `offset`
+- **get-following-feed**: accepts `cursor`; returns `meta.cursor` and `meta.hasMore`; `useFollowingReviewsGraphQL` uses cursor for load-more
+- **get-restaurants**: accepts `cursor` when `order_by=created_at` (or default); returns `meta.cursor` and `meta.hasMore`
+- `reviewV2Service` and `ReviewRepository.getAllReviews` use cursor when provided
 
 ### Gains
 

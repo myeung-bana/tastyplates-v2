@@ -11,28 +11,28 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export class ReviewRepository implements ReviewRepo {
   async getAllReviews(first = 16, after: string | null = null, accessToken?: string): Promise<{ reviews: GraphQLReview[]; pageInfo: PageInfo }> {
     try {
-      const offset = after ? parseInt(after) || 0 : 0;
-      
+      const numericOffset = after ? parseInt(after, 10) : NaN;
+      const useCursor = after != null && String(after).length > 0 && isNaN(numericOffset);
+
       const response = await reviewV2Service.getAllReviews({
         limit: first,
-        offset: offset
+        ...(useCursor ? { cursor: after! } : { offset: isNaN(numericOffset) ? 0 : numericOffset })
       });
 
-      // Transform to legacy format
       const pageInfo: PageInfo = {
-        endCursor: response.hasMore ? (offset + first).toString() : null,
-        hasNextPage: response.hasMore
+        endCursor: response.cursor ?? (response.hasMore ? String((response.offset ?? 0) + first) : null),
+        hasNextPage: response.hasMore ?? false
       };
 
-      return { 
-        reviews: response.reviews as GraphQLReview[], 
-        pageInfo 
+      return {
+        reviews: response.reviews as GraphQLReview[],
+        pageInfo
       };
     } catch (error) {
       console.error('Error fetching all reviews:', error);
-      return { 
-        reviews: [], 
-        pageInfo: { endCursor: null, hasNextPage: false } 
+      return {
+        reviews: [],
+        pageInfo: { endCursor: null, hasNextPage: false }
       };
     }
   }

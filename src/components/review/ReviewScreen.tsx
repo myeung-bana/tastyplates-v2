@@ -65,6 +65,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   const userUuidRef = useRef<string | null>(null);
   const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
   const CACHE_TTL = 30000; // 30s
+  /** Pending like toggles: prevents double-tap and shows disabled state */
+  const [likePendingIds, setLikePendingIds] = useState<Set<string>>(new Set());
 
   // Used to re-bind observers when the *windowed* review list changes (not just its length).
   const reviewsKey = useMemo(
@@ -111,7 +113,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, [reviews]);
 
-  // On open: sync like status + count from API for initial + adjacent posts (so heart/count reflect DB)
+  // Background sync: like status for initial + adjacent (no blocking before first paint)
   useEffect(() => {
     if (!isOpen || !user || reviews.length === 0) return;
 
@@ -153,10 +155,13 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
       (i) => i >= 0 && i < reviews.length
     );
 
-    indices.forEach((i) => {
-      const r = reviews[i];
-      if (r) void syncOne(r);
-    });
+    const t = setTimeout(() => {
+      indices.forEach((i) => {
+        const r = reviews[i];
+        if (r) void syncOne(r);
+      });
+    }, 0);
+    return () => clearTimeout(t);
   }, [isOpen, initialIndex, reviews, user, getUserUuid, getNhostToken]);
 
   // Helper function to fetch first comment for a review
@@ -377,24 +382,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     loading: loadingMore,
   });
 
-  // Handle like
+  // Handle like (pending lock prevents double-tap)
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:247',message:'handleLike called',data:{reviewId:review.id,reviewDatabaseId:review.databaseId,hasNhostUser:!!nhostUser},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
-    // #endregion
     if (!user) {
       toast.error("Please sign in to like reviews");
       return;
     }
 
+    const reviewId = review.id || String(review.databaseId);
+    if (likePendingIds.has(reviewId)) return;
+
+    setLikePendingIds((prev) => new Set(prev).add(reviewId));
+
     const isLiked = userLiked[review.databaseId] ?? false;
     const currentLikes = likesCount[review.databaseId] ?? 0;
     const reviewDatabaseId = review.databaseId;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:256',message:'Current state before optimistic update',data:{reviewDatabaseId,isLiked,currentLikes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
 
-    // Optimistic update
     setUserLiked((prev) => ({ ...prev, [review.databaseId]: !isLiked }));
     setLikesCount((prev) => ({
       ...prev,
@@ -402,74 +405,57 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }));
 
     try {
-      const reviewId = review.id || String(review.databaseId);
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUUID = typeof reviewId === 'string' && UUID_REGEX.test(reviewId);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:268',message:'Review ID validation',data:{reviewId,isUUID},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
+      const UUID_REGEX_LOCAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = typeof reviewId === "string" && UUID_REGEX_LOCAL.test(reviewId);
 
       if (isUUID) {
-        // Use new API v1 endpoint with Nhost - direct user ID from session
         const userId = await getUserUuid();
         if (!userId) {
-          toast.error('Please sign in to like reviews');
+          toast.error("Please sign in to like reviews");
+          setLikePendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(reviewId);
+            return next;
+          });
           return;
         }
-        
-        const apiStartTime = Date.now();
         const result = await reviewV2Service.toggleLike(reviewId, userId);
-        const apiDuration = Date.now() - apiStartTime;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:280',message:'API call success',data:{reviewId,userId,result,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C,E'})}).catch(()=>{});
-        // #endregion
-        // Update with actual values from API
         setUserLiked((prev) => ({ ...prev, [review.databaseId]: result.liked }));
         setLikesCount((prev) => ({ ...prev, [review.databaseId]: result.likesCount }));
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:283',message:'State updated from API',data:{reviewDatabaseId,resultLiked:result.liked,resultLikesCount:result.likesCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D,E'})}).catch(()=>{});
-        // #endregion
       } else {
-        // Legacy numeric ID - use Nhost token
         const token = await getNhostToken();
         if (!token) {
-          toast.error('Please sign in to like reviews');
+          toast.error("Please sign in to like reviews");
+          setLikePendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(reviewId);
+            return next;
+          });
           return;
         }
-        const apiStartTime = Date.now();
         if (isLiked) {
           await reviewService.unlikeComment(reviewId, token);
         } else {
           await reviewService.likeComment(reviewId, token);
         }
-        const apiDuration = Date.now() - apiStartTime;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:291',message:'Legacy API call completed',data:{reviewId,isLiked,apiDuration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
       }
-    } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/981a41b5-f391-4324-be30-fb74de0ecca3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewScreen.tsx:294',message:'API call error',data:{reviewId:review.id||String(review.databaseId),errorMessage:error?.message||String(error),errorStack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      // Revert on error
+    } catch (error: unknown) {
       setUserLiked((prev) => ({ ...prev, [review.databaseId]: isLiked }));
-      setLikesCount((prev) => ({
-        ...prev,
-        [review.databaseId]: currentLikes,
-      }));
-      
-      const errorMessage = error?.message || '';
-      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('<!DOCTYPE') || errorMessage.includes('Unexpected token');
-      
-      if (isJsonError) {
-        console.error("Error toggling like: API returned non-JSON response (likely HTML error page)", error);
+      setLikesCount((prev) => ({ ...prev, [review.databaseId]: currentLikes }));
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("JSON") || msg.includes("<!DOCTYPE")) {
         toast.error("Failed to update like. Please try again.");
       } else {
-        console.error("Error toggling like:", error);
         toast.error("Failed to update like");
       }
+    } finally {
+      setLikePendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reviewId);
+        return next;
+      });
     }
-  }, [user, userLiked, likesCount, getUserUuid, getNhostToken]);
+  }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken]);
 
   // Handle comment/reply like - Same pattern as review likes
   const handleCommentLike = useCallback(
@@ -808,6 +794,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
                     <button
                       className="review-screen__action-btn"
                       onClick={() => handleLike(review)}
+                      disabled={likePendingIds.has(review.id || String(review.databaseId))}
+                      aria-busy={likePendingIds.has(review.id || String(review.databaseId))}
                     >
                       {reviewIsLiked ? (
                         <AiFillHeart className="w-6 h-6 text-red-500" />

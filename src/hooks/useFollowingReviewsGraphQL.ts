@@ -19,7 +19,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   // Nhost user.user_id is always a UUID
   const userId = user?.user_id ? String(user.user_id) : '';
@@ -39,7 +39,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
       return;
     }
 
-    const currentOffset = append ? offset : 0;
+    const cursor = append ? nextCursor : undefined;
     if (!append) setInitialLoading(true);
     setLoading(true);
 
@@ -47,7 +47,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
       const response = await reviewV2Service.getFollowingFeed({
         userId,
         limit: append ? LOAD_MORE_LIMIT : LIMIT,
-        offset: currentOffset,
+        ...(cursor ? { cursor } : { offset: 0 }),
       });
 
       const transformed = (response.reviews || []).map((review) =>
@@ -60,7 +60,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
         return Array.from(uniqueMap.values());
       });
 
-      setOffset(currentOffset + transformed.length);
+      setNextCursor(response.cursor ?? null);
       setHasMore(!!response.hasMore);
     } catch (error) {
       console.error('Error loading following feed:', error);
@@ -70,7 +70,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [enabled, isUuidUserId, offset, userId]);
+  }, [enabled, isUuidUserId, nextCursor, userId]);
 
   const loadMore = useCallback(() => {
     if (!enabled) return;
@@ -81,7 +81,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
 
   const refreshFollowingReviews = useCallback(async () => {
     if (!enabled) return;
-    setOffset(0);
+    setNextCursor(null);
     setHasMore(true);
     await loadFollowingReviews(false);
   }, [enabled, loadFollowingReviews]);
@@ -90,7 +90,7 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
   useEffect(() => {
     if (!enabled) return;
     setReviews([]);
-    setOffset(0);
+    setNextCursor(null);
     setHasMore(true);
     setInitialLoading(true);
     void loadFollowingReviews(false);

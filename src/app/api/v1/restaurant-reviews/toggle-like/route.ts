@@ -10,6 +10,9 @@ import { rateLimitOrThrow, likeRateLimit } from '@/lib/redis-ratelimit';
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Future: reduce latency by using one Postgres function (check + insert/delete + update likes_count)
+// in a single transaction instead of 2–3 Hasura round-trips. See documentation/enhancements/like-button-review-enhancements.md.
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

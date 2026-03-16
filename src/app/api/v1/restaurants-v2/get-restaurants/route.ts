@@ -4,6 +4,7 @@ import { GET_RESTAURANTS_LIST } from '@/app/graphql/Restaurants/restaurantQuerie
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 import { createHash } from 'crypto';
+import { decodeRestaurantCursor, encodeRestaurantCursor } from '@/lib/cursor-pagination';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -49,9 +50,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Basic pagination
+    // Basic pagination (cursor preferred for created_at order for stable, fast pages)
     const limit = parseInt(searchParams.get('limit') || '100');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const offsetParam = searchParams.get('offset');
+    const cursorParam = searchParams.get('cursor');
     
     // Basic filters
     const status = searchParams.get('status');
@@ -77,6 +79,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const decodedCursor = cursorParam ? decodeRestaurantCursor(cursorParam) : null;
+    const offset = parseInt(offsetParam || '0', 10);
 
     if (offset < 0) {
       return NextResponse.json(
@@ -187,12 +192,7 @@ export async function GET(request: NextRequest) {
       whereConditions.push({ is_main_location: { _eq: false } });
     }
 
-    // Build final where clause
-    const where = whereConditions.length > 0 
-      ? (whereConditions.length === 1 ? whereConditions[0] : { _and: whereConditions })
-      : undefined;
-
-    // Build order_by clause
+    // Build order_by clause (cursor only supported for created_at order)
     let orderByClause: any = { created_at: 'desc' }; // Default
     if (orderBy) {
       switch (orderBy) {
@@ -200,7 +200,6 @@ export async function GET(request: NextRequest) {
           orderByClause = { average_rating: 'desc_nulls_last' };
           break;
         case 'price':
-          // Use price_range_id instead of price (which doesn't exist in Hasura schema)
           orderByClause = { price_range_id: 'asc_nulls_last' };
           break;
         case 'created_at':
@@ -209,16 +208,39 @@ export async function GET(request: NextRequest) {
         case 'updated_at':
           orderByClause = { updated_at: 'desc' };
           break;
-        // Note: 'distance' sorting requires client-side processing after fetch
         default:
           orderByClause = { created_at: 'desc' };
       }
     }
 
+    const orderByIsCreatedAt = !orderBy || orderBy === 'created_at';
+    const canUseCursor = !!decodedCursor && orderByIsCreatedAt;
+
+    // Build final where clause (merge cursor condition when using cursor pagination)
+    let where = whereConditions.length > 0
+      ? (whereConditions.length === 1 ? whereConditions[0] : { _and: whereConditions })
+      : undefined;
+
+    if (canUseCursor && decodedCursor) {
+      const cursorCondition = {
+        _or: [
+          { created_at: { _lt: decodedCursor.created_at } },
+          {
+            _and: [
+              { created_at: { _eq: decodedCursor.created_at } },
+              { id: { _lt: decodedCursor.id } }
+            ]
+          }
+        ]
+      };
+      where = where ? { _and: [where, cursorCondition] } : cursorCondition;
+    }
+
     // Build cache key from query params
     const cacheKeyParams = {
       limit,
-      offset,
+      offset: canUseCursor ? undefined : offset,
+      cursor: canUseCursor ? cursorParam : undefined,
       status: status || 'publish',
       search: search || '',
       cuisine_ids: cuisineIds || '',
@@ -248,9 +270,9 @@ export async function GET(request: NextRequest) {
       async () => {
         const variables = {
           limit,
-          offset,
+          offset: canUseCursor ? 0 : offset,
           where,
-          order_by: [orderByClause]
+          order_by: orderByIsCreatedAt ? [{ created_at: 'desc' as const }, { id: 'desc' as const }] : [orderByClause]
         };
 
         if (isDev) {
@@ -312,14 +334,23 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        const last = filteredRestaurants[filteredRestaurants.length - 1];
+        const nextCursor = canUseCursor && last?.created_at != null && last?.id != null
+          ? encodeRestaurantCursor(last.created_at, last.id)
+          : undefined;
+        const hasMore = canUseCursor
+          ? filteredRestaurants.length === limit
+          : offset + limit < total;
+
         return {
           success: true,
           data: filteredRestaurants,
           meta: {
-            total: filteredRestaurants.length, // Use filtered count for hasMore calculation
+            total: canUseCursor ? undefined : total,
             limit,
-            offset,
-            hasMore: offset + limit < total,
+            ...(canUseCursor ? {} : { offset }),
+            cursor: nextCursor,
+            hasMore,
             fetchedAt: new Date().toISOString()
           }
         };
