@@ -1,332 +1,245 @@
 # Redis Guide (Upstash) for TastyPlates v2
 
-This guide explains **how to add Upstash Redis** to this Next.js monolith (TastyPlates v2) for:
+This guide covers **Upstash Redis** in the TastyPlates v2 Next.js app for:
 
-- **Rate limiting** (prevent abuse for likes/comments/uploads)
-- **Shared caching** (reduce Hasura/external API load, speed up repeated reads)
-- **Idempotency** (prevent duplicate submissions)
-- Optional: **feed/ranking** (trending reviews) and background jobs later
+- **Shared caching** — reduce Hasura load, speed up repeated reads
+- **Rate limiting** — prevent abuse on likes, comments, uploads, and user actions
+- **Cache invalidation** — versioned keys so writes keep caches fresh
 
-This repo currently uses **Hasura via server-side GraphQL helpers** and has multiple read-heavy API routes under `src/app/api/v1/*`. It also has ad-hoc client/in-memory caches; Redis makes caching **shared across users and server instances** (critical in serverless deployments).
-
----
-
-## Why Upstash (and why now)
-
-Upstash is a good fit because:
-
-- **Serverless-friendly**: REST API client avoids long-lived TCP connections.
-- **Free plan**: great for initial caching + rate limiting rollout.
-- **Fast wins**: protects expensive endpoints (uploads) and reduces repeated Hasura calls.
-
-Redis is **not required** to run the app, but it can **improve performance and reliability** once traffic grows and API endpoints are called frequently.
+The app uses Hasura via server-side GraphQL and has read-heavy API routes under `src/app/api/v1/*`. Redis gives **shared cache across users and server instances**, which matters in serverless. Redis is **not required** to run the app; endpoints fall back to direct queries if Redis is unavailable.
 
 ---
 
-## What parts of this codebase benefit most
+## Why Upstash
 
-### High ROI (do first)
-
-1. **Rate limit** write/cost endpoints:
-   - `/api/v1/upload/image`, `/api/v1/upload/batch`
-   - `/api/v1/images/download-google-photo`
-   - `/api/v1/restaurant-reviews/create-review`
-   - `/api/v1/restaurant-reviews/create-comment`
-   - `/api/v1/restaurant-reviews/toggle-like`
-   - `/api/v1/restaurant-users/*` (follow/unfollow/toggle-checkin/toggle-favorite)
-
-2. **Cache read-heavy endpoints** (short TTL):
-   - `/api/v1/restaurants-v2/get-restaurants`
-   - `/api/v1/restaurant-reviews/get-all-reviews`
-   - `/api/v1/restaurant-reviews/get-reviews-by-restaurant`
-   - `/api/v1/restaurant-reviews/get-replies`
-   - `/api/v1/restaurant-users/suggested`
-
-3. **Object caching** to reduce repeated Hasura lookups (medium TTL):
-   - restaurant by uuid
-   - user by id
-
-### Medium ROI (next)
-
-4. **Idempotency** for write endpoints (prevents double submissions)
-5. **Cached counters** (draft/published counts, followers counts) for dashboards/profile pages
-
-### Optional / Advanced
-
-6. **Trending ranking** using Redis sorted sets
-7. **Job queue** (BullMQ) if you introduce background workers (not recommended on Free plan)
+- **Serverless-friendly**: REST API client, no long-lived TCP connections.
+- **Free tier**: 10,000 commands/day, 256 MB — good for initial rollout.
+- **Fast wins**: protects expensive endpoints (uploads) and cuts repeated Hasura calls.
 
 ---
 
-## Step 1 — Add Upstash dependencies
+## Setup
 
-Add these packages:
+### Dependencies
 
 ```bash
 yarn add @upstash/redis @upstash/ratelimit
 ```
 
----
+Current versions in use: `@upstash/redis@1.36.0`, `@upstash/ratelimit@2.0.7`.
 
-## Step 2 — Add environment variables
+### Environment variables
 
-Add to `.env.local` (and hosting provider settings):
+Add to `.env.local` (and your hosting provider):
 
 ```bash
 UPSTASH_REDIS_REST_URL="YOUR_UPSTASH_REDIS_REST_URL"
 UPSTASH_REDIS_REST_TOKEN="YOUR_UPSTASH_REDIS_REST_TOKEN"
 ```
 
-Notes:
-- **Never commit real tokens.**
-- Prefer adding these to `.env.example` as placeholders only.
+Get these from [Upstash Console](https://console.upstash.com/). Do not commit real tokens; use `.env.example` as placeholders only.
+
+### Server-only client
+
+Use Redis only from **server code** (`src/app/api/**/route.ts` and server utilities). Do not import into client components.
+
+**`src/lib/upstash-redis.ts`** — Base client using `Redis.fromEnv()` (reads the env vars above).
 
 ---
 
-## Step 3 — Create a server-only Redis client
+## Helpers (implementation)
 
-Create a module like `src/lib/upstash-redis.ts`:
+### `src/lib/redis-cache.ts`
 
-```ts
-import { Redis } from "@upstash/redis"
+- **`cacheGetOrSetJSON<T>(key, ttlSeconds, fn)`** — Returns cached JSON or runs `fn`, stores result, returns `{ value, hit }`.
+- **`cacheInvalidate(key)`** — Deletes a cache key.
+- Errors fall back to direct queries; failures are logged and do not break the API.
 
-export const redis = Redis.fromEnv()
-```
+### `src/lib/redis-versioning.ts`
 
-**Important**: Only import/use this from **server code**:
-- `src/app/api/**/route.ts`
-- server utilities used by route handlers
+- **`getVersion(key)`** — Current version number for a resource.
+- **`bumpVersion(key)`** — Increments version (Redis INCR) to invalidate all caches that include this version in their key.
 
-Do **not** import it into client components.
+Cache keys include the version, e.g. `reviews:restaurant:{uuid}:v{version}:limit=10:offset=0`, so bumping the version key invalidates related caches without pattern deletes.
 
----
+### `src/lib/redis-ratelimit.ts`
 
-## Step 4 — Add shared helpers (recommended)
+Five limiters (sliding window), with graceful fallback if Redis fails (requests allowed through):
 
-### 4.1 Caching helper (get-or-set JSON)
-
-Create `src/lib/redis-cache.ts`:
-
-```ts
-import { redis } from "./upstash-redis"
-
-export async function cacheGetOrSetJSON<T>(
-  key: string,
-  ttlSeconds: number,
-  fn: () => Promise<T>
-): Promise<{ value: T; hit: boolean }> {
-  const cached = await redis.get<T>(key)
-  if (cached !== null && cached !== undefined) {
-    return { value: cached, hit: true }
-  }
-
-  const value = await fn()
-  await redis.set(key, value, { ex: ttlSeconds })
-  return { value, hit: false }
-}
-```
-
-### 4.2 Versioned keys for invalidation (no KEYS needed)
-
-Upstash REST supports scans, but pattern deletes are still something you want to avoid. A safe pattern is **versioned keys**:
-
-Create `src/lib/redis-versioning.ts`:
-
-```ts
-import { redis } from "./upstash-redis"
-
-export async function getVersion(key: string): Promise<number> {
-  const v = await redis.get<number>(key)
-  return typeof v === "number" ? v : 0
-}
-
-export async function bumpVersion(key: string): Promise<number> {
-  // INCR creates the key if missing
-  return await redis.incr(key)
-}
-```
-
-Example:
-- `v:restaurant:{uuid}:reviews`
-- `v:user:{uuid}:reviews`
-- `v:review:{reviewId}:replies`
-
-Cache keys include these versions so writes “invalidate” by incrementing:
-
-```
-reviews:restaurant:{uuid}:v{vRestaurantReviews}:limit=10:offset=0
-replies:review:{parentReviewId}:v{vReplies}
-```
+| Limiter | Limit | Purpose |
+|--------|--------|--------|
+| **uploadRateLimit** | 10 / 60 s | Uploads, batch uploads, Google photo proxy (per IP) |
+| **likeRateLimit** | 20 / 10 s | Like/unlike |
+| **createRateLimit** | 5 / 30 s | Create review, create comment |
+| **followRateLimit** | 10 / 10 s | Follow, unfollow |
+| **wishlistRateLimit** | 15 / 10 s | Toggle check-in, toggle favorite |
 
 ---
 
-## Step 5 — Add rate limiting (Upstash Ratelimit)
+## Caching
 
-Create `src/lib/redis-ratelimit.ts`:
+### Cached endpoints
 
-```ts
-import { Ratelimit } from "@upstash/ratelimit"
-import { redis } from "./upstash-redis"
+| Endpoint | TTL | Cache key pattern | Version key |
+|---------|-----|-------------------|-------------|
+| `/api/v1/restaurant-users/suggested` | 60 s | `users:suggested:v{version}:limit={limit}:exclude={userId}` | `v:users:suggested` |
+| `/api/v1/restaurant-reviews/get-replies` | 10 s | `replies:{parentReviewId}:user={userId}:v{version}` | `v:review:{parentReviewId}:replies` |
+| `/api/v1/restaurant-reviews/get-reviews-by-restaurant` | 30 s | `reviews:restaurant:{uuid}:v{version}:limit={limit}:offset={offset}` | `v:restaurant:{uuid}:reviews` |
+| `/api/v1/restaurant-reviews/get-all-reviews` | 15 s | `reviews:all:v{version}:limit={limit}:offset={offset}` | `v:reviews:all` |
+| `/api/v1/restaurants-v2/get-restaurants` | 30 s | `restaurants:v{version}:{JSON params}` | `v:restaurants:all` |
 
-// Sliding window is usually best UX for user actions
-export const ratelimit = new Ratelimit({
+### Debugging
+
+Cached responses send:
+
+- **`X-Cache: HIT`** or **`X-Cache: MISS`**
+- **`X-Cache-Key`** (on some endpoints)
+
+Use these in browser dev tools or `curl -I` to confirm cache behavior.
+
+### Cache invalidation (on writes)
+
+When write operations succeed, the app bumps version keys so the next read fetches fresh data.
+
+**Create review:**
+
+```typescript
+await Promise.all([
+  bumpVersion(`v:restaurant:${restaurant_uuid}:reviews`),
+  bumpVersion(`v:reviews:all`),
+  bumpVersion(`v:user:${author_id}:reviews`),
+]);
+```
+
+**Create comment/reply:**
+
+```typescript
+await bumpVersion(`v:review:${parent_review_id}:replies`);
+```
+
+**Restaurant updated:** `bumpVersion('v:restaurants:all')`  
+**Suggested users refresh:** `bumpVersion('v:users:suggested')`
+
+### TTL tuning
+
+- **Hot (feeds):** 10–15 s  
+- **Warm (restaurant lists):** 30–60 s  
+- **Cold (profiles):** 5–10 min  
+
+Adjust the `ttlSeconds` parameter in the relevant `route.ts` files.
+
+---
+
+## Rate limiting
+
+### Protected endpoints
+
+| Endpoint | Limiter | Identifier |
+|----------|---------|------------|
+| `/api/v1/upload/image` | uploadRateLimit | IP |
+| `/api/v1/upload/batch` | uploadRateLimit | IP |
+| `/api/v1/images/download-google-photo` | uploadRateLimit | IP |
+| `/api/v1/restaurant-reviews/create-review` | createRateLimit | user |
+| `/api/v1/restaurant-reviews/create-comment` | createRateLimit | user |
+| `/api/v1/restaurant-reviews/toggle-like` | likeRateLimit | user |
+| `/api/v1/restaurant-users/follow` | followRateLimit | user |
+| `/api/v1/restaurant-users/unfollow` | followRateLimit | user |
+| `/api/v1/restaurant-users/toggle-checkin` | wishlistRateLimit | user |
+| `/api/v1/restaurant-users/toggle-favorite` | wishlistRateLimit | user |
+
+### 429 response
+
+When the limit is exceeded:
+
+- **Status:** `429 Too Many Requests`
+- **Header:** `Retry-After: <seconds>`
+- **Body:**
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Please try again later.",
+  "retryAfter": <seconds>
+}
+```
+
+### Changing limits
+
+Edit `src/lib/redis-ratelimit.ts`. Example — allow 20 uploads per minute:
+
+```typescript
+export const uploadRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(10, "10 s"),
+  limiter: Ratelimit.slidingWindow(20, "60 s"),
   analytics: true,
-})
-
-export async function rateLimitOrThrow(key: string) {
-  const result = await ratelimit.limit(key)
-  if (!result.success) {
-    const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))
-    const error = new Error("Rate limit exceeded")
-    ;(error as any).status = 429
-    ;(error as any).retryAfter = retryAfter
-    return { ok: false as const, retryAfter }
-  }
-  return { ok: true as const }
-}
-```
-
-### Where to apply it
-
-**Uploads** (protect cost):
-- 10 requests / 60s per user + per IP
-
-**Likes**:
-- 20 / 10s per user (or 60/min)
-
-**Comments**:
-- 5 / 10s per user
-
-**Create review**:
-- 2 / 30s per user (tune as needed)
-
-**Google photo proxy**:
-- strict per IP (to avoid bandwidth abuse)
-
----
-
-## Step 6 — Apply Redis to real endpoints in this repo
-
-### 6.1 Toggle like (`/api/v1/restaurant-reviews/toggle-like`)
-
-What Redis should do here:
-- **Rate limit** the endpoint.
-- **Optionally** cache GET “like status” for a user+review for a very short TTL (5–15s).
-- **Invalidate** cached “review details” and “review replies” versions if your UI depends on it.
-
-Pseudo-flow:
-
-```ts
-// rateLimit key: like:{userId}
-await rateLimitOrThrow(`like:${user_id}`)
-
-// do Hasura mutation
-
-// invalidate version keys (examples)
-await bumpVersion(`v:review:${review_id}:meta`)
-// if replies UI shows likes_count quickly:
-// await bumpVersion(`v:review:${parent_review_id}:replies`)
-```
-
-### 6.2 Create comment (`/api/v1/restaurant-reviews/create-comment`)
-
-What Redis should do:
-- Rate limit: `comment:{author_id}`
-- Idempotency (optional): `idem:comment:{author_id}:{idempotencyKey}`
-- Invalidate replies list: bump `v:review:{parent_review_id}:replies`
-
-### 6.3 Create review (`/api/v1/restaurant-reviews/create-review`)
-
-What Redis should do:
-- Rate limit: `review:create:{author_id}`
-- Idempotency: `idem:review:create:{author_id}:{idempotencyKey}`
-- Invalidate:
-  - `v:restaurant:{restaurant_uuid}:reviews`
-  - `v:user:{author_id}:reviews`
-  - possibly global feeds: `v:feed:all`
-
-### 6.4 Read endpoints (cache)
-
-For:
-- `get-all-reviews`
-- `get-reviews-by-restaurant`
-- `get-replies`
-- `restaurants-v2/get-restaurants`
-- `restaurant-users/suggested`
-
-Cache strategy:
-- Cache the **final JSON** returned by the route handler with **short TTL**.
-- Additionally cache “objects” (restaurant/user) with medium TTL to reduce repeated Hasura lookups.
-
-Example of versioned cache key for restaurant reviews:
-
-```
-vKey = v:restaurant:{restaurant_uuid}:reviews
-cacheKey = reviews:restaurant:{restaurant_uuid}:v{v}:limit={limit}:offset={offset}
-ttl = 30s
+  prefix: "ratelimit:upload",
+});
 ```
 
 ---
 
-## Step 7 — Idempotency (phasing out duplicates)
+## Performance
 
-### How it works
+**Before caching (typical):** Restaurant list ~200–500 ms, review feeds ~150–300 ms, replies ~100–200 ms, suggested users ~80–150 ms.
 
-Client sends:
-- `Idempotency-Key: <uuid>` header for create-review/create-comment/upload.
+**After caching (cache hit):** ~5–20 ms for these endpoints; ~90–95% faster and ~60–80% less Hasura query volume.
 
-Server:
-- Checks Redis for `idem:{route}:{userId}:{key}`
-- If present, return stored response
-- If missing, run request, then store response for ~5–10 minutes
-
-This is especially valuable on:
-- review creation
-- comment creation
-- uploads (avoids duplicate S3 writes)
+**Error handling:** If Redis is down or rate limiting fails, endpoints still work (direct Hasura or allow-through). Errors are logged; cache/rate-limit failures are transparent to users.
 
 ---
 
-## Operational notes (Upstash Free plan)
+## Testing
 
-To keep within limits:
-- Prefer **short TTL** for full route-response caching.
-- Prefer **object caching** for restaurants/users (small payloads).
-- Avoid caching very large arrays for long durations.
-- Avoid scanning/deleting by pattern; use **versioned keys**.
+### Cache
 
----
+```bash
+# First request (MISS), second (HIT)
+curl -I "http://localhost:3000/api/v1/restaurant-users/suggested?limit=6"
+curl -I "http://localhost:3000/api/v1/restaurant-users/suggested?limit=6"
+```
 
-## Will it improve performance?
+Check for `X-Cache: HIT` on the second. Server logs: `✅ Cache HIT: {key}` / `❌ Cache MISS: {key}`.
 
-Typically yes, especially for:
-- review feeds and restaurant pages (less Hasura N+1 calls)
-- high-frequency actions (likes/comments) by adding rate limiting + reducing retries/dup submits
-- serverless deployments where in-memory caches don’t persist
+### Rate limits
 
-However:
-- Redis adds complexity; always start with **Phase 1 (rate limit) + Phase 2 (small cache)** first.
+```bash
+# Upload: should get 429 after 10 requests in 60 s
+for i in {1..12}; do
+  curl -X POST http://localhost:3000/api/v1/upload/image -F "file=@test.jpg" -w "\nStatus: %{http_code}\n"
+  sleep 1
+done
 
----
-
-## Suggested rollout plan (practical)
-
-1. **Add Upstash client + helpers**
-2. **Rate limit** uploads + likes + comments + create-review
-3. **Cache** `restaurants-v2/get-restaurants` and `restaurant-users/suggested`
-4. **Cache** `get-replies` (short TTL) + add version bump on create-comment
-5. **Add versioned caching** to restaurant review lists and invalidate on create/update/delete review
-6. Add idempotency (create-review + create-comment)
+# Like: should get 429 after 20 requests in 10 s
+for i in {1..25}; do
+  curl -X POST http://localhost:3000/api/v1/restaurant-reviews/toggle-like \
+    -H "Content-Type: application/json" \
+    -d '{"review_id":"<uuid>","user_id":"<uuid>"}' -w "\nStatus: %{http_code}\n"
+done
+```
 
 ---
 
-## Next steps
+## Monitoring
 
-If you want, I can:
-- add the Upstash helpers (`src/lib/upstash-redis.ts`, `src/lib/redis-cache.ts`, `src/lib/redis-ratelimit.ts`, `src/lib/redis-versioning.ts`)
-- wire rate limiting + caching into the specific API routes listed above
-- provide a small “key registry” table (keys + TTLs + invalidation triggers) for maintainability
+- **Upstash Console** — Command usage, cache/rate-limit analytics.
+- **Server logs** — Cache HIT/MISS, `⚠️ Rate limit error for key {key}`, Redis fallback messages.
+- **Response headers** — `X-Cache`, `Retry-After` when rate limited.
+- **App analytics** — Count 429s and monitor `Retry-After` for abuse or tuning.
 
+---
 
+## Next steps (optional)
+
+1. **Idempotency** — `Idempotency-Key` header on create-review / create-comment / upload; store result in Redis for 5–10 min to avoid duplicate submissions.
+2. **More invalidation** — Bump versions when deleting or updating reviews/comments.
+3. **Object caching** — Cache restaurant-by-UUID and user-by-ID with longer TTL (e.g. 5 min) to reduce repeated lookups.
+4. **UX** — Show “X requests remaining” or retry countdown when rate limited.
+
+---
+
+## Summary
+
+- **Caching:** 5 read endpoints use versioned cache keys and short TTLs; writes bump versions so caches stay fresh.
+- **Rate limiting:** 10 endpoints use 5 limiters (upload, like, create, follow, wishlist) with per-user or per-IP keys.
+- **Resilience:** Redis failures do not break the API; endpoints fall back to direct Hasura or allow requests through.
+- **Production:** Add Upstash credentials to `.env.local`, restart the server, and use the headers/logs above to verify behavior.

@@ -2,6 +2,65 @@ Below is a “how modern companies do it” breakdown, mapped to your stack: **N
 
 ---
 
+## Current implementation snapshot (as of codebase review)
+
+This section reflects what the code actually does today: like toggle, comments/replies, and review feed.
+
+### Data model (Hasura / Postgres)
+
+- **Reviews and comments** — Same table `restaurant_reviews`. Top-level posts have `parent_review_id` null; comments/replies have `parent_review_id` set to the parent review UUID. Rows include `likes_count`, `replies_count` (denormalized).
+- **Likes** — Table `restaurant_review_likes(review_id, user_id)` with unique constraint `restaurant_review_likes_unique`. A DB trigger (e.g. `update_review_likes_count()`) keeps `restaurant_reviews.likes_count` in sync when likes are inserted/deleted.
+- **Feed query** — Only top-level reviews (`parent_review_id` null). Comments are not nested in the feed; they are loaded on-demand per review.
+
+### Like (write path)
+
+- **API:** `POST /api/v1/restaurant-reviews/toggle-like` (body: `review_id`, `user_id`). UUIDs required. Rate limited: 20 requests / 10s per user (Redis `likeRateLimit`).
+- **Server flow:** (1) One combined Hasura query: check if user liked + read current `likes_count`. (2) If liked → `DELETE_REVIEW_LIKE`; else → `INSERT_REVIEW_LIKE` (with `on_conflict` on unique constraint). (3) Read `likes_count` from `restaurant_reviews_by_pk`. (4) If trigger did not update count (self-heal logic), run aggregate count once and optionally update `likes_count` so future reads stay fast.
+- **Response:** `{ success, data: { liked, action, likesCount } }`.
+- **Client:** **useReviewLike** (where wired): Optimistic update → `reviewV2Service.toggleLike(reviewId, userId)` (POST JSON). On success confirm from API; on error revert + toast. No success toast. **ReviewScreen, ReviewScreenDesktop, ReviewBlock:** Some call `reviewV2Service.toggleLike` or `fetch(.../toggle-like...)` directly with local optimistic state.
+- **Like status read:** `GET .../toggle-like?review_id=&user_id=` returns `{ data: { liked, likesCount } }` (existence check + denormalized count).
+
+### Comments (write path)
+
+- **API:** `POST /api/v1/restaurant-reviews/create-comment` (body: `parent_review_id`, `author_id`, `content`, optional `restaurant_uuid`). Rate limited: 5 requests / 30s per user. UUID validation; content length 1–1000.
+- **Server flow:** If `restaurant_uuid` missing, fetch parent review to get it. Insert via `CREATE_REVIEW` with `{ restaurant_uuid, author_id, content, status: 'approved', parent_review_id }`. After success, `bumpVersion(\`v:review:${parent_review_id}:replies\`)` for cache invalidation.
+- **Client:** `ReviewService.createComment(input, accessToken)` → fetch create-comment. Used from ReviewScreenDesktop and CommentsBottomSheet. No optimistic comment insert in the paths checked; UI waits for success then refetches replies.
+
+### Reviews feed (read path)
+
+- **API:** `GET /api/v1/restaurant-reviews/get-all-reviews?limit=&offset=` (default limit 16, offset 0). Uses **offset pagination** in this route. Cache: versioned key, TTL 300s, version `v:reviews:all`.
+- **Server flow:** (1) Hasura `GET_ALL_REVIEWS_WITH_NHOST_AUTHORS` (reviews only). (2) Batch-fetch restaurants by UUID. (3) Enrich with author (AuthorProfile/user) and restaurant. Return `{ data: enrichedReviews, meta: { total, limit, offset, hasMore } }`.
+- **Replies read:** `GET .../get-replies?parent_review_id=&user_id=` (user_id optional for viewer_has_liked). Cached with `v:review:{parent_review_id}:replies`, TTL 120s. Comments loaded on-demand when opening a review.
+
+### Where things live in code
+
+| Concern | Location |
+|--------|----------|
+| Toggle like API | `src/app/api/v1/restaurant-reviews/toggle-like/route.ts` |
+| Create comment API | `src/app/api/v1/restaurant-reviews/create-comment/route.ts` |
+| Get all reviews (feed) | `src/app/api/v1/restaurant-reviews/get-all-reviews/route.ts` |
+| Get replies | `src/app/api/v1/restaurant-reviews/get-replies/route.ts` |
+| Like hook (optimistic) | `src/hooks/useReviewLike.ts` |
+| Like service (client) | `src/app/api/v1/services/reviewV2Service.ts` (`toggleLike` POST body) |
+| Comment service (client) | `src/services/Reviews/reviewService.ts` (`createComment`) |
+| GraphQL (likes, reviews) | `src/app/graphql/RestaurantReviews/restaurantReviewQueries.ts` |
+
+### Assessment vs. modern SNS checklist
+
+- **Cursor pagination:** Feed in `get-all-reviews` is offset-based (cursor may exist elsewhere; see Performance.md).
+- **Stored counters:** Yes — `likes_count` / `replies_count` on `restaurant_reviews`; trigger + API self-heal.
+- **Unique constraint for likes:** Yes — `restaurant_review_likes_unique`; INSERT uses `on_conflict`.
+- **Existence check for viewer_has_liked:** Yes — `restaurant_review_likes` limit 1, not aggregate.
+- **Comments on-demand:** Yes — get-replies; not nested in feed.
+- **Transactional like + counter:** Counter by DB trigger; API does insert/delete then read count (no single DB function).
+- **Optimistic UI for like:** Yes — useReviewLike and direct call sites.
+- **No refetch entire feed after like:** Yes — only affected post state updated.
+- **Write path behind monolith API:** Yes — likes and comments via Next.js routes (rate limit, validation, cache invalidation).
+- **No success toast on like:** Yes.
+- **Idempotency:** Not implemented for like or create-comment.
+
+---
+
 ## 1) What your stack *should* look like (clean separation)
 
 ### A. Next.js (Client + Server)
