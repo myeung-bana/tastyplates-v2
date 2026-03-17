@@ -120,7 +120,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
       {/* Full Screen Gallery Modal */}
       {showAllImages && (
         <div 
-          className="fixed inset-0 z-50 bg-black transition-opacity duration-300"
+          className="fixed inset-0 z-[1001] bg-black transition-opacity duration-300"
           onClick={(e) => {
             // Close if clicking on backdrop (not on image or controls)
             if (e.target === e.currentTarget) {
@@ -129,10 +129,10 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
           }}
         >
           <div className="relative w-full h-full flex items-center justify-center">
-            {/* Close Button */}
+            {/* Close Button - top left */}
             <button
               onClick={() => setShowAllImages(false)}
-              className="absolute top-4 right-4 text-white p-2 hover:bg-white/20 rounded-full transition-colors z-10 bg-black/50"
+              className="absolute top-4 left-4 text-white p-2 hover:bg-white/20 rounded-full transition-colors z-10 bg-black/50"
               aria-label="Close gallery"
             >
               <FiX className="w-6 h-6" />
@@ -204,8 +204,8 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
               </div>
             )}
 
-            {/* Image Counter */}
-            <div className="absolute top-4 left-4 text-white text-lg font-medium">
+            {/* Image Counter - top right so it doesn't overlap close button */}
+            <div className="absolute top-4 right-4 text-white text-lg font-medium">
               {selectedImage + 1} / {images.length}
             </div>
           </div>

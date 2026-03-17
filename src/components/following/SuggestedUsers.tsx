@@ -1,9 +1,10 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import FallbackImage, { FallbackImageType } from '@/components/ui/Image/FallbackImage';
 import { FiUserPlus, FiCheck } from 'react-icons/fi';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { nhost } from '@/lib/nhost';
 import { toast } from 'react-hot-toast';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
@@ -21,93 +22,66 @@ interface SuggestedUsersProps {
   onFollowSuccess?: () => void;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function SuggestedUsers({ onFollowSuccess }: SuggestedUsersProps) {
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
+  const userId = user?.user_id ?? nhostUser?.id ?? '';
+
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [followingStates, setFollowingStates] = useState<Record<string, boolean>>({});
   const [followLoading, setFollowLoading] = useState<Record<string, boolean>>({});
 
-  // Fetch following count to determine if we should show suggestions
-  useEffect(() => {
-    if (user?.id) {
-      fetchFollowingCount();
+  const fetchFollowingCount = useCallback(async () => {
+    if (!userId || !UUID_REGEX.test(userId)) {
+      setFollowingCount(0);
+      return;
     }
-  }, [user?.id]);
+    try {
+      const result = await restaurantUserService.getFollowingCount(userId);
+      if (result.success) {
+        setFollowingCount(result.data.followingCount);
+      } else {
+        setFollowingCount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching following count:', error);
+      setFollowingCount(0);
+    }
+  }, [userId]);
+
+  // Fetch following count when user is available
+  useEffect(() => {
+    if (userId) {
+      fetchFollowingCount();
+    } else {
+      setFollowingCount(null);
+      setLoading(false);
+    }
+  }, [userId, fetchFollowingCount]);
 
   // Fetch suggested users only if following count is less than 5
   useEffect(() => {
     if (followingCount !== null && followingCount < 5) {
       fetchSuggestedUsers();
     } else if (followingCount !== null && followingCount >= 5) {
-      // User has 5+ follows, don't show suggestions
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followingCount]);
 
-  const fetchFollowingCount = async () => {
-    if (!user?.id) return;
-
-    try {
-      const userIdStr = String(user.id);
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      
-      // Check if user.id is already a UUID
-      if (UUID_REGEX.test(userIdStr)) {
-        const result = await restaurantUserService.getFollowingCount(userIdStr);
-        if (result.success) {
-          setFollowingCount(result.data.followingCount);
-        } else {
-          // If error, default to showing suggestions
-          setFollowingCount(0);
-        }
-      } else {
-        // If not UUID, try to get user UUID first
-        if (firebaseUser) {
-          const idToken = await firebaseUser.getIdToken();
-          const userResponse = await fetch('/api/v1/restaurant-users/get-restaurant-user-by-firebase-uuid', {
-            headers: { 'Authorization': `Bearer ${idToken}` }
-          });
-          
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            if (userData.success && userData.data?.id) {
-              const result = await restaurantUserService.getFollowingCount(userData.data.id);
-              if (result.success) {
-                setFollowingCount(result.data.followingCount);
-              } else {
-                setFollowingCount(0);
-              }
-            } else {
-              setFollowingCount(0);
-            }
-          } else {
-            setFollowingCount(0);
-          }
-        } else {
-          setFollowingCount(0);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching following count:', error);
-      // Default to showing suggestions on error
-      setFollowingCount(0);
-    }
-  };
-
   const fetchSuggestedUsers = async () => {
     try {
       setLoading(true);
-      
-      // Get auth token if available
+
       let headers: HeadersInit = {};
-      if (firebaseUser) {
-        const idToken = await firebaseUser.getIdToken();
-        headers = {
-          'Authorization': `Bearer ${idToken}`
-        };
+      if (nhost?.auth?.getSession()) {
+        const token = nhost.auth.getSession()?.accessToken;
+        if (token) {
+          headers = { 'Authorization': `Bearer ${token}` };
+        }
       }
 
       const response = await fetch('/api/v1/restaurant-users/suggested?limit=6', {
@@ -131,19 +105,19 @@ export default function SuggestedUsers({ onFollowSuccess }: SuggestedUsersProps)
     }
   };
 
-  const handleFollow = async (userId: string, username: string) => {
-    if (!user || !firebaseUser) {
+  const handleFollow = async (targetUserId: string, username: string) => {
+    if (!userId) {
       toast.error('Please sign in to follow users');
       return;
     }
 
-    const isCurrentlyFollowing = followingStates[userId];
-    
+    const isCurrentlyFollowing = followingStates[targetUserId];
+
     try {
-      setFollowLoading(prev => ({ ...prev, [userId]: true }));
-      
-      const idToken = await firebaseUser.getIdToken();
-      const endpoint = isCurrentlyFollowing 
+      setFollowLoading(prev => ({ ...prev, [targetUserId]: true }));
+
+      const token = nhost?.auth?.getSession()?.accessToken;
+      const endpoint = isCurrentlyFollowing
         ? '/api/v1/restaurant-users/unfollow'
         : '/api/v1/restaurant-users/follow';
 
@@ -151,9 +125,9 @@ export default function SuggestedUsers({ onFollowSuccess }: SuggestedUsersProps)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({ user_id: targetUserId })
       });
 
       if (!response.ok) {
@@ -163,11 +137,11 @@ export default function SuggestedUsers({ onFollowSuccess }: SuggestedUsersProps)
       const result = await response.json();
       
       if (result.success) {
-        setFollowingStates(prev => ({ ...prev, [userId]: !isCurrentlyFollowing }));
-        
+        setFollowingStates(prev => ({ ...prev, [targetUserId]: !isCurrentlyFollowing }));
+
         // Update follower count optimistically
-        setSuggestedUsers(prev => prev.map(u => 
-          u.id === userId 
+        setSuggestedUsers(prev => prev.map(u =>
+          u.id === targetUserId
             ? { ...u, followerCount: isCurrentlyFollowing ? u.followerCount - 1 : u.followerCount + 1 }
             : u
         ));
@@ -190,7 +164,7 @@ export default function SuggestedUsers({ onFollowSuccess }: SuggestedUsersProps)
       console.error('Error updating follow status:', error);
       toast.error(`Failed to ${isCurrentlyFollowing ? 'unfollow' : 'follow'} user`);
     } finally {
-      setFollowLoading(prev => ({ ...prev, [userId]: false }));
+      setFollowLoading(prev => ({ ...prev, [targetUserId]: false }));
     }
   };
 

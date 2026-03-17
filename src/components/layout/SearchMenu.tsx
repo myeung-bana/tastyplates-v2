@@ -135,39 +135,14 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
     setSelectedPalates(new Set());
   };
 
-  const handlePalateSelection = (palateKey: string, isRegion: boolean = false) => {
-    const newSelection = new Set(selectedPalates);
-
-    if (isRegion) {
-      const region = palateOptions.find((r) => r.key === palateKey);
-      if (region?.children) {
-        region.children.forEach((child) => {
-          newSelection.delete(child.key);
-        });
-      }
-
-      if (newSelection.has(palateKey)) {
-        newSelection.delete(palateKey);
-      } else {
-        newSelection.add(palateKey);
-      }
-    } else {
-      const parentRegion = palateOptions.find((region) =>
-        region.children?.some((child) => child.key === palateKey)
-      );
-
-      if (parentRegion) {
-        newSelection.delete(parentRegion.key);
-      }
-
-      if (newSelection.has(palateKey)) {
-        newSelection.delete(palateKey);
-      } else {
-        newSelection.add(palateKey);
-      }
+  // Single selection: either one region (e.g. All East Asian) OR one country (e.g. Japanese). Clicking current selection resets to All Cuisines.
+  const handlePalateSelection = (palateKey: string, _isRegion: boolean = false) => {
+    const isOnlySelection = selectedPalates.size === 1 && selectedPalates.has(palateKey);
+    if (isOnlySelection) {
+      setSelectedPalates(new Set());
+      return;
     }
-
-    setSelectedPalates(newSelection);
+    setSelectedPalates(new Set([palateKey]));
   };
 
   return (
@@ -295,10 +270,13 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
                         {selectedPalates.size} selected
                       </span>
                       <button
-                        onClick={() => setSelectedPalates(new Set())}
+                        onClick={() => {
+                          setSelectedPalates(new Set());
+                          setSearchValue("");
+                        }}
                         className="text-xs text-[#ff7c0a] hover:text-[#e66b00] font-medium underline"
                       >
-                        Clear
+                        Reset
                       </button>
                     </div>
                   )}

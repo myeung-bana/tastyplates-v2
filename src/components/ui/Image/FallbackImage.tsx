@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_IMAGE, DEFAULT_USER_ICON, DEFAULT_USER_IMAGE } from "@/constants/images";
+import { DEFAULT_IMAGE, DEFAULT_USER_ICON, DEFAULT_USER_IMAGE, DEFAULT_RESTAURANT_CARD_IMAGE } from "@/constants/images";
 import Image, { ImageProps } from "next/image";
 import { useState, useEffect, useRef } from "react";
 
@@ -8,12 +8,14 @@ export enum FallbackImageType {
     Avatar = "avatar",
     Icon = "icon",
     Default = "default",
+    RestaurantCard = "restaurant_card",
 }
 
 const FALLBACK_IMAGE_MAP: Record<FallbackImageType, string> = {
     [FallbackImageType.Avatar]: DEFAULT_USER_IMAGE,
     [FallbackImageType.Icon]: DEFAULT_USER_ICON,
     [FallbackImageType.Default]: DEFAULT_IMAGE,
+    [FallbackImageType.RestaurantCard]: DEFAULT_RESTAURANT_CARD_IMAGE,
 };
 
 type FallbackImageProps = ImageProps & {

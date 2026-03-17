@@ -4,6 +4,10 @@ export const DEFAULT_USER_ICON = "/profile-icon.svg";
 export const DEFAULT_IMAGE = "/images/tastyplates_placeholder_portrait.jpg"; // Deprecated - use DEFAULT_REVIEW_IMAGE or DEFAULT_RESTAURANT_IMAGE
 export const DEFAULT_REVIEW_IMAGE = "/images/tastyplates_placeholder_portrait.jpg";
 export const DEFAULT_RESTAURANT_IMAGE = "/images/tastyplates_placeholder_landscape.jpg";
+/** Fallback for RestaurantCard only when API returns no image or load fails. Use DB default URL via env. */
+export const DEFAULT_RESTAURANT_CARD_IMAGE =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEFAULT_RESTAURANT_IMAGE_URL) ||
+  "/images/tastyplates_placeholder_landscape.jpg";
 
 // Flag icons
 export const FLAG = "/flag.svg";

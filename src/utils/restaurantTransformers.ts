@@ -2,7 +2,6 @@
 
 import { RestaurantV2 } from '@/app/api/v1/services/restaurantV2Service';
 import { Listing } from '@/interfaces/restaurant/restaurant';
-import { DEFAULT_RESTAURANT_IMAGE } from '@/constants/images';
 import { getBestAddress } from '@/utils/addressUtils';
 
 // Restaurant type for list view (matches component interface)
@@ -186,7 +185,8 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
     id: restaurant.uuid, // Use UUID as ID
     slug: restaurant.slug,
     name: restaurant.title,
-    image: restaurant.featured_image_url || DEFAULT_RESTAURANT_IMAGE,
+    // Expect API to return default image from DB when restaurant has no image; empty falls back to DEFAULT_RESTAURANT_CARD_IMAGE in RestaurantCard
+    image: restaurant.featured_image_url ?? '',
     rating: restaurant.average_rating || 0,
     databaseId: restaurant.id,
     palatesNames: palatesArray.map((p: any) => 

@@ -1,8 +1,9 @@
 'use client';
-import React from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { useFollowingReviewsGraphQL } from '@/hooks/useFollowingReviewsGraphQL';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
 import SuggestedUsers from '@/components/following/SuggestedUsers';
@@ -10,24 +11,58 @@ import { FaUsers, FaCompass } from 'react-icons/fa';
 import { FiUsers, FiTrendingUp, FiHeart } from 'react-icons/fi';
 import Link from 'next/link';
 
+const FOLLOWING_FEED_MIN_COUNT = 10;
+
 export default function FollowingPage() {
-  const { user, loading: sessionLoading } = useFirebaseSession();
-  const { 
-    reviews, 
-    loading, 
-    initialLoading, 
-    hasMore, 
-    loadMore
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
+  const [followingCountLoading, setFollowingCountLoading] = useState(true);
+
+  const userId = user?.user_id ?? nhostUser?.id ?? '';
+
+  const {
+    reviews,
+    loading,
+    initialLoading,
+    hasMore,
+    loadMore,
+    refreshFollowingReviews,
   } = useFollowingReviewsGraphQL();
-  
+
   const { observerRef } = useInfiniteScroll({
     loadMore: async () => loadMore(),
     hasNextPage: hasMore,
-    loading: loading
+    loading: loading,
   });
 
+  // Fetch following count when user is available
+  const fetchFollowingCount = useCallback(async () => {
+    if (!userId) {
+      setFollowingCount(0);
+      setFollowingCountLoading(false);
+      return;
+    }
+    setFollowingCountLoading(true);
+    try {
+      const result = await restaurantUserService.getFollowingCount(userId);
+      if (result.success && result.data) {
+        setFollowingCount(result.data.followingCount);
+      } else {
+        setFollowingCount(0);
+      }
+    } catch {
+      setFollowingCount(0);
+    } finally {
+      setFollowingCountLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchFollowingCount();
+  }, [fetchFollowingCount]);
+
   // Show sign-in prompt if not authenticated (but don't show spinner)
-  if (!user && !sessionLoading) {
+  if (!nhostUser && !sessionLoading) {
     return (
       <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,20 +74,25 @@ export default function FollowingPage() {
             <p className="text-lg text-gray-600 mb-8">
               Follow other food lovers to see their latest reviews and discoveries
             </p>
-            <button 
-              onClick={() => window.location.href = '/signin'}
-              className="bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors"
+            <Link
+              href="/login"
+              className="inline-block bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors"
             >
               Sign In
-            </button>
+            </Link>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show skeleton while session is loading or initial data is loading
-  if (sessionLoading || (user && initialLoading)) {
+  // Show skeleton while session or following count is loading, or initial feed is loading
+  const showSkeleton =
+    sessionLoading ||
+    (nhostUser && followingCountLoading) ||
+    (nhostUser && user && initialLoading && (followingCount === null || followingCount >= FOLLOWING_FEED_MIN_COUNT));
+
+  if (showSkeleton) {
     return (
       <div className="py-8 md:pt-[88px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -74,15 +114,69 @@ export default function FollowingPage() {
     );
   }
 
+  // Gate: require at least 10 followed users to use this page
+  const showGate = followingCount !== null && followingCount < FOLLOWING_FEED_MIN_COUNT;
+
+  if (showGate) {
+    return (
+      <div className="py-8 md:pt-[88px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3 font-neusans">
+              Following
+            </h1>
+            <p className="text-gray-600">
+              Discover the latest reviews from food lovers you follow
+            </p>
+          </div>
+          <div className="max-w-2xl mx-auto text-center py-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-full mb-6">
+              <FiUsers className="h-10 w-10 text-[#ff7c0a]" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 font-neusans">
+              Follow 10 users to unlock this feed
+            </h2>
+            <p className="text-lg text-gray-600 mb-6 font-neusans">
+              This page shows the latest reviews from people you follow. Follow at least 10 users to see your personalized feed.
+            </p>
+            <p className="text-base font-medium text-gray-700 mb-8 font-neusans">
+              You&apos;re following <span className="text-[#ff7c0a]">{followingCount}</span> of {FOLLOWING_FEED_MIN_COUNT} users.
+            </p>
+            <div className="mb-10">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center font-neusans">Find people to follow</h3>
+              <SuggestedUsers onFollowSuccess={() => { fetchFollowingCount(); refreshFollowingReviews(); }} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center gap-2 bg-[#ff7c0a] hover:bg-[#e66d08] text-white px-8 py-3 rounded-full font-semibold transition-colors font-neusans"
+              >
+                <FiTrendingUp className="w-5 h-5" />
+                Browse Trending Reviews
+              </Link>
+              <Link
+                href="/restaurants"
+                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-8 py-3 rounded-full font-semibold border-2 border-gray-200 transition-colors font-neusans"
+              >
+                <FaCompass className="w-5 h-5" />
+                Explore Restaurants
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="py-8 md:pt-[88px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3 font-neusans">
             Following
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 font-neusans">
             Discover the latest reviews from food lovers you follow
           </p>
         </div>

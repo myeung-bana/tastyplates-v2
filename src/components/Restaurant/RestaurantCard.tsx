@@ -15,7 +15,7 @@ import { PAGE } from "@/lib/utils";
 import { TASTYSTUDIO_ADD_REVIEW_CREATE, RESTAURANTS } from "@/constants/pages";
 import toast from "react-hot-toast";
 import { favoriteStatusError, removedFromWishlistSuccess, savedToWishlistSuccess } from "@/constants/messages";
-import FallbackImage from "../ui/Image/FallbackImage";
+import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { getStreetCity } from "@/utils/addressUtils";
 import { useRestaurantOverallRating } from "@/hooks/useRestaurantOverallRating";
 import { STAR_FILLED } from "@/constants/images";
@@ -371,6 +371,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             }}
           >
             <FallbackImage
+              type={FallbackImageType.RestaurantCard}
               data-role="image"
               src={restaurant.image}
               alt={restaurant.name}

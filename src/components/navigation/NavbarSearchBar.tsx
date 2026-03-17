@@ -74,41 +74,14 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
     setIsInputFocused(false);
   };
 
-  const handlePalateSelection = (palateKey: string, isRegion: boolean = false) => {
-    const newSelection = new Set(selectedPalates);
-    
-    if (isRegion) {
-      // If selecting a region, remove all individual cuisines from that region
-      const region = palateOptions.find(r => r.key === palateKey);
-      if (region?.children) {
-        region.children.forEach(child => {
-          newSelection.delete(child.key);
-        });
-      }
-      
-      if (newSelection.has(palateKey)) {
-        newSelection.delete(palateKey);
-      } else {
-        newSelection.add(palateKey);
-      }
-    } else {
-      // If selecting individual cuisine, remove the parent region if it exists
-      const parentRegion = palateOptions.find(region => 
-        region.children?.some(child => child.key === palateKey)
-      );
-      
-      if (parentRegion) {
-        newSelection.delete(parentRegion.key);
-      }
-      
-      if (newSelection.has(palateKey)) {
-        newSelection.delete(palateKey);
-      } else {
-        newSelection.add(palateKey);
-      }
+  // Single selection: either one region (e.g. All East Asian) OR one country (e.g. Japanese). Clicking current selection resets to All Cuisines.
+  const handlePalateSelection = (palateKey: string, _isRegion: boolean = false) => {
+    const isOnlySelection = selectedPalates.size === 1 && selectedPalates.has(palateKey);
+    if (isOnlySelection) {
+      setSelectedPalates(new Set());
+      return;
     }
-    
-    setSelectedPalates(newSelection);
+    setSelectedPalates(new Set([palateKey]));
   };
 
   const getSelectedPalateLabels = (): string[] => {
@@ -135,18 +108,9 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
     if (searchMode === 'keyword') {
       return searchValue || 'Search by Keyword...';
     }
-    
     const labels = getSelectedPalateLabels();
-    if (labels.length === 0) {
-      return 'All Cuisines';
-    }
-    if (labels.length === 1) {
-      return labels[0] || 'All Cuisines';
-    }
-    if (labels.length === 2) {
-      return `${labels[0] || ''}, ${labels[1] || ''}`;
-    }
-    return `${labels[0] || ''}, ${labels[1] || ''} +${labels.length - 2} more`;
+    if (labels.length === 0) return 'All Cuisines';
+    return labels[0] || 'All Cuisines';
   };
 
   return (
@@ -275,7 +239,7 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
                 }}
                 className="navbar__palate-modal-clear"
               >
-                Clear All
+                Reset
               </button>
               <button
                 onClick={() => setShowPalateModal(false)}
