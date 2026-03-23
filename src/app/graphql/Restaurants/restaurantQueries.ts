@@ -132,6 +132,22 @@ export const GET_RESTAURANT_BY_UUID = `
   }
 `;
 
+/** Batch by `restaurants.id` — use with `article_restaurant_associations.restaurant_id` when no Hasura object relationship exists */
+export const GET_RESTAURANTS_BY_IDS = `
+  query GetRestaurantsByIds($ids: [Int!]!) {
+    restaurants(where: { id: { _in: $ids } }) {
+      id
+      uuid
+      title
+      slug
+      featured_image_url
+      address
+      listing_street
+      content
+    }
+  }
+`;
+
 // GET RESTAURANTS BY UUIDs - Batch fetch multiple restaurants (optimized for N+1 prevention)
 export const GET_RESTAURANTS_BY_UUIDS = `
   query GetRestaurantsByUuids($uuids: [uuid!]!, $limit: Int = 100) {

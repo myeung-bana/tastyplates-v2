@@ -36,6 +36,8 @@ import ReplyItem from "./ReplyItem";
 import ReplySkeleton from "../ui/Skeleton/ReplySkeleton";
 import SigninModal from "../auth/SigninModal";
 import SignupModal from "../auth/SignupModal";
+import ReviewEngagementAuthModal from "./ReviewEngagementAuthModal";
+import { getEngagementAuthorFromReview } from "@/utils/reviewEngagementAuthor";
 import "@/styles/components/_review-screen-desktop.scss";
 
 interface ReviewScreenDesktopProps {
@@ -93,6 +95,10 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const [replyLikeLoading, setReplyLikeLoading] = useState<Record<string, boolean>>({});
   const [isShowSignin, setIsShowSignin] = useState(false);
   const [isShowSignup, setIsShowSignup] = useState(false);
+  const [engagementModalOpen, setEngagementModalOpen] = useState(false);
+  const [engagementAuthor, setEngagementAuthor] = useState<
+    ReturnType<typeof getEngagementAuthorFromReview> | null
+  >(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fetchedCommentCountsRef = useRef<Set<number>>(new Set());
   const preloadedImagesRef = useRef<Set<string>>(new Set());
@@ -155,12 +161,19 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
   const CACHE_TTL = 30000; // 30 seconds cache
 
+  const openEngagementAuth = useCallback(() => {
+    const review = reviews[currentIndex];
+    setEngagementAuthor(getEngagementAuthorFromReview(review));
+    setEngagementModalOpen(true);
+  }, [reviews, currentIndex]);
+
   // Current review for like hook (one review at a time in desktop viewer)
   const currentReviewForLike = reviews[currentIndex];
   const reviewLike = useReviewLike({
     reviewId: currentReviewForLike?.id ?? "",
     initialLiked: currentReviewForLike ? (userLiked[currentReviewForLike.databaseId] ?? false) : false,
     initialCount: currentReviewForLike ? (likesCount[currentReviewForLike.databaseId] ?? 0) : 0,
+    onAuthRequired: openEngagementAuth,
     onConfirm: useCallback((liked: boolean, count: number, reviewId?: string) => {
       if (!reviewId) return;
       const r = reviews.find((rev) => rev.id === reviewId || String(rev.databaseId) === reviewId);
@@ -412,7 +425,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const handleCommentLike = useCallback(
     async (reply: GraphQLReview) => {
       if (!user) {
-        toast.error("Please sign in to like comments");
+        openEngagementAuth();
         return;
       }
 
@@ -455,7 +468,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         toast.error("Failed to like comment. Please try again.");
       }
     },
-    [user, replyUserLiked, replyLikes, getUserUuid, UUID_REGEX]
+    [user, replyUserLiked, replyLikes, getUserUuid, UUID_REGEX, openEngagementAuth]
   );
 
   // Navigate between images in current review
@@ -586,7 +599,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isSubmittingComment || cooldown > 0) return;
     if (!user) {
-      toast.error("Please sign in to comment");
+      openEngagementAuth();
       return;
     }
 
@@ -739,7 +752,7 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     } finally {
       setIsSubmittingComment(false);
     }
-  }, [commentText, isSubmittingComment, cooldown, user, nhostUser, reviews, currentIndex, getNhostToken]);
+  }, [commentText, isSubmittingComment, cooldown, user, nhostUser, reviews, currentIndex, getNhostToken, openEngagementAuth, getUserUuid]);
 
   // Wheel gesture handler (two-finger scroll or mouse wheel)
   const bindWheel = useWheel(
@@ -1184,7 +1197,8 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
                   <div className="review-screen-desktop__comment-login">
                     <p className="text-sm text-gray-500 text-center">
                       <button
-                        onClick={() => toast.error("Please sign in to comment")}
+                        type="button"
+                        onClick={openEngagementAuth}
                         className="text-blue-500 hover:text-blue-600 font-medium"
                       >
                         Sign in
@@ -1224,6 +1238,27 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
           </div>
         </div>
       </div>
+
+      <ReviewEngagementAuthModal
+        isOpen={engagementModalOpen}
+        onClose={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+        }}
+        username={engagementAuthor?.username ?? "this creator"}
+        avatarUrl={engagementAuthor?.avatarUrl ?? DEFAULT_USER_ICON}
+        profileHref={engagementAuthor?.profileHref ?? null}
+        onSignUp={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+          setIsShowSignup(true);
+        }}
+        onLogIn={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+          setIsShowSignin(true);
+        }}
+      />
 
       {/* Signin/Signup Modals */}
       <SigninModal

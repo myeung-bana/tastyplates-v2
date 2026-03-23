@@ -6,8 +6,9 @@
   }
 
   &__container {
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
+    padding: 0 1rem;
 
     @media (max-width: 767px) {
       padding: 0 0.75rem;

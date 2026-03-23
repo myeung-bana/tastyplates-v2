@@ -4,34 +4,30 @@ import { Article } from "@/types/article";
 import { transformHasuraArticle } from "@/utils/articleTransformers";
 import ArticleCard from "./ArticleCard";
 import ArticleCardSkeleton from "@/components/ui/Skeleton/ArticleCardSkeleton";
+import { useLocation } from "@/contexts/LocationContext";
 import "@/styles/components/_articles.scss";
 
 const Articles = () => {
+  const { selectedLocation } = useLocation();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const isBlogDev = process.env.NEXT_PUBLIC_BLOG_DEV === "true";
-
-    if (isBlogDev) {
-      import("@/data/mockArticles")
-        .then(({ MOCK_ARTICLES }) => {
-          setArticles(MOCK_ARTICLES.slice(0, 8));
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    } else {
-      fetch("/api/v1/articles/get-articles?limit=8")
-        .then((res) => res.json())
-        .then(({ success, data }) => {
-          if (success && Array.isArray(data)) {
-            setArticles(data.map(transformHasuraArticle));
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
-  }, []);
+    setLoading(true);
+    const params = new URLSearchParams({
+      limit: "8",
+      location_slug: selectedLocation.key,
+    });
+    fetch(`/api/v1/articles/get-articles?${params.toString()}`)
+      .then((res) => res.json())
+      .then(({ success, data }) => {
+        if (success && Array.isArray(data)) {
+          setArticles(data.map(transformHasuraArticle));
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [selectedLocation.key]);
 
   if (!loading && articles.length === 0) return null;
 
@@ -44,13 +40,17 @@ const Articles = () => {
             See all
           </a>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="articles__grid grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {loading
             ? Array.from({ length: 8 }, (_, i) => (
-                <ArticleCardSkeleton key={`article-skeleton-${i}`} />
+                <ArticleCardSkeleton key={`article-skeleton-${i}`} large />
               ))
             : articles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                  size="large"
+                />
               ))}
         </div>
       </div>

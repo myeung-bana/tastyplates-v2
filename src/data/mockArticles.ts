@@ -36,6 +36,60 @@ export const MOCK_ARTICLES: Article[] = [
     content:
       "Dim sum is best enjoyed slowly, with family, and without a reservation queue stretching around the block. We spent a week in Hong Kong's outer districts to find the spots that locals return to week after week...",
     view_count: 876,
+    article_linked_locations: [
+      {
+        id: "mloc-hk-1",
+        display_order: 0,
+        location_id: "5",
+        name: "Hong Kong",
+        slug: "hongkong",
+        short_label: "HK",
+        flag_url: "https://flagcdn.com/hk.svg",
+        type: "country",
+      },
+      {
+        id: "mloc-hk-2",
+        display_order: 1,
+        location_id: "6",
+        name: "Kowloon",
+        slug: "kowloon",
+        short_label: "KLN",
+        flag_url: "https://flagcdn.com/hk.svg",
+        type: "city",
+      },
+    ],
+    article_linked_restaurants: [
+      {
+        associationId: "mars-2",
+        display_order: 0,
+        restaurant_id: "102",
+        title: "Lin Heung Tea House",
+        slug: "lin-heung-tea-house",
+        uuid: "00000000-0000-0000-0000-000000000002",
+        imageUrl:
+          "https://images.unsplash.com/photo-1544148103-07737bf5558f?w=600&q=80",
+        addressLine: "160-164 Wellington St, Central",
+        description:
+          "Historic cart-style service and classic dim sum favorites in a bustling upstairs hall.",
+      },
+      {
+        associationId: "mars-1",
+        display_order: 1,
+        restaurant_id: "101",
+        title: "Tim Ho Wan",
+        slug: "tim-ho-wan-mong-kok",
+        uuid: "00000000-0000-0000-0000-000000000001",
+        imageUrl:
+          "https://images.unsplash.com/photo-1609167830220-7164aa360951?w=600&q=80",
+        addressLine: "9-11 Fuk Wing St, Sham Shui Po",
+        description:
+          "Michelin-starred dim sum hole in the wall known for baked BBQ pork buns and har gow.",
+      },
+    ],
+    article_restaurant_associations: [
+      { id: "mars-2", article_id: "2", display_order: 0, restaurant_id: "102" },
+      { id: "mars-1", article_id: "2", display_order: 1, restaurant_id: "101" },
+    ],
   },
   {
     id: "3",

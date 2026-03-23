@@ -23,6 +23,8 @@ interface CommentsBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onCommentCountChange?: (count: number) => void;
+  /** When set, guest like/comment attempts open this instead of a toast */
+  onAuthRequired?: () => void;
 }
 
 const reviewService = new ReviewService();
@@ -33,6 +35,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   isOpen,
   onClose,
   onCommentCountChange,
+  onAuthRequired,
 }) => {
   const { user, nhostUser } = useNhostSession();
   const [replies, setReplies] = useState<GraphQLReview[]>([]);
@@ -175,14 +178,16 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Handle reply like
   const handleReplyLike = useCallback(async (reply: GraphQLReview) => {
     if (!user) {
-      toast.error("Please sign in to like comments");
+      if (onAuthRequired) onAuthRequired();
+      else toast.error("Please sign in to like comments");
       return;
     }
 
     // Get Nhost token for authentication
     const token = await getNhostToken();
     if (!token) {
-      toast.error('Please sign in to like comments');
+      if (onAuthRequired) onAuthRequired();
+      else toast.error("Please sign in to like comments");
       return;
     }
 
@@ -229,7 +234,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setReplyLoading((prev) => ({ ...prev, [replyId]: false }));
     }
-  }, [user, replyUserLiked, replyLikes, getNhostToken]);
+  }, [user, replyUserLiked, replyLikes, getNhostToken, onAuthRequired]);
 
   // Cooldown timer
   useEffect(() => {
@@ -332,7 +337,8 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
     if (!nhostUser) {
-      toast.error("Please sign in to comment");
+      if (onAuthRequired) onAuthRequired();
+      else toast.error("Please sign in to comment");
       return;
     }
 
@@ -404,7 +410,8 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
       // Get Nhost token for authentication
       const token = await getNhostToken();
       if (!token) {
-        toast.error('Please sign in to post comments');
+        if (onAuthRequired) onAuthRequired();
+        else toast.error("Please sign in to post comments");
         return;
       }
       
@@ -498,7 +505,19 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [commentText, isLoading, cooldown, nhostUser, user, review, replies.length, onCommentCountChange, getNhostToken, getUserUuid]);
+  }, [
+    commentText,
+    isLoading,
+    cooldown,
+    nhostUser,
+    user,
+    review,
+    replies.length,
+    onCommentCountChange,
+    getNhostToken,
+    getUserUuid,
+    onAuthRequired,
+  ]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -602,7 +621,12 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
           <div className="comments-bottom-sheet__login-prompt">
             <p className="text-sm text-gray-500 text-center">
               <button
-                onClick={() => toast.error("Please sign in to comment")}
+                type="button"
+                onClick={() =>
+                  onAuthRequired
+                    ? onAuthRequired()
+                    : toast.error("Please sign in to comment")
+                }
                 className="text-blue-500 hover:text-blue-600 font-medium"
               >
                 Sign in

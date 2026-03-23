@@ -21,6 +21,10 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import PalateTags from "../ui/PalateTags/PalateTags";
 import { useFollowContext } from "../FollowContext";
 import { FollowButton } from "@/components/ui/follow-button";
+import SigninModal from "../auth/SigninModal";
+import SignupModal from "../auth/SignupModal";
+import ReviewEngagementAuthModal from "./ReviewEngagementAuthModal";
+import { getEngagementAuthorFromReview } from "@/utils/reviewEngagementAuthor";
 import "@/styles/components/_review-screen.scss";
 
 interface ReviewScreenProps {
@@ -74,6 +78,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   const followInFlightRef = useRef(false);
   const followCheckCacheRef = useRef<Record<number, { isFollowing: boolean; ts: number }>>({});
   const FOLLOW_CACHE_MS = 5 * 60 * 1000;
+  const [engagementModalOpen, setEngagementModalOpen] = useState(false);
+  const [engagementAuthor, setEngagementAuthor] = useState<
+    ReturnType<typeof getEngagementAuthorFromReview> | null
+  >(null);
+  const [isShowSignin, setIsShowSignin] = useState(false);
+  const [isShowSignup, setIsShowSignup] = useState(false);
 
   // Used to re-bind observers when the *windowed* review list changes (not just its length).
   const reviewsKey = useMemo(
@@ -450,10 +460,22 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     loading: loadingMore,
   });
 
+  const openEngagementFromReview = useCallback((review: GraphQLReview) => {
+    setEngagementAuthor(getEngagementAuthorFromReview(review));
+    setEngagementModalOpen(true);
+  }, []);
+
+  const openEngagementForSelectedReview = useCallback(() => {
+    if (selectedReview) {
+      setEngagementAuthor(getEngagementAuthorFromReview(selectedReview));
+      setEngagementModalOpen(true);
+    }
+  }, [selectedReview]);
+
   // Handle like (pending lock prevents double-tap)
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
     if (!user) {
-      toast.error("Please sign in to like reviews");
+      openEngagementFromReview(review);
       return;
     }
 
@@ -479,7 +501,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
       if (isUUID) {
         const userId = await getUserUuid();
         if (!userId) {
-          toast.error("Please sign in to like reviews");
+          openEngagementFromReview(review);
           setLikePendingIds((prev) => {
             const next = new Set(prev);
             next.delete(reviewId);
@@ -493,7 +515,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
       } else {
         const token = await getNhostToken();
         if (!token) {
-          toast.error("Please sign in to like reviews");
+          openEngagementFromReview(review);
           setLikePendingIds((prev) => {
             const next = new Set(prev);
             next.delete(reviewId);
@@ -523,7 +545,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
         return next;
       });
     }
-  }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken]);
+  }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken, openEngagementFromReview]);
 
   const handleFollowToggle = useCallback(
     async (review: GraphQLReview, isFollowingState: boolean) => {
@@ -601,7 +623,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   const handleCommentLike = useCallback(
     async (reply: GraphQLReview) => {
       if (!user) {
-        toast.error("Please sign in to like comments");
+        openEngagementFromReview(
+          selectedReview ?? reviews[activeIndex] ?? reply
+        );
         return;
       }
 
@@ -644,7 +668,16 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
         toast.error("Failed to like comment. Please try again.");
       }
     },
-    [user, replyUserLiked, replyLikes, getUserUuid]
+    [
+      user,
+      replyUserLiked,
+      replyLikes,
+      getUserUuid,
+      openEngagementFromReview,
+      selectedReview,
+      reviews,
+      activeIndex,
+    ]
   );
 
   // Handle comment click
@@ -996,6 +1029,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
             setShowComments(false);
             setSelectedReview(null);
           }}
+          onAuthRequired={openEngagementForSelectedReview}
           onCommentCountChange={(count) => {
             setCommentCounts((prev) => ({
               ...prev,
@@ -1031,6 +1065,43 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
           }}
         />
       )}
+
+      <ReviewEngagementAuthModal
+        isOpen={engagementModalOpen}
+        onClose={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+        }}
+        username={engagementAuthor?.username ?? "this creator"}
+        avatarUrl={engagementAuthor?.avatarUrl ?? DEFAULT_USER_ICON}
+        profileHref={engagementAuthor?.profileHref ?? null}
+        onSignUp={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+          setIsShowSignup(true);
+        }}
+        onLogIn={() => {
+          setEngagementModalOpen(false);
+          setEngagementAuthor(null);
+          setIsShowSignin(true);
+        }}
+      />
+      <SigninModal
+        isOpen={isShowSignin}
+        onClose={() => setIsShowSignin(false)}
+        onOpenSignup={() => {
+          setIsShowSignin(false);
+          setIsShowSignup(true);
+        }}
+      />
+      <SignupModal
+        isOpen={isShowSignup}
+        onClose={() => setIsShowSignup(false)}
+        onOpenSignin={() => {
+          setIsShowSignup(false);
+          setIsShowSignin(true);
+        }}
+      />
     </>
   );
 
