@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import { IoMdClose } from "react-icons/io";
 import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { RestaurantService } from '@/services/restaurant/restaurantService';
 import ReviewModal from "@/components/ui/Modal/ReviewModal"; 
 import toast from 'react-hot-toast';
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
 import { formatDateT } from '@/lib/utils';
 import FallbackImage from '@/components/ui/Image/FallbackImage';
+import { nhost } from '@/lib/nhost';
 
 interface FetchedRestaurant {
     id: string;
@@ -37,7 +38,7 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     const imageUrl = restaurant.featuredImage?.node?.sourceUrl || DEFAULT_RESTAURANT_IMAGE;
     const cuisineNames = restaurant.palates?.nodes?.map(palate => palate.name) || [];
     const countryNames = restaurant.listingDetails?.googleMapUrl.streetAddress || restaurant.listingStreet || 'Unknown Location';
-    const { firebaseUser } = useFirebaseSession();
+    const { nhostUser } = useNhostSession();
 
     const [isShowDelete, setIsShowDelete] = useState<boolean>(false);
     const [isLoadingDelete, setIsLoadingDelete] = useState<boolean>(false);
@@ -47,15 +48,18 @@ const ListingCardDraft: React.FC<ListingCardProps> = ({ restaurant, onDeleteSucc
     };
 
     const confirmDelete = async () => {
-        if (!firebaseUser) {
+        if (!nhostUser) {
             toast.error("Authentication token is missing. Please log in.");
             return;
         }
 
         setIsLoadingDelete(true);
         try {
-            // Get Firebase ID token for authentication
-            const idToken = await firebaseUser.getIdToken();
+            // Get Nhost access token for authentication
+            const idToken = nhost?.auth.getAccessToken();
+            if (!idToken) {
+                throw new Error("Authentication token is missing. Please log in.");
+            }
             await restaurantService.deleteRestaurantListing(restaurant.databaseId, idToken);
             toast.success(deleteDraftSuccess);
             onDeleteSuccess();

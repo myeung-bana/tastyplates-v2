@@ -61,7 +61,9 @@ export async function GET(request: NextRequest) {
     
     // Advanced filters
     const cuisineIds = searchParams.get('cuisine_ids');
+    const cuisineSlugs = searchParams.get('cuisine_slugs');
     const palateIds = searchParams.get('palate_ids');
+    const palateSlugsParam = searchParams.get('palate_slugs');
     const categoryIds = searchParams.get('category_ids');
     const priceRangeId = searchParams.get('price_range_id');
     const minRating = searchParams.get('min_rating');
@@ -70,6 +72,8 @@ export async function GET(request: NextRequest) {
     const longitude = searchParams.get('longitude');
     const radiusKm = searchParams.get('radius_km');
     const isMainLocation = searchParams.get('is_main_location');
+    const cityName = searchParams.get('city_name');
+    const countryShort = searchParams.get('country_short');
     const orderBy = searchParams.get('order_by');
 
     // Validation
@@ -120,12 +124,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Cuisine slug filter (alternative to cuisine_ids, uses slug field in JSONB array)
+    if (cuisineSlugs) {
+      const slugs = cuisineSlugs.split(',').map(s => s.trim()).filter(Boolean);
+      if (slugs.length > 0) {
+        whereConditions.push({
+          _or: slugs.map(slug => ({
+            cuisines: { _contains: [{ slug }] }
+          }))
+        });
+      }
+    }
+
     if (palateIds) {
       const ids = palateIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
       if (ids.length > 0) {
         whereConditions.push({
           _or: ids.map(id => ({
             palates: { _contains: [{ id }] }
+          }))
+        });
+      }
+    }
+
+    // Palate slug filter (alternative to palate_ids, uses slug field in JSONB array)
+    if (palateSlugsParam) {
+      const slugs = palateSlugsParam.split(',').map(s => s.trim()).filter(Boolean);
+      if (slugs.length > 0) {
+        whereConditions.push({
+          _or: slugs.map(slug => ({
+            palates: { _contains: [{ slug }] }
           }))
         });
       }
@@ -185,6 +213,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // City / country hard filters via JSONB address field
+    // e.g. address->>'city' contains the city name stored by Google Maps API
+    if (cityName) {
+      whereConditions.push({
+        address: { _contains: { city: cityName } }
+      });
+    }
+
+    if (countryShort) {
+      whereConditions.push({
+        address: { _contains: { country_short: countryShort } }
+      });
+    }
+
     // Main location filter
     if (isMainLocation === 'true') {
       whereConditions.push({ is_main_location: { _eq: true } });
@@ -198,6 +240,9 @@ export async function GET(request: NextRequest) {
       switch (orderBy) {
         case 'rating':
           orderByClause = { average_rating: 'desc_nulls_last' };
+          break;
+        case 'rating_asc':
+          orderByClause = { average_rating: 'asc_nulls_last' };
           break;
         case 'price':
           orderByClause = { price_range_id: 'asc_nulls_last' };
@@ -244,7 +289,9 @@ export async function GET(request: NextRequest) {
       status: status || 'publish',
       search: search || '',
       cuisine_ids: cuisineIds || '',
+      cuisine_slugs: cuisineSlugs || '',
       palate_ids: palateIds || '',
+      palate_slugs: palateSlugsParam || '',
       category_ids: categoryIds || '',
       price_range_id: priceRangeId || '',
       min_rating: minRating || '',
@@ -253,6 +300,8 @@ export async function GET(request: NextRequest) {
       longitude: longitude || '',
       radius_km: radiusKm || '',
       is_main_location: isMainLocation || '',
+      city_name: cityName || '',
+      country_short: countryShort || '',
       order_by: orderBy || 'created_at'
     };
     

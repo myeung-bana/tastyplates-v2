@@ -34,7 +34,7 @@ export interface RestaurantV2 {
   };
   created_at: string;
   updated_at: string;
-  published_at?: string;
+  published_at?: string | null;
   cuisines?: Array<{ id: number; name: string; slug: string }>;
   palates?: Array<{ id: number; name: string; slug: string }>;
   categories?: Array<{ id: number; name: string; slug: string }>;
@@ -101,7 +101,9 @@ class RestaurantV2Service {
     status?: string;
     search?: string;
     cuisine_ids?: number[];
+    cuisine_slugs?: string[];
     palate_ids?: number[];
+    palate_slugs?: string[];
     category_ids?: number[];
     price_range_id?: number;
     min_rating?: number;
@@ -110,7 +112,9 @@ class RestaurantV2Service {
     longitude?: number;
     radius_km?: number;
     is_main_location?: boolean;
-    order_by?: 'rating' | 'price' | 'created_at' | 'updated_at' | 'distance';
+    city_name?: string;
+    country_short?: string;
+    order_by?: 'rating' | 'rating_asc' | 'price' | 'created_at' | 'updated_at' | 'distance';
   }): Promise<RestaurantsV2Response> {
     try {
       const queryParams = new URLSearchParams();
@@ -119,7 +123,9 @@ class RestaurantV2Service {
       if (params?.status) queryParams.append('status', params.status);
       if (params?.search) queryParams.append('search', params.search);
       if (params?.cuisine_ids?.length) queryParams.append('cuisine_ids', params.cuisine_ids.join(','));
+      if (params?.cuisine_slugs?.length) queryParams.append('cuisine_slugs', params.cuisine_slugs.join(','));
       if (params?.palate_ids?.length) queryParams.append('palate_ids', params.palate_ids.join(','));
+      if (params?.palate_slugs?.length) queryParams.append('palate_slugs', params.palate_slugs.join(','));
       if (params?.category_ids?.length) queryParams.append('category_ids', params.category_ids.join(','));
       if (params?.price_range_id) queryParams.append('price_range_id', params.price_range_id.toString());
       if (params?.min_rating !== undefined) queryParams.append('min_rating', params.min_rating.toString());
@@ -128,6 +134,8 @@ class RestaurantV2Service {
       if (params?.longitude) queryParams.append('longitude', params.longitude.toString());
       if (params?.radius_km) queryParams.append('radius_km', params.radius_km.toString());
       if (params?.is_main_location !== undefined) queryParams.append('is_main_location', params.is_main_location.toString());
+      if (params?.city_name) queryParams.append('city_name', params.city_name);
+      if (params?.country_short) queryParams.append('country_short', params.country_short);
       if (params?.order_by) queryParams.append('order_by', params.order_by);
 
       const url = `${this.baseUrl}/get-restaurants${queryParams.toString() ? `?${queryParams}` : ''}`;

@@ -13,7 +13,7 @@ import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
-import { useFirebaseSession } from '@/hooks/useFirebaseSession'
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useUpload } from '@/contexts/UploadContext';
 import toast from 'react-hot-toast';
 import { transformWordPressImagesToReviewImages, getRestaurantUuidFromSlug } from "@/utils/reviewTransformers";
@@ -26,6 +26,8 @@ import RestaurantReviewHeader from "./RestaurantReviewHeader";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
 import ContentGuidelinesReminder from "@/components/reviews/ContentGuidelinesReminder";
+import { useAuthModal } from "@/components/auth/AuthModalWrapper";
+import { nhost } from "@/lib/nhost";
 
 interface Restaurant {
   id: string;
@@ -49,8 +51,9 @@ const ReviewSubmissionCreatePage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const restaurantSlug = searchParams?.get('slug') || undefined; // Get from query parameter
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const { startUpload, updateProgress, completeUpload, resetUpload } = useUpload();
+  const { showSignin } = useAuthModal();
   const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
@@ -107,6 +110,17 @@ const ReviewSubmissionCreatePage = () => {
       icon: HELMET,
     },
   ];
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!nhostUser) {
+      toast.error("You must be logged in to access this page");
+      router.replace("/");
+      setTimeout(() => {
+        showSignin();
+      }, 100);
+    }
+  }, [sessionLoading, nhostUser, router, showSignin]);
 
   // S3 Upload Functions
   const uploadFileToS3 = async (file: File): Promise<string> => {
@@ -187,10 +201,13 @@ const ReviewSubmissionCreatePage = () => {
         } catch (v2Error) {
           console.log('V2 API failed, trying WordPress fallback:', v2Error);
           // Fallback to WordPress API
-          if (firebaseUser) {
+          if (nhostUser) {
             try {
-              // Get Firebase ID token for authentication
-              const idToken = await firebaseUser.getIdToken();
+              // Get Nhost access token for authenticated fallback call
+              const idToken = nhost?.auth.getAccessToken();
+              if (!idToken) {
+                throw new Error("Missing access token");
+              }
               const data = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", idToken);
               if (data) {
                 setRestaurantName(data.title as string || 'Restaurant');
@@ -220,7 +237,7 @@ const ReviewSubmissionCreatePage = () => {
             }
           } else {
             console.warn('No access token available for WordPress fallback');
-            // Set defaults if no firebaseUser
+            // Set defaults if no authenticated session
             setRestaurantName('Restaurant');
             setRestaurantLocation('Location not available');
           }
@@ -234,7 +251,7 @@ const ReviewSubmissionCreatePage = () => {
     };
 
     fetchRestaurantData();
-  }, [restaurantSlug, firebaseUser, router]);
+  }, [restaurantSlug, nhostUser, router]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -322,7 +339,7 @@ const ReviewSubmissionCreatePage = () => {
 
     try {
       // Get user UUID (must be a string UUID for V2 API)
-      const userId = user?.id;
+      const userId = user?.user_id ?? nhostUser?.id;
       if (!userId) {
         toast.error('User not authenticated');
         setIsLoading(false);
@@ -468,7 +485,8 @@ const ReviewSubmissionCreatePage = () => {
     setSelectedFiles(selectedFiles.filter((item: string) => item != index))
   }
 
-  if (loading) return <ReviewSubmissionSkeleton />;
+  if (sessionLoading || loading) return <ReviewSubmissionSkeleton />;
+  if (!nhostUser) return null;
   
   // If no slug, don't render (will redirect)
   if (!restaurantSlug) {

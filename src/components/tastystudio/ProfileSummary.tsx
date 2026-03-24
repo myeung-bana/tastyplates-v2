@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { useProfileData } from '@/hooks/useProfileData';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import FallbackImage, { FallbackImageType } from '../ui/Image/FallbackImage';
@@ -26,12 +26,12 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 };
 
 const ProfileSummary: React.FC = () => {
-  const { user } = useFirebaseSession();
+  const { user, nhostUser } = useNhostSession();
   const [reviewCount, setReviewCount] = useState(0);
   const [reviewCountLoading, setReviewCountLoading] = useState(true);
 
   // Get user identifier (username or UUID)
-  const userIdentifier = user?.username || user?.id || '';
+  const userIdentifier = user?.username || user?.user_id || nhostUser?.id || '';
 
   // Fetch profile data using useProfileData hook
   const {
@@ -105,7 +105,6 @@ const ProfileSummary: React.FC = () => {
           <FallbackImage
             src={
               profileImageUrl ||
-              (user?.profile_image ? getProfileImageUrl(user.profile_image) : null) ||
               DEFAULT_USER_ICON
             }
             alt={displayName}

@@ -16,12 +16,13 @@ interface Filter2Props {
   initialCuisines?: string[];
   initialPalates?: string[];
   initialSortOption?: string | null;
+  canUsePreferenceSort?: boolean;
 }
 
 
-const SORT_OPTIONS: Array<{ key: string; label: string }> = [
+const BASE_SORT_OPTIONS: Array<{ key: string; label: string }> = [
   { key: 'MY_PREFERENCE', label: 'My Preference' },
-  { key: 'SMART', label: 'Smart' },
+  { key: 'SMART', label: 'Smart Sort' },
   { key: 'DESC', label: 'Highest Rated' },
   { key: 'ASC', label: 'Lowest Rated' },
   { key: 'NEWEST', label: 'Newest' },
@@ -32,6 +33,7 @@ const Filter2 = ({
   initialCuisines = [],
   initialPalates = [],
   initialSortOption = 'SMART',
+  canUsePreferenceSort = false,
 }: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialCuisines);
@@ -44,13 +46,32 @@ const Filter2 = ({
 
   // Use centralized usePriceRanges hook to fetch price data
   const { priceRanges, loading: isLoadingPrices } = usePriceRanges();
+  const sortOptions = canUsePreferenceSort
+    ? BASE_SORT_OPTIONS
+    : BASE_SORT_OPTIONS.filter((opt) => opt.key !== 'MY_PREFERENCE');
 
   // Sync with initial values from parent
   useEffect(() => {
     setSelectedCuisines(initialCuisines);
     setSelectedPalates(initialPalates);
-    setSortOption(initialSortOption || 'SMART');
-  }, [initialCuisines, initialPalates, initialSortOption]);
+    const nextSort = !canUsePreferenceSort && initialSortOption === 'MY_PREFERENCE'
+      ? 'SMART'
+      : (initialSortOption || 'SMART');
+    setSortOption(nextSort);
+  }, [initialCuisines, initialPalates, initialSortOption, canUsePreferenceSort]);
+
+  useEffect(() => {
+    if (!canUsePreferenceSort && sortOption === 'MY_PREFERENCE') {
+      setSortOption('SMART');
+      onFilterChange({
+        cuisine: selectedCuisines,
+        price: price || null,
+        rating: rating > 0 ? rating : null,
+        palates: selectedPalates,
+        sortOption: 'SMART',
+      });
+    }
+  }, [canUsePreferenceSort, sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
 
   const handleCuisineChange = (cuisines: string[], palates: string[]) => {
     setSelectedCuisines(cuisines);
@@ -137,13 +158,13 @@ const Filter2 = ({
                 className="filter2__button font-neusans"
               >
                 <span className="filter2__button-text text-sm font-neusans">
-                  Sort: {SORT_OPTIONS.find((s) => s.key === sortOption)?.label || 'Smart'}
+                  Sort: {sortOptions.find((s) => s.key === sortOption)?.label || 'Smart Sort'}
                 </span>
               </button>
             }
             content={
               <div className="filter2__dropdown font-neusans">
-                {SORT_OPTIONS.map((opt) => (
+                {sortOptions.map((opt) => (
                   <div
                     key={opt.key}
                     onClick={() => {

@@ -15,7 +15,7 @@ import { useParams } from "next/navigation";
 import ReviewSubmissionSkeleton from "@/components/ui/Skeleton/ReviewSubmissionSkeleton";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
-import { useFirebaseSession } from '@/hooks/useFirebaseSession'
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter } from "next/navigation";
 import { useUpload } from '@/contexts/UploadContext';
 import toast from 'react-hot-toast';
@@ -37,6 +37,8 @@ import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
 import { Button } from "@/components/ui/button";
 import { GridLoader } from 'react-spinners';
 import ContentGuidelinesReminder from "@/components/reviews/ContentGuidelinesReminder";
+import { useAuthModal } from "@/components/auth/AuthModalWrapper";
+import { nhost } from "@/lib/nhost";
 interface Restaurant {
   id: string;
   slug: string;
@@ -59,9 +61,10 @@ const reviewService = new ReviewService();
 const ReviewSubmissionPage = () => {
   const params = useParams() as { slug?: string };
   const restaurantSlug = params.slug; // Optional - undefined for /add-review route
-  const { user, firebaseUser } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const { selectedLocation } = useLocation();
   const { startUpload, updateProgress, completeUpload, resetUpload } = useUpload();
+  const { showSignin } = useAuthModal();
   const [restaurantName, setRestaurantName] = useState(restaurantSlug ? 'Loading...' : '');
   const [restaurantImage, setRestaurantImage] = useState('');
   const [restaurantLocation, setRestaurantLocation] = useState(restaurantSlug ? 'Loading...' : '');
@@ -103,6 +106,17 @@ const ReviewSubmissionPage = () => {
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!nhostUser) {
+      toast.error("You must be logged in to access this page");
+      router.replace("/");
+      setTimeout(() => {
+        showSignin();
+      }, 100);
+    }
+  }, [sessionLoading, nhostUser, router, showSignin]);
+
+  useEffect(() => {
     const fetchRestaurantData = async () => {
       if (!restaurantSlug) {
         setLoading(false);
@@ -142,10 +156,13 @@ const ReviewSubmissionPage = () => {
         } catch (v2Error) {
           console.log('V2 API failed, trying WordPress fallback:', v2Error);
           // Fallback to WordPress API
-          if (firebaseUser) {
+          if (nhostUser) {
             try {
-              // Get Firebase ID token for authentication
-              const idToken = await firebaseUser.getIdToken();
+              // Get Nhost access token for authenticated fallback call
+              const idToken = nhost?.auth.getAccessToken();
+              if (!idToken) {
+                throw new Error("Missing access token");
+              }
               const data = await restaurantService.fetchRestaurantById(restaurantSlug, "SLUG", idToken);
               if (data) {
                 setRestaurantName(data.title as string || 'Restaurant');
@@ -175,7 +192,7 @@ const ReviewSubmissionPage = () => {
             }
           } else {
             console.warn('No access token available for WordPress fallback');
-            // Set defaults if no firebaseUser
+            // Set defaults if no authenticated session
             setRestaurantName('Restaurant');
             setRestaurantLocation('Location not available');
           }
@@ -189,7 +206,7 @@ const ReviewSubmissionPage = () => {
     };
 
     fetchRestaurantData();
-  }, [restaurantSlug, firebaseUser]);
+  }, [restaurantSlug, nhostUser]);
 
 
   const [isDoneSelecting, setIsDoneSelecting] = useState(false);
@@ -345,7 +362,7 @@ const ReviewSubmissionPage = () => {
 
     try {
       // Get user UUID (must be a string UUID for V2 API)
-      const userId = user?.id;
+      const userId = user?.user_id ?? nhostUser?.id;
       if (!userId) {
         toast.error('User not authenticated');
         setIsLoading(false);
@@ -693,7 +710,8 @@ const ReviewSubmissionPage = () => {
     setIsRestaurantSelected(true);
   };
 
-  if (loading) return <ReviewSubmissionSkeleton />;
+  if (sessionLoading || loading) return <ReviewSubmissionSkeleton />;
+  if (!nhostUser) return null;
   return (
     <>
       <div className="submitRestaurants font-neusans">

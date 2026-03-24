@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useCallback } from "react"
 import "@/styles/pages/_restaurants.scss"
 import { RestaurantService } from "@/services/restaurant/restaurantService"
 import ListingCardDraft from "./ListingCardDraft"
-import { useFirebaseSession } from "@/hooks/useFirebaseSession"
+import { useNhostSession } from "@/hooks/useNhostSession"
 import { sessionStatus } from "@/constants/response"
 import { LISTING_EXPLANATION } from "@/constants/pages"
 
@@ -31,8 +31,8 @@ const ListingDraftPage = () => {
     const [pendingListings, setPendingListings] = useState<FetchedRestaurant[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const { user, loading: sessionLoading } = useFirebaseSession();
-    const userId = user?.id || null;
+    const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+    const userId = user?.user_id || nhostUser?.id || null;
     const getPendingListings = useCallback(async () => {
 
         if (sessionLoading || !userId) {

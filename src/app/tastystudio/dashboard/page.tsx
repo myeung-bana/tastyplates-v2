@@ -2,21 +2,21 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useFirebaseSession } from '@/hooks/useFirebaseSession';
+import { useNhostSession } from '@/hooks/useNhostSession';
 import { useProfileData } from '@/hooks/useProfileData';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import Link from 'next/link';
 import { FiEdit3, FiList, FiTrendingUp, FiClock } from 'react-icons/fi';
-import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
+import { LOGIN, TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
 import ProfileSummary from '@/components/tastystudio/ProfileSummary';
 
 const TastyStudioDashboard = () => {
-  const { user, loading } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   
   // Get user identifier for useProfileData
-  const userIdentifier = user?.username || user?.id || '';
+  const userIdentifier = user?.username || user?.user_id || nhostUser?.id || '';
   const { userData, loading: profileLoading } = useProfileData(userIdentifier);
   
   const [stats, setStats] = useState({
@@ -32,10 +32,10 @@ const TastyStudioDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading && !nhostUser) {
+      router.push(LOGIN);
     }
-  }, [user, loading, router]);
+  }, [nhostUser, loading, router]);
 
   // Fetch review statistics
   useEffect(() => {
@@ -118,7 +118,7 @@ const TastyStudioDashboard = () => {
     );
   }
 
-  if (!user) {
+  if (!nhostUser) {
     return null;
   }
 

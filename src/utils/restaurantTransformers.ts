@@ -37,6 +37,8 @@ export interface Restaurant {
     zoom?: number;
   };
   ratingsCount?: number;
+  /** `published_at` or `created_at` as ms for client-side NEWEST sort */
+  listedAtMs?: number;
   searchPalateStats?: {
     avg: number;
     count: number;
@@ -209,6 +211,12 @@ export const transformRestaurantV2ToRestaurant = (restaurant: RestaurantV2): Res
     ratingsCount: restaurant.ratings_count || 0,
     streetAddress: restaurant.listing_street || '',
     googleMapUrl: address || {},
+    listedAtMs: (() => {
+      const raw = restaurant.published_at || restaurant.created_at;
+      if (!raw) return 0;
+      const t = Date.parse(String(raw));
+      return Number.isNaN(t) ? 0 : t;
+    })(),
     // Note: searchPalateStats is not available in V2 API yet - will need to be calculated separately
     // This will be added in a future update when review data is integrated
     searchPalateStats: undefined

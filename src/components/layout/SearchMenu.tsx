@@ -3,10 +3,10 @@ import React, { useState, useEffect } from "react";
 import { FiX, FiSearch, FiMapPin, FiChevronDown } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useLocation } from "@/contexts/LocationContext";
-import { palateOptions } from "@/constants/formOptions";
 import { RESTAURANTS } from "@/constants/pages";
 import { LOCATION_HIERARCHY } from "@/constants/location";
 import LocationBottomSheet from "../navigation/LocationBottomSheet";
+import CuisinePillSelector from "@/components/Filter/CuisinePillSelector";
 
 interface SearchMenuProps {
   isOpen: boolean;
@@ -135,16 +135,6 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
     setSelectedPalates(new Set());
   };
 
-  // Single selection: either one region (e.g. All East Asian) OR one country (e.g. Japanese). Clicking current selection resets to All Cuisines.
-  const handlePalateSelection = (palateKey: string, _isRegion: boolean = false) => {
-    const isOnlySelection = selectedPalates.size === 1 && selectedPalates.has(palateKey);
-    if (isOnlySelection) {
-      setSelectedPalates(new Set());
-      return;
-    }
-    setSelectedPalates(new Set([palateKey]));
-  };
-
   return (
     <>
       {/* Overlay */}
@@ -262,89 +252,12 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
 
               {/* Cuisine Selection - Tag Cloud Style */}
               {searchMode === "cuisine" && (
-                <div className="pt-1">
-                  {/* Clear Button */}
-                  {selectedPalates.size > 0 && (
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs text-gray-500">
-                        {selectedPalates.size} selected
-                      </span>
-                      <button
-                        onClick={() => {
-                          setSelectedPalates(new Set());
-                          setSearchValue("");
-                        }}
-                        className="text-xs text-[#ff7c0a] hover:text-[#e66b00] font-medium underline"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  )}
-
-                  {/* All Cuisines Pill */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <button
-                      onClick={() => {
-                        setSelectedPalates(new Set());
-                        setSearchValue("");
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                        selectedPalates.size === 0
-                          ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
-                          : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      All Cuisines
-                    </button>
-                  </div>
-
-                  {/* Cuisine Sections */}
-                  <div className="space-y-4">
-                    {palateOptions.map((region) => (
-                      <div key={region.key}>
-                        {/* Section Title */}
-                        <h4 className="text-xs font-medium text-gray-500 mb-2">
-                          {region.label}
-                        </h4>
-
-                        {/* Pills: All Region + Individual Cuisines */}
-                        <div className="flex flex-wrap gap-2">
-                          {/* All Region Pill */}
-                          <button
-                            onClick={() => handlePalateSelection(region.key, true)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                              selectedPalates.has(region.key)
-                                ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
-                                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            All {region.label}
-                          </button>
-
-                          {/* Individual Cuisine Pills */}
-                          {region.children?.map((cuisine) => (
-                            <button
-                              key={cuisine.key}
-                              onClick={() => handlePalateSelection(cuisine.key, false)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                                selectedPalates.has(cuisine.key)
-                                  ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
-                                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
-                              }`}
-                            >
-                              <img
-                                src={cuisine.flag || ""}
-                                alt=""
-                                className="w-3.5 h-2.5 object-cover rounded-sm flex-shrink-0"
-                              />
-                              <span>{cuisine.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <CuisinePillSelector
+                  selectedPalates={selectedPalates}
+                  onSelectedPalatesChange={setSelectedPalates}
+                  onReset={() => setSearchValue("")}
+                  showSelectionMeta
+                />
               )}
             </div>
           </div>

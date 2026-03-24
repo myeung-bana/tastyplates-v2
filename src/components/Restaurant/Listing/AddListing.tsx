@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MdClose, MdOutlineFileUpload } from "react-icons/md";
 import { CategoryService } from "@/services/category/categoryService";
 import { PalatesService } from "@/services/palates/palatestService";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import Select, { components } from "react-select";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import CustomOption from "@/components/ui/Select/CustomOption";
@@ -23,6 +23,7 @@ import FallbackImage from "@/components/ui/Image/FallbackImage";
 import { CASH, FLAG, HELMET, PHONE } from "@/constants/images";
 import { maximumImage, minimumImage, reviewDescriptionLimit, reviewTitleLimit, listingTitleLimit } from "@/constants/validation";
 import { maximumImageLimit, maximumReviewDescription, maximumReviewTitle, minimumImageLimit, maximumListingTitle } from "@/constants/messages";
+import { nhost } from "@/lib/nhost";
 
 declare global {
   interface Window {
@@ -64,7 +65,7 @@ const AddListingPage = () => {
   const [selectedPalates, setSelectedPalates] = useState<
     { label: string; value: string }[]
   >([]);
-  const { firebaseUser } = useFirebaseSession();
+  const { nhostUser } = useNhostSession();
   const [reviewMainTitle, setReviewMainTitle] = useState("");
   const [content, setContent] = useState("");
   const [reviewStars, setReviewStars] = useState(0);
@@ -432,8 +433,8 @@ const AddListingPage = () => {
       }
 
       // ✅ API call
-      // Get Firebase ID token for authentication
-      const idToken = firebaseUser ? await firebaseUser.getIdToken() : undefined;
+      // Get Nhost access token for authentication
+      const idToken = nhost?.auth.getAccessToken();
       if (!idToken) {
         toast.error("Please log in to create a listing");
         return;

@@ -12,7 +12,7 @@ import ReviewModal from "@/components/ui/Modal/ReviewModal";
 import SkeletonCard from "@/components/ui/Skeleton/SkeletonCard";
 import { RestaurantService } from "@/services/restaurant/restaurantService";
 import { reviewV2Service, ReviewV2 } from "@/app/api/v1/services/reviewV2Service";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useNhostSession } from "@/hooks/useNhostSession";
 // Using DraftReviewData from DraftReviewCard instead
 import ReviewCardSkeleton2 from "@/components/ui/Skeleton/ReviewCardSkeleton2";
 import { deleteDraftError, deleteDraftSuccess } from "@/constants/messages";
@@ -24,6 +24,7 @@ import { DEFAULT_RESTAURANT_IMAGE } from "@/constants/images";
 import { useAuthModal } from "@/components/auth/AuthModalWrapper";
 import { useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
+import { nhost } from "@/lib/nhost";
 
 interface Restaurant {
   id: string;
@@ -58,7 +59,7 @@ interface Restaurant {
 const restaurantService = new RestaurantService();
 
 const ListingPage = () => {
-  const { user, firebaseUser, loading: sessionLoading } = useFirebaseSession();
+  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const router = useRouter();
   const { showSignin } = useAuthModal();
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -85,7 +86,7 @@ const ListingPage = () => {
     if (sessionLoading) return;
     
     // If session has loaded and user is not authenticated, redirect
-    if (!firebaseUser) {
+    if (!nhostUser) {
       toast.error('You must be logged in to access this page');
       router.push(HOME);
       // Show login modal after a short delay to ensure redirect happens first
@@ -93,7 +94,7 @@ const ListingPage = () => {
         showSignin();
       }, 100);
     }
-  }, [firebaseUser, sessionLoading, router, showSignin]);
+  }, [nhostUser, sessionLoading, router, showSignin]);
 
   // Helper: transform GraphQL node to Restaurant
   const transformNodes = useCallback((nodes: Record<string, unknown>[]): Restaurant[] => {
@@ -312,13 +313,17 @@ const ListingPage = () => {
   const fetchReviewDrafts = useCallback(async () => {
     setLoadingDrafts(true);
     try {
-      if (!firebaseUser) {
+      if (!nhostUser) {
         setLoadingDrafts(false);
         return;
       }
       
-      // Get Firebase ID token for authentication
-      const idToken = await firebaseUser.getIdToken();
+      // Get Nhost access token for authentication
+      const idToken = nhost?.auth.getAccessToken();
+      if (!idToken) {
+        setLoadingDrafts(false);
+        return;
+      }
       
       // Fetch draft reviews from new Hasura API
       const response = await reviewV2Service.getDraftReviews(idToken, {
@@ -347,24 +352,25 @@ const ListingPage = () => {
     } finally {
       setLoadingDrafts(false);
     }
-  }, [firebaseUser, transformReviewDrafts]);
+  }, [nhostUser, transformReviewDrafts]);
 
   useEffect(() => {
     if (!debouncedSearchTerm) {
       fetchReviewDrafts();
     }
-  }, [firebaseUser, debouncedSearchTerm, fetchReviewDrafts]);
+  }, [nhostUser, debouncedSearchTerm, fetchReviewDrafts]);
 
   const fetchPublishedReviews = useCallback(async () => {
     setLoadingPublished(true);
     try {
-      if (!user?.id) {
+      const authorId = user?.user_id || nhostUser?.id;
+      if (!authorId) {
         setLoadingPublished(false);
         return;
       }
       
       // Fetch published reviews with status 'approved'
-      const response = await reviewV2Service.getUserReviews(user.id, {
+      const response = await reviewV2Service.getUserReviews(authorId, {
         status: 'approved',
         limit: 20,
         offset: 0
@@ -377,16 +383,16 @@ const ListingPage = () => {
     } finally {
       setLoadingPublished(false);
     }
-  }, [user?.id]);
+  }, [user?.user_id, nhostUser?.id]);
 
   useEffect(() => {
-    if (!debouncedSearchTerm && user?.id) {
+    if (!debouncedSearchTerm && (user?.user_id || nhostUser?.id)) {
       fetchPublishedReviews();
     }
-  }, [user?.id, debouncedSearchTerm, fetchPublishedReviews]);
+  }, [user?.user_id, nhostUser?.id, debouncedSearchTerm, fetchPublishedReviews]);
 
   const confirmDeleteDraft = async (draftId: number) => {
-    if (!firebaseUser) return false;
+    if (!nhostUser) return false;
     
     // Get UUID from mapping
     const reviewUuid = draftIdToUuidMap.get(draftId);
@@ -466,7 +472,7 @@ const ListingPage = () => {
   }, [combinedReviews.length]);
 
   // Don't render content if session is loading or user is not authenticated
-  if (sessionLoading || !firebaseUser) {
+  if (sessionLoading || !nhostUser) {
     return null;
   }
 

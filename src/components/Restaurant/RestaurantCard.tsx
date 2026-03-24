@@ -454,13 +454,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
           <div className="restaurant-card__info w-full">
             <div className="restaurant-card__location">
-              <span className="block w-full text-[11px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden leading-[1.4]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
+              <span className="block w-full text-[10px] md:text-[0.9rem] mt-1 whitespace-normal break-words line-clamp-2 overflow-hidden leading-[1.4]" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{address}</span>
             </div>
           </div>
 
           {/* Cuisine Categories (shows first 3, then "+X" if more) - Make tags clickable */}
           {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
-            <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+            <div className="restaurant-card__tags mt-1 text-[10px] md:text-[0.9rem] leading-[1.4]">
               {restaurant.listingCategories.slice(0, 3).map((cuisine, index) => {
                 const isLast = index === Math.min((restaurant.listingCategories?.length || 0), 3) - 1;
                 return (
@@ -491,7 +491,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             const parentCategories = restaurant.categories.filter(cat => cat.parent_id === null || cat.parent_id === undefined);
             if (parentCategories.length > 0) {
               return (
-                <div className="restaurant-card__tags mt-1 text-[11px] md:text-[0.9rem] leading-[1.4]">
+                <div className="restaurant-card__tags mt-1 text-[10px] md:text-[0.9rem] leading-[1.4]">
                   <span className="restaurant-card__tag truncate">
                     {parentCategories.map(cat => cat.name).join(' / ')}
                   </span>

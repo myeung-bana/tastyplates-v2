@@ -40,6 +40,7 @@ const SuggestedRestaurants: React.FC<SuggestedRestaurantsProps> = ({
     ),
     googleMapUrl: item.listingDetails?.googleMapUrl,
     ratingsCount: item.ratingsCount ?? 0,
+    listedAtMs: 0,
     searchPalateStats: item.searchPalateStats,
   });
 

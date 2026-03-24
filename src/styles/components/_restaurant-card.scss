@@ -20,14 +20,16 @@
     background-color: transparent;
     color: #31343F;
     border-radius: 0.25rem; // Changed to smaller border radius for rectangle shape
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 400;
     white-space: nowrap;
     text-align: center;
     text-transform: none; // Optional: makes tags look more distinct
     letter-spacing: 0.025em; // Optional: slightly improves readability of uppercase text
     font-family: "Neusans", sans-serif;
-
+    &:hover {
+      text-decoration: none !important;
+    }
     @media (max-width: 767px) {
       font-size: 10px;
     }

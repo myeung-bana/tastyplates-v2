@@ -1,15 +1,43 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { FiCheckCircle } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import { TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
+import { useNhostSession } from '@/hooks/useNhostSession';
+import { useRouter } from 'next/navigation';
+import { useAuthModal } from '@/components/auth/AuthModalWrapper';
+import toast from 'react-hot-toast';
 
 function ReviewSubmissionSuccessContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { nhostUser, loading } = useNhostSession();
+  const { showSignin } = useAuthModal();
   const restaurantName = searchParams?.get('restaurant') || 'Restaurant';
+
+  useEffect(() => {
+    if (loading) return;
+    if (!nhostUser) {
+      toast.error('You must be logged in to access this page');
+      router.replace('/');
+      setTimeout(() => {
+        showSignin();
+      }, 100);
+    }
+  }, [loading, nhostUser, router, showSignin]);
+
+  if (loading || !nhostUser) {
+    return (
+      <div className="min-h-screen bg-white font-neusans flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm text-[#494D5D] font-neusans">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white font-neusans">
