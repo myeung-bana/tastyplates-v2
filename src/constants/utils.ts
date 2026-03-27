@@ -12,15 +12,16 @@ export const RESTAURANT_CONSTANTS = {
   SUGGESTED_RESULTS_COUNT: 4, // Number of suggested restaurants to show
   
   // Regional palate groupings for suggestions
+  // Values are canonical palate slugs (lowercase, hyphenated) — must match `palateOptions` child keys and DB `palates[].slug`
   REGIONAL_PALATE_GROUPS: {
-    "East Asian": ["Chinese", "Japanese", "Korean", "Mongolian", "Taiwanese"],
-    "South Asian": ["Indian", "Pakistani", "Bangladeshi", "Sri Lankan", "Nepalese", "Afghan"],
-    "South East Asian": ["Thai", "Vietnamese", "Indonesian", "Malaysian", "Filipino", "Singaporean", "Cambodian", "Laotian", "Myanmar"],
-    "Middle Eastern": ["Turkish", "Lebanese", "Iranian", "Israeli", "Syrian", "Jordanian", "Iraqi", "Egyptian", "Moroccan"],
-    "African": ["Ethiopian", "Nigerian", "South African", "Moroccan", "Egyptian", "Kenyan", "Ghanaian", "Senegalese"],
-    "North American": ["American", "Canadian", "Mexican", "Cuban", "Jamaican", "Haitian", "Dominican"],
-    "European": ["Italian", "French", "Spanish", "German", "British", "Greek", "Portuguese", "Polish", "Russian", "Swedish", "Norwegian", "Dutch", "Belgian", "Swiss", "Austrian"],
-    "Oceanic": ["Australian", "New Zealand", "Fijian", "Tongan", "Samoan", "Hawaiian"]
+    "East Asian": ["chinese", "japanese", "korean", "taiwanese"],
+    "South Asian": ["nepalese", "bangladesh", "sri-lankan", "maldivian", "indian", "pakistani"],
+    "South East Asian": ["malaysian", "filipino", "singaporean", "indonesian"],
+    "Middle Eastern": ["armenian", "east-arabian", "lebanese", "caucasian", "iranian", "turkish"],
+    "African": ["angolan", "congolese", "ethiopian", "kenyan", "zimbabwean", "egyptian", "algerian", "ghanaian", "nigerian"],
+    "North American": ["canadian", "mexican", "american"],
+    "European": ["british", "spanish", "italian", "french", "german", "russian", "danish", "finnish", "swedish", "romanian", "greek", "portuguese"],
+    "Oceanic": ["australian", "polynesian"],
   },
   
   // UI text

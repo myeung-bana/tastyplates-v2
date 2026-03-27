@@ -5,6 +5,22 @@ import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 import { createHash } from 'crypto';
 import { decodeRestaurantCursor, encodeRestaurantCursor } from '@/lib/cursor-pagination';
+import { normalizePalateSlugForApi } from '@/lib/palateSlug';
+
+/** Fetch authentic rating weights for SMART sort — ordered by authentic_rating_weighted DESC NULLS LAST. */
+const GET_SMART_SORT_SUMMARIES = `
+  query SmartSortSummaries {
+    restaurant_rating_summary(
+      order_by: [
+        { authentic_rating_weighted: desc_nulls_last }
+        { restaurant_id: desc }
+      ]
+    ) {
+      restaurant_id
+      authentic_rating_weighted
+    }
+  }
+`;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -126,12 +142,15 @@ export async function GET(request: NextRequest) {
 
     // Cuisine slug filter (alternative to cuisine_ids, uses slug field in JSONB array)
     if (cuisineSlugs) {
-      const slugs = cuisineSlugs.split(',').map(s => s.trim()).filter(Boolean);
+      const slugs = cuisineSlugs
+        .split(',')
+        .map((s) => normalizePalateSlugForApi(s))
+        .filter(Boolean);
       if (slugs.length > 0) {
         whereConditions.push({
-          _or: slugs.map(slug => ({
-            cuisines: { _contains: [{ slug }] }
-          }))
+          _or: slugs.map((slug) => ({
+            cuisines: { _contains: [{ slug }] },
+          })),
         });
       }
     }
@@ -149,12 +168,15 @@ export async function GET(request: NextRequest) {
 
     // Palate slug filter (alternative to palate_ids, uses slug field in JSONB array)
     if (palateSlugsParam) {
-      const slugs = palateSlugsParam.split(',').map(s => s.trim()).filter(Boolean);
+      const slugs = palateSlugsParam
+        .split(',')
+        .map((s) => normalizePalateSlugForApi(s))
+        .filter(Boolean);
       if (slugs.length > 0) {
         whereConditions.push({
-          _or: slugs.map(slug => ({
-            palates: { _contains: [{ slug }] }
-          }))
+          _or: slugs.map((slug) => ({
+            palates: { _contains: [{ slug }] },
+          })),
         });
       }
     }
@@ -253,6 +275,10 @@ export async function GET(request: NextRequest) {
         case 'updated_at':
           orderByClause = { updated_at: 'desc' };
           break;
+        case 'smart':
+          // SMART sort uses a two-step approach (see inside cacheGetOrSetJSON below)
+          orderByClause = { created_at: 'desc' };
+          break;
         default:
           orderByClause = { created_at: 'desc' };
       }
@@ -305,13 +331,15 @@ export async function GET(request: NextRequest) {
       order_by: orderBy || 'created_at'
     };
     
-    // Get version for restaurants list
+    // Get version(s) for cache key
+    // SMART sort depends on the rating summary (updated on review changes), so include review version.
     const version = await getVersion('v:restaurants:all');
+    const reviewVersion = orderBy === 'smart' ? await getVersion('v:reviews:all') : 0;
     
     // Create compact cache key (hash params to avoid huge keys/headers)
     const paramsStr = JSON.stringify(cacheKeyParams);
     const paramsHash = createHash('sha1').update(paramsStr).digest('hex');
-    const cacheKey = `restaurants:v${version}:${paramsHash}`;
+    const cacheKey = `restaurants:v${version}:rv${reviewVersion}:${paramsHash}`;
     
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
@@ -352,6 +380,45 @@ export async function GET(request: NextRequest) {
 
         const restaurants = result.data?.restaurants || [];
         const total = result.data?.restaurants_aggregate?.aggregate?.count || restaurants.length;
+
+        // SMART sort: fetch authentic weights and re-sort by authentic_rating_weighted
+        if (orderBy === 'smart') {
+          const summaryResult = await hasuraQuery<{
+            restaurant_rating_summary: Array<{
+              restaurant_id: number;
+              authentic_rating_weighted: number | null;
+            }>;
+          }>(GET_SMART_SORT_SUMMARIES);
+
+          if (!summaryResult.errors && summaryResult.data?.restaurant_rating_summary) {
+            // Build weight map: restaurant_id → authentic_rating_weighted (0 if null)
+            const weightMap = new Map<number, number>(
+              summaryResult.data.restaurant_rating_summary.map((r) => [
+                r.restaurant_id,
+                r.authentic_rating_weighted ?? 0,
+              ])
+            );
+
+            // Filter to restaurants with an authentic score, then sort descending
+            const withScore = restaurants.filter((r: any) => weightMap.has(r.id));
+            withScore.sort(
+              (a: any, b: any) => (weightMap.get(b.id) ?? 0) - (weightMap.get(a.id) ?? 0)
+            );
+
+            return {
+              success: true,
+              data: withScore,
+              meta: {
+                total: withScore.length,
+                limit,
+                offset,
+                cursor: undefined,
+                hasMore: false, // SMART sort loads all matched; pagination is handled by filter changes
+                fetchedAt: new Date().toISOString(),
+              },
+            };
+          }
+        }
 
         // If distance sorting was requested, sort client-side (requires lat/lon)
         let sortedRestaurants = restaurants;

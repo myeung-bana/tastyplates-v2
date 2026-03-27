@@ -19,6 +19,7 @@ import { TASTYSTUDIO_ADD_REVIEW_CREATE } from "@/constants/pages";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import { 
   calculateRatingMetrics, 
+  calculateMyPreferenceRating,
   type RatingMetrics,
   calculateCommunityRecognitionMetrics,
   type CommunityRecognitionMetrics,
@@ -73,6 +74,13 @@ export default function RestaurantDetail() {
     authenticRating: 0,
     authenticCount: 0
   });
+  /** Precomputed scores from restaurant_rating_summary — populated by get-rating-summary API */
+  const [summaryScores, setSummaryScores] = useState<{
+    overallRating: number | null;
+    overallCount: number;
+    authenticRating: number | null;
+    authenticCount: number;
+  } | null>(null);
   const [communityRecognitionMetrics, setCommunityRecognitionMetrics] = useState<CommunityRecognitionMetrics>({
     mustRevisit: 0,
     instaWorthy: 0,
@@ -113,13 +121,59 @@ export default function RestaurantDetail() {
     fetchRestaurant();
   }, [slug]);
 
-  // Calculate rating metrics when data changes
+  // Fetch precomputed overall + authentic scores from the summary table.
+  // Falls back gracefully to null if the backfill hasn't run yet.
   useEffect(() => {
-    if (restaurant && reviews.length > 0) {
-      const userPalates = user?.palates || null;
+    if (!restaurant?.id) return;
+    const controller = new AbortController();
 
-      // Combine both the restaurant's palates field and cuisines field so the
-      // authentic score works regardless of which JSONB column the admin populated.
+    fetch(`/api/v1/restaurants-v2/get-rating-summary?uuid=${restaurant.id}`, {
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.success && json.data) {
+          setSummaryScores({
+            overallRating: json.data.overall_rating_avg ?? null,
+            overallCount: json.data.overall_review_count ?? 0,
+            authenticRating: json.data.authentic_rating_avg ?? null,
+            authenticCount: json.data.authentic_review_count ?? 0,
+          });
+        }
+      })
+      .catch((e) => {
+        if (e?.name !== 'AbortError') console.error('[restaurant-detail] get-rating-summary error:', e);
+      });
+
+    return () => controller.abort();
+  }, [restaurant?.id]);
+
+  // Calculate rating metrics when data changes.
+  // Uses precomputed overall + authentic scores when available; computes myPreference client-side.
+  useEffect(() => {
+    if (!restaurant) return;
+
+    const userPalates = user?.palates || null;
+
+    if (summaryScores) {
+      // Use precomputed overall + authentic; compute myPreference from loaded reviews
+      const myPreference =
+        userPalates && reviews.length > 0
+          ? calculateMyPreferenceRating(reviews, userPalates)
+          : { rating: 0, count: 0 };
+
+      setRatingMetrics({
+        overallRating: summaryScores.overallRating ?? 0,
+        overallCount: summaryScores.overallCount,
+        searchRating: 0,
+        searchCount: 0,
+        myPreferenceRating: myPreference.rating,
+        myPreferenceCount: myPreference.count,
+        authenticRating: summaryScores.authenticRating ?? 0,
+        authenticCount: summaryScores.authenticCount,
+      });
+    } else if (reviews.length > 0) {
+      // Fallback: full client-side computation (before backfill runs)
       const combinedRestaurantPalates = [
         ...(restaurant?.palates?.nodes?.map((n: { name: string }) => n.name) ?? []),
         ...(restaurant?.listingCategories?.nodes?.map((n: { name: string }) => n.name) ?? []),
@@ -134,12 +188,13 @@ export default function RestaurantDetail() {
         restaurantPalates
       );
       setRatingMetrics(metrics);
-
-      // Calculate community recognition metrics
-      const recognitionMetrics = calculateCommunityRecognitionMetrics(reviews);
-      setCommunityRecognitionMetrics(recognitionMetrics);
     }
-  }, [restaurant, reviews, palatesParam, user?.palates]);
+
+    // Community recognition always computed from loaded reviews
+    if (reviews.length > 0) {
+      setCommunityRecognitionMetrics(calculateCommunityRecognitionMetrics(reviews));
+    }
+  }, [restaurant, reviews, palatesParam, user?.palates, summaryScores]);
 
   // Fetch restaurant reviews from new V2 API
   useEffect(() => {

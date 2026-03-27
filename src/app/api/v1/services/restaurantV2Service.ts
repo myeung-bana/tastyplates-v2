@@ -114,7 +114,7 @@ class RestaurantV2Service {
     is_main_location?: boolean;
     city_name?: string;
     country_short?: string;
-    order_by?: 'rating' | 'rating_asc' | 'price' | 'created_at' | 'updated_at' | 'distance';
+    order_by?: 'rating' | 'rating_asc' | 'smart' | 'price' | 'created_at' | 'updated_at' | 'distance';
   }): Promise<RestaurantsV2Response> {
     try {
       const queryParams = new URLSearchParams();

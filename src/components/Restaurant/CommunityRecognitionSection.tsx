@@ -13,21 +13,19 @@ interface CommunityRecognitionSectionProps {
 }
 
 export default function CommunityRecognitionSection({ metrics }: CommunityRecognitionSectionProps) {
-  // Default values if no metrics provided
   const defaultMetrics: CommunityRecognitionMetrics = {
     mustRevisit: 0,
     instaWorthy: 0,
     valueForMoney: 0,
-    bestService: 0
+    bestService: 0,
   };
 
   const recognitionMetrics = metrics || defaultMetrics;
-  
-  // Helper function to display value (show "-" if 0)
+
   const displayValue = (value: number): string => {
     return value > 0 ? value.toString() : "-";
   };
-  
+
   const recognitionItems = [
     {
       icon: COMMUNITY_MUST_REVISIT,
@@ -58,67 +56,65 @@ export default function CommunityRecognitionSection({ metrics }: CommunityRecogn
   return (
     <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
       <h3 className="text-lg font-neusans mb-4 md:mb-6">Community Recognition</h3>
-      
-      {/* Mobile: Horizontal scroll wrapper */}
+
+      {/* Mobile — same scale as RatingSection (text-xl value, text-xs label, text-[9px] caption) */}
       <div className="md:hidden -mx-6 px-6">
         <div className="overflow-x-auto pb-2 hide-scrollbar">
-          <div className="flex gap-4 min-w-max">
+          <div className="flex gap-3 min-w-max">
             {recognitionItems.map((item, index) => (
-              <div key={index} className="flex flex-col items-center min-w-[140px]">
-                <h3 className="font-neusans font-semibold text-sm mb-1">{item.label}</h3>
-                <div className="flex flex-col items-center">
-                  {/* Score with icon badge overlay */}
-                  <div className="relative inline-block mb-2">
-                    <span className="font-neusans text-gray-800 text-2xl font-bold">
-                      {displayValue(item.value)}
-                    </span>
-                    <div className="absolute -bottom-1 -right-[25px] flex items-center justify-center w-7 h-7 rounded-full">
-                      <Image
-                        src={item.icon}
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                        alt={`${item.label} icon`}
-                      />
+              <React.Fragment key={item.label}>
+                {index > 0 && <div className="w-px bg-[#CACACA] self-stretch my-1" />}
+                <div className="flex flex-col items-center min-w-[110px]">
+                  <h3 className="font-neusans font-semibold text-xs mb-0.5">{item.label}</h3>
+                  <div className="flex flex-col items-center">
+                    <div className="relative inline-block mb-1">
+                      <span className="font-neusans text-gray-800 text-xl font-bold">
+                        {displayValue(item.value)}
+                      </span>
+                      <div className="absolute -bottom-0.5 -right-3 flex items-center justify-center w-4 h-4">
+                        <Image
+                          src={item.icon}
+                          width={12}
+                          height={12}
+                          className="w-3 h-3"
+                          alt=""
+                        />
+                      </div>
                     </div>
+                    <span className="text-[9px] text-gray-500 text-center leading-tight">
+                      {item.description}
+                    </span>
                   </div>
-                  {/* Description text */}
-                  <span className="text-[10px] text-gray-500 text-center leading-tight">
-                    {item.description}
-                  </span>
                 </div>
-              </div>
+              </React.Fragment>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Desktop: Grid layout matching Rating section */}
-      <div className="!hidden md:!flex w-full justify-evenly items-center gap-0">
+      {/* Desktop — mirrors RatingSection: rating-summary + rating-column, text-2xl value */}
+      <div className="!hidden md:!flex rating-summary w-full">
         {recognitionItems.map((item, index) => (
-          <React.Fragment key={index}>
-            {index > 0 && <div className="h-[85%] border-l border-[#CACACA]"></div>}
-            
-            <div className="flex flex-col items-center flex-1">
-              <h3 className="font-neusans font-semibold text-sm mb-1">{item.label}</h3>
+          <React.Fragment key={item.label}>
+            {index > 0 && <div className="h-[85%] border-l border-[#CACACA]" />}
+            <div className="rating-column font-neusans">
+              <h3 className="font-neusans font-semibold text-xs mb-0.5">{item.label}</h3>
               <div className="flex flex-col items-center">
-                {/* Score with icon badge overlay */}
-                <div className="relative inline-block mb-3">
-                  <span className="font-neusans text-gray-800 text-4xl font-bold">
+                <div className="relative inline-block mb-1.5">
+                  <span className="font-neusans text-gray-800 text-2xl font-bold">
                     {displayValue(item.value)}
                   </span>
-                  <div className="absolute -bottom-1 -right-[25px] flex items-center justify-center w-8 h-8 rounded-full">
+                  <div className="absolute -bottom-0.5 -right-4 flex items-center justify-center w-5 h-5">
                     <Image
                       src={item.icon}
-                      width={20}
-                      height={20}
-                      className="w-5 h-5"
-                      alt={`${item.label} icon`}
+                      width={14}
+                      height={14}
+                      className="w-3.5 h-3.5"
+                      alt=""
                     />
                   </div>
                 </div>
-                {/* Description text */}
-                <span className="text-xs text-gray-500 text-center">
+                <span className="text-[10px] text-gray-500 leading-tight text-center">
                   {item.description}
                 </span>
               </div>

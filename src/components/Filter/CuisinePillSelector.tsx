@@ -53,7 +53,7 @@ export default function CuisinePillSelector({
           onClick={handleReset}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
             selectedPalates.size === 0
-              ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
+              ? "bg-[#ff7c0a] !text-white border border-[#ff7c0a]"
               : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
           }`}
         >
@@ -70,7 +70,7 @@ export default function CuisinePillSelector({
                 onClick={() => handlePalateSelection(region.key)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                   selectedPalates.has(region.key)
-                    ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
+                    ? "bg-[#ff7c0a] !text-white border border-[#ff7c0a]"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                 }`}
               >
@@ -83,7 +83,7 @@ export default function CuisinePillSelector({
                   onClick={() => handlePalateSelection(cuisine.key)}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                     selectedPalates.has(cuisine.key)
-                      ? "bg-[#ff7c0a] text-white border border-[#ff7c0a]"
+                      ? "bg-[#ff7c0a] !text-white border border-[#ff7c0a]"
                       : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                   }`}
                 >

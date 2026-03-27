@@ -383,6 +383,7 @@ export const UPDATE_REVIEW = `
       _set: $changes
     ) {
       id
+      restaurant_uuid
       title
       content
       rating
@@ -403,6 +404,7 @@ export const DELETE_REVIEW = `
       _set: { deleted_at: "now()" }
     ) {
       id
+      restaurant_uuid
       deleted_at
     }
   }

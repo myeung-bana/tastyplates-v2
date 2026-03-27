@@ -184,16 +184,56 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
         setIsLoading(false);
 
         if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-          // Filter for restaurants if searchType is 'restaurant'
+          // Keep restaurant search tightly focused on food establishments
           const filtered = searchType === 'restaurant'
-            ? predictions.filter((p) => 
-                p.types.some((type) => 
-                  type.includes('restaurant') || 
-                  type.includes('food') || 
-                  type.includes('meal') ||
-                  type.includes('establishment')
-                )
-              )
+            ? predictions
+                .filter((p) => {
+                  const types = p.types || [];
+                  const hasRestaurantType = types.some((type) => type.includes('restaurant'));
+                  const hasFoodType = types.some((type) =>
+                    type.includes('food') ||
+                    type.includes('meal') ||
+                    type.includes('cafe') ||
+                    type.includes('bakery') ||
+                    type.includes('bar')
+                  );
+                  const hasEstablishmentType = types.some((type) => type.includes('establishment'));
+
+                  // Accept explicit restaurant/food matches.
+                  // For generic establishments, only keep them if user query itself signals restaurant intent.
+                  if (hasRestaurantType || hasFoodType) return true;
+                  if (!hasEstablishmentType) return false;
+
+                  const userQuery = inputValue.toLowerCase();
+                  return [
+                    'restaurant',
+                    'resto',
+                    'food',
+                    'dining',
+                    'eat',
+                    'cafe',
+                    'bakery',
+                    'bar',
+                    'bistro',
+                  ].some((keyword) => userQuery.includes(keyword));
+                })
+                .sort((a, b) => {
+                  const score = (prediction: google.maps.places.AutocompletePrediction) => {
+                    const types = prediction.types || [];
+                    let value = 0;
+                    if (types.some((type) => type.includes('restaurant'))) value += 3;
+                    if (types.some((type) =>
+                      type.includes('food') ||
+                      type.includes('meal') ||
+                      type.includes('cafe') ||
+                      type.includes('bakery') ||
+                      type.includes('bar')
+                    )) value += 2;
+                    if (types.some((type) => type.includes('establishment'))) value += 1;
+                    return value;
+                  };
+                  return score(b) - score(a);
+                })
             : predictions;
 
           setPredictions(filtered);

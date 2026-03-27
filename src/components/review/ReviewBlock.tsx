@@ -13,7 +13,7 @@ import 'slick-carousel/slick/slick-theme.css'
 import 'slick-carousel/slick/slick.css'
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { nhost } from "@/lib/nhost";
-import { capitalizeWords, formatDateT, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
+import { capitalizeWords, PAGE, stripTags, truncateText, generateProfileUrl } from "@/lib/utils";
 import { ReviewService } from "@/services/Reviews/reviewService";
 import { palateFlagMap } from "@/utils/palateFlags";
 import ReviewScreen from "./ReviewScreen";
@@ -22,13 +22,14 @@ import { ReviewedDataProps } from "@/interfaces/Reviews/review";
 import { updateLikeFailed } from "@/constants/messages";
 import toast from "react-hot-toast";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
-import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR, STAR_FILLED, STAR_HALF } from "@/constants/images";
+import { CASH, DEFAULT_USER_ICON, FLAG, HELMET, PHONE, STAR_FILLED } from "@/constants/images";
 import { reviewDescriptionDisplayLimit, reviewTitleDisplayLimit } from "@/constants/validation";
 import { PROFILE } from "@/constants/pages";
 import PalateTags from "../ui/PalateTags/PalateTags";
 // useUserData is deprecated - author data now comes from review relationships
 import { useRef, useCallback } from "react";
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
+import { formatDistanceToNow } from "date-fns";
 
 // Helper for relay global ID
 const encodeRelayId = (type: string, id: number) => {
@@ -409,6 +410,20 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
     ? review.userImage
     : (fetchedUserData?.profile_image || DEFAULT_USER_ICON);
 
+  // Match mobile timestamp behavior and keep labels compact (e.g. 2w ago, a day ago)
+  const formatRelativeTime = (dateString: string): string => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString.includes('T') ? dateString : `${dateString}T00:00:00Z`);
+      if (Number.isNaN(date.getTime())) return '';
+      return formatDistanceToNow(date, { addSuffix: true })
+        .replace('about ', '')
+        .replace('less than a minute ago', 'just now');
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <div className="review-block">
       <div className="review-block__header">
@@ -416,31 +431,34 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           {(review.authorId || authorUuid) ? (
             isOwnProfile ? (
               <a href={PROFILE}>
-                <Image
+                <FallbackImage
                   src={displayImage}
                   alt={displayName}
                   width={48}
                   height={48}
                   className="review-block__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                 />
               </a>
               ) : user ? (
                 <a href={profileUrl}>
-                  <Image
+                  <FallbackImage
                     src={displayImage}
                     alt={displayName}
                     width={48}
                     height={48}
                     className="review-block__user-image cursor-pointer"
+                    type={FallbackImageType.Icon}
                   />
                 </a>
               ) : (
-                <Image
+                <FallbackImage
                   src={displayImage}
                   alt={displayName}
                   width={48}
                   height={48}
                   className="review-block__user-image cursor-pointer"
+                  type={FallbackImageType.Icon}
                   onClick={() => setIsShowSignin(true)}
                 />
               )
@@ -491,19 +509,10 @@ const ReviewBlock = ({ review }: ReviewBlockProps) => {
           </div>
         </div>
         <div className="review-block__rating">
-          {Array.from({ length: 5 }, (_, i) => {
-            const full = i + 1 <= review.rating;
-            const half = !full && i + 0.5 <= review.rating;
-            return full ? (
-              <Image src={STAR_FILLED} key={i} width={16} height={16} className="size-4" alt="star rating" />
-            ) : half ? (
-              <Image src={STAR_HALF} key={i} width={16} height={16} className="size-4" alt="star rating" />
-            ) : (
-              <Image src={STAR} key={i} width={16} height={16} className="size-4" alt="star rating" />
-            );
-          })}
+          <Image src={STAR_FILLED} width={16} height={16} className="size-4" alt="star rating" />
+          <span>{Number(review.rating || 0).toFixed(1)}</span>
           <span className="review-block__timestamp">
-            {formatDateT(review.date)}
+            {formatRelativeTime(review.date)}
           </span>
         </div>
       </div>

@@ -14,6 +14,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { debounce } from "@/utils/debounce";
 import SuggestedRestaurants from './SuggestedRestaurants';
 import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
+import { normalizePalateUrlSegment } from '@/lib/palateSlug';
 import { useLocation } from '@/contexts/LocationContext';
 import '@/styles/components/suggested-restaurants.scss';
 import Breadcrumb from '@/components/common/Breadcrumb';
@@ -135,11 +136,10 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     const paramValue = initialPalatesFromUrl || initialEthnicFromUrl;
     if (!paramValue) return [];
     
-    // Split by comma and clean up the values
+    // Split by comma; normalize segments (legacy Title Case → lowercase slugs; regions stay canonical)
     const values = paramValue.split(',').map(val => val.trim()).filter(val => val);
-    
-    // Expand any region names to individual palates
-    return expandRegionsToPalates(values);
+    const normalized = values.map(normalizePalateUrlSegment).filter(Boolean);
+    return expandRegionsToPalates(normalized);
   };
   
   // Initialize state with URL parameters
@@ -168,7 +168,6 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   const userPreferencePalates = useMemo(() => normalizeUserPalates(user?.palates), [user?.palates]);
   const [preferenceStats, setPreferenceStats] = useState<PreferenceStatsMap>({});
   const [preferenceLoading, setPreferenceLoading] = useState(false);
-  const [authenticStats, setAuthenticStats] = useState<PreferenceStatsMap>({});
 
 
 
@@ -186,9 +185,8 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
 
   /**
    * Client-side sort applied to the server-filtered result set.
-   * DESC / ASC / NEWEST: data arrives pre-ordered from the API; this is effectively a no-op for those.
-   * SMART: ranks by authentic score from /api/v1/restaurants-v2/get-authentic-stats.
-   * MY_PREFERENCE: ranks by preference stats fetched per user palates.
+   * DESC / ASC / NEWEST / SMART: data arrives pre-ordered from the API — this is a no-op for those.
+   * MY_PREFERENCE: ranks by preference stats fetched per user palates (client-side only).
    */
   const sortRestaurants = useCallback(
     (
@@ -196,7 +194,6 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
       sortOption: string | null,
       opts: {
         locationKeyword?: string;
-        authenticStats: PreferenceStatsMap | null;
       }
     ) => {
       if (!restaurants || restaurants.length === 0) return restaurants;
@@ -209,8 +206,6 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           opts.locationKeyword
         );
       }
-
-      const authMap = opts.authenticStats;
 
       const compareBySortOption = (a: Restaurant, b: Restaurant): number => {
         if (sortOption === 'MY_PREFERENCE') {
@@ -227,32 +222,8 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           return (b.ratingsCount || 0) - (a.ratingsCount || 0);
         }
 
-        if (sortOption === 'ASC') {
-          return (a.rating || 0) - (b.rating || 0);
-        }
-        if (sortOption === 'DESC') {
-          return (b.rating || 0) - (a.rating || 0);
-        }
-        if (sortOption === 'NEWEST') {
-          const t = (b.listedAtMs || 0) - (a.listedAtMs || 0);
-          if (t !== 0) return t > 0 ? 1 : -1;
-          return (b.databaseId || 0) - (a.databaseId || 0);
-        }
-
-        // SMART — authentic score (desc), then overall rating / review volume
-        const aAuth = authMap?.[a.id]?.avg ?? 0;
-        const bAuth = authMap?.[b.id]?.avg ?? 0;
-        if (Math.abs(aAuth - bAuth) > 0.01) return bAuth - aAuth;
-
-        const aAuthCnt = authMap?.[a.id]?.count ?? 0;
-        const bAuthCnt = authMap?.[b.id]?.count ?? 0;
-        if (aAuthCnt !== bAuthCnt) return bAuthCnt - aAuthCnt;
-
-        const ratingDiff = (b.rating || 0) - (a.rating || 0);
-        if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
-        const reviewCountDiff = (b.ratingsCount || 0) - (a.ratingsCount || 0);
-        if (reviewCountDiff !== 0) return reviewCountDiff;
-        return (b.recognitionCount || 0) - (a.recognitionCount || 0);
+        // SMART / ASC / DESC / NEWEST — data arrives pre-sorted from the server; no-op.
+        return 0;
       };
 
       return sortedRestaurants.sort(compareBySortOption);
@@ -265,8 +236,10 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   const palatesKey = (filters.palates || []).join(',');
   const cuisinesKey = (filters.cuisine || []).join(',');
   const ratingKey = filters.rating || 0;
-  // Only server-sortable options trigger a refetch; SMART/MY_PREFERENCE sort client-side
-  const serverSortKey = ['DESC', 'ASC', 'NEWEST'].includes(filters.sortOption || '') ? (filters.sortOption || '') : '';
+  // MY_PREFERENCE sorts client-side; all other named options are handled server-side
+  const serverSortKey = ['DESC', 'ASC', 'NEWEST', 'SMART'].includes(filters.sortOption || '')
+    ? (filters.sortOption || '')
+    : '';
 
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
@@ -293,11 +266,12 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           locationParams.country_short = selectedLocation.shortLabel;
         }
 
-        // Map sort option to server-side order_by (SMART and MY_PREFERENCE sort client-side)
-        let serverOrderBy: 'rating' | 'rating_asc' | 'created_at' | undefined;
+        // Map sort option to server-side order_by; MY_PREFERENCE sorts client-side
+        let serverOrderBy: 'rating' | 'rating_asc' | 'smart' | 'created_at' | undefined;
         if (filters.sortOption === 'DESC') serverOrderBy = 'rating';
         else if (filters.sortOption === 'ASC') serverOrderBy = 'rating_asc';
         else if (filters.sortOption === 'NEWEST') serverOrderBy = 'created_at';
+        else if (filters.sortOption === 'SMART') serverOrderBy = 'smart';
 
         // Server-side palate/cuisine slug filters
         const palateSlugs = filters.palates?.length ? filters.palates : undefined;
@@ -445,30 +419,8 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.sortOption, userPreferencePalates.join('|')]);
 
-  // Fetch authentic stats for SMART sort (cached server-side)
-  useEffect(() => {
-    if (filters.sortOption !== 'SMART') return;
-
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const res = await fetch('/api/v1/restaurants-v2/get-authentic-stats', {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`Failed to fetch authentic stats: ${res.status}`);
-        const json = await res.json();
-        if (!json?.success) throw new Error(json?.error || 'Failed to fetch authentic stats');
-        setAuthenticStats(json.data || {});
-      } catch (e) {
-        if ((e as any)?.name === 'AbortError') return;
-        devError('Failed to load authentic stats:', e);
-        setAuthenticStats({});
-      }
-    };
-
-    load();
-    return () => controller.abort();
-  }, [filters.sortOption]);
+  // SMART sort is now handled server-side in get-restaurants (two-step via restaurant_rating_summary).
+  // No client-side authentic stats fetch needed.
 
   const displayedRestaurants = useMemo(() => {
     let list = restaurants;
@@ -495,16 +447,14 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     }
 
     // Location, cuisine, palate, and rating filtering are now handled server-side in fetchRestaurants.
-    // Client-side sort is applied here for SMART/MY_PREFERENCE; server-side sorts (DESC/ASC/NEWEST)
-    // arrive already ordered from the API and sortRestaurants is a no-op for those.
+    // SMART / DESC / ASC / NEWEST data arrives pre-sorted from the API.
+    // MY_PREFERENCE is the only option still sorted client-side.
     return sortRestaurants(list, filters.sortOption, {
       locationKeyword: searchAddress,
-      authenticStats: filters.sortOption === 'SMART' ? authenticStats : null,
     });
   }, [
     restaurants,
     preferenceStats,
-    authenticStats,
     filters.price,
     filters.sortOption,
     searchAddress,

@@ -68,21 +68,22 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
       <div className="p-4 md:p-6">
         {/* Main Content: Image + Info */}
         <div className="flex gap-4 mb-6">
-          {/* Circular Image - 120x120px - Hidden on mobile */}
+          {/* Circular featured image beside title — 80×80 (desktop) */}
           <div className="flex-shrink-0 hidden md:block">
             {restaurant.featuredImage?.node?.sourceUrl ? (
-              <div className="relative w-[120px] h-[120px] rounded-full overflow-hidden ring-4 ring-gray-100 shadow-md">
+              <div className="relative w-20 h-20 rounded-full overflow-hidden ring-4 ring-gray-100 shadow-md">
                 <Image
                   src={restaurant.featuredImage.node.sourceUrl}
                   alt={restaurant.title}
                   fill
                   className="object-cover"
                   priority
+                  sizes="80px"
                 />
               </div>
             ) : (
-              <div className="w-[120px] h-[120px] rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center ring-4 ring-gray-100 shadow-md">
-                <span className="text-4xl">🍽️</span>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center ring-4 ring-gray-100 shadow-md">
+                <span className="text-3xl">🍽️</span>
               </div>
             )}
           </div>

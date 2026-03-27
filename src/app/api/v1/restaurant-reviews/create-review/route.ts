@@ -3,6 +3,7 @@ import { hasuraMutation } from '@/app/graphql/hasura-server-client';
 import { CREATE_REVIEW } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { rateLimitOrThrow, createRateLimit } from '@/lib/redis-ratelimit';
 import { bumpVersion } from '@/lib/redis-versioning';
+import { rebuildRatingSummary } from '@/lib/rebuildRatingSummary';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -148,11 +149,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Recompute rating aggregates and keep restaurants.average_rating live.
+    // Run in the background so the response is not delayed; errors are logged inside.
+    rebuildRatingSummary(restaurant_uuid).catch((e) =>
+      console.error('[create-review] rebuildRatingSummary failed:', e)
+    );
+
     // Cache invalidation: Bump versions for affected caches
     await Promise.all([
       bumpVersion(`v:restaurant:${restaurant_uuid}:reviews`),
       bumpVersion(`v:reviews:all`),
       bumpVersion(`v:user:${author_id}:reviews`),
+      bumpVersion(`v:restaurants:all`), // average_rating on restaurants row is now updated
     ]);
 
     return NextResponse.json({

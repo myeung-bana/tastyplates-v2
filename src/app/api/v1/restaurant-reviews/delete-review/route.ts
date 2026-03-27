@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation } from '@/app/graphql/hasura-server-client';
 import { DELETE_REVIEW } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { bumpVersion } from '@/lib/redis-versioning';
+import { rebuildRatingSummary } from '@/lib/rebuildRatingSummary';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,6 +47,19 @@ export async function DELETE(request: NextRequest) {
         { success: false, error: 'Review not found' },
         { status: 404 }
       );
+    }
+
+    // Recompute rating aggregates after soft-delete
+    if (deletedReview.restaurant_uuid) {
+      rebuildRatingSummary(deletedReview.restaurant_uuid).catch((e) =>
+        console.error('[delete-review] rebuildRatingSummary failed:', e)
+      );
+
+      await Promise.all([
+        bumpVersion(`v:restaurant:${deletedReview.restaurant_uuid}:reviews`),
+        bumpVersion(`v:reviews:all`),
+        bumpVersion(`v:restaurants:all`),
+      ]);
     }
 
     return NextResponse.json({
