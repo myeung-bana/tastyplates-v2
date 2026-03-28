@@ -383,6 +383,21 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               loading={priority ? "eager" : "lazy"}
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             />
+            {/* Cuisine pills — bottom-left overlay on image */}
+            {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
+              <div className="restaurant-card__cuisine-overlay">
+                {restaurant.listingCategories.slice(0, 2).map((cuisine) => (
+                  <span key={cuisine.slug || cuisine.id} className="restaurant-card__cuisine-pill">
+                    {cuisine.name}
+                  </span>
+                ))}
+                {restaurant.listingCategories.length > 2 && (
+                  <span className="restaurant-card__cuisine-pill">
+                    +{restaurant.listingCategories.length - 2}
+                  </span>
+                )}
+              </div>
+            )}
           </Link>
           {profileTablist !== 'listings' && (
             <div className="flex flex-col gap-2 absolute top-2 right-2 md:top-4 md:right-4 text-[#31343F]">
@@ -458,33 +473,6 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             </div>
           </div>
 
-          {/* Cuisine Categories (shows first 3, then "+X" if more) - Make tags clickable */}
-          {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (
-            <div className="restaurant-card__tags mt-1 text-[10px] md:text-[0.9rem] leading-[1.4]">
-              {restaurant.listingCategories.slice(0, 3).map((cuisine, index) => {
-                const isLast = index === Math.min((restaurant.listingCategories?.length || 0), 3) - 1;
-                return (
-                  <React.Fragment key={cuisine.id}>
-                    <Link
-                      href={`/restaurants/cuisines/${cuisine.slug}`}
-                      className="restaurant-card__tag hover:text-[#ff7c0a] transition-colors cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {cuisine.name}
-                    </Link>
-                    {!isLast && (
-                      <span className="restaurant-card__tag"> / </span>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-              {restaurant.listingCategories.length > 3 && (
-                <span className="restaurant-card__tag">
-                  {' +' + (restaurant.listingCategories.length - 3)}
-                </span>
-              )}
-            </div>
-          )}
           
           {/* Establishment Categories (only parent categories) */}
           {restaurant.categories && restaurant.categories.length > 0 && (() => {

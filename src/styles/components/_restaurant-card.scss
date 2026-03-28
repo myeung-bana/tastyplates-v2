@@ -41,4 +41,33 @@
     object-fit: contain;
     border-radius: 16px;
   }
+
+  &__cuisine-overlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  &__cuisine-pill {
+    display: inline-block;
+    font-size: 14px;
+    font-family: "Neusans", sans-serif;
+    font-weight: 500;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background-color: #ff7c0a;
+    color: #fff;
+    white-space: nowrap;
+
+    @media (max-width: 767px) {
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+  }
 }

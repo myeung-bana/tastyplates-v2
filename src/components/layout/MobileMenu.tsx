@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiSearch, FiHeart, FiUser, FiSettings } from "react-icons/fi";
+import { FiSearch, FiHeart, FiUser, FiSettings, FiFileText } from "react-icons/fi";
 import { PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
 
 interface MobileMenuProps {
@@ -17,6 +17,7 @@ interface MobileMenuProps {
 
 const navigationItems = [
   { name: "Explore", href: RESTAURANTS, icon: FiSearch },
+  { name: "Articles", href: "/articles", icon: FiFileText },
   { name: "Following", href: "/following", icon: FiHeart },
 ];
 
@@ -44,7 +45,7 @@ export default function MobileMenu({
       {/* Mobile menu sidebar */}
       <aside
         id="separator-sidebar"
-        className={`fixed top-0 left-0 z-[10000] w-[280px] h-screen transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-[10000] w-[300px] h-screen transition-transform duration-300 ease-in-out ${
           isOpen ? "" : "-translate-x-full"
         } sm:translate-x-0 sm:hidden`}
         aria-label="Sidebar"
@@ -76,8 +77,13 @@ export default function MobileMenu({
           {/* Navigation Items */}
           <div className="space-y-2 font-neusans">
             {navigationItems.map((item) => {
-              // Show all items if authenticated, only Explore if not authenticated
-              if (!isAuthenticated && item.name !== "Explore") return null;
+              // Guests: Explore + Articles; signed-in: all items
+              if (
+                !isAuthenticated &&
+                item.name !== "Explore" &&
+                item.name !== "Articles"
+              )
+                return null;
 
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");

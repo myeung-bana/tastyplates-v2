@@ -88,20 +88,15 @@ const Filter2 = ({
     setRating(0);
   };
 
-  const applyFilters = () => {
-    console.log('🔄 Filter2 applyFilters called with:', {
-      cuisine: selectedCuisines,
-      palates: selectedPalates,
-      price: price || null,
-      rating: rating > 0 ? rating : null,
-      sortOption,
-    });
-    
+  const applyFilters = (cuisineOverride?: string[], palateOverride?: string[]) => {
+    const cuisine = cuisineOverride ?? selectedCuisines;
+    const palates = palateOverride ?? selectedPalates;
+
     onFilterChange({
-      cuisine: selectedCuisines,
+      cuisine,
       price: price || null,
       rating: rating > 0 ? rating : null,
-      palates: selectedPalates,
+      palates,
       sortOption: sortOption || null,
     });
     setIsModalOpen(false);
@@ -129,7 +124,7 @@ const Filter2 = ({
               onFilterChange={handleCuisineChange}
               selectedCuisines={selectedCuisines}
               selectedPalates={selectedPalates}
-              onApplyFilters={applyFilters}
+              onApplyFilters={(cuisines, palates) => applyFilters(cuisines, palates)}
             />
           </div>
           <div className="filter2">

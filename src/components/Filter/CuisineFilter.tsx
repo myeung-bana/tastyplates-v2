@@ -7,7 +7,8 @@ interface CuisineFilterProps {
   onFilterChange: (cuisines: string[], palates: string[]) => void;
   selectedCuisines: string[];
   selectedPalates: string[];
-  onApplyFilters?: () => void;
+  /** Fresh selection — parent must use these instead of React state to avoid stale reads after Apply. */
+  onApplyFilters?: (cuisines: string[], palates: string[]) => void;
 }
 const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onApplyFilters }: CuisineFilterProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -25,15 +26,13 @@ const CuisineFilter = ({ onFilterChange, selectedCuisines, selectedPalates, onAp
   const applyFilters = () => {
     const cuisinesArray = Array.from(selectedCuisinesSet);
     const palatesArray = Array.from(selectedPalatesSet);
-    
-    // Update the filter state
+
     onFilterChange(cuisinesArray, palatesArray);
-    
-    // Trigger the parent's apply filters to refetch data
+
     if (onApplyFilters) {
-      onApplyFilters();
+      onApplyFilters(cuisinesArray, palatesArray);
     }
-    
+
     setIsModalOpen(false);
   };
 

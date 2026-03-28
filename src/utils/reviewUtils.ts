@@ -64,35 +64,39 @@ export function calculateOverallRating(reviews: GraphQLReview[]): { rating: numb
 }
 
 /**
- * Calculate search rating based on user palates matching the search term
- * @param reviews - Array of all reviews
- * @param searchTerm - The search term (e.g., "Japanese", "Italian")
- * @returns Search rating and count
+ * True when no cuisine/palate filter is applied for Search Score (same as Overall).
  */
-export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: string): { rating: number; count: number } {
-  if (!reviews || reviews.length === 0 || !searchTerm) {
+export function isNoPalateFilterForSearch(param: string | null | undefined): boolean {
+  if (param == null) return true;
+  const t = String(param).trim().toLowerCase();
+  return t === "" || t === "all";
+}
+
+/**
+ * Search Score for a restaurant detail: average stars of reviews whose reviewers
+ * share the selected palate tag. If no filter ("All cuisines"), identical to overall.
+ */
+export function calculateSearchScoreForRestaurant(
+  reviews: GraphQLReview[],
+  selectedPalate: string | null | undefined
+): { rating: number; count: number } {
+  if (!reviews || reviews.length === 0) {
     return { rating: 0, count: 0 };
   }
 
-  // Filter reviews where user palates match the search term
-  // Use the new utility function for consistent palate normalization
-  const searchTermLower = searchTerm.toLowerCase();
-  const matchingReviews = reviews.filter(review => {
-    const userPalates = review.palates || null;
-    const palateArray = normalizePalates(userPalates);
-    
-    // Check if any of the user's palates match the search term
-    return palateArray.some(palate => 
-      palate.includes(searchTermLower) || 
-      searchTermLower.includes(palate)
-    );
-  });
+  if (isNoPalateFilterForSearch(selectedPalate)) {
+    return calculateOverallRating(reviews);
+  }
+
+  const matchingReviews = reviews.filter((review) =>
+    hasMatchingPalates(String(selectedPalate).trim(), review.palates || null)
+  );
 
   if (matchingReviews.length === 0) {
     return { rating: 0, count: 0 };
   }
 
-  const validReviews = matchingReviews.filter(review => {
+  const validReviews = matchingReviews.filter((review) => {
     const rating = parseFloat(String(review.reviewStars || "0"));
     return !isNaN(rating) && rating > 0;
   });
@@ -106,11 +110,18 @@ export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: stri
   }, 0);
 
   const averageRating = totalRating / validReviews.length;
-  
+
   return {
-    rating: Math.round(averageRating * 100) / 100, // Round to 2 decimal places
-    count: validReviews.length
+    rating: Math.round(averageRating * 100) / 100,
+    count: validReviews.length,
   };
+}
+
+/**
+ * @deprecated Prefer calculateSearchScoreForRestaurant — kept for call sites that pass a non-null term only
+ */
+export function calculateSearchRating(reviews: GraphQLReview[], searchTerm: string): { rating: number; count: number } {
+  return calculateSearchScoreForRestaurant(reviews, searchTerm);
 }
 
 /**
@@ -202,8 +213,8 @@ export function calculateAuthenticRating(
 /**
  * Calculate all rating metrics for a restaurant
  * @param restaurantReviews - Reviews for the specific restaurant
- * @param allReviews - All reviews in the system (for search rating calculation)
- * @param searchTerm - The search term from URL parameters
+ * @param allReviews - Reviews for this restaurant (Search Score is computed from these + searchTerm)
+ * @param searchTerm - URL palate filter (e.g. `ethnic`); null/empty/`all` → Search matches Overall
  * @param userPalates - Current user's palate string (pipe-separated) or array
  * @param restaurantPalates - Restaurant's cuisine/palates for authentic score (e.g. restaurant.palates.nodes.map(n => n.name))
  * @returns Combined rating metrics
@@ -216,7 +227,7 @@ export function calculateRatingMetrics(
   restaurantPalates: string | string[] | any[] | null | undefined = null
 ): RatingMetrics {
   const overall = calculateOverallRating(restaurantReviews);
-  const search = searchTerm ? calculateSearchRating(allReviews, searchTerm) : { rating: 0, count: 0 };
+  const search = calculateSearchScoreForRestaurant(allReviews, searchTerm);
   const myPreference = userPalates ? calculateMyPreferenceRating(restaurantReviews, userPalates) : { rating: 0, count: 0 };
   const authentic = restaurantPalates ? calculateAuthenticRating(restaurantReviews, restaurantPalates) : { rating: 0, count: 0 };
 

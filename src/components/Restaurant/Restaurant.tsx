@@ -10,8 +10,7 @@ import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
 import { transformRestaurantV2ToRestaurant } from "@/utils/restaurantTransformers";
 import { useDebounce } from "use-debounce";
 import { useNhostSession } from "@/hooks/useNhostSession";
-import { useSearchParams, useRouter } from "next/navigation";
-import { debounce } from "@/utils/debounce";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import SuggestedRestaurants from './SuggestedRestaurants';
 import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
 import { normalizePalateUrlSegment } from '@/lib/palateSlug';
@@ -106,6 +105,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   
   // Initialize URL parameters - support both 'ethnic' and 'palates' parameters
   const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
@@ -241,6 +241,22 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     ? (filters.sortOption || '')
     : '';
 
+  // Sync `palates` query param with filters (shareable URLs; canonical `palates` vs legacy `ethnic`).
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filters.palates?.length) {
+      params.set("palates", filters.palates.join(","));
+      params.delete("ethnic");
+    } else {
+      params.delete("palates");
+    }
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next !== current) {
+      router.replace(next ? `${pathname}?${next}` : pathname || "/restaurants", { scroll: false });
+    }
+  }, [palatesKey, pathname, router, searchParams]);
+
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
     try {
@@ -273,11 +289,22 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
         else if (filters.sortOption === 'NEWEST') serverOrderBy = 'created_at';
         else if (filters.sortOption === 'SMART') serverOrderBy = 'smart';
 
-        // Server-side palate/cuisine slug filters
-        const palateSlugs = filters.palates?.length ? filters.palates : undefined;
-        const cuisineSlugsForApi = cuisineSlug
+        // Server-side cuisine slug filters.
+        // Cuisine pill selections (filters.palates) store slugs like "korean", "japanese", and region
+        // keys like "East Asian". Expand regions to their child slugs, then merge with any explicit
+        // cuisine slugs. Both are queried against the `cuisines` JSONB field in the DB (restaurants
+        // store cuisine tags in `cuisines`, not `palates`).
+        const expandedPalateSlugs = filters.palates?.length
+          ? expandRegionsToPalates(filters.palates)
+          : [];
+        const baseCuisineSlugs = cuisineSlug
           ? [cuisineSlug]
-          : (filters.cuisine?.length ? filters.cuisine : undefined);
+          : (filters.cuisine ?? []);
+        const cuisineSlugsForApi = [...baseCuisineSlugs, ...expandedPalateSlugs];
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Restaurant.tsx:fetchRestaurants',message:'about to call getAllRestaurants',data:{filtersPalates:filters.palates,expandedPalateSlugs,cuisineSlugsForApi,sortOption:filters.sortOption,serverOrderBy},runId:'post-fix',hypothesisId:'H-A',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         const response = await restaurantV2Service.getAllRestaurants({
           limit: firstValue,
@@ -285,8 +312,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           status: 'publish',
           search: debouncedSearchTerm || undefined,
           min_rating: filters.rating && filters.rating > 0 ? filters.rating : undefined,
-          palate_slugs: palateSlugs,
-          cuisine_slugs: cuisineSlugsForApi,
+          cuisine_slugs: cuisineSlugsForApi.length ? cuisineSlugsForApi : undefined,
           order_by: serverOrderBy,
           ...locationParams,
         });
@@ -348,25 +374,19 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
       }));
   }, []);
 
-  const [debouncedFilterUpdate] = useMemo(
-    () => debounce(filterUpdateFn as (...args: unknown[]) => void, 300),
+  const handleFilterChange = useCallback(
+    (newFilters: {
+      cuisine?: string[] | null;
+      price?: string | null;
+      rating?: number | null;
+      badges?: string | null;
+      sortOption?: string | null;
+      palates?: string[] | null;
+    }) => {
+      filterUpdateFn(newFilters);
+    },
     [filterUpdateFn]
-  ) as [(newFilters: FilterChangeType) => void, () => void];
-
-  const handleFilterChange = useCallback((
-    newFilters:
-      {
-        cuisine?: string[] | null;
-        price?: string | null;
-        rating?: number | null;
-        badges?: string | null;
-        sortOption?: string | null;
-        palates?: string[] | null;
-      }
-  ) => {
-    debouncedFilterUpdate(newFilters);
-  }, [debouncedFilterUpdate]);
-
+  );
 
   useEffect(() => {
     setRestaurants([]);

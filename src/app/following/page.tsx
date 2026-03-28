@@ -6,7 +6,6 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
-import SuggestedUsers from '@/components/following/SuggestedUsers';
 import { FaUsers, FaCompass } from 'react-icons/fa';
 import { FiUsers, FiTrendingUp, FiHeart } from 'react-icons/fi';
 import Link from 'next/link';
@@ -26,7 +25,6 @@ export default function FollowingPage() {
     initialLoading,
     hasMore,
     loadMore,
-    refreshFollowingReviews,
   } = useFollowingReviewsGraphQL();
 
   const { observerRef } = useInfiniteScroll({
@@ -139,13 +137,9 @@ export default function FollowingPage() {
             <p className="text-lg text-gray-600 mb-6 font-neusans">
               This page shows the latest reviews from people you follow. Follow at least 10 users to see your personalized feed.
             </p>
-            <p className="text-base font-medium text-gray-700 mb-8 font-neusans">
-              You&apos;re following <span className="text-[#ff7c0a]">{followingCount}</span> of {FOLLOWING_FEED_MIN_COUNT} users.
+            <p className="text-base font-medium text-gray-700 mb-10 font-neusans">
+              You&apos;re following <span className="text-[#ff7c0a]">{followingCount}</span> of {FOLLOWING_FEED_MIN_COUNT} users. Discover people to follow from trending reviews and restaurant pages.
             </p>
-            <div className="mb-10">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center font-neusans">Find people to follow</h3>
-              <SuggestedUsers onFollowSuccess={() => { fetchFollowingCount(); refreshFollowingReviews(); }} />
-            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/"
@@ -240,11 +234,6 @@ export default function FollowingPage() {
                       Build connections with fellow food lovers and share your experiences.
                     </p>
                   </div>
-                </div>
-
-                {/* Suggested Users Component */}
-                <div className="mb-12">
-                  <SuggestedUsers onFollowSuccess={loadMore} />
                 </div>
 
                 {/* CTA Section */}

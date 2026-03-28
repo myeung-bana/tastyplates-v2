@@ -172,6 +172,9 @@ export async function GET(request: NextRequest) {
         .split(',')
         .map((s) => normalizePalateSlugForApi(s))
         .filter(Boolean);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'get-restaurants/route.ts:palate-filter',message:'palate filter built',data:{palateSlugsParam,normalizedSlugs:slugs},runId:'post-fix',hypothesisId:'H-A',timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (slugs.length > 0) {
         whereConditions.push({
           _or: slugs.map((slug) => ({
@@ -341,6 +344,12 @@ export async function GET(request: NextRequest) {
     const paramsHash = createHash('sha1').update(paramsStr).digest('hex');
     const cacheKey = `restaurants:v${version}:rv${reviewVersion}:${paramsHash}`;
     
+    // #region agent log - post-fix: log what cuisine_slugs the API receives
+    if (cuisineSlugs) {
+      fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'get-restaurants/route.ts:cuisine-slugs-received',message:'cuisine_slugs received by API',data:{cuisineSlugs,palateSlugsParam},runId:'post-fix',hypothesisId:'H-A',timestamp:Date.now()})}).catch(()=>{});
+    }
+    // #endregion
+
     const { value: responseData, hit } = await cacheGetOrSetJSON(
       cacheKey,
       600, // 600 seconds (10 minutes) TTL for better performance
@@ -381,6 +390,10 @@ export async function GET(request: NextRequest) {
         const restaurants = result.data?.restaurants || [];
         const total = result.data?.restaurants_aggregate?.aggregate?.count || restaurants.length;
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'get-restaurants/route.ts:after-hasura',message:'hasura returned restaurants',data:{count:restaurants.length,total,sampleTitles:restaurants.slice(0,5).map((r:any)=>r.title),palateSlugsParam,cuisineSlugs,orderBy},runId:'post-fix',hypothesisId:'H-A',timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
         // SMART sort: fetch authentic weights and re-sort by authentic_rating_weighted
         if (orderBy === 'smart') {
           const summaryResult = await hasuraQuery<{
@@ -404,6 +417,10 @@ export async function GET(request: NextRequest) {
             withScore.sort(
               (a: any, b: any) => (weightMap.get(b.id) ?? 0) - (weightMap.get(a.id) ?? 0)
             );
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'get-restaurants/route.ts:smart-sort',message:'smart sort applied',data:{beforeCount:restaurants.length,afterCount:withScore.length,summaryEntriesCount:summaryResult.data.restaurant_rating_summary.length,droppedCount:restaurants.length-withScore.length},runId:'post-fix',hypothesisId:'H-B',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
 
             return {
               success: true,

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -34,7 +34,7 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
-  const { user, nhostUser, loading } = useNhostSession();
+  const { user, nhostUser, loading, authReady } = useNhostSession();
   const [isMobile, setIsMobile] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -85,17 +85,21 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMobile, lastScrollY]);
 
-  // Handle profile click for non-authenticated users
-  const handleProfileClick = (e: React.MouseEvent) => {
-    if (!user || loading) {
-      e.preventDefault();
-      showSignin();
-    }
-  };
+  /** Canonical profile path when signed in (matches MobileMenu). */
+  const profileHref = useMemo(() => {
+    if (user?.username) return `/profile/${encodeURIComponent(user.username)}`;
+    if (user?.user_id) return `/profile/${encodeURIComponent(user.user_id)}`;
+    if (nhostUser?.id) return `/profile/${encodeURIComponent(nhostUser.id)}`;
+    return PROFILE;
+  }, [user?.username, user?.user_id, nhostUser?.id]);
 
-  // Handle click for items that require auth
-  const handleAuthRequiredClick = (e: React.MouseEvent, item: any) => {
-    if (!user || loading) {
+  // Handle click for items that require auth (Nhost session, not legacy Firebase profile)
+  const handleAuthRequiredClick = (e: React.MouseEvent) => {
+    if (loading) {
+      e.preventDefault();
+      return;
+    }
+    if (!authReady) {
       e.preventDefault();
       showSignin();
     }
@@ -153,16 +157,24 @@ const BottomNav: React.FC = () => {
     }`}>
       <div className="flex items-center justify-around px-2 py-1">
         {navItems
-          .filter(item => !item.requiresAuth || (!loading && !!user) || item.showWhenUnauthenticated)
+          .filter(
+            (item) =>
+              !item.requiresAuth ||
+              authReady ||
+              item.showWhenUnauthenticated
+          )
           .map((item) => {
           const Icon = item.icon;
           const active = isActive(item.activePaths);
           
+          const href =
+            item.href === PROFILE && authReady ? profileHref : item.href;
+
           return (
             <Link
               key={item.href}
-              href={item.href}
-              onClick={item.requiresAuth ? (e) => handleAuthRequiredClick(e, item) : undefined}
+              href={href}
+              onClick={item.requiresAuth ? handleAuthRequiredClick : undefined}
               className={`flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors duration-200 ${
                 active 
                   ? 'text-[#ff7c0a]' 

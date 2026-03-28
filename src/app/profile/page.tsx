@@ -1,35 +1,33 @@
 "use client";
-import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { useAuthenticationStatus } from "@nhost/nextjs";
+import { useNhostSession } from "@/hooks/useNhostSession";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import ProfileHeaderSkeleton from "@/components/ui/Skeleton/ProfileHeaderSkeleton";
 
 const ProfilePage = () => {
-  const { user, loading } = useFirebaseSession();
+  const { user, nhostUser, loading } = useNhostSession();
+  const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return; // Wait for session to load
-    
-    if (!user || !user.id) {
-      // Redirect to login if not authenticated
+    if (loading || authLoading) return;
+
+    if (!isAuthenticated || !nhostUser?.id) {
       router.push("/");
       return;
     }
 
-    // Redirect to the user's profile using username
-    // Fallback to UUID if username is not available (for backward compatibility)
-    if (user.username) {
-      const profileUrl = `/profile/${encodeURIComponent(user.username)}`;
-      router.replace(profileUrl);
-    } else {
-      // Fallback to UUID if username is not available
-      const profileUrl = `/profile/${user.id}`;
-      router.replace(profileUrl);
-    }
-  }, [user, loading, router]);
+    // Prefer username from restaurant profile; fallback to Nhost id (UUID)
+    const segment = user?.username
+      ? encodeURIComponent(user.username)
+      : user?.user_id
+        ? encodeURIComponent(user.user_id)
+        : encodeURIComponent(nhostUser.id);
 
-  // Show skeleton loading while redirecting
+    router.replace(`/profile/${segment}`);
+  }, [user, loading, authLoading, isAuthenticated, nhostUser, router]);
+
   return (
     <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-4 md:mt-20 text-[#31343F]">
       <ProfileHeaderSkeleton />

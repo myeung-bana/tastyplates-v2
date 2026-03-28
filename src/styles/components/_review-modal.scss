@@ -11,6 +11,26 @@
   z-index: 1005;
 }
 
+// Login, register, forgot password: edge-to-edge sheet on small screens only
+.review-modal-overlay.review-modal-overlay--auth-sheet {
+  @media (max-width: 767px) {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 0;
+  }
+}
+
+.review-modal-panel--auth-sheet {
+  @media (max-width: 767px) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100dvh;
+    max-height: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+}
+
 .review-modal {
   background-color: white;
   padding: 2rem;

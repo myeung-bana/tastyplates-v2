@@ -375,7 +375,13 @@
     }
 
     &--active {
-      background-color: #F1F1F1;
+      background-color: #ff7c0a;
+      color: #fff;
+
+      &:hover {
+        background-color: #e66d08;
+        color: #fff;
+      }
     }
 
     &--checkbox {

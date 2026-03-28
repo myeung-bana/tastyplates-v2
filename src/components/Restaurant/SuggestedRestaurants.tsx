@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Restaurant } from './Restaurant';
-import { RestaurantService } from '@/services/restaurant/restaurantService';
+import { restaurantV2Service } from '@/app/api/v1/services/restaurantV2Service';
+import { transformRestaurantV2ToRestaurant } from '@/utils/restaurantTransformers';
 import { getRegionalPalatesForSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
 import RestaurantCard from './RestaurantCard';
-import { Listing } from '@/interfaces/restaurant/restaurant';
-import { getBestAddress } from '@/utils/addressUtils';
 
 interface SuggestedRestaurantsProps {
   selectedPalates: string[];
   onRestaurantClick?: (restaurant: Restaurant) => void;
 }
-
-const restaurantService = new RestaurantService();
 
 const SuggestedRestaurants: React.FC<SuggestedRestaurantsProps> = ({ 
   selectedPalates, 
@@ -21,29 +18,6 @@ const SuggestedRestaurants: React.FC<SuggestedRestaurantsProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mapListingToRestaurant = (item: Listing): Restaurant => ({
-    id: item.id,
-    slug: item.slug,
-    name: item.title,
-    image: item.featuredImage?.node.sourceUrl || '/images/tastyplates_placeholder_landscape.jpg',
-    rating: item.averageRating,
-    databaseId: item.databaseId || 0,
-    palatesNames: item.palates.nodes?.map((c: { name: string }) => c.name) || [],
-    listingCategories: item.listingCategories?.nodes.map((c) => ({ id: c.id, name: c.name, slug: c.slug })) || [],
-    countries: item.countries?.nodes.map((c) => c.name).join(", ") || "Default Location",
-    priceRange: item.priceRange,
-    initialSavedStatus: item.isFavorite ?? false,
-    streetAddress: getBestAddress(
-      item.listingDetails?.googleMapUrl, 
-      item.listingStreet, 
-      'No address available'
-    ),
-    googleMapUrl: item.listingDetails?.googleMapUrl,
-    ratingsCount: item.ratingsCount ?? 0,
-    listedAtMs: 0,
-    searchPalateStats: item.searchPalateStats,
-  });
-
   useEffect(() => {
     const fetchSuggestedRestaurants = async () => {
       if (!selectedPalates || selectedPalates.length === 0) return;
@@ -52,36 +26,23 @@ const SuggestedRestaurants: React.FC<SuggestedRestaurantsProps> = ({
       setError(null);
 
       try {
-        const suggestedPalates = getRegionalPalatesForSuggestions(selectedPalates);
+        const suggestedCuisineSlugs = getRegionalPalatesForSuggestions(selectedPalates);
         
-        if (suggestedPalates.length === 0) {
+        if (suggestedCuisineSlugs.length === 0) {
           setSuggestedRestaurants([]);
           return;
         }
 
-        console.log('🔍 Fetching suggested restaurants for palates:', suggestedPalates);
+        const response = await restaurantV2Service.getAllRestaurants({
+          limit: RESTAURANT_CONSTANTS.SUGGESTED_RESULTS_COUNT,
+          offset: 0,
+          status: 'publish',
+          cuisine_slugs: suggestedCuisineSlugs,
+        });
 
-        const data = await restaurantService.fetchAllRestaurants(
-          '', // No search term
-          RESTAURANT_CONSTANTS.SUGGESTED_RESULTS_COUNT,
-          null, // No pagination
-          null, // No cuisine filter
-          suggestedPalates, // Use suggested palates
-          null, // No price filter
-          null, // No status filter
-          null, // No user filter
-          null, // No recognition filter
-          null, // No sort option
-          null, // No rating filter
-          null, // No statuses filter
-          null, // No address filter
-          suggestedPalates.join(',') // Pass as ethnicSearch
-        );
-
-        const transformed = (data.nodes as unknown as Listing[]).map(mapListingToRestaurant);
+        const transformed = (response.data || []).map(transformRestaurantV2ToRestaurant);
         setSuggestedRestaurants(transformed);
       } catch (err) {
-        console.error('Error fetching suggested restaurants:', err);
         setError('Failed to load suggested restaurants');
       } finally {
         setLoading(false);

@@ -23,7 +23,9 @@ import {
   type RatingMetrics,
   calculateCommunityRecognitionMetrics,
   type CommunityRecognitionMetrics,
-  calculateOverallRating
+  calculateOverallRating,
+  calculateSearchScoreForRestaurant,
+  isNoPalateFilterForSearch,
 } from "@/utils/reviewUtils";
 import { GraphQLReview } from "@/types/graphql";
 import ImageGallery from "@/components/Restaurant/ImageGallery";
@@ -149,24 +151,32 @@ export default function RestaurantDetail() {
   }, [restaurant?.id]);
 
   // Calculate rating metrics when data changes.
-  // Uses precomputed overall + authentic scores when available; computes myPreference client-side.
+  // Uses precomputed overall + authentic when available; Search Score + myPreference from client reviews (?ethnic=).
   useEffect(() => {
     if (!restaurant) return;
 
     const userPalates = user?.palates || null;
 
     if (summaryScores) {
-      // Use precomputed overall + authentic; compute myPreference from loaded reviews
+      // Use precomputed overall + authentic; myPreference + Search Score from loaded reviews
       const myPreference =
         userPalates && reviews.length > 0
           ? calculateMyPreferenceRating(reviews, userPalates)
           : { rating: 0, count: 0 };
 
+      // Search Score: no palate filter → same as Overall (DB summary); else average for reviewers matching ?ethnic=
+      const searchMetrics = isNoPalateFilterForSearch(palatesParam)
+        ? {
+            rating: summaryScores.overallRating ?? 0,
+            count: summaryScores.overallCount,
+          }
+        : calculateSearchScoreForRestaurant(reviews, palatesParam);
+
       setRatingMetrics({
         overallRating: summaryScores.overallRating ?? 0,
         overallCount: summaryScores.overallCount,
-        searchRating: 0,
-        searchCount: 0,
+        searchRating: searchMetrics.rating,
+        searchCount: searchMetrics.count,
         myPreferenceRating: myPreference.rating,
         myPreferenceCount: myPreference.count,
         authenticRating: summaryScores.authenticRating ?? 0,
