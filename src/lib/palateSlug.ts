@@ -19,3 +19,16 @@ export function normalizePalateUrlSegment(segment: string): string {
 export function normalizePalateSlugForApi(slug: string): string {
   return slug.trim().toLowerCase().replace(/\s+/g, '-');
 }
+
+/**
+ * First palate/region key from `?palate=` / `?ethnic=` for UI (navbar, hero) — matches `palateOptions` keys.
+ * Uses the first comma segment only (single-select UIs).
+ */
+export function getFirstPalateKeyFromUrlParam(raw: string | null | undefined): string | null {
+  if (raw == null || String(raw).trim() === '') return null;
+  const first = String(raw).split(',')[0].trim();
+  if (!first) return null;
+  const lower = first.toLowerCase();
+  if (lower === 'all') return null;
+  return normalizePalateUrlSegment(first);
+}

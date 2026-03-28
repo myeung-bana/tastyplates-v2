@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiSearch, FiX, FiCommand } from 'react-icons/fi';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import "@/styles/components/_hero.scss";
 import { palateOptions } from "@/constants/formOptions";
 import { RESTAURANTS } from "@/constants/pages";
+import { getFirstPalateKeyFromUrlParam } from '@/lib/palateSlug';
 import Toast from "@/components/ui/Toast/Toast";
 
 interface SelectedPalate {
@@ -15,6 +16,7 @@ interface SelectedPalate {
 
 const Hero = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState('');
   const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
   const [showPalateModal, setShowPalateModal] = useState(false);
@@ -26,6 +28,16 @@ const Hero = () => {
     message: string;
     type: 'success' | 'error' | 'info';
   } | null>(null);
+
+  useEffect(() => {
+    const raw = searchParams.get('palate') || searchParams.get('ethnic');
+    const key = getFirstPalateKeyFromUrlParam(raw);
+    if (!key) {
+      setSelectedPalates(new Set());
+      return;
+    }
+    setSelectedPalates(new Set([key]));
+  }, [searchParams]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -40,11 +52,9 @@ const Hero = () => {
       if (searchValue) {
         params.set('search', encodeURIComponent(searchValue));
       }
-      // Only add palates parameter if palates are actually selected
       if (selectedPalates.size > 0) {
-        params.set('palates', Array.from(selectedPalates).join(','));
+        params.set('palate', Array.from(selectedPalates).join(','));
       }
-      // If no palates selected, navigate to /restaurants with no filters (All Cuisines)
     }
     
     const queryString = params.toString();

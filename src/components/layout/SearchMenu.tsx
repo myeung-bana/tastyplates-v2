@@ -116,7 +116,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
         params.set("search", encodeURIComponent(searchValue));
       }
       if (selectedPalates.size > 0) {
-        params.set("palates", Array.from(selectedPalates).join(","));
+        params.set("palate", Array.from(selectedPalates).join(","));
       }
     }
 

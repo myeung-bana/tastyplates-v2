@@ -1,5 +1,5 @@
 import "@/styles/components/filter2.scss";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PiCaretDown } from "react-icons/pi";
 import CustomPopover from "../ui/Popover/Popover";
 import { usePriceRanges } from "@/hooks/usePriceRanges";
@@ -17,11 +17,14 @@ interface Filter2Props {
   initialPalates?: string[];
   initialSortOption?: string | null;
   canUsePreferenceSort?: boolean;
+  /** When `?palate=` is present — sort list by reviewers matching that palate (client-side). */
+  canUsePalateContextSort?: boolean;
 }
 
 
 const BASE_SORT_OPTIONS: Array<{ key: string; label: string }> = [
   { key: 'MY_PREFERENCE', label: 'My Preference' },
+  { key: 'PALATE_CONTEXT', label: 'Palate match' },
   { key: 'SMART', label: 'Smart Sort' },
   { key: 'DESC', label: 'Highest Rated' },
   { key: 'ASC', label: 'Lowest Rated' },
@@ -34,6 +37,7 @@ const Filter2 = ({
   initialPalates = [],
   initialSortOption = 'SMART',
   canUsePreferenceSort = false,
+  canUsePalateContextSort = false,
 }: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialCuisines);
@@ -46,19 +50,28 @@ const Filter2 = ({
 
   // Use centralized usePriceRanges hook to fetch price data
   const { priceRanges, loading: isLoadingPrices } = usePriceRanges();
-  const sortOptions = canUsePreferenceSort
-    ? BASE_SORT_OPTIONS
-    : BASE_SORT_OPTIONS.filter((opt) => opt.key !== 'MY_PREFERENCE');
+  const sortOptions = useMemo(() => {
+    let opts = canUsePreferenceSort
+      ? BASE_SORT_OPTIONS
+      : BASE_SORT_OPTIONS.filter((opt) => opt.key !== 'MY_PREFERENCE');
+    if (!canUsePalateContextSort) {
+      opts = opts.filter((opt) => opt.key !== 'PALATE_CONTEXT');
+    }
+    return opts;
+  }, [canUsePreferenceSort, canUsePalateContextSort]);
 
   // Sync with initial values from parent
   useEffect(() => {
     setSelectedCuisines(initialCuisines);
     setSelectedPalates(initialPalates);
-    const nextSort = !canUsePreferenceSort && initialSortOption === 'MY_PREFERENCE'
-      ? 'SMART'
-      : (initialSortOption || 'SMART');
+    const nextSort =
+      !canUsePreferenceSort && initialSortOption === 'MY_PREFERENCE'
+        ? 'SMART'
+        : !canUsePalateContextSort && initialSortOption === 'PALATE_CONTEXT'
+          ? 'SMART'
+          : (initialSortOption || 'SMART');
     setSortOption(nextSort);
-  }, [initialCuisines, initialPalates, initialSortOption, canUsePreferenceSort]);
+  }, [initialCuisines, initialPalates, initialSortOption, canUsePreferenceSort, canUsePalateContextSort]);
 
   useEffect(() => {
     if (!canUsePreferenceSort && sortOption === 'MY_PREFERENCE') {
@@ -72,6 +85,19 @@ const Filter2 = ({
       });
     }
   }, [canUsePreferenceSort, sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
+
+  useEffect(() => {
+    if (!canUsePalateContextSort && sortOption === 'PALATE_CONTEXT') {
+      setSortOption('SMART');
+      onFilterChange({
+        cuisine: selectedCuisines,
+        price: price || null,
+        rating: rating > 0 ? rating : null,
+        palates: selectedPalates,
+        sortOption: 'SMART',
+      });
+    }
+  }, [canUsePalateContextSort, sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
 
   const handleCuisineChange = (cuisines: string[], palates: string[]) => {
     setSelectedCuisines(cuisines);

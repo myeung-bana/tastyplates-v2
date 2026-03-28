@@ -111,7 +111,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const [error, setError] = useState<string | null>(null);
   // const [localRatingsCount, setLocalRatingsCount] = useState<number | null>(null);
   // const hasFetched = useRef(false);
-  const palateParam = searchParams?.get("ethnic");
+  const palateParam =
+    searchParams?.get("palate") || searchParams?.get("ethnic");
 
   useEffect(() => {
     // Only set initial state if explicitly provided as boolean
@@ -353,7 +354,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             </div>
           )}
           <Link
-            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
+            href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { palate: decodeURIComponent(palateParam) } : {})}
             onClick={async (e) => {
               e.stopPropagation();
               const clickedElement = e.target as HTMLElement;
@@ -361,13 +362,13 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               if ((pathname === "/review-listing" || pathname === "/tastystudio/review-listing") && clickedElement.dataset.role === "image") {
                 const slug = restaurant.slug || "";
                 if (slug) {
-                  const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
+                  const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&palate=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
                   router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
                 }
                 return;
               }
               if (onClick) await onClick(); // Wait for mutation to complete
-              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
+              router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { palate: decodeURIComponent(palateParam) } : {}));
             }}
           >
             <FallbackImage
@@ -436,20 +437,20 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
         <div className="restaurant-card__content">
           <div className="restaurant-card__header">
             <Link
-              href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {})}
+              href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { palate: decodeURIComponent(palateParam) } : {})}
               className="restaurant-card__name truncate w-[220px] text-[1rem] whitespace-nowrap overflow-hidden text-ellipsis hover:text-[#ff7c0a] transition-colors"
               onClick={async (e) => {
                 e.stopPropagation();
                 if (pathname === "/review-listing" || pathname === "/tastystudio/review-listing") {
                   const slug = restaurant.slug || "";
                   if (slug) {
-                    const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&ethnic=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
+                    const queryParams = palateParam ? `?slug=${encodeURIComponent(slug)}&palate=${encodeURIComponent(palateParam)}` : `?slug=${encodeURIComponent(slug)}`;
                     router.push(`${TASTYSTUDIO_ADD_REVIEW_CREATE}${queryParams}`);
                   }
                   return;
                 }
                 if (onClick) await onClick(); // Wait for mutation to complete
-                router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { ethnic: decodeURIComponent(palateParam) } : {}));
+                router.push(PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { palate: decodeURIComponent(palateParam) } : {}));
               }}
             >
               {restaurant.name}

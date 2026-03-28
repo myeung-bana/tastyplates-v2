@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiSearch, FiX, FiCommand } from 'react-icons/fi';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { palateOptions } from '@/constants/formOptions';
+import { getFirstPalateKeyFromUrlParam } from '@/lib/palateSlug';
 
 interface NavbarSearchBarProps {
   isAuthenticated: boolean;
@@ -25,6 +26,20 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
   const [searchMode, setSearchMode] = useState<'cuisine' | 'keyword'>('cuisine');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Pre-select palate from /restaurants?palate=… (or legacy ?ethnic=)
+  useEffect(() => {
+    if (!pathname?.startsWith('/restaurants')) return;
+    const raw = searchParams.get('palate') || searchParams.get('ethnic');
+    const key = getFirstPalateKeyFromUrlParam(raw);
+    if (!key) {
+      setSelectedPalates(new Set());
+      return;
+    }
+    setSelectedPalates(new Set([key]));
+  }, [pathname, searchParams]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -39,11 +54,10 @@ const NavbarSearchBar: React.FC<NavbarSearchBarProps> = ({
       if (searchValue) {
         params.set('search', encodeURIComponent(searchValue));
       }
-      // Only add palates parameter if palates are actually selected
+      // `palate` = Search Score context on restaurant detail pages; omit when browsing all cuisines
       if (selectedPalates.size > 0) {
-        params.set('palates', Array.from(selectedPalates).join(','));
+        params.set('palate', Array.from(selectedPalates).join(','));
       }
-      // If no palates selected, navigate to /restaurants with no filters (All Cuisines)
     }
     
     const queryString = params.toString();

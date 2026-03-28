@@ -13,7 +13,8 @@ import { useNhostSession } from "@/hooks/useNhostSession";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import SuggestedRestaurants from './SuggestedRestaurants';
 import { shouldShowSuggestions, RESTAURANT_CONSTANTS } from '@/constants/utils';
-import { normalizePalateUrlSegment } from '@/lib/palateSlug';
+import { getFirstPalateKeyFromUrlParam, normalizePalateUrlSegment } from '@/lib/palateSlug';
+import { isNoPalateFilterForSearch } from '@/utils/reviewUtils';
 import { useLocation } from '@/contexts/LocationContext';
 import '@/styles/components/suggested-restaurants.scss';
 import Breadcrumb from '@/components/common/Breadcrumb';
@@ -107,41 +108,37 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   const router = useRouter();
   const pathname = usePathname();
   
-  // Initialize URL parameters - support both 'ethnic' and 'palates' parameters
-  const initialEthnicFromUrl = searchParams?.get("ethnic") ? decodeURIComponent(searchParams.get("ethnic") as string) : "";
-  const initialPalatesFromUrl = searchParams?.get("palates") ? decodeURIComponent(searchParams.get("palates") as string) : "";
   const initialAddressFromUrl = searchParams?.get("address") ? decodeURIComponent(searchParams.get("address") as string) : "";
   const initialListingFromUrl = searchParams?.get("listing") ? decodeURIComponent(searchParams.get("listing") as string) : "";
-  
-  // Helper function to expand region names to individual palates
+
+  // Helper function to expand region names to individual cuisine slugs
   const expandRegionsToPalates = (values: string[]): string[] => {
     const expanded: string[] = [];
-    values.forEach(value => {
-      // Check if this value is a region name
+    values.forEach((value) => {
       if (RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS[value as keyof typeof RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS]) {
-        // It's a region, add all palates from that region
         const regionPalates = RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS[value as keyof typeof RESTAURANT_CONSTANTS.REGIONAL_PALATE_GROUPS];
         expanded.push(...regionPalates);
       } else {
-        // It's an individual palate
         expanded.push(value);
       }
     });
     return expanded;
   };
-  
-  // Convert URL parameters to palates array
-  const getInitialPalatesFromUrl = () => {
-    // Prefer 'palates' parameter over 'ethnic' for consistency with NavbarSearchBar
-    const paramValue = initialPalatesFromUrl || initialEthnicFromUrl;
-    if (!paramValue) return [];
-    
-    // Split by comma; normalize segments (legacy Title Case → lowercase slugs; regions stay canonical)
-    const values = paramValue.split(',').map(val => val.trim()).filter(val => val);
+
+  /** Listing filter only: `cuisine` (canonical) or legacy `palates` bookmarks. Not the same as `palate` (Search Score context). */
+  const getInitialCuisineFromUrl = (): string[] => {
+    const raw =
+      searchParams?.get("cuisine") ||
+      searchParams?.get("palates") ||
+      "";
+    if (!raw) return [];
+    const values = raw.split(",").map((val) => val.trim()).filter(Boolean);
     const normalized = values.map(normalizePalateUrlSegment).filter(Boolean);
     return expandRegionsToPalates(normalized);
   };
-  
+
+  const initialCuisineSlugs = getInitialCuisineFromUrl();
+
   // Initialize state with URL parameters
   const [searchAddress] = useState(initialAddressFromUrl);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -154,20 +151,46 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   const [searchTerm] = useState(initialListingFromUrl);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
-  const initialPalates = getInitialPalatesFromUrl();
-
-  const [filters, setFilters] = useState({
-    cuisine: cuisineSlug ? [cuisineSlug] : null as string[] | null,
-    palates: initialPalates,
-    price: null as string | null,
-    rating: null as number | null,
-    badges: null as string | null,
-    sortOption: null as string | null, // 'MY_PREFERENCE' | 'SMART' | 'ASC' | 'DESC' | 'NEWEST'
+  const [filters, setFilters] = useState(() => {
+    const fromUrl = initialCuisineSlugs;
+    const cuisine =
+      cuisineSlug && fromUrl.length
+        ? [...new Set([cuisineSlug, ...fromUrl])]
+        : cuisineSlug
+          ? [cuisineSlug]
+          : fromUrl.length
+            ? fromUrl
+            : null;
+    return {
+      cuisine,
+      price: null as string | null,
+      rating: null as number | null,
+      badges: null as string | null,
+      sortOption: null as string | null,
+    };
   });
+
+  /** Search Score context for detail links: `?palate=` (canonical) or legacy `?ethnic=`. Does not filter the listing. */
+  const palateContext = useMemo(() => {
+    const p = searchParams?.get("palate") || searchParams?.get("ethnic");
+    return p ? decodeURIComponent(p) : null;
+  }, [searchParams]);
+
+  /** First URL palate/region expanded to API slugs — used for “Palate match” sort (`get-preference-stats`). */
+  const palateUrlSlugs = useMemo(() => {
+    if (!palateContext || isNoPalateFilterForSearch(palateContext)) return [];
+    const first = getFirstPalateKeyFromUrlParam(palateContext);
+    if (!first) return [];
+    return expandRegionsToPalates([first]);
+  }, [palateContext]);
+
+  const canUsePalateContextSort = palateUrlSlugs.length > 0;
 
   const userPreferencePalates = useMemo(() => normalizeUserPalates(user?.palates), [user?.palates]);
   const [preferenceStats, setPreferenceStats] = useState<PreferenceStatsMap>({});
   const [preferenceLoading, setPreferenceLoading] = useState(false);
+  const [palateUrlStats, setPalateUrlStats] = useState<PreferenceStatsMap>({});
+  const [, setPalateUrlLoading] = useState(false);
 
 
 
@@ -186,7 +209,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   /**
    * Client-side sort applied to the server-filtered result set.
    * DESC / ASC / NEWEST / SMART: data arrives pre-ordered from the API — this is a no-op for those.
-   * MY_PREFERENCE: ranks by preference stats fetched per user palates (client-side only).
+   * MY_PREFERENCE / PALATE_CONTEXT: ranks by preference stats (client-side only).
    */
   const sortRestaurants = useCallback(
     (
@@ -208,7 +231,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
       }
 
       const compareBySortOption = (a: Restaurant, b: Restaurant): number => {
-        if (sortOption === 'MY_PREFERENCE') {
+        if (sortOption === 'MY_PREFERENCE' || sortOption === 'PALATE_CONTEXT') {
           const aPref = a.searchPalateStats?.avg ?? -1;
           const bPref = b.searchPalateStats?.avg ?? -1;
           if (aPref !== bPref) return bPref - aPref;
@@ -233,29 +256,38 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
 
   // Stable primitive keys used as useCallback deps so array/object identity doesn't cause spurious refetches
   const locationKey = selectedLocation?.key || '';
-  const palatesKey = (filters.palates || []).join(',');
-  const cuisinesKey = (filters.cuisine || []).join(',');
+  const cuisineKey = (filters.cuisine || []).join(',');
   const ratingKey = filters.rating || 0;
-  // MY_PREFERENCE sorts client-side; all other named options are handled server-side
+  // MY_PREFERENCE / PALATE_CONTEXT sort client-side; other named options are handled server-side
   const serverSortKey = ['DESC', 'ASC', 'NEWEST', 'SMART'].includes(filters.sortOption || '')
     ? (filters.sortOption || '')
     : '';
 
-  // Sync `palates` query param with filters (shareable URLs; canonical `palates` vs legacy `ethnic`).
+  // Sync listing filter `cuisine` and preserve `palate` (Search Score context). Drop legacy `palates` on listing.
   useEffect(() => {
+    if (!searchParams) return;
     const params = new URLSearchParams(searchParams.toString());
-    if (filters.palates?.length) {
-      params.set("palates", filters.palates.join(","));
+    if (filters.cuisine?.length) {
+      params.set("cuisine", filters.cuisine.join(","));
+    } else {
+      params.delete("cuisine");
+    }
+    params.delete("palates");
+
+    if (palateContext) {
+      params.set("palate", palateContext);
       params.delete("ethnic");
     } else {
-      params.delete("palates");
+      params.delete("palate");
+      params.delete("ethnic");
     }
+
     const next = params.toString();
     const current = searchParams.toString();
     if (next !== current) {
       router.replace(next ? `${pathname}?${next}` : pathname || "/restaurants", { scroll: false });
     }
-  }, [palatesKey, pathname, router, searchParams]);
+  }, [cuisineKey, pathname, router, searchParams, palateContext]);
 
   const fetchRestaurants = useCallback(async (reset = false, after: string | null = null, firstOverride?: number) => {
     setLoading(true);
@@ -282,29 +314,21 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
           locationParams.country_short = selectedLocation.shortLabel;
         }
 
-        // Map sort option to server-side order_by; MY_PREFERENCE sorts client-side
+        // Map sort option to server-side order_by; MY_PREFERENCE / PALATE_CONTEXT re-order client-side (use smart as base)
         let serverOrderBy: 'rating' | 'rating_asc' | 'smart' | 'created_at' | undefined;
         if (filters.sortOption === 'DESC') serverOrderBy = 'rating';
         else if (filters.sortOption === 'ASC') serverOrderBy = 'rating_asc';
         else if (filters.sortOption === 'NEWEST') serverOrderBy = 'created_at';
         else if (filters.sortOption === 'SMART') serverOrderBy = 'smart';
+        else if (filters.sortOption === 'PALATE_CONTEXT' || filters.sortOption === 'MY_PREFERENCE') serverOrderBy = 'smart';
 
-        // Server-side cuisine slug filters.
-        // Cuisine pill selections (filters.palates) store slugs like "korean", "japanese", and region
-        // keys like "East Asian". Expand regions to their child slugs, then merge with any explicit
-        // cuisine slugs. Both are queried against the `cuisines` JSONB field in the DB (restaurants
-        // store cuisine tags in `cuisines`, not `palates`).
-        const expandedPalateSlugs = filters.palates?.length
-          ? expandRegionsToPalates(filters.palates)
-          : [];
-        const baseCuisineSlugs = cuisineSlug
-          ? [cuisineSlug]
-          : (filters.cuisine ?? []);
-        const cuisineSlugsForApi = [...baseCuisineSlugs, ...expandedPalateSlugs];
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/998e216f-8c70-4192-8627-2b8eab37289f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Restaurant.tsx:fetchRestaurants',message:'about to call getAllRestaurants',data:{filtersPalates:filters.palates,expandedPalateSlugs,cuisineSlugsForApi,sortOption:filters.sortOption,serverOrderBy},runId:'post-fix',hypothesisId:'H-A',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+        // Server-side cuisine slug filters (`filters.cuisine` + optional page `cuisineSlug` in initial state).
+        const cuisineForApi = filters.cuisine?.length
+          ? expandRegionsToPalates(filters.cuisine)
+          : cuisineSlug
+            ? expandRegionsToPalates([cuisineSlug])
+            : [];
+        const cuisineSlugsForApi = cuisineForApi.length ? [...new Set(cuisineForApi)] : [];
 
         const response = await restaurantV2Service.getAllRestaurants({
           limit: firstValue,
@@ -342,7 +366,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
         return Array.from(uniqueMap.values());
       });
 
-      setShowSuggestions(shouldShowSuggestions(transformed.length) && !!filters.palates && filters.palates.length > 0);
+      setShowSuggestions(shouldShowSuggestions(transformed.length) && !!filters.cuisine && filters.cuisine.length > 0);
 
       setEndCursor(newEndCursor);
       setHasNextPage(newHasNextPage);
@@ -352,7 +376,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, locationKey, palatesKey, cuisinesKey, ratingKey, serverSortKey, cuisineSlug]);
+  }, [debouncedSearchTerm, locationKey, cuisineKey, ratingKey, serverSortKey, cuisineSlug]);
 
   // Debounced filter change handler
   type FilterChangeType = {
@@ -365,13 +389,19 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
   };
 
   const filterUpdateFn = useCallback((newFilters: FilterChangeType) => {
-    setFilters(
-      prev => ({
+    setFilters((prev) => {
+      const { palates: cuisinePills, cuisine: explicitCuisine, ...rest } = newFilters;
+      return {
         ...prev,
-        ...newFilters,
-        cuisine: Array.isArray(newFilters.cuisine) ? newFilters.cuisine : prev.cuisine,
-        palates: Array.isArray(newFilters.palates) ? newFilters.palates : prev.palates
-      }));
+        ...rest,
+        cuisine:
+          cuisinePills !== undefined
+            ? cuisinePills
+            : explicitCuisine !== undefined
+              ? explicitCuisine
+              : prev.cuisine,
+      };
+    });
   }, []);
 
   const handleFilterChange = useCallback(
@@ -397,16 +427,24 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     isFirstLoad.current = false;
   }, [debouncedSearchTerm, fetchRestaurants]);
 
-  // Default sort to MY_PREFERENCE for users with palates (don't override user choice once set)
+  // Default sort: `?palate=` → PALATE_CONTEXT; else logged-in palates → MY_PREFERENCE (never override an explicit choice)
   useEffect(() => {
     if (!userPreferencePalates || userPreferencePalates.length === 0) {
-      // If user logs out while on MY_PREFERENCE, fall back to SMART
       setFilters((prev) => (prev.sortOption === 'MY_PREFERENCE' ? { ...prev, sortOption: 'SMART' } : prev));
-      return;
     }
-    setFilters((prev) => (prev.sortOption ? prev : { ...prev, sortOption: 'MY_PREFERENCE' }));
+    if (!canUsePalateContextSort) {
+      setFilters((prev) => (prev.sortOption === 'PALATE_CONTEXT' ? { ...prev, sortOption: 'SMART' } : prev));
+    }
+    setFilters((prev) => {
+      if (prev.sortOption) return prev;
+      if (canUsePalateContextSort) return { ...prev, sortOption: 'PALATE_CONTEXT' };
+      if (userPreferencePalates && userPreferencePalates.length > 0) return { ...prev, sortOption: 'MY_PREFERENCE' };
+      return prev;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userPreferencePalates.join('|')]);
+  }, [userPreferencePalates.join('|'), canUsePalateContextSort]);
+
+  const palateUrlSlugsKey = palateUrlSlugs.join(',');
 
   // Fetch preference stats when needed (cached endpoint)
   useEffect(() => {
@@ -439,17 +477,51 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.sortOption, userPreferencePalates.join('|')]);
 
+  useEffect(() => {
+    const shouldFetch = filters.sortOption === 'PALATE_CONTEXT' && palateUrlSlugs.length > 0;
+    if (!shouldFetch) return;
+
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        setPalateUrlLoading(true);
+        const url = `/api/v1/restaurants-v2/get-preference-stats?palates=${encodeURIComponent(
+          palateUrlSlugs.join(',')
+        )}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Failed to fetch palate URL stats: ${res.status}`);
+        const json = await res.json();
+        if (!json?.success) throw new Error(json?.error || 'Failed to fetch palate URL stats');
+        setPalateUrlStats(json.data || {});
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return;
+        devError('Failed to load palate URL stats:', e);
+        setPalateUrlStats({});
+      } finally {
+        setPalateUrlLoading(false);
+      }
+    };
+
+    load();
+    return () => controller.abort();
+  }, [filters.sortOption, palateUrlSlugsKey, palateUrlSlugs.length]);
+
   // SMART sort is now handled server-side in get-restaurants (two-step via restaurant_rating_summary).
   // No client-side authentic stats fetch needed.
 
   const displayedRestaurants = useMemo(() => {
     let list = restaurants;
 
-    // Attach preference stats for MY_PREFERENCE sort (client-side enrichment)
+    // Attach preference stats for MY_PREFERENCE / PALATE_CONTEXT sort (client-side enrichment)
     if (filters.sortOption === 'MY_PREFERENCE') {
       list = list.map((r) => ({
         ...r,
         searchPalateStats: preferenceStats[r.id] || r.searchPalateStats || { avg: 0, count: 0 },
+      }));
+    } else if (filters.sortOption === 'PALATE_CONTEXT') {
+      list = list.map((r) => ({
+        ...r,
+        searchPalateStats: palateUrlStats[r.id] || r.searchPalateStats || { avg: 0, count: 0 },
       }));
     }
 
@@ -468,13 +540,14 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
 
     // Location, cuisine, palate, and rating filtering are now handled server-side in fetchRestaurants.
     // SMART / DESC / ASC / NEWEST data arrives pre-sorted from the API.
-    // MY_PREFERENCE is the only option still sorted client-side.
+    // MY_PREFERENCE / PALATE_CONTEXT are sorted client-side.
     return sortRestaurants(list, filters.sortOption, {
       locationKeyword: searchAddress,
     });
   }, [
     restaurants,
     preferenceStats,
+    palateUrlStats,
     filters.price,
     filters.sortOption,
     searchAddress,
@@ -517,9 +590,17 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
             <Filter2 
               onFilterChange={handleFilterChange}
               initialCuisines={filters.cuisine || []}
-              initialPalates={filters.palates || []}
-              initialSortOption={filters.sortOption || (userPreferencePalates.length > 0 ? 'MY_PREFERENCE' : 'SMART')}
+              initialPalates={filters.cuisine || []}
+              initialSortOption={
+                filters.sortOption ||
+                (canUsePalateContextSort
+                  ? 'PALATE_CONTEXT'
+                  : userPreferencePalates.length > 0
+                    ? 'MY_PREFERENCE'
+                    : 'SMART')
+              }
               canUsePreferenceSort={userPreferencePalates.length > 0}
+              canUsePalateContextSort={canUsePalateContextSort}
             />
           )}
 
@@ -552,7 +633,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
               
               {showSuggestions && (
                 <SuggestedRestaurants
-                  selectedPalates={filters.palates || []}
+                  selectedPalates={filters.cuisine || []}
                 />
               )}
               

@@ -1,6 +1,5 @@
-import { type RatingMetrics } from "@/utils/reviewUtils";
+import { type RatingMetrics, isNoPalateFilterForSearch } from "@/utils/reviewUtils";
 import { useAuthenticationStatus } from "@nhost/nextjs";
-import { useNhostSession } from "@/hooks/useNhostSession";
 import { FiLock } from "react-icons/fi";
 
 interface RatingSectionProps {
@@ -8,7 +7,6 @@ interface RatingSectionProps {
   palatesParam: string | null;
 }
 
-// Helper function to format count (1k, 14k, etc.)
 function formatCount(count: number): string {
   if (count >= 1000) {
     return `${Math.floor(count / 1000)}k`;
@@ -16,25 +14,46 @@ function formatCount(count: number): string {
   return count.toString();
 }
 
-// Helper function to display rating value
 function displayRating(rating: number): string {
   return rating > 0 ? rating.toFixed(1) : "-";
 }
 
 export default function RatingSection({ ratingMetrics, palatesParam }: RatingSectionProps) {
   const { isAuthenticated } = useAuthenticationStatus();
-  const { user } = useNhostSession();
-  const userPalates = (user as any)?.palates || null;
+
+  const palateUrlActive = Boolean(palatesParam && !isNoPalateFilterForSearch(palatesParam));
+  /** Search Score: show for everyone when ?palate= drives the slice; else signed-in only (legacy). */
+  const showSearchScoreValues = isAuthenticated || palateUrlActive;
+  const sharedScoreUnlocked = isAuthenticated;
+
+  const searchSubtitleMobile = (
+    <>
+      {showSearchScoreValues ? (
+        palateUrlActive && !isAuthenticated ? (
+          <>Avg. from reviewers<br />with this palate</>
+        ) : (
+          <>How much we<br />think you&apos;d like</>
+        )
+      ) : (
+        <>Sign in to see<br />your score</>
+      )}
+    </>
+  );
+
+  const searchSubtitleDesktop =
+    showSearchScoreValues
+      ? palateUrlActive && !isAuthenticated
+        ? "Average from reviewers with this palate"
+        : "How much we think you’d like"
+      : "Sign in to see your score";
 
   return (
     <div className="bg-white rounded-2xl p-6 md:shadow-sm md:border md:border-gray-200 font-neusans">
       <h3 className="text-lg font-neusans mb-4 md:mb-6">Ratings</h3>
-      
-      {/* Mobile: Horizontal scroll wrapper */}
+
       <div className="md:hidden -mx-6 px-6">
         <div className="overflow-x-auto pb-2 hide-scrollbar">
           <div className="flex gap-3 min-w-max">
-            {/* Overall Rating */}
             <div className="flex flex-col items-center min-w-[110px]">
               <h3 className="font-neusans font-semibold text-xs mb-0.5">Overall Score</h3>
               <div className="flex flex-col items-center">
@@ -49,19 +68,18 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                   </div>
                 </div>
                 <span className="text-[9px] text-gray-500 text-center leading-tight">
-                  What platform<br/>users think
+                  What platform<br />users think
                 </span>
               </div>
             </div>
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            {/* Search Rating */}
             <div className="flex flex-col items-center min-w-[110px]">
               <h3 className="font-neusans font-semibold text-xs mb-0.5">Search Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-1">
-                  {isAuthenticated ? (
+                  {showSearchScoreValues ? (
                     <>
                       <span className="font-neusans text-gray-800 text-xl font-bold">
                         {displayRating(ratingMetrics.searchRating)}
@@ -76,18 +94,12 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                     <FiLock className="w-5 h-5 text-gray-400" />
                   )}
                 </div>
-                <span className="text-[9px] text-gray-500 text-center leading-tight">
-                  {isAuthenticated
-                    ? <>How much we<br/>think you&apos;d like</>
-                    : <>Sign in to see<br/>your score</>
-                  }
-                </span>
+                <span className="text-[9px] text-gray-500 text-center leading-tight">{searchSubtitleMobile}</span>
               </div>
             </div>
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            {/* Authentic Score */}
             <div className="flex flex-col items-center min-w-[110px]">
               <h3 className="font-neusans font-semibold text-xs mb-0.5">Authentic Score</h3>
               <div className="flex flex-col items-center">
@@ -109,15 +121,12 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            {/* My Preference - Only show when user is logged in */}
-            {user && userPalates && (
-              <>
-                <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
-                
-                <div className="flex flex-col items-center min-w-[110px]">
-                  <h3 className="font-neusans font-semibold text-xs mb-0.5">Shared Score</h3>
-                  <div className="flex flex-col items-center">
-                    <div className="relative inline-block mb-1">
+            <div className="flex flex-col items-center min-w-[110px]">
+              <h3 className="font-neusans font-semibold text-xs mb-0.5">Shared Score</h3>
+              <div className="flex flex-col items-center">
+                <div className="relative inline-block mb-1">
+                  {sharedScoreUnlocked ? (
+                    <>
                       <span className="font-neusans text-gray-800 text-xl font-bold">
                         {displayRating(ratingMetrics.myPreferenceRating)}
                       </span>
@@ -126,21 +135,25 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                           {formatCount(ratingMetrics.myPreferenceCount)}
                         </span>
                       </div>
-                    </div>
-                    <span className="text-[9px] text-gray-500 text-center leading-tight">
-                      What shared<br/>preference users think
-                    </span>
-                  </div>
+                    </>
+                  ) : (
+                    <FiLock className="w-5 h-5 text-gray-400" />
+                  )}
                 </div>
-              </>
-            )}
+                <span className="text-[9px] text-gray-500 text-center leading-tight">
+                  {sharedScoreUnlocked ? (
+                    <>What shared<br />preference users think</>
+                  ) : (
+                    <>Sign in to see<br />shared score</>
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Desktop: Compact grid layout to fit container */}
       <div className="!hidden md:!flex rating-summary w-full">
-        {/* Overall Rating */}
         <div className="rating-column">
           <h3 className="font-neusans font-semibold text-xs mb-0.5">Overall Score</h3>
           <div className="flex flex-col items-center">
@@ -154,20 +167,17 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                 </span>
               </div>
             </div>
-            <span className="text-[10px] text-gray-500 leading-tight">
-              What platform users think
-            </span>
+            <span className="text-[10px] text-gray-500 leading-tight">What platform users think</span>
           </div>
         </div>
-        
+
         <div className="h-[85%] border-l border-[#CACACA]"></div>
-        
-        {/* Search Rating */}
+
         <div className="rating-column font-neusans">
           <h3 className="font-neusans font-semibold text-xs mb-0.5">Search Score</h3>
           <div className="flex flex-col items-center">
             <div className="relative inline-block mb-1.5">
-              {isAuthenticated ? (
+              {showSearchScoreValues ? (
                 <>
                   <span className="font-neusans text-gray-800 text-2xl font-bold">
                     {displayRating(ratingMetrics.searchRating)}
@@ -182,18 +192,12 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                 <FiLock className="w-6 h-6 text-gray-400" />
               )}
             </div>
-            <span className="text-[10px] text-gray-500 leading-tight">
-              {isAuthenticated
-                ? "How much we think you\u2019d like"
-                : "Sign in to see your score"
-              }
-            </span>
+            <span className="text-[10px] text-gray-500 leading-tight">{searchSubtitleDesktop}</span>
           </div>
         </div>
 
         <div className="h-[85%] border-l border-[#CACACA]"></div>
 
-        {/* Authentic Score */}
         <div className="rating-column font-neusans">
           <h3 className="font-neusans font-semibold text-xs mb-0.5">Authentic Score</h3>
           <div className="flex flex-col items-center">
@@ -207,23 +211,18 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                 </span>
               </div>
             </div>
-            <span className="text-[10px] text-gray-500 leading-tight">
-              How authentic this restaurant is
-            </span>
+            <span className="text-[10px] text-gray-500 leading-tight">How authentic this restaurant is</span>
           </div>
         </div>
 
         <div className="h-[85%] border-l border-[#CACACA]"></div>
 
-        {/* My Preference - Only show when user is logged in */}
-        {user && userPalates && (
-          <>
-            <div className="h-[85%] border-l border-[#CACACA]"></div>
-            
-            <div className="rating-column font-neusans">
-              <h3 className="font-neusans font-semibold text-xs mb-0.5">Shared Score</h3>
-              <div className="flex flex-col items-center">
-                <div className="relative inline-block mb-1.5">
+        <div className="rating-column font-neusans">
+          <h3 className="font-neusans font-semibold text-xs mb-0.5">Shared Score</h3>
+          <div className="flex flex-col items-center">
+            <div className="relative inline-block mb-1.5">
+              {sharedScoreUnlocked ? (
+                <>
                   <span className="font-neusans text-gray-800 text-2xl font-bold">
                     {displayRating(ratingMetrics.myPreferenceRating)}
                   </span>
@@ -232,14 +231,16 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
                       {formatCount(ratingMetrics.myPreferenceCount)}
                     </span>
                   </div>
-                </div>
-                <span className="text-[10px] text-gray-500 leading-tight">
-                  What shared preference users think
-                </span>
-              </div>
+                </>
+              ) : (
+                <FiLock className="w-6 h-6 text-gray-400" />
+              )}
             </div>
-          </>
-        )}
+            <span className="text-[10px] text-gray-500 leading-tight">
+              {sharedScoreUnlocked ? "What shared preference users think" : "Sign in to see shared score"}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

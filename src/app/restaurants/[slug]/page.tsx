@@ -92,7 +92,8 @@ export default function RestaurantDetail() {
   const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const palatesParam = searchParams?.get("ethnic") || null;
+  const palatesParam =
+    searchParams?.get("palate") || searchParams?.get("ethnic") || null;
 
   const params = useParams();
   const slug = params?.slug as string;
@@ -151,7 +152,7 @@ export default function RestaurantDetail() {
   }, [restaurant?.id]);
 
   // Calculate rating metrics when data changes.
-  // Uses precomputed overall + authentic when available; Search Score + myPreference from client reviews (?ethnic=).
+  // Uses precomputed overall + authentic when available; Search Score + myPreference from client reviews (?palate=).
   useEffect(() => {
     if (!restaurant) return;
 
@@ -164,7 +165,7 @@ export default function RestaurantDetail() {
           ? calculateMyPreferenceRating(reviews, userPalates)
           : { rating: 0, count: 0 };
 
-      // Search Score: no palate filter → same as Overall (DB summary); else average for reviewers matching ?ethnic=
+      // Search Score: no palate filter → same as Overall (DB summary); else average for reviewers matching ?palate=
       const searchMetrics = isNoPalateFilterForSearch(palatesParam)
         ? {
             rating: summaryScores.overallRating ?? 0,

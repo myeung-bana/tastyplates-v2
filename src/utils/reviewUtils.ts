@@ -214,7 +214,7 @@ export function calculateAuthenticRating(
  * Calculate all rating metrics for a restaurant
  * @param restaurantReviews - Reviews for the specific restaurant
  * @param allReviews - Reviews for this restaurant (Search Score is computed from these + searchTerm)
- * @param searchTerm - URL palate filter (e.g. `ethnic`); null/empty/`all` → Search matches Overall
+ * @param searchTerm - URL palate filter (e.g. `?palate=`); null/empty/`all` → Search matches Overall
  * @param userPalates - Current user's palate string (pipe-separated) or array
  * @param restaurantPalates - Restaurant's cuisine/palates for authentic score (e.g. restaurant.palates.nodes.map(n => n.name))
  * @returns Combined rating metrics
