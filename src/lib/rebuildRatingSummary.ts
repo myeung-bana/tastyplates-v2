@@ -23,7 +23,9 @@ function bayesianWeighted(avg: number, count: number): number {
 
 // ─── GraphQL ─────────────────────────────────────────────────────────────────
 
-/** Fetch all non-deleted, non-reply reviews for a given restaurant. */
+/** Fetch all non-deleted, non-reply reviews for a given restaurant.
+ * Includes AuthorProfile.palates so authentic matching uses the reviewer's
+ * profile palates (same as the live RatingSection / calculateAuthenticRating). */
 const GET_REVIEWS_FOR_REBUILD = `
   query RebuildGetReviews($restaurantUuid: uuid!) {
     restaurant_reviews(
@@ -36,6 +38,9 @@ const GET_REVIEWS_FOR_REBUILD = `
       rating
       status
       palates
+      AuthorProfile {
+        palates
+      }
     }
   }
 `;
@@ -63,9 +68,11 @@ const UPSERT_RATING_SUMMARY = `
         constraint: restaurant_rating_summary_pkey
         update_columns: [
           overall_review_count
+          overall_rating_sum
           overall_rating_avg
           overall_rating_weighted
           authentic_review_count
+          authentic_rating_sum
           authentic_rating_avg
           authentic_rating_weighted
           review_version
@@ -93,9 +100,11 @@ const UPSERT_CUISINE_RATING_SUMMARY = `
         constraint: restaurant_cuisine_rating_summary_pkey
         update_columns: [
           search_review_count
+          search_rating_sum
           search_rating_avg
           search_rating_weighted
           authentic_review_count
+          authentic_rating_sum
           authentic_rating_avg
           authentic_rating_weighted
           review_version
@@ -188,7 +197,12 @@ export async function rebuildRatingSummary(restaurantUuid: string): Promise<void
   // Fetch reviews and restaurant taxonomy in parallel
   const [reviewsResult, restaurantResult] = await Promise.all([
     hasuraQuery<{
-      restaurant_reviews: Array<{ rating: number; status: string; palates: unknown }>;
+      restaurant_reviews: Array<{
+        rating: number;
+        status: string;
+        palates: unknown;
+        AuthorProfile?: { palates: unknown } | null;
+      }>;
     }>(GET_REVIEWS_FOR_REBUILD, { restaurantUuid }),
     hasuraQuery<{ restaurants: Array<{ id: number; palates: unknown; cuisines: unknown }> }>(
       GET_RESTAURANT_FOR_REBUILD,
@@ -229,8 +243,13 @@ export async function rebuildRatingSummary(restaurantUuid: string): Promise<void
     overall.sum += rating;
     overall.count += 1;
 
-    // A review counts as "authentic" when the reviewer shares palate affinity with the restaurant
-    const reviewerPalates = extractReviewPalates(review.palates);
+    // A review counts as "authentic" when the reviewer's profile palates overlap the restaurant's
+    // taxonomy. Use author profile palates first (same as live calculateAuthenticRating); fall back
+    // to the review's own palates field if the author profile has none.
+    const authorProfilePalates = extractReviewPalates(review.AuthorProfile?.palates);
+    const reviewerPalates = authorProfilePalates.length > 0
+      ? authorProfilePalates
+      : extractReviewPalates(review.palates);
     if (restaurantTaxonomy.length > 0 && hasMatchingPalates(restaurantTaxonomy, reviewerPalates)) {
       authentic.sum += rating;
       authentic.count += 1;
@@ -243,15 +262,17 @@ export async function rebuildRatingSummary(restaurantUuid: string): Promise<void
   const authenticWeighted =
     authenticAvg !== null ? bayesianWeighted(authenticAvg, authentic.count) : null;
 
-  // Upsert restaurant_rating_summary
+  // Upsert restaurant_rating_summary (sums match DB NOT NULL columns; avg/weighted derived from reviews)
   const summaryResult = await hasuraMutation(UPSERT_RATING_SUMMARY, {
     object: {
       restaurant_id: restaurant.id,
       overall_review_count: overall.count,
+      overall_rating_sum: Number(overall.sum.toFixed(4)),
       overall_rating_avg:
         overallAvg !== null ? Number(overallAvg.toFixed(4)) : null,
       overall_rating_weighted: overallWeighted,
       authentic_review_count: authentic.count,
+      authentic_rating_sum: Number(authentic.sum.toFixed(4)),
       authentic_rating_avg:
         authenticAvg !== null ? Number(authenticAvg.toFixed(4)) : null,
       authentic_rating_weighted: authenticWeighted,
@@ -286,10 +307,12 @@ export async function rebuildRatingSummary(restaurantUuid: string): Promise<void
       cuisine_id: cuisineId,
       // "Search" score in cuisine context = overall rating of the restaurant
       search_review_count: overall.count,
+      search_rating_sum: Number(overall.sum.toFixed(4)),
       search_rating_avg: overallAvg !== null ? Number(overallAvg.toFixed(4)) : null,
       search_rating_weighted: overallWeighted,
       // Authentic score stays the same as the restaurant-level authentic aggregate
       authentic_review_count: authentic.count,
+      authentic_rating_sum: Number(authentic.sum.toFixed(4)),
       authentic_rating_avg: authenticAvg !== null ? Number(authenticAvg.toFixed(4)) : null,
       authentic_rating_weighted: authenticWeighted,
       review_version: versionTs,

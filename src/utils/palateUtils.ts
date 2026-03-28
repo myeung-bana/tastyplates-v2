@@ -15,8 +15,10 @@ export function normalizePalates(palates: string | string[] | any[] | null | und
   if (Array.isArray(palates)) {
     return palates.map(p => {
       if (typeof p === 'string') return p.trim().toLowerCase();
-      if (typeof p === 'object' && p !== null && 'name' in p) {
-        return String(p.name).trim().toLowerCase();
+      if (typeof p === 'object' && p !== null) {
+        // Handle { name: "Korean" }, { slug: "korean" }, or { name: "...", slug: "..." }
+        const val = (p as any).name ?? (p as any).slug ?? '';
+        return String(val).trim().toLowerCase();
       }
       return String(p).trim().toLowerCase();
     }).filter(Boolean);

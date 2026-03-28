@@ -55,7 +55,7 @@
 
   &__cuisine-pill {
     display: inline-block;
-    font-size: 14px;
+    font-size: 13px;
     font-family: "Neusans", sans-serif;
     font-weight: 500;
     line-height: 1;
@@ -64,6 +64,8 @@
     background-color: #ff7c0a;
     color: #fff;
     white-space: nowrap;
+    font-weight: 400;
+    text-decoration: none !important;
 
     @media (max-width: 767px) {
       font-size: 11px;

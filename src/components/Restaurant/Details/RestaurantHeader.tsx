@@ -6,6 +6,7 @@ import { FiMapPin, FiPhone, FiGlobe, FiNavigation } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantButton";
 import SaveRestaurantButton from "./SaveRestaurantButton";
+import "@/styles/components/_restaurant-card.scss";
 
 interface RestaurantHeaderProps {
   restaurant: Listing;
@@ -93,9 +94,7 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
           {/* Primary Ethnic Palate */}
           {primaryPalate && (
               <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-orange-50 text-[#ff7c0a] rounded-full text-sm font-medium font-neusans">
-                  {primaryPalate}
-                </span>
+                <span className="restaurant-card__cuisine-pill">{primaryPalate}</span>
               </div>
             )}
             {/* Restaurant Title */}
@@ -108,21 +107,17 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
               <span className="font-medium">{getLocation()}</span>
             </div>
 
-            {/* Categories with Bullet Separator */}
+            {/* Listing categories — same pill style as RestaurantCard */}
             {categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 text-gray-600 text-sm mb-2 font-neusans">
-                {categories.map((category: { name: string; slug: string }, index: number) => (
-                  <React.Fragment key={`cat-${index}`}>
-                    <Link
-                      href={`/restaurants/cuisines/${category.slug}`}
-                      className="hover:text-[#ff7c0a] transition-colors font-neusans"
-                    >
-                      {category.name}
-                    </Link>
-                    {index < categories.length - 1 && (
-                      <span className="text-gray-400 font-neusans">•</span>
-                    )}
-                  </React.Fragment>
+              <div className="flex flex-wrap items-center gap-1 mb-2">
+                {categories.map((category: { name: string; slug: string }) => (
+                  <Link
+                    key={category.slug}
+                    href={`/restaurants/cuisines/${category.slug}`}
+                    className="restaurant-card__cuisine-pill hover:opacity-90 transition-opacity no-underline"
+                  >
+                    {category.name}
+                  </Link>
                 ))}
               </div>
             )}
