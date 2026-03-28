@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation, hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { CREATE_REVIEW, GET_REVIEW_BY_ID } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { CREATE_REVIEW, GET_REVIEW_BY_ID, INCREMENT_REPLIES_COUNT } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { rateLimitOrThrow, createRateLimit } from '@/lib/redis-ratelimit';
 import { bumpVersion } from '@/lib/redis-versioning';
 
@@ -174,6 +174,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Increment replies_count on the parent review (fire-and-forget; cache bump is more critical)
+    hasuraMutation(INCREMENT_REPLIES_COUNT, { id: parent_review_id }).catch((err) => {
+      console.error('[create-comment] Failed to increment replies_count:', err);
+    });
 
     // Cache invalidation: Bump version for parent review's replies
     await bumpVersion(`v:review:${parent_review_id}:replies`);

@@ -108,27 +108,42 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     setReviews(initialReviews);
   }, [initialReviews]);
 
-  // Initialize likes and comment counts
+  // Initialize likes and seed comment counts from the feed payload
   useEffect(() => {
     if (reviews.length > 0) {
       const initialLiked: Record<number, boolean> = {};
-      const initialCounts: Record<number, number> = {};
-      
+      const initialLikesCount: Record<number, number> = {};
+      const initialCommentCounts: Record<number, number> = {};
+
+      // Pre-seed the like status cache so the background sync skips the first API call
+      const userIdForSeed = user?.user_id && UUID_REGEX.test(String(user.user_id)) ? String(user.user_id) : null;
+
       reviews.forEach((review) => {
         initialLiked[review.databaseId] = review.userLiked ?? false;
-        initialCounts[review.databaseId] = 0; // Will be updated when we fetch comment counts
+        initialLikesCount[review.databaseId] = review.commentLikes ?? 0;
+        // Seed from repliesCount so we avoid an extra round-trip for the count
+        const seeded = (review as any).repliesCount;
+        if (typeof seeded === 'number') {
+          initialCommentCounts[review.databaseId] = seeded;
+        }
+        // Pre-seed like status cache so background sync skips first API call
+        if (userIdForSeed && review.id) {
+          const reviewId = review.id || String(review.databaseId);
+          if (UUID_REGEX.test(String(reviewId))) {
+            likeStatusCacheRef.current[`${reviewId}_${userIdForSeed}`] = {
+              isLiked: review.userLiked ?? false,
+              count: review.commentLikes ?? 0,
+              timestamp: Date.now()
+            };
+          }
+        }
       });
-      
+
       setUserLiked(initialLiked);
-      setLikesCount((prev) => {
-        const updated = { ...prev };
-        reviews.forEach((review) => {
-          updated[review.databaseId] = review.commentLikes ?? 0;
-        });
-        return updated;
-      });
+      setLikesCount(initialLikesCount);
+      setCommentCounts((prev) => ({ ...prev, ...initialCommentCounts }));
     }
-  }, [reviews]);
+  }, [reviews, user?.user_id]);
 
   // Background sync: like status for initial + adjacent (no blocking before first paint)
   useEffect(() => {
@@ -512,6 +527,12 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
         const result = await reviewV2Service.toggleLike(reviewId, userId);
         setUserLiked((prev) => ({ ...prev, [review.databaseId]: result.liked }));
         setLikesCount((prev) => ({ ...prev, [review.databaseId]: result.likesCount }));
+        // Update like status cache so background sync won't overwrite this action
+        likeStatusCacheRef.current[`${reviewId}_${userId}`] = {
+          isLiked: result.liked,
+          count: result.likesCount,
+          timestamp: Date.now()
+        };
       } else {
         const token = await getNhostToken();
         if (!token) {

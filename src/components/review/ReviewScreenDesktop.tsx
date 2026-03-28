@@ -139,23 +139,44 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
     return () => clearTimeout(timer);
   }, [currentIndex, isOpen, reviews]);
 
-  // Initialize like states
+  // Initialize like states and seed comment counts from the feed payload
   useEffect(() => {
     if (reviews.length > 0) {
       const initialLiked: Record<number, boolean> = {};
-      const initialCounts: Record<number, number> = {};
+      const initialLikesCount: Record<number, number> = {};
+      const initialCommentCounts: Record<number, number> = {};
+
+      // Pre-seed the like status cache so the background sync skips the first API call
+      const userIdForSeed = user?.user_id && UUID_REGEX.test(String(user.user_id)) ? String(user.user_id) : null;
+
       reviews.forEach((review) => {
         initialLiked[review.databaseId] = review.userLiked ?? false;
         // Ensure commentLikes is always an integer
         const commentLikes = review.commentLikes ?? 0;
-        initialCounts[review.databaseId] = typeof commentLikes === 'string' 
-          ? parseInt(commentLikes, 10) || 0 
+        initialLikesCount[review.databaseId] = typeof commentLikes === 'string'
+          ? parseInt(commentLikes, 10) || 0
           : Number(commentLikes) || 0;
+        // Seed comment count from repliesCount so we don't need an extra fetch
+        const seeded = (review as any).repliesCount;
+        if (typeof seeded === 'number') {
+          initialCommentCounts[review.databaseId] = seeded;
+          // Mark as already fetched so the bg fetch is skipped
+          fetchedCommentCountsRef.current.add(review.databaseId);
+        }
+        // Pre-seed like status cache so background sync skips first API call
+        if (userIdForSeed && review.id) {
+          likeStatusCacheRef.current[`${review.id}_${userIdForSeed}`] = {
+            isLiked: review.userLiked ?? false,
+            count: initialLikesCount[review.databaseId] ?? 0,
+            timestamp: Date.now()
+          };
+        }
       });
       setUserLiked(initialLiked);
-      setLikesCount(initialCounts);
+      setLikesCount(initialLikesCount);
+      setCommentCounts((prev) => ({ ...prev, ...initialCommentCounts }));
     }
-  }, [reviews]);
+  }, [reviews, user?.user_id]);
 
   // Cache to avoid redundant API calls for the same review
   const likeStatusCacheRef = useRef<Record<string, { isLiked: boolean; count: number; timestamp: number }>>({});
@@ -181,7 +202,16 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
         setUserLiked((prev) => ({ ...prev, [r.databaseId]: liked }));
         setLikesCount((prev) => ({ ...prev, [r.databaseId]: count }));
       }
-    }, [reviews]),
+      // Keep like status cache in sync so background sync won't overwrite this action
+      const userIdSync = user?.user_id && UUID_REGEX.test(String(user.user_id)) ? String(user.user_id) : null;
+      if (userIdSync && reviewId) {
+        likeStatusCacheRef.current[`${reviewId}_${userIdSync}`] = {
+          isLiked: liked,
+          count,
+          timestamp: Date.now()
+        };
+      }
+    }, [reviews, user?.user_id]),
   });
 
   // Background sync: fetch like status after paint (no blocking, no debounce before first paint)
@@ -717,25 +747,37 @@ const ReviewScreenDesktop: React.FC<ReviewScreenDesktopProps> = ({
       }, token);
 
       if (res.success) {
-        // Refetch replies with userId to get proper like status (now newest first)
-        const userId = await getUserUuid();
-        const updatedReplies = await reviewService.fetchCommentReplies(review.id, userId || undefined);
-        
-        // Remove optimistic comment and replace state with fresh data
-        setReplies(updatedReplies);
-        
-        // Reinitialize like state with real IDs (maintain all existing states)
-        const newLikes: Record<string, number> = {};
-        const newLiked: Record<string, boolean> = {};
-        updatedReplies.forEach((r) => {
-          if (r.id) {
-            newLikes[r.id] = r.commentLikes ?? 0;
-            newLiked[r.id] = r.userLiked ?? false;
-          }
-        });
-        setReplyLikes(newLikes);
-        setReplyUserLiked(newLiked);
-        
+        const createdComment = res.data; // { id, content, created_at, author_id, ... }
+
+        if (createdComment?.id) {
+          // Replace the optimistic placeholder with the persisted comment (no extra round-trip)
+          const realReply: GraphQLReview = {
+            ...optimisticReply,
+            id: createdComment.id,
+            date: createdComment.created_at || optimisticReply.date,
+          };
+          delete (realReply as any).isOptimistic;
+
+          setReplies((prev) => prev.map((r) => r.id === optimisticReply.id ? realReply : r));
+
+          // Migrate like-state keys from fake optimistic ID → real UUID
+          setReplyLikes((prev) => {
+            const updated = { ...prev };
+            delete updated[optimisticReply.id];
+            updated[createdComment.id] = 0;
+            return updated;
+          });
+          setReplyUserLiked((prev) => {
+            const updated = { ...prev };
+            delete updated[optimisticReply.id];
+            updated[createdComment.id] = false;
+            return updated;
+          });
+        } else {
+          // Fallback: remove optimistic placeholder (shouldn't happen in practice)
+          setReplies((prev) => prev.filter((r) => r.id !== optimisticReply.id));
+        }
+
         setCommentCounts((prev) => ({
           ...prev,
           [review.databaseId]: (prev[review.databaseId] || 0) + 1,

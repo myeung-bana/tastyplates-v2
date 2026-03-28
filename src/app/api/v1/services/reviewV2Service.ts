@@ -154,7 +154,7 @@ class ReviewV2Service {
   }
 
   async getAllReviews(
-    options?: { limit?: number; offset?: number; cursor?: string; signal?: AbortSignal }
+    options?: { limit?: number; offset?: number; cursor?: string; signal?: AbortSignal; userId?: string }
   ): Promise<ReviewsResponse> {
     const params = new URLSearchParams();
     if (options?.limit) params.append('limit', options.limit.toString());
@@ -164,6 +164,10 @@ class ReviewV2Service {
       params.append('cursor', options.cursor);
     } else if (options?.offset !== undefined) {
       params.append('offset', options.offset.toString());
+    }
+
+    if (options?.userId) {
+      params.append('user_id', options.userId);
     }
 
     const response = await fetch(`${this.baseUrl}/get-all-reviews?${params}`, {

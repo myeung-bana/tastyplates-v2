@@ -27,6 +27,7 @@ export interface GraphQLReview {
   reviewMainTitle: string;
   commentLikes: number;
   userLiked: boolean;
+  repliesCount?: number;
   reviewStars: string | number;
   date: string;
   content: string;

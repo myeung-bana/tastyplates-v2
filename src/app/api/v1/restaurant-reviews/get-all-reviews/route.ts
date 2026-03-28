@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraQuery } from '@/app/graphql/hasura-server-client';
-import { GET_ALL_REVIEWS_WITH_NHOST_AUTHORS, GET_ALL_REVIEWS_WITH_NHOST_AUTHORS_CURSOR } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { GET_ALL_REVIEWS_WITH_NHOST_AUTHORS, GET_ALL_REVIEWS_WITH_NHOST_AUTHORS_CURSOR, CHECK_REVIEW_LIKES_BATCH } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { GET_RESTAURANTS_BY_UUIDS } from '@/app/graphql/Restaurants/restaurantQueries';
 import { cacheGetOrSetJSON } from '@/lib/redis-cache';
 import { getVersion } from '@/lib/redis-versioning';
 import { GRAPHQL_LIMITS } from '@/constants/graphql';
 import { decodeReviewCursor, encodeReviewCursor } from '@/lib/cursor-pagination';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -23,6 +25,8 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '16', 10) || 16, 100);
     const offsetParam = searchParams.get('offset');
     const cursorParam = searchParams.get('cursor');
+    const userId = searchParams.get('user_id') || null;
+    const isValidUserId = userId && UUID_REGEX.test(userId);
     const decodedCursor = cursorParam ? decodeReviewCursor(cursorParam) : null;
     const useCursorPagination = !!decodedCursor;
     const offset = useCursorPagination ? undefined : (offsetParam !== null ? parseInt(offsetParam || '0', 10) : 0);
@@ -148,9 +152,41 @@ export async function GET(request: NextRequest) {
       }
     );
     const tCache = Date.now() - tCache0;
+
+    // Personalise with user_liked after cache (outside cache so base stays user-agnostic)
+    let tLikesBatch = 0;
+    let finalData = responseData;
+    if (isValidUserId && responseData?.data?.length > 0) {
+      try {
+        const tLikes0 = Date.now();
+        const reviewIds = (responseData.data as any[]).map((r: any) => r.id).filter(Boolean);
+        if (reviewIds.length > 0) {
+          const likesResult = await hasuraQuery(CHECK_REVIEW_LIKES_BATCH, {
+            reviewIds,
+            userId
+          });
+          tLikesBatch = Date.now() - tLikes0;
+          if (!likesResult.errors && likesResult.data?.restaurant_review_likes) {
+            const likedSet = new Set<string>(
+              likesResult.data.restaurant_review_likes.map((l: any) => l.review_id)
+            );
+            finalData = {
+              ...responseData,
+              data: (responseData.data as any[]).map((r: any) => ({
+                ...r,
+                user_liked: likedSet.has(r.id)
+              }))
+            };
+          }
+        }
+      } catch (err) {
+        console.error('[get-all-reviews] Error fetching likes batch:', err);
+      }
+    }
+
     const tTotal = Date.now() - t0;
 
-    return NextResponse.json(responseData, {
+    return NextResponse.json(finalData, {
       headers: {
         'X-Cache': hit ? 'HIT' : 'MISS',
         ...(isDev ? { 'X-Cache-Key': cacheKey } : {}),
@@ -159,6 +195,7 @@ export async function GET(request: NextRequest) {
           `cache;dur=${tCache}`,
           `hasura_reviews;dur=${hit ? 0 : tHasura}`,
           `hasura_restaurants;dur=${hit ? 0 : tHasuraRestaurants}`,
+          `hasura_likes;dur=${tLikesBatch}`,
           `total;dur=${tTotal}`
         ].join(', '),
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',

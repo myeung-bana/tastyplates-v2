@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasuraMutation } from '@/app/graphql/hasura-server-client';
-import { DELETE_REVIEW } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
+import { DELETE_REVIEW, DECREMENT_REPLIES_COUNT } from '@/app/graphql/RestaurantReviews/restaurantReviewQueries';
 import { bumpVersion } from '@/lib/redis-versioning';
 import { rebuildRatingSummary } from '@/lib/rebuildRatingSummary';
 
@@ -47,6 +47,13 @@ export async function DELETE(request: NextRequest) {
         { success: false, error: 'Review not found' },
         { status: 404 }
       );
+    }
+
+    // If the deleted row was a comment (has parent), decrement parent's replies_count
+    if (deletedReview.parent_review_id) {
+      hasuraMutation(DECREMENT_REPLIES_COUNT, { id: deletedReview.parent_review_id }).catch((err) => {
+        console.error('[delete-review] Failed to decrement replies_count:', err);
+      });
     }
 
     // Recompute rating aggregates after soft-delete

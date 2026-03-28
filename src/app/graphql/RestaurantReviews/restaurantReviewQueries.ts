@@ -405,7 +405,34 @@ export const DELETE_REVIEW = `
     ) {
       id
       restaurant_uuid
+      parent_review_id
       deleted_at
+    }
+  }
+`;
+
+// INCREMENT replies_count on a parent review when a comment is created
+export const INCREMENT_REPLIES_COUNT = `
+  mutation IncrementRepliesCount($id: uuid!) {
+    update_restaurant_reviews_by_pk(
+      pk_columns: { id: $id }
+      _inc: { replies_count: 1 }
+    ) {
+      id
+      replies_count
+    }
+  }
+`;
+
+// DECREMENT replies_count on a parent review when a comment is deleted
+export const DECREMENT_REPLIES_COUNT = `
+  mutation DecrementRepliesCount($id: uuid!) {
+    update_restaurant_reviews_by_pk(
+      pk_columns: { id: $id }
+      _inc: { replies_count: -1 }
+    ) {
+      id
+      replies_count
     }
   }
 `;

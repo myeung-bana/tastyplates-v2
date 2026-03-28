@@ -53,9 +53,10 @@ const Reviews = () => {
     setLoading(true);
     
     try {
-      // Fetch only 8 reviews
+      // Fetch only 8 reviews; pass userId so the API can inject user_liked in one round-trip
       const response = await reviewV2Service.getAllReviews({
-        limit: LIMIT
+        limit: LIMIT,
+        userId: user?.user_id
       });
 
       if (!response.reviews || response.reviews.length === 0) {
@@ -89,7 +90,7 @@ const Reviews = () => {
           deleted_at: null,
           author: item.author,
           restaurant: item.restaurant,
-          user_liked: false
+          user_liked: item.user_liked ?? false
         };
         return reviewV2;
       });
