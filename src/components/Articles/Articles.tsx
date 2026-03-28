@@ -8,11 +8,13 @@ import { useLocation } from "@/contexts/LocationContext";
 import "@/styles/components/_articles.scss";
 
 const Articles = () => {
-  const { selectedLocation } = useLocation();
+  const { selectedLocation, isLoading: locationLoading } = useLocation();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (locationLoading) return;
+
     setLoading(true);
     const params = new URLSearchParams({
       limit: "8",
@@ -27,9 +29,9 @@ const Articles = () => {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [selectedLocation.key]);
+  }, [locationLoading, selectedLocation.key]);
 
-  if (!loading && articles.length === 0) return null;
+  if (!locationLoading && !loading && articles.length === 0) return null;
 
   return (
     <section className="articles !w-full">
@@ -41,7 +43,7 @@ const Articles = () => {
           </a>
         </div>
         <div className="articles__grid grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {loading
+          {locationLoading || loading
             ? Array.from({ length: 8 }, (_, i) => (
                 <ArticleCardSkeleton key={`article-skeleton-${i}`} large />
               ))

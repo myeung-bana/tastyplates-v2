@@ -60,27 +60,22 @@ export async function GET(request: NextRequest) {
     const locationSlug = searchParams.get('location_slug')?.trim() || '';
 
     let locationIds: number[] | null = null;
+    let locationResolved = false;
     if (locationSlug) {
-      locationIds = await resolveLocationIdsForSlug(locationSlug);
-      if (!locationIds?.length) {
-        return NextResponse.json({
-          success: true,
-          data: [],
-          meta: {
-            limit,
-            offset,
-            hasMore: false,
-            locationSlug,
-            locationResolved: false,
-          },
-        });
+      const resolved = await resolveLocationIdsForSlug(locationSlug);
+      if (resolved?.length) {
+        locationIds = resolved;
+        locationResolved = true;
       }
+      // If slug does not match any active `restaurant_locations` row, fall through to global list
+      // so the homepage still shows articles; meta.locationResolved flags the fallback.
     }
 
     const version = await getVersion('v:articles:all:v2');
-    const cacheSegment = locationSlug
-      ? `loc:${encodeURIComponent(locationSlug)}`
-      : 'all';
+    const cacheSegment =
+      locationSlug && locationResolved
+        ? `loc:${encodeURIComponent(locationSlug)}`
+        : 'all';
     const cacheKey = `articles:${cacheSegment}:v${version}:limit=${limit}:offset=${offset}`;
 
     const { value: articles } = await cacheGetOrSetJSON(
@@ -140,7 +135,9 @@ export async function GET(request: NextRequest) {
         limit,
         offset,
         hasMore,
-        ...(locationSlug ? { locationSlug, locationResolved: true } : {}),
+        ...(locationSlug
+          ? { locationSlug, locationResolved }
+          : {}),
       },
     });
   } catch (error) {

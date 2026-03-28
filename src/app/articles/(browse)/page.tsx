@@ -11,13 +11,14 @@ import { useLocation } from "@/contexts/LocationContext";
 const PAGE_SIZE = 12;
 
 export default function ArticlesListingPage() {
-  const { selectedLocation } = useLocation();
+  const { selectedLocation, isLoading: locationLoading } = useLocation();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
   const load = useCallback(async (nextOffset: number, append: boolean) => {
+    if (locationLoading) return;
     const params = new URLSearchParams({
       limit: String(PAGE_SIZE),
       offset: String(nextOffset),
@@ -34,14 +35,15 @@ export default function ArticlesListingPage() {
     );
     setArticles((prev) => (append ? [...prev, ...mapped] : mapped));
     setHasMore(!!json.meta?.hasMore && mapped.length > 0);
-  }, [selectedLocation.key]);
+  }, [selectedLocation.key, locationLoading]);
 
   useEffect(() => {
+    if (locationLoading) return;
     setLoading(true);
     load(0, false)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [load]);
+  }, [load, locationLoading]);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
