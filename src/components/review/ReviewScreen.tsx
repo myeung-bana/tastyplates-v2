@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GraphQLReview } from "@/types/graphql";
-import { FiX, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
+import { FiX, FiArrowLeft, FiMessageCircle, FiHeart, FiMapPin, FiStar } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import Link from "next/link";
 import { useNhostSession } from "@/hooks/useNhostSession";
@@ -25,6 +25,8 @@ import SigninModal from "../auth/SigninModal";
 import SignupModal from "../auth/SignupModal";
 import ReviewEngagementAuthModal from "./ReviewEngagementAuthModal";
 import { getEngagementAuthorFromReview } from "@/utils/reviewEngagementAuthor";
+import { useIsMobile } from "@/utils/deviceUtils";
+import { useHaptic } from "@/hooks/useHaptic";
 import "@/styles/components/_review-screen.scss";
 
 interface ReviewScreenProps {
@@ -50,6 +52,8 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   onActiveIndexChange,
 }) => {
   const { user, nhostUser } = useNhostSession();
+  const isMobile = useIsMobile();
+  const { trigger: haptic } = useHaptic();
   const [reviews, setReviews] = useState<GraphQLReview[]>(initialReviews);
   const [userLiked, setUserLiked] = useState<Record<number, boolean>>({});
   const [likesCount, setLikesCount] = useState<Record<number, number>>({});
@@ -331,8 +335,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, []);
 
-  // Scroll to initial index on open
+  // Scroll to initial index on open (desktop multi-review mode only)
   useEffect(() => {
+    if (isMobile) return;
     if (isOpen && scrollContainerRef.current && initialIndex >= 0 && initialIndex < reviews.length) {
       const targetPost = postRefs.current[initialIndex];
       if (targetPost) {
@@ -341,7 +346,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
         }, 100);
       }
     }
-  }, [isOpen, initialIndex, reviews.length]);
+  }, [isOpen, initialIndex, reviews.length, isMobile]);
 
   // Keep ref in sync so we don't have to rebuild observers on every activeIndex change.
   useEffect(() => {
@@ -355,9 +360,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     activeIndexRef.current = initialIndex;
   }, [isOpen, initialIndex, reviewsKey]);
 
-  // Track which post is "active" (most visible) to support windowed paging viewers.
+  // Track which post is "active" (most visible) — desktop multi-review mode only.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isMobile) return;
     const root = scrollContainerRef.current;
     if (!root) return;
 
@@ -392,7 +397,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
     elementToIndex.forEach((_, el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [isOpen, reviewsKey, onActiveIndexChange]);
+  }, [isOpen, isMobile, reviewsKey, onActiveIndexChange]);
 
   // Fetch first comment for initial post and adjacent posts immediately
   useEffect(() => {
@@ -415,9 +420,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, [isOpen, initialIndex, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  // Use Intersection Observer to detect visible posts and lazy load comments
+  // Use Intersection Observer to detect visible posts and lazy load comments (desktop only)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isMobile) return;
     
     const observers = new Map<string, IntersectionObserver>();
     
@@ -448,7 +453,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
-  }, [isOpen, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
+  }, [isOpen, isMobile, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
   // Infinite scroll
   const loadMore = useCallback(async (): Promise<void> => {
@@ -489,6 +494,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
   // Handle like (pending lock prevents double-tap)
   const handleLike = useCallback(async (review: GraphQLReview): Promise<void> => {
+    haptic("selection");
     if (!user) {
       openEngagementFromReview(review);
       return;
@@ -566,7 +572,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
         return next;
       });
     }
-  }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken, openEngagementFromReview]);
+  }, [user, userLiked, likesCount, likePendingIds, getUserUuid, getNhostToken, openEngagementFromReview, haptic]);
 
   const handleFollowToggle = useCallback(
     async (review: GraphQLReview, isFollowingState: boolean) => {
@@ -703,9 +709,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
   // Handle comment click
   const handleCommentClick = useCallback((review: GraphQLReview) => {
+    haptic("light");
     setSelectedReview(review);
     setShowComments(true);
-  }, []);
+  }, [haptic]);
 
   // Prevent body scroll when modal is open and hide TopNav on mobile
   useEffect(() => {
@@ -749,282 +756,290 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   if (!isOpen || reviews.length === 0) return null;
   if (typeof document === "undefined") return null;
 
+  // On mobile: show only the single review at initialIndex
+  const displayReviews = isMobile
+    ? [reviews[Math.min(initialIndex, reviews.length - 1)]]
+    : reviews;
+
+  const renderPost = (review: GraphQLReview, index: number, actualIndex: number) => {
+    const images = review.reviewImages || [];
+    const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
+    const reviewIsLiked = userLiked[review.databaseId] ?? false;
+    const reviewLikes = likesCount[review.databaseId] ?? 0;
+    const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
+
+    return (
+      <div
+        key={review.id || `review-${actualIndex}`}
+        ref={(el) => {
+          if (el) postRefs.current[actualIndex] = el;
+        }}
+        className="review-screen__post"
+      >
+        {/* Image Section */}
+        <div className="review-screen__image-section">
+          <FallbackImage
+            src={mainImage}
+            alt={stripTags(review.reviewMainTitle || "Review")}
+            fill
+            className="review-screen__image"
+            priority={index < 3}
+          />
+        </div>
+
+        {/* Content Section */}
+        <div className="review-screen__content-section">
+          {/* User Info */}
+          <div className="review-screen__user-info">
+            {review.author?.node?.databaseId ? (
+              nhostUser?.id &&
+              String(nhostUser.id) === String(review.author?.node?.databaseId) ? (
+                <Link href={PROFILE}>
+                  <FallbackImage
+                    src={review.userAvatar || DEFAULT_USER_ICON}
+                    alt={review.author?.node?.name || "User"}
+                    width={40}
+                    height={40}
+                    className="review-screen__avatar"
+                    type={FallbackImageType.Icon}
+                  />
+                </Link>
+              ) : user ? (
+                <Link href={generateProfileUrl(review.author?.node?.databaseId, review.author?.node?.username)} prefetch={false}>
+                  <FallbackImage
+                    src={review.userAvatar || DEFAULT_USER_ICON}
+                    alt={review.author?.node?.name || "User"}
+                    width={40}
+                    height={40}
+                    className="review-screen__avatar"
+                    type={FallbackImageType.Icon}
+                  />
+                </Link>
+              ) : (
+                <FallbackImage
+                  src={review.userAvatar || DEFAULT_USER_ICON}
+                  alt={review.author?.node?.name || "User"}
+                  width={40}
+                  height={40}
+                  className="review-screen__avatar"
+                  type={FallbackImageType.Icon}
+                />
+              )
+            ) : (
+              <FallbackImage
+                src={review.userAvatar || DEFAULT_USER_ICON}
+                alt={review.author?.node?.name || "User"}
+                width={40}
+                height={40}
+                className="review-screen__avatar"
+                type={FallbackImageType.Icon}
+              />
+            )}
+
+            <div className="review-screen__user-details">
+              <div className="review-screen__user-header">
+                <div className="review-screen__user-info-left">
+                  <div className="flex items-center gap-2">
+                    <h3 className="review-screen__username">
+                      {review.author?.node?.name || review.author?.name || "Unknown User"}
+                    </h3>
+                    {(() => {
+                      const palateNames = review.palates 
+                        ? (typeof review.palates === 'string' 
+                            ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
+                            : [])
+                        : [];
+                      return palateNames.length > 0 ? (
+                        <PalateTags palateNames={palateNames} maxTags={2} className="mb-0" />
+                      ) : null;
+                    })()}
+                  </div>
+                  {review.commentedOn?.node?.title && (
+                    <Link
+                      href={`/restaurants/${review.commentedOn.node.slug}`}
+                      className="review-screen__restaurant-link"
+                    >
+                      <FiMapPin className="w-3 h-3" />
+                      <span>{review.commentedOn.node.title}</span>
+                    </Link>
+                  )}
+                </div>
+                <div className="review-screen__user-header-right">
+                  {nhostUser?.id &&
+                    review.author?.node?.databaseId &&
+                    String(nhostUser.id) !== String(review.author.node.id) &&
+                    String(nhostUser.id) !== String(review.author.node.databaseId) && (
+                      <FollowButton
+                        isFollowing={isFollowing[review.author.node.databaseId] ?? false}
+                        onToggle={(isFollowingState) => handleFollowToggle(review, isFollowingState)}
+                        size="sm"
+                      />
+                    )}
+                  {review.date && (
+                    <span className="review-screen__timestamp">
+                      {formatRelativeTime(review.date)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Review Content */}
+          <div className="review-screen__review-content">
+            {review.reviewMainTitle && (
+              <h2 className="review-screen__title">
+                {capitalizeWords(stripTags(review.reviewMainTitle))}
+              </h2>
+            )}
+            {review.content && (() => {
+              const MAX_CHARS = 300;
+              const reviewContent = stripTags(review.content);
+              const shouldTruncate = reviewContent.length > MAX_CHARS;
+              const isExpanded = isTextExpanded[review.databaseId] || false;
+              const displayText = isExpanded || !shouldTruncate 
+                ? reviewContent 
+                : reviewContent.slice(0, MAX_CHARS) + "...";
+              
+              return (
+                <div className="review-screen__text-container">
+                  <p className="review-screen__text">
+                    {displayText}
+                  </p>
+                  {shouldTruncate && (
+                    <button
+                      className="review-screen__see-more"
+                      onClick={() => setIsTextExpanded(prev => ({
+                        ...prev,
+                        [review.databaseId]: !isExpanded
+                      }))}
+                    >
+                      {isExpanded ? "See Less" : "See More"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+            
+            {review.reviewStars && (
+              <div className="review-screen__rating">
+                <FiStar className="w-3 h-3" />
+                <span>{review.reviewStars}/5</span>
+              </div>
+            )}
+          </div>
+
+          {/* First Comment Preview */}
+          {(() => {
+            const reviewId = review.id || "";
+            const isLoading = loadingFirstComments[reviewId] || false;
+            const fc = firstComments[reviewId];
+            const rc = commentCounts[review.databaseId] ?? 0;
+            
+            if (fc === null && !isLoading) return null;
+            
+            if (isLoading && fc === undefined) {
+              return (
+                <div className="review-screen__comment-preview">
+                  <ReplySkeleton count={1} />
+                </div>
+              );
+            }
+            
+            if (fc) {
+              return (
+                <div className="review-screen__comment-preview">
+                  <div className="review-screen__comment-item">
+                    <FallbackImage
+                      src={fc.userAvatar || DEFAULT_USER_ICON}
+                      alt={fc.author?.node?.name || "User"}
+                      width={24}
+                      height={24}
+                      className="review-screen__comment-avatar"
+                      type={FallbackImageType.Icon}
+                    />
+                    <div className="review-screen__comment-content">
+                      <span className="review-screen__comment-author">
+                        {fc.author?.node?.name || fc.author?.name || "Unknown"}
+                      </span>
+                      <span className="review-screen__comment-text">
+                        {stripTags(fc.content || "")}
+                      </span>
+                    </div>
+                  </div>
+                  {rc > 1 && (
+                    <button
+                      className="review-screen__view-all-comments"
+                      onClick={() => handleCommentClick(review)}
+                    >
+                      View all {rc} comments
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            
+            return null;
+          })()}
+
+          {/* Action Buttons */}
+          <div className="review-screen__actions">
+            <button
+              className="review-screen__action-btn"
+              onClick={() => handleLike(review)}
+              type="button"
+            >
+              {reviewIsLiked ? (
+                <AiFillHeart className="w-6 h-6 text-red-500" />
+              ) : (
+                <FiHeart className="w-6 h-6" />
+              )}
+              <span>{reviewLikes}</span>
+            </button>
+
+            <button
+              className="review-screen__action-btn"
+              onClick={() => handleCommentClick(review)}
+            >
+              <FiMessageCircle className="w-6 h-6" />
+              <span>{reviewCommentCount}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleBack = () => {
+    haptic("light");
+    onClose();
+  };
+
   const content = (
     <>
-      <div className="review-screen" ref={scrollContainerRef}>
-        {/* Close Button */}
+      <div className={`review-screen ${isMobile ? 'review-screen--single' : ''}`} ref={scrollContainerRef}>
+        {/* Close / Back Button */}
         <button
           className="review-screen__close"
-          onClick={onClose}
-          aria-label="Close"
+          onClick={handleBack}
+          aria-label={isMobile ? "Go back" : "Close"}
         >
-          <FiX className="w-6 h-6" />
+          {isMobile ? (
+            <FiArrowLeft className="w-6 h-6" />
+          ) : (
+            <FiX className="w-6 h-6" />
+          )}
         </button>
 
         {/* Scroll Container */}
         <div className="review-screen__scroll-container">
-          {reviews.map((review, index) => {
-            const images = review.reviewImages || [];
-            const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
-            const reviewIsLiked = userLiked[review.databaseId] ?? false;
-            const reviewLikes = likesCount[review.databaseId] ?? 0;
-            const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
-            const firstComment = firstComments[review.id || ""] || null;
-            const isLoadingComment = loadingFirstComments[review.id || ""] || false;
-
-            return (
-              <div
-                key={review.id || `review-${index}`}
-                ref={(el) => {
-                  if (el) postRefs.current[index] = el;
-                }}
-                className="review-screen__post"
-              >
-                {/* Image Section - 60-70% */}
-                <div className="review-screen__image-section">
-                  <FallbackImage
-                    src={mainImage}
-                    alt={stripTags(review.reviewMainTitle || "Review")}
-                    fill
-                    className="review-screen__image"
-                    priority={index < 3}
-                  />
-                </div>
-
-                {/* Content Section - 30-40% */}
-                <div className="review-screen__content-section">
-                  {/* User Info */}
-                  <div className="review-screen__user-info">
-                    {review.author?.node?.databaseId ? (
-                      nhostUser?.id &&
-                      String(nhostUser.id) === String(review.author?.node?.databaseId) ? (
-                        <Link href={PROFILE}>
-                          <FallbackImage
-                            src={review.userAvatar || DEFAULT_USER_ICON}
-                            alt={review.author?.node?.name || "User"}
-                            width={40}
-                            height={40}
-                            className="review-screen__avatar"
-                            type={FallbackImageType.Icon}
-                          />
-                        </Link>
-                      ) : user ? (
-                        <Link href={generateProfileUrl(review.author?.node?.databaseId, review.author?.node?.username)} prefetch={false}>
-                          <FallbackImage
-                            src={review.userAvatar || DEFAULT_USER_ICON}
-                            alt={review.author?.node?.name || "User"}
-                            width={40}
-                            height={40}
-                            className="review-screen__avatar"
-                            type={FallbackImageType.Icon}
-                          />
-                        </Link>
-                      ) : (
-                        <FallbackImage
-                          src={review.userAvatar || DEFAULT_USER_ICON}
-                          alt={review.author?.node?.name || "User"}
-                          width={40}
-                          height={40}
-                          className="review-screen__avatar"
-                          type={FallbackImageType.Icon}
-                        />
-                      )
-                    ) : (
-                      <FallbackImage
-                        src={review.userAvatar || DEFAULT_USER_ICON}
-                        alt={review.author?.node?.name || "User"}
-                        width={40}
-                        height={40}
-                        className="review-screen__avatar"
-                        type={FallbackImageType.Icon}
-                      />
-                    )}
-
-                    <div className="review-screen__user-details">
-                      <div className="review-screen__user-header">
-                        <div className="review-screen__user-info-left">
-                          <div className="flex items-center gap-2">
-                            <h3 className="review-screen__username">
-                              {review.author?.node?.name || review.author?.name || "Unknown User"}
-                            </h3>
-                            {/* Palate Tags - Inline with username */}
-                            {(() => {
-                              const palateNames = review.palates 
-                                ? (typeof review.palates === 'string' 
-                                    ? review.palates.split('|').map(p => p.trim()).filter(Boolean)
-                                    : [])
-                                : [];
-                              return palateNames.length > 0 ? (
-                                <PalateTags palateNames={palateNames} maxTags={2} className="mb-0" />
-                              ) : null;
-                            })()}
-                          </div>
-                          {review.commentedOn?.node?.title && (
-                            <Link
-                              href={`/restaurants/${review.commentedOn.node.slug}`}
-                              className="review-screen__restaurant-link"
-                            >
-                              <FiMapPin className="w-3 h-3" />
-                              <span>{review.commentedOn.node.title}</span>
-                            </Link>
-                          )}
-                        </div>
-                        <div className="review-screen__user-header-right">
-                          {nhostUser?.id &&
-                            review.author?.node?.databaseId &&
-                            String(nhostUser.id) !== String(review.author.node.id) &&
-                            String(nhostUser.id) !== String(review.author.node.databaseId) && (
-                              <FollowButton
-                                isFollowing={isFollowing[review.author.node.databaseId] ?? false}
-                                onToggle={(isFollowingState) => handleFollowToggle(review, isFollowingState)}
-                                size="sm"
-                              />
-                            )}
-                          {review.date && (
-                            <span className="review-screen__timestamp">
-                              {formatRelativeTime(review.date)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Review Content */}
-                  <div className="review-screen__review-content">
-                    {review.reviewMainTitle && (
-                      <h2 className="review-screen__title">
-                        {capitalizeWords(stripTags(review.reviewMainTitle))}
-                      </h2>
-                    )}
-                    {review.content && (() => {
-                      const MAX_CHARS = 300;
-                      const reviewContent = stripTags(review.content);
-                      const shouldTruncate = reviewContent.length > MAX_CHARS;
-                      const isExpanded = isTextExpanded[review.databaseId] || false;
-                      const displayText = isExpanded || !shouldTruncate 
-                        ? reviewContent 
-                        : reviewContent.slice(0, MAX_CHARS) + "...";
-                      
-                      return (
-                        <div className="review-screen__text-container">
-                          <p className="review-screen__text">
-                            {displayText}
-                          </p>
-                          {shouldTruncate && (
-                            <button
-                              className="review-screen__see-more"
-                              onClick={() => setIsTextExpanded(prev => ({
-                                ...prev,
-                                [review.databaseId]: !isExpanded
-                              }))}
-                            >
-                              {isExpanded ? "See Less" : "See More"}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })()}
-                    
-                    {/* Rating */}
-                    {review.reviewStars && (
-                      <div className="review-screen__rating">
-                        <FiStar className="w-3 h-3" />
-                        <span>{review.reviewStars}/5</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* First Comment Preview */}
-                  {(() => {
-                    const reviewId = review.id || "";
-                    const isLoading = loadingFirstComments[reviewId] || false;
-                    const firstComment = firstComments[reviewId];
-                    const reviewCommentCount = commentCounts[review.databaseId] ?? 0;
-                    
-                    // Hide section entirely if we've confirmed there are no comments
-                    // firstComment === null means we fetched and confirmed no comments exist
-                    if (firstComment === null && !isLoading) {
-                      return null;
-                    }
-                    
-                    // Show skeleton only while loading and haven't confirmed no comments
-                    if (isLoading && firstComment === undefined) {
-                      return (
-                        <div className="review-screen__comment-preview">
-                          <ReplySkeleton count={1} />
-                        </div>
-                      );
-                    }
-                    
-                    // Show first comment if it exists
-                    if (firstComment) {
-                      return (
-                        <div className="review-screen__comment-preview">
-                          <div className="review-screen__comment-item">
-                            <FallbackImage
-                              src={firstComment.userAvatar || DEFAULT_USER_ICON}
-                              alt={firstComment.author?.node?.name || "User"}
-                              width={24}
-                              height={24}
-                              className="review-screen__comment-avatar"
-                              type={FallbackImageType.Icon}
-                            />
-                            <div className="review-screen__comment-content">
-                              <span className="review-screen__comment-author">
-                                {firstComment.author?.node?.name || firstComment.author?.name || "Unknown"}
-                              </span>
-                              <span className="review-screen__comment-text">
-                                {stripTags(firstComment.content || "")}
-                              </span>
-                            </div>
-                          </div>
-                          {reviewCommentCount > 1 && (
-                            <button
-                              className="review-screen__view-all-comments"
-                              onClick={() => handleCommentClick(review)}
-                            >
-                              View all {reviewCommentCount} comments
-                            </button>
-                          )}
-                        </div>
-                      );
-                    }
-                    
-                    // Don't render anything if we haven't fetched yet (firstComment is undefined)
-                    return null;
-                  })()}
-
-                  {/* Action Buttons */}
-                  <div className="review-screen__actions">
-                    <button
-                      className="review-screen__action-btn"
-                      onClick={() => handleLike(review)}
-                      type="button"
-                    >
-                      {reviewIsLiked ? (
-                        <AiFillHeart className="w-6 h-6 text-red-500" />
-                      ) : (
-                        <FiHeart className="w-6 h-6" />
-                      )}
-                      <span>{reviewLikes}</span>
-                    </button>
-
-                    <button
-                      className="review-screen__action-btn"
-                      onClick={() => handleCommentClick(review)}
-                    >
-                      <FiMessageCircle className="w-6 h-6" />
-                      <span>{reviewCommentCount}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
+          {displayReviews.map((review, index) => {
+            const actualIndex = isMobile ? initialIndex : index;
+            return renderPost(review, index, actualIndex);
           })}
 
-          {/* Infinite Scroll Trigger & Loading Skeleton */}
-          {onLoadMore && hasNextPage && (
+          {/* Infinite Scroll Trigger — desktop only */}
+          {!isMobile && onLoadMore && hasNextPage && (
             <div ref={observerRef} className="review-screen__load-more">
               {loadingMore && (
                 <div className="review-screen__skeleton-post">

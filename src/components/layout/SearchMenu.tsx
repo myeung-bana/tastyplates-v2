@@ -7,6 +7,7 @@ import { RESTAURANTS } from "@/constants/pages";
 import { LOCATION_HIERARCHY } from "@/constants/location";
 import LocationBottomSheet from "../navigation/LocationBottomSheet";
 import CuisinePillSelector from "@/components/Filter/CuisinePillSelector";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface SearchMenuProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const MAX_RECENT_SEARCHES = 10;
 const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
   const { selectedLocation } = useLocation();
+  const { trigger: haptic } = useHaptic();
   const [searchValue, setSearchValue] = useState("");
   const [selectedPalates, setSelectedPalates] = useState<Set<string>>(new Set());
   const [searchMode, setSearchMode] = useState<"cuisine" | "keyword">("cuisine");
@@ -67,6 +69,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
 
   // Clear all recent searches
   const clearRecentSearches = () => {
+    haptic("medium");
     setRecentSearches([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem(RECENT_SEARCHES_KEY);
@@ -103,6 +106,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSearch = () => {
+    haptic("success");
     const params = new URLSearchParams();
 
     if (searchMode === "keyword") {
@@ -126,10 +130,12 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
   };
 
   const handleRecentSearchClick = (term: string) => {
+    haptic("selection");
     setSearchValue(term);
   };
 
   const toggleSearchMode = () => {
+    haptic("selection");
     setSearchMode((prevMode) => (prevMode === "cuisine" ? "keyword" : "cuisine"));
     setSearchValue("");
     setSelectedPalates(new Set());
@@ -155,7 +161,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
           {/* Minimal Header - Just Close Button */}
           <div className="flex items-center justify-end px-4 py-3 border-b border-gray-100">
             <button
-              onClick={onClose}
+              onClick={() => { haptic("medium"); onClose(); }}
               className="flex items-center justify-center w-9 h-9 text-gray-600 hover:text-gray-900 transition-colors"
               aria-label="Close search menu"
             >
@@ -168,7 +174,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ isOpen, onClose }) => {
             <div className="px-4 py-3 space-y-5">
               {/* Region Selection - Compact */}
               <button
-                onClick={() => setShowLocationModal(true)}
+                onClick={() => { haptic("light"); setShowLocationModal(true); }}
                 className="w-full flex items-center justify-between px-3 py-2.5 border border-gray-200 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-all duration-200"
               >
                 <div className="flex items-center gap-2">

@@ -14,6 +14,7 @@ import {
   FiLogOut,
   FiLayout
 } from "react-icons/fi";
+import { useHaptic } from "@/hooks/useHaptic";
 import { RESTAURANTS, PROFILE, SETTINGS, LISTING, CONTENT_GUIDELINES, HOME, TASTYSTUDIO_DASHBOARD, PRIVACY_POLICY, TERMS_OF_SERVICE, COOKIE_POLICY } from "@/constants/pages";
 import { logOutSuccessfull } from "@/constants/messages";
 import { LOGOUT_KEY } from "@/constants/session";
@@ -37,6 +38,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
   const pathname = usePathname();
   const { user } = useNhostSession();
   const router = useRouter();
+  const { trigger: haptic } = useHaptic();
 
   const handleLogout = async () => {
     try {
@@ -85,6 +87,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
         <button
           key={index}
           onClick={() => {
+            haptic(item.name === "Log out" ? "warning" : "light");
             if (item.onClick) item.onClick();
             if (!item.isButton) onClose();
           }}
@@ -104,7 +107,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       <Link
         key={item.href}
         href={item.href || "#"}
-        onClick={onClose}
+        onClick={() => { haptic("light"); onClose(); }}
         className={className}
       >
         <Icon

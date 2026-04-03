@@ -20,6 +20,7 @@ import { getStreetCity } from "@/utils/addressUtils";
 import { useRestaurantOverallRating } from "@/hooks/useRestaurantOverallRating";
 import { STAR_FILLED } from "@/constants/images";
 import Link from "next/link";
+import { useHaptic } from "@/hooks/useHaptic";
 
 export interface Restaurant {
   id: string;
@@ -106,6 +107,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, firebaseUser } = useFirebaseSession();
+  const { trigger: haptic } = useHaptic();
   const [saved, setSaved] = useState<boolean | null>(initialSavedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,9 +170,11 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user || !firebaseUser) {
+      haptic("warning");
       setShowSignin(true);
       return;
     }
+    haptic("selection");
     setLoading(true);
     setError(null);
     const prevSaved = saved;
@@ -330,6 +334,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user || !firebaseUser) {
+      haptic("warning");
       setShowSignin(true);
       return;
     }
@@ -338,6 +343,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
 
   const handleCommentButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    haptic("light");
     setIsReviewModalOpen(true);
   };
 
@@ -357,8 +363,8 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
             href={PAGE(RESTAURANTS, [restaurant.slug], palateParam ? { palate: decodeURIComponent(palateParam) } : {})}
             onClick={async (e) => {
               e.stopPropagation();
+              haptic("light");
               const clickedElement = e.target as HTMLElement;
-              // Detect if the image was clicked and you're on the /review-listing page
               if ((pathname === "/review-listing" || pathname === "/tastystudio/review-listing") && clickedElement.dataset.role === "image") {
                 const slug = restaurant.slug || "";
                 if (slug) {

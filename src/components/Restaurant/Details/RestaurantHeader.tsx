@@ -8,6 +8,7 @@ import { parseOpeningHours, getCurrentDay } from "@/utils/openingHoursUtils";
 import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantButton";
 import SaveRestaurantButton from "./SaveRestaurantButton";
 import toast from "react-hot-toast";
+import { useHaptic } from "@/hooks/useHaptic";
 import "@/styles/components/_restaurant-card.scss";
 
 interface RestaurantHeaderProps {
@@ -71,7 +72,10 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
   const todayHours = parsedHours?.[getCurrentDay()];
   const isCurrentlyClosed = !todayHours || todayHours.toLowerCase() === "closed";
 
+  const { trigger: haptic } = useHaptic();
+
   const handleShare = async () => {
+    haptic("light");
     const url = `${window.location.origin}/restaurants/${restaurant.slug}`;
     if (navigator.share) {
       try {

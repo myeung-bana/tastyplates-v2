@@ -9,6 +9,7 @@ import { TASTYPLATES_LOGO_COLOUR } from "@/constants/images";
 import Image from "next/image";
 import SidebarHeader from "./SidebarHeader";
 import SearchMenu from "./SearchMenu";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface MobileTopBarProps {
   onSearchClick?: () => void;
@@ -19,8 +20,10 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
   const { user } = useNhostSession();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
+  const { trigger: haptic } = useHaptic();
 
   const toggleSidebar = () => {
+    haptic("light");
     setIsSidebarOpen(!isSidebarOpen);
   };
 
@@ -29,6 +32,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
   };
 
   const toggleSearchMenu = () => {
+    haptic("light");
     setIsSearchMenuOpen(!isSearchMenuOpen);
   };
 

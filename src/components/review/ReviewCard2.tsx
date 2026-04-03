@@ -20,6 +20,7 @@ import {
   DEFAULT_USER_ICON,
   STAR_FILLED,
 } from "@/constants/images";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface ReviewCard2Props extends Omit<ReviewCardProps, 'width' | 'index'> {
   reviews?: GraphQLReview[];
@@ -33,13 +34,14 @@ const ReviewCard2 = ({ data, reviews, reviewIndex, viewerSource, viewerReturnTo,
   const [showAuthModal, setShowAuthModal] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const router = useRouter();
+  const { trigger: haptic } = useHaptic();
 
   const { user } = useNhostSession();
 
   const currentIndex = typeof reviewIndex === 'number' ? reviewIndex : 0;
 
   const handleCardClick = () => {
-    // Preferred: delegate to parent's shared viewer
+    haptic("light");
     if (onOpenViewer) {
       onOpenViewer(currentIndex);
       return;

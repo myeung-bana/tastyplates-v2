@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FcGoogle } from "react-icons/fc";
 import "@/styles/pages/_auth.scss";
+import { useHaptic } from "@/hooks/useHaptic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UserService } from '@/services/user/userService';
 import { nhostAuthService } from "@/services/auth/nhostAuthService";
@@ -31,6 +32,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
   const hasRedirected = useRef(false);
   // Using Nhost authentication
   
@@ -134,6 +136,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    haptic("success");
     setError("");
     setIsLoading(true);
     localStorage.removeItem(REGISTRATION_KEY);
@@ -186,12 +189,13 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
     }
   };
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
-  const toggleShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
+  const toggleShowPassword = () => { haptic("selection"); setShowPassword(!showPassword); };
+  const toggleShowConfirmPassword = () => { haptic("selection"); setShowConfirmPassword(!showConfirmPassword); };
 
   // Nhost handles authentication - no manual password generation needed
 
   const signUpWithGoogle = async () => {
+    haptic("light");
     setError("");
     setIsLoading(true);
     localStorage.removeItem(REGISTRATION_KEY);

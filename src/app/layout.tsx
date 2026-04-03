@@ -14,6 +14,7 @@ import MobileTopBar from "@/components/layout/MobileTopBar";
 import PwaInstallBanner from "@/components/layout/PwaInstallBanner";
 import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
+import PullToRefreshWrapper from "@/components/layout/PullToRefreshWrapper";
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UploadProvider } from '@/contexts/UploadContext';
 import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
@@ -105,7 +106,9 @@ export default function RootLayout({
                         <PwaInstallBanner />
                         <MobileTopBar />
                         <main className="flex-1 main-content pt-14 md:pt-0 pb-20 md:pb-0">
-                          {children}
+                          <PullToRefreshWrapper>
+                            {children}
+                          </PullToRefreshWrapper>
                         </main>
                         <ConditionalFooter />
                         <BottomNav />

@@ -5,6 +5,9 @@ import { useFirebaseSession } from '@/hooks/useFirebaseSession';
 import { GraphQLReview } from '@/types/graphql';
 import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
+import ReviewScreen from '@/components/review/ReviewScreen';
+import ReviewScreenDesktop from '@/components/review/ReviewScreenDesktop';
+import { useIsMobile } from '@/utils/deviceUtils';
 import HttpMethods from '@/repositories/http/requests';
 
 const request = new HttpMethods();
@@ -17,6 +20,9 @@ const HashtagPage = () => {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [endCursor, setEndCursor] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => {
     if (hashtag) {
@@ -91,6 +97,10 @@ const HashtagPage = () => {
                   data={review as any}
                   reviews={reviews}
                   reviewIndex={index}
+                  onOpenViewer={(idx) => {
+                    setViewerIndex(idx);
+                    setViewerOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -115,6 +125,23 @@ const HashtagPage = () => {
           </div>
         )}
       </div>
+
+      {/* Review viewer */}
+      {isMobile ? (
+        <ReviewScreen
+          reviews={reviews}
+          initialIndex={viewerIndex}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+      ) : (
+        <ReviewScreenDesktop
+          reviews={reviews}
+          initialIndex={viewerIndex}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </div>
   );
 };

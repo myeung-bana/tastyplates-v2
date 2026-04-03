@@ -4,6 +4,19 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
+import { useHaptic } from "@/hooks/useHaptic"
+
+type HapticPreset = "light" | "medium" | "success" | "warning" | "error" | "selection";
+
+const VARIANT_HAPTIC: Record<string, HapticPreset> = {
+  primary: "success",
+  default: "light",
+  secondary: "light",
+  destructive: "warning",
+  outline: "selection",
+  ghost: "selection",
+  link: "selection",
+};
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center whitespace-nowrap rounded-[50px] text-sm font-neusans font-normal transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
@@ -38,16 +51,31 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  haptic?: HapticPreset | false
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, haptic, onClick, ...props }, ref) => {
+    const { trigger } = useHaptic()
     const Comp = asChild ? Slot : "button"
+
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        const preset = haptic !== false
+          ? (haptic ?? VARIANT_HAPTIC[variant ?? "default"] ?? "selection")
+          : null;
+        if (preset) trigger(preset);
+        onClick?.(e);
+      },
+      [haptic, variant, trigger, onClick]
+    )
+
     return (
       <Comp
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        onClick={handleClick}
         {...props}
       />
     )

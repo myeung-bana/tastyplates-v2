@@ -7,6 +7,7 @@ import Spinner from "@/components/common/LoadingSpinner";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import Cookies from "js-cookie";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { useHaptic } from "@/hooks/useHaptic";
 import { emailRequired, googleLoginFailed, invalidEmailFormat, loginFailed, passwordRequired, unexpectedError } from "@/constants/messages";
 import { responseStatus } from "@/constants/response";
 import { HOME, USER_VERIFICATION } from "@/constants/pages";
@@ -25,6 +26,7 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPassword, onLoginSuccess }) => {
   const router = useRouter();
   const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
   const hasRedirected = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -114,6 +116,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    haptic("success");
     setMessage('');
     setShowResendVerification(false);
     setIsLoading(true);
@@ -194,6 +197,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
   // Google OAuth using Nhost's built-in provider
 
   const loginWithGoogle = async () => {
+    haptic("light");
     setMessage('');
     setIsLoading(true);
     sessionStorage.setItem('oauth_pending', 'true');
@@ -212,7 +216,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
     // Note: On success, user is redirected — execution stops here
   };
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
+  const toggleShowPassword = () => { haptic("selection"); setShowPassword(!showPassword); };
 
   return (
     <div className="auth">

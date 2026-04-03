@@ -11,6 +11,7 @@ import {
   uncheckInRestaurantSuccess,
 } from "@/constants/messages";
 import { restaurantUserService } from "@/app/api/v1/services/restaurantUserService";
+import { useHaptic } from "@/hooks/useHaptic";
 
 export default function CheckInRestaurantButton({
   restaurantSlug,
@@ -18,6 +19,7 @@ export default function CheckInRestaurantButton({
   restaurantSlug: string;
 }) {
   const { nhostUser, loading: sessionLoading } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -55,9 +57,11 @@ export default function CheckInRestaurantButton({
 
   const handleToggle = useCallback(async () => {
     if (!nhostUser?.id) {
+      haptic("warning");
       setShowSignin(true);
       return;
     }
+    haptic("selection");
 
     setLoading(true);
     setError(null);
@@ -77,6 +81,7 @@ export default function CheckInRestaurantButton({
 
       if (response.success) {
         const isCheckedIn = response.data.status === "checkedin";
+        haptic("success");
         toast.success(
           isCheckedIn ? checkInRestaurantSuccess : uncheckInRestaurantSuccess
         );
@@ -110,7 +115,7 @@ export default function CheckInRestaurantButton({
       <>
         <button
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
-          onClick={() => setShowSignin(true)}
+          onClick={() => { haptic("warning"); setShowSignin(true); }}
         >
           <FiMapPin className="w-4 h-4 text-gray-500" />
           <span>Check-In</span>

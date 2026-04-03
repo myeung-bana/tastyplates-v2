@@ -9,6 +9,7 @@ import {
   removedFromWishlistSuccess,
   savedToWishlistSuccess,
 } from "@/constants/messages";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface SaveRestaurantButtonProps {
   restaurantSlug: string;
@@ -20,6 +21,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
   onShowSignin,
 }) => {
   const { nhostUser, loading: sessionLoading } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -42,9 +44,11 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
 
   const toggleFavorite = useCallback(async () => {
     if (!nhostUser) {
+      haptic("warning");
       onShowSignin();
       return;
     }
+    haptic("selection");
 
     setLoading(true);
     setError(null);
@@ -57,6 +61,7 @@ const SaveRestaurantButton: React.FC<SaveRestaurantButtonProps> = ({
 
       if (response.success) {
         const isSaved = response.data.status === "saved";
+        haptic("success");
         setSaved(isSaved);
         toast.success(isSaved ? savedToWishlistSuccess : removedFromWishlistSuccess);
       } else {

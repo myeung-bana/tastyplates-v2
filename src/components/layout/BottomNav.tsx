@@ -13,6 +13,7 @@ import { useAuthModal } from "../auth/AuthModalWrapper";
 import { useProfileData } from "@/hooks/useProfileData";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import { useNhostSession } from "@/hooks/useNhostSession";
+import { useHaptic } from "@/hooks/useHaptic";
 
 // Helper function to extract profile image URL from JSONB format
 const getProfileImageUrl = (profileImage: any): string | null => {
@@ -39,6 +40,7 @@ const BottomNav: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { showSignin } = useAuthModal();
+  const { trigger: haptic } = useHaptic();
   
   // Fetch current user profile data for authenticated users
   const currentUserId = user?.user_id || null;
@@ -101,8 +103,11 @@ const BottomNav: React.FC = () => {
     }
     if (!authReady) {
       e.preventDefault();
+      haptic("warning");
       showSignin();
+      return;
     }
+    haptic("selection");
   };
 
   const navItems = [
@@ -174,7 +179,7 @@ const BottomNav: React.FC = () => {
             <Link
               key={item.href}
               href={href}
-              onClick={item.requiresAuth ? handleAuthRequiredClick : undefined}
+              onClick={item.requiresAuth ? handleAuthRequiredClick : () => haptic("selection")}
               className={`flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 transition-colors duration-200 ${
                 active 
                   ? 'text-[#ff7c0a]' 

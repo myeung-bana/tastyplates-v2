@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiSearch, FiHeart, FiUser, FiSettings, FiFileText } from "react-icons/fi";
 import { PROFILE, RESTAURANTS, SETTINGS } from "@/constants/pages";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function MobileMenu({
   onOpenSignup,
 }: MobileMenuProps) {
   const pathname = usePathname();
+  const { trigger: haptic } = useHaptic();
 
   return (
     <>
@@ -54,7 +56,7 @@ export default function MobileMenu({
           {/* Close button */}
           <div className="flex justify-end mb-6">
             <button
-              onClick={onClose}
+              onClick={() => { haptic("medium"); onClose(); }}
               className="p-2 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close menu"
             >
@@ -92,7 +94,7 @@ export default function MobileMenu({
                 <Link
                   key={item.name}
                   href={item.href}
-                  onClick={onClose}
+                  onClick={() => { haptic("light"); onClose(); }}
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium text-base transition-all duration-200 ${
                     isActive
                       ? "bg-[#ff7c0a] text-white"
@@ -152,6 +154,7 @@ export default function MobileMenu({
               <div className="pt-4 space-y-2">
                 <button
                   onClick={() => {
+                    haptic("light");
                     onClose();
                     onOpenSignin();
                   }}
@@ -161,6 +164,7 @@ export default function MobileMenu({
                 </button>
                 <button
                   onClick={() => {
+                    haptic("light");
                     onClose();
                     onOpenSignup();
                   }}

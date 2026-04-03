@@ -9,6 +9,7 @@ import { PROFILE } from "@/constants/pages";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_USER_ICON } from "@/constants/images";
 import PalateTags from "@/components/ui/PalateTags/PalateTags";
+import { useHaptic } from "@/hooks/useHaptic";
 import "@/styles/components/_reply-item.scss";
 
 interface ReplyItemProps {
@@ -25,6 +26,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
   isLoading
 }) => {
   const { user } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
 
   return (
     <div className="reply-item">
@@ -85,7 +87,10 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
               })()}
             </div>
             <button
-              onClick={() => onLike(reply)}
+              onClick={() => {
+                haptic("selection");
+                onLike(reply);
+              }}
               disabled={isLoading}
               className="reply-item__like-btn"
             >

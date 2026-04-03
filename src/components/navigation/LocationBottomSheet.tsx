@@ -5,6 +5,7 @@ import { FiArrowLeft, FiChevronRight, FiCheck } from 'react-icons/fi';
 import { useLocation } from '@/contexts/LocationContext';
 import { LocationOption } from '@/constants/location';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useHaptic } from '@/hooks/useHaptic';
 
 interface LocationBottomSheetProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface LocationBottomSheetProps {
 
 const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClose }) => {
   const { selectedLocation, setSelectedLocation, locationHierarchy } = useLocation();
+  const { trigger: haptic } = useHaptic();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'countries' | 'cities'>('countries');
 
@@ -37,6 +39,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
   };
 
   const handleCountrySelect = (countryKey: string) => {
+    haptic("selection");
     const country = locationHierarchy.countries.find(c => c.key === countryKey);
     if (!country) return;
 
@@ -63,6 +66,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
   };
 
   const handleCitySelect = (city: LocationOption) => {
+    haptic("success");
     setSelectedLocation(city);
     onClose();
     setSelectedCountry(null);
@@ -70,6 +74,7 @@ const LocationBottomSheet: React.FC<LocationBottomSheetProps> = ({ isOpen, onClo
   };
 
   const handleBackToCountries = () => {
+    haptic("light");
     setSelectedCountry(null);
     setViewMode('countries');
   };

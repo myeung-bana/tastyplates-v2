@@ -6,6 +6,10 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import ReviewCard2 from '@/components/review/ReviewCard2';
 import ReviewCardSkeleton from '@/components/ui/Skeleton/ReviewCardSkeleton';
+import ReviewScreen from '@/components/review/ReviewScreen';
+import ReviewScreenDesktop from '@/components/review/ReviewScreenDesktop';
+import { GraphQLReview } from '@/types/graphql';
+import { useIsMobile } from '@/utils/deviceUtils';
 import { FaUsers, FaCompass } from 'react-icons/fa';
 import { FiUsers, FiTrendingUp, FiHeart } from 'react-icons/fi';
 import Link from 'next/link';
@@ -16,6 +20,9 @@ export default function FollowingPage() {
   const { user, nhostUser, loading: sessionLoading } = useNhostSession();
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [followingCountLoading, setFollowingCountLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   const userId = user?.user_id ?? nhostUser?.id ?? '';
 
@@ -293,9 +300,14 @@ export default function FollowingPage() {
                   {reviews.map((review, index) => (
                     <ReviewCard2 
                       key={review.id}
-                      data={review as any} // GraphQLReview is compatible with ReviewedDataProps
+                      data={review as any}
                       reviews={reviews}
                       reviewIndex={index}
+                      viewerSource={{ src: 'following' }}
+                      onOpenViewer={(idx) => {
+                        setViewerIndex(idx);
+                        setViewerOpen(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -320,6 +332,23 @@ export default function FollowingPage() {
           </>
         )}
       </div>
+
+      {/* Review viewer */}
+      {isMobile ? (
+        <ReviewScreen
+          reviews={reviews as unknown as GraphQLReview[]}
+          initialIndex={viewerIndex}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+      ) : (
+        <ReviewScreenDesktop
+          reviews={reviews as unknown as GraphQLReview[]}
+          initialIndex={viewerIndex}
+          isOpen={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </div>
   );
 }

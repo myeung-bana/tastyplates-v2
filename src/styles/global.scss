@@ -105,3 +105,18 @@ body.review-screen-open {
     display: none; /* Chrome, Safari, Opera */
   }
 }
+
+// Pull-to-refresh library overrides — allow page scroll within the PTR container
+.ptr,
+.ptr__children {
+  overflow: auto !important;
+  height: auto !important;
+  min-height: 100% !important;
+}
+
+// Disable native browser pull-to-refresh in PWA standalone mode
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: contain;
+  }
+}

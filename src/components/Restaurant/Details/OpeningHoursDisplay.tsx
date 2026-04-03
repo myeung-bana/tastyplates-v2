@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { FiClock, FiChevronDown } from "react-icons/fi";
 import { groupOpeningHours, formatDayRange } from "@/utils/openingHoursUtils";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface OpeningHoursDisplayProps {
   openingHours: string | object | null | undefined;
@@ -9,6 +10,7 @@ interface OpeningHoursDisplayProps {
 
 const OpeningHoursDisplay: React.FC<OpeningHoursDisplayProps> = ({ openingHours }) => {
   const [expanded, setExpanded] = useState(false);
+  const { trigger: haptic } = useHaptic();
   const grouped = groupOpeningHours(openingHours);
   
   if (grouped.length === 0) {
@@ -37,7 +39,7 @@ const OpeningHoursDisplay: React.FC<OpeningHoursDisplayProps> = ({ openingHours 
       <div className="flex-1 min-w-0">
         {/* Collapsed summary — always visible */}
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => { haptic("selection"); setExpanded(!expanded); }}
           className="w-full flex items-center justify-between gap-2 text-left"
           aria-expanded={expanded}
         >

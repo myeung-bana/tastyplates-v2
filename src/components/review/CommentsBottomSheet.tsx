@@ -16,6 +16,7 @@ import {
 } from "@/constants/messages";
 import { responseStatusCode as code } from "@/constants/response";
 import toast from "react-hot-toast";
+import { useHaptic } from "@/hooks/useHaptic";
 import "@/styles/components/_comments-bottom-sheet.scss";
 
 interface CommentsBottomSheetProps {
@@ -38,6 +39,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   onAuthRequired,
 }) => {
   const { user, nhostUser } = useNhostSession();
+  const { trigger: haptic } = useHaptic();
   const [replies, setReplies] = useState<GraphQLReview[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -177,6 +179,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
 
   // Handle reply like
   const handleReplyLike = useCallback(async (reply: GraphQLReview) => {
+    haptic("selection");
     if (!user) {
       if (onAuthRequired) onAuthRequired();
       else toast.error("Please sign in to like comments");
@@ -234,7 +237,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     } finally {
       setReplyLoading((prev) => ({ ...prev, [replyId]: false }));
     }
-  }, [user, replyUserLiked, replyLikes, getNhostToken, onAuthRequired]);
+  }, [user, replyUserLiked, replyLikes, getNhostToken, onAuthRequired, haptic]);
 
   // Cooldown timer
   useEffect(() => {
@@ -302,6 +305,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Smooth close handler with animation
   const handleSmoothClose = useCallback(() => {
     if (isClosing) return;
+    haptic("medium");
     
     setIsClosing(true);
     
@@ -319,7 +323,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
         setSheetPosition(0);
       }, 200); // Backdrop fade duration
     }, 300); // Sheet slide duration
-  }, [isClosing, onClose]);
+  }, [isClosing, onClose, haptic]);
 
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return;
@@ -336,6 +340,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
   // Handle comment submission
   const handleCommentSubmit = useCallback(async () => {
     if (!commentText.trim() || isLoading || cooldown > 0) return;
+    haptic("success");
     if (!nhostUser) {
       if (onAuthRequired) onAuthRequired();
       else toast.error("Please sign in to comment");
@@ -517,6 +522,7 @@ const CommentsBottomSheet: React.FC<CommentsBottomSheetProps> = ({
     getNhostToken,
     getUserUuid,
     onAuthRequired,
+    haptic,
   ]);
 
   // Prevent body scroll when modal is open

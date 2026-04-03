@@ -425,6 +425,26 @@
   }
 }
 
+// Mobile single-review mode
+.review-screen--single {
+  overflow: hidden;
+  scroll-snap-type: none;
+
+  .review-screen__scroll-container {
+    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .review-screen__post {
+    min-height: 100dvh;
+    height: 100dvh;
+    scroll-snap-align: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 // Mobile optimizations
 @media (max-width: 768px) {
   .review-screen {
