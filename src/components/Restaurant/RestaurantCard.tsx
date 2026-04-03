@@ -382,7 +382,7 @@ const RestaurantCard = ({ restaurant, profileTablist, initialSavedStatus, onWish
               style={{ cursor: "pointer" }}
               priority={priority}
               loading={priority ? "eager" : "lazy"}
-              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              sizes="(max-width: 639px) 100vw, (max-width: 1024px) 50vw, (max-width: 1400px) 33vw, 25vw"
             />
             {/* Cuisine pills — bottom-left overlay on image */}
             {restaurant.listingCategories && restaurant.listingCategories.length > 0 && (

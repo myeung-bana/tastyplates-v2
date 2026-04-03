@@ -345,7 +345,9 @@ export default function RestaurantDetail() {
           <div className="lg:w-[375px] lg:flex-shrink-0">
             <div className="lg:sticky lg:top-24 space-y-6">
               <RestaurantDetailsSection restaurant={restaurant} />
-              <RestaurantQuickActions onAddReview={addReview} restaurant={restaurant} />
+              <div className="hidden lg:block">
+                <RestaurantQuickActions onAddReview={addReview} restaurant={restaurant} />
+              </div>
             </div>
           </div>
         </div>

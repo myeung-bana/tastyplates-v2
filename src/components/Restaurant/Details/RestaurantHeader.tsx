@@ -2,10 +2,12 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FiMapPin, FiPhone, FiGlobe, FiNavigation } from "react-icons/fi";
+import { FiMapPin, FiPhone, FiGlobe, FiNavigation, FiShare2 } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
+import { parseOpeningHours, getCurrentDay } from "@/utils/openingHoursUtils";
 import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantButton";
 import SaveRestaurantButton from "./SaveRestaurantButton";
+import toast from "react-hot-toast";
 import "@/styles/components/_restaurant-card.scss";
 
 interface RestaurantHeaderProps {
@@ -64,6 +66,32 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.title + ' ' + getLocation())}`;
   };
 
+  // Derive today's open/closed status from opening hours
+  const parsedHours = parseOpeningHours(restaurant.listingDetails?.openingHours);
+  const todayHours = parsedHours?.[getCurrentDay()];
+  const isCurrentlyClosed = !todayHours || todayHours.toLowerCase() === "closed";
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/restaurants/${restaurant.slug}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: restaurant.title,
+          text: `Check out ${restaurant.title} on TastyPlates!`,
+          url,
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          await navigator.clipboard.writeText(url);
+          toast.success("Link copied!");
+        }
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied!");
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden">
       <div className="p-4 md:p-6">
@@ -97,10 +125,21 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
                 <span className="restaurant-card__cuisine-pill">{primaryPalate}</span>
               </div>
             )}
-            {/* Restaurant Title */}
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 font-neusans leading-tight">
-              {restaurant.title}
-            </h1>
+            {/* Restaurant Title + Open/Closed badge */}
+            <div className="flex items-center gap-2.5 mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 font-neusans leading-tight">
+                {restaurant.title}
+              </h1>
+              {parsedHours && (
+                <span className={`flex-shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                  isCurrentlyClosed
+                    ? "bg-gray-100 text-gray-500"
+                    : "bg-green-50 text-green-600"
+                }`}>
+                  {isCurrentlyClosed ? "Closed" : "Open"}
+                </span>
+              )}
+            </div>
             {/* Location Badge - Top */}
             <div className="flex items-center gap-1.5 text-gray-600 text-sm mb-2">
               <FiMapPin className="w-4 h-4 flex-shrink-0" />
@@ -189,6 +228,15 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
             onShowSignin={onShowSignin}
           />
           <CheckInRestaurantButton restaurantSlug={restaurant.slug} />
+
+          {/* Share (icon-only) */}
+          <button
+            onClick={handleShare}
+            className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+            aria-label="Share restaurant"
+          >
+            <FiShare2 className="w-4 h-4 text-gray-500" />
+          </button>
         </div>
       </div>
     </div>

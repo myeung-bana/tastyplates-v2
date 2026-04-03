@@ -10,6 +10,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --pwa-banner-height: 0px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,6 +27,13 @@ body {
   background-color: $color-white;
   margin: 0;
   // padding: 5.5rem 0 0 0;
+}
+
+// Offset main content & mobile top bar when PWA install banner is visible
+@media (max-width: 767px) {
+  .main-content {
+    padding-top: calc(3.5rem + var(--pwa-banner-height, 0px)) !important;
+  }
 }
 
 h1,

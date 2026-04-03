@@ -1,8 +1,9 @@
 import "@/styles/components/filter2.scss";
 import { useEffect, useMemo, useState } from "react";
-import { PiCaretDown } from "react-icons/pi";
-import CustomPopover from "../ui/Popover/Popover";
+import { FiSliders, FiX } from "react-icons/fi";
+import { PiArrowsDownUp } from "react-icons/pi";
 import { usePriceRanges } from "@/hooks/usePriceRanges";
+import { useHaptic } from "@/hooks/useHaptic";
 import CuisineFilter from "./CuisineFilter";
 
 interface Filter2Props {
@@ -21,15 +22,33 @@ interface Filter2Props {
   canUsePalateContextSort?: boolean;
 }
 
-
-const BASE_SORT_OPTIONS: Array<{ key: string; label: string }> = [
-  { key: 'MY_PREFERENCE', label: 'My Preference' },
-  { key: 'PALATE_CONTEXT', label: 'Palate match' },
-  { key: 'SMART', label: 'Smart Sort' },
-  { key: 'DESC', label: 'Highest Rated' },
-  { key: 'ASC', label: 'Lowest Rated' },
-  { key: 'NEWEST', label: 'Newest' },
+const BASE_SORT_OPTIONS: Array<{ key: string; label: string; description: string }> = [
+  { key: 'MY_PREFERENCE', label: 'My Preference', description: 'Ranks restaurants based on your personal palate profile and past reviews.' },
+  { key: 'PALATE_CONTEXT', label: 'Palate match', description: 'Ranks by ratings from reviewers who share the selected palate.' },
+  { key: 'SMART', label: 'Smart Sort', description: 'A balanced mix of rating, review count, and recency for the best overall picks.' },
+  { key: 'DESC', label: 'Highest Rated', description: 'Shows the top-rated restaurants first.' },
+  { key: 'ASC', label: 'Lowest Rated', description: 'Shows the lowest-rated restaurants first.' },
+  { key: 'NEWEST', label: 'Newest', description: 'Shows the most recently added restaurants first.' },
 ];
+
+const RATING_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 3.0, label: '3.0' },
+  { value: 3.5, label: '3.5+' },
+  { value: 4.0, label: '4.0+' },
+  { value: 4.5, label: '4.5+' },
+  { value: 4.8, label: '4.8+' },
+  { value: 5.0, label: '5 Stars' },
+];
+
+const PILL_BASE =
+  "flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans cursor-pointer whitespace-nowrap";
+const PILL_ACTIVE =
+  "flex items-center gap-2 px-4 py-2 border border-[#ff7c0a] bg-[#ff7c0a] text-white rounded-[50px] transition-colors font-normal text-sm font-neusans cursor-pointer whitespace-nowrap";
+
+const FOOTER_RESET =
+  "flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans cursor-pointer";
+const FOOTER_APPLY =
+  "flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-[#ff7c0a] border border-[#ff7c0a] text-white rounded-[50px] hover:bg-[#e66d08] transition-colors font-normal text-sm font-neusans cursor-pointer";
 
 const Filter2 = ({
   onFilterChange,
@@ -40,16 +59,16 @@ const Filter2 = ({
   canUsePalateContextSort = false,
 }: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isSortModalOpen, setIsSortModalOpen] = useState<boolean>(false);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialCuisines);
   const [selectedPalates, setSelectedPalates] = useState<string[]>(initialPalates);
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
-  const [isPriceOpen, setIsPriceOpen] = useState<boolean>(false);
-  const [isSortOpen, setIsSortOpen] = useState<boolean>(false);
   const [sortOption, setSortOption] = useState<string>(initialSortOption || 'SMART');
 
-  // Use centralized usePriceRanges hook to fetch price data
   const { priceRanges, loading: isLoadingPrices } = usePriceRanges();
+  const { trigger: haptic } = useHaptic();
+
   const sortOptions = useMemo(() => {
     let opts = canUsePreferenceSort
       ? BASE_SORT_OPTIONS
@@ -60,7 +79,6 @@ const Filter2 = ({
     return opts;
   }, [canUsePreferenceSort, canUsePalateContextSort]);
 
-  // Sync with initial values from parent
   useEffect(() => {
     setSelectedCuisines(initialCuisines);
     setSelectedPalates(initialPalates);
@@ -105,16 +123,23 @@ const Filter2 = ({
   };
 
   const selectPrice = (value: string) => {
+    haptic("selection");
     setPrice(price === value ? "" : value);
-    setIsPriceOpen(false);
+  };
+
+  const selectRating = (value: number) => {
+    haptic("selection");
+    setRating(rating === value ? 0 : value);
   };
 
   const resetFilter = () => {
+    haptic("light");
     setPrice("");
     setRating(0);
   };
 
   const applyFilters = (cuisineOverride?: string[], palateOverride?: string[]) => {
+    haptic("success");
     const cuisine = cuisineOverride ?? selectedCuisines;
     const palates = palateOverride ?? selectedPalates;
 
@@ -128,6 +153,32 @@ const Filter2 = ({
     setIsModalOpen(false);
   };
 
+  const [pendingSort, setPendingSort] = useState<string>(sortOption);
+
+  const handleSortSelect = (key: string) => {
+    haptic("selection");
+    setPendingSort(key);
+  };
+
+  const applySortOption = () => {
+    haptic("success");
+    setSortOption(pendingSort);
+    setIsSortModalOpen(false);
+    onFilterChange({
+      cuisine: selectedCuisines,
+      price: price || null,
+      rating: rating > 0 ? rating : null,
+      palates: selectedPalates,
+      sortOption: pendingSort,
+    });
+  };
+
+  const cancelSort = () => {
+    haptic("light");
+    setPendingSort(sortOption);
+    setIsSortModalOpen(false);
+  };
+
   const getActiveFiltersCount = () => {
     let count = 0;
     if (price !== "") count++;
@@ -137,171 +188,168 @@ const Filter2 = ({
 
   const activeFiltersCount = getActiveFiltersCount();
 
-  // Get selected price display name
-  const selectedPriceDisplay = priceRanges.find(pr => pr.slug === price || pr.id.toString() === price)?.display_name || "Select Price";
-
   return (
     <>
-      {/* Filter Buttons */}
+      {/* ─── Top bar trigger pills ─── */}
       <div className="filter2__buttons text-sm font-neusans">
         <div className="filter2__buttons-left">
+          {/* Cuisine — desktop only */}
           <div className="hidden md:block">
-            <CuisineFilter 
+            <CuisineFilter
               onFilterChange={handleCuisineChange}
               selectedCuisines={selectedCuisines}
               selectedPalates={selectedPalates}
               onApplyFilters={(cuisines, palates) => applyFilters(cuisines, palates)}
             />
           </div>
-          <div className="filter2">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="filter2__button font-neusans"
-            >
-              <span className="filter2__button-text text-sm font-neusans">
-                Price & Rating
-                {activeFiltersCount > 0 && (
-                  <span className="filter2__badge font-neusans">{activeFiltersCount}</span>
-                )}
+
+          {/* Price & Rating trigger (icon-only on mobile) */}
+          <button
+            onClick={() => { haptic("light"); setIsModalOpen(true); }}
+            className={activeFiltersCount > 0 ? PILL_ACTIVE : PILL_BASE}
+          >
+            <FiSliders className="w-4 h-4" />
+            <span className="hidden md:inline">Price & Rating</span>
+            {activeFiltersCount > 0 && (
+              <span className="ml-0.5 flex items-center justify-center w-5 h-5 rounded-full bg-white text-[#ff7c0a] text-[11px] font-medium">
+                {activeFiltersCount}
               </span>
-            </button>
-          </div>
+            )}
+          </button>
         </div>
 
+        {/* Sort trigger — icon pill (icon-only on mobile) */}
         <div className="filter2__buttons-right">
-          <CustomPopover
-            isOpen={isSortOpen}
-            setIsOpen={setIsSortOpen}
-            align="end"
-            trigger={
-              <button
-                onClick={() => setIsSortOpen(!isSortOpen)}
-                className="filter2__button font-neusans"
-              >
-                <span className="filter2__button-text text-sm font-neusans">
-                  Sort: {sortOptions.find((s) => s.key === sortOption)?.label || 'Smart Sort'}
-                </span>
-              </button>
-            }
-            content={
-              <div className="filter2__dropdown font-neusans">
-                {sortOptions.map((opt) => (
-                  <div
-                    key={opt.key}
-                    onClick={() => {
-                      setSortOption(opt.key);
-                      setIsSortOpen(false);
-                      // Apply immediately to feel snappy (no need to open modal)
-                      onFilterChange({
-                        cuisine: selectedCuisines,
-                        price: price || null,
-                        rating: rating > 0 ? rating : null,
-                        palates: selectedPalates,
-                        sortOption: opt.key,
-                      });
-                    }}
-                    className={`filter2__option font-neusans ${sortOption === opt.key ? "filter2__option--active" : ""}`}
-                  >
-                    {opt.label}
-                  </div>
-                ))}
-              </div>
-            }
-          />
+          <button
+            onClick={() => { haptic("light"); setPendingSort(sortOption); setIsSortModalOpen(true); }}
+            className={sortOption !== 'SMART' ? PILL_ACTIVE : PILL_BASE}
+            aria-label="Sort"
+          >
+            <PiArrowsDownUp className="w-4 h-4" />
+            <span className="hidden md:inline">{sortOptions.find((s) => s.key === sortOption)?.label || 'Sort'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Slide-in Modal (left) - match CuisineFilter behavior */}
+      {/* ─── Price & Rating slide-in modal ─── */}
       <div className={`filter2__modal ${isModalOpen ? 'filter2__modal--open' : ''}`}>
         <div className="filter2__overlay" onClick={() => setIsModalOpen(false)} />
         <div className="filter2__content font-neusans">
-          {/* Header */}
           <div className="filter2__header">
-            <h2 className="filter2__title font-neusans">Filter</h2>
-            <button onClick={() => setIsModalOpen(false)} className="filter2__close" />
+            <h2 className="filter2__title font-neusans">Price & Rating</h2>
+            <button onClick={() => setIsModalOpen(false)} className="filter2__close" aria-label="Close">
+              <FiX className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Content */}
           <div className="filter2__body">
-            {/* Price Section */}
+            {/* Price pills */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title font-neusans">Price</h3>
-              <div className="filter2__subsection">
-                <label className="filter2__label font-neusans">Price Range</label>
-                <CustomPopover
-                  isOpen={isPriceOpen}
-                  setIsOpen={setIsPriceOpen}
-                  align="center"
-                  trigger={
-                    <button
-                      onClick={() => setIsPriceOpen(!isPriceOpen)}
-                      className="filter2__select font-neusans"
-                    >
-                      <span className="filter2__select-text font-neusans">
-                        {price ? selectedPriceDisplay : "Select Price"}
-                      </span>
-                      <PiCaretDown className="filter2__select-icon" />
-                    </button>
-                  }
-                  content={
-                    <div className="filter2__dropdown font-neusans">
-                      <div
-                        onClick={() => selectPrice("")}
-                        className={`filter2__option font-neusans ${price === "" ? "filter2__option--active" : ""}`}
+              <h3 className="filter2__section-title font-neusans">Price Range</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => selectPrice("")}
+                  className={price === "" ? PILL_ACTIVE : PILL_BASE}
+                >
+                  All Prices
+                </button>
+                {isLoadingPrices ? (
+                  <span className="text-sm text-gray-400 font-neusans py-2">Loading…</span>
+                ) : (
+                  priceRanges.map((pr) => {
+                    const key = pr.slug || pr.id.toString();
+                    return (
+                      <button
+                        key={pr.id}
+                        onClick={() => selectPrice(key)}
+                        className={price === key ? PILL_ACTIVE : PILL_BASE}
                       >
-                        All Prices
-                      </div>
-                      {isLoadingPrices ? (
-                        <div className="filter2__option font-neusans">Loading prices...</div>
-                      ) : (
-                        priceRanges.map((priceRange) => (
-                          <div
-                            key={priceRange.id}
-                            onClick={() => selectPrice(priceRange.slug || priceRange.id.toString())}
-                            className={`filter2__option font-neusans ${price === (priceRange.slug || priceRange.id.toString()) ? "filter2__option--active" : ""}`}
-                          >
-                            {priceRange.display_name || priceRange.name}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  }
-                />
+                        {pr.display_name || pr.name}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            {/* Rating Section */}
+            {/* Rating pills */}
             <div className="filter2__section">
-              <h3 className="filter2__section-title font-neusans">Rating</h3>
-              <div className="filter2__rating">
-                <label htmlFor="rating" className="filter2__rating-label font-neusans">
-                  Over {rating}
-                </label>
-                <input
-                  type="range"
-                  id="rating"
-                  name="rating"
-                  value={rating}
-                  min="1"
-                  max="5"
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRating(Number(e.target.value))}
-                  className="filter2__rating-slider"
-                />
-                <div className="filter2__rating-labels">
-                  <span className="font-neusans">1</span>
-                  <span className="font-neusans">2</span>
-                  <span className="font-neusans">3</span>
-                  <span className="font-neusans">4</span>
-                  <span className="font-neusans">5</span>
-                </div>
+              <h3 className="filter2__section-title font-neusans">Minimum Rating</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { haptic("selection"); setRating(0); }}
+                  className={rating === 0 ? PILL_ACTIVE : PILL_BASE}
+                >
+                  Any
+                </button>
+                {RATING_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => selectRating(opt.value)}
+                    className={rating === opt.value ? PILL_ACTIVE : PILL_BASE}
+                  >
+                    ★ {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
           {/* Footer */}
           <div className="filter2__footer">
-            <button onClick={resetFilter} className="filter2__button filter2__button--secondary font-neusans">Reset</button>
-            <button onClick={applyFilters} className="filter2__button filter2__button--primary font-neusans">Apply</button>
+            <button onClick={resetFilter} className={FOOTER_RESET}>
+              Reset
+            </button>
+            <button onClick={() => applyFilters()} className={FOOTER_APPLY}>
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Sort slide-in modal ─── */}
+      <div className={`filter2__modal ${isSortModalOpen ? 'filter2__modal--open' : ''}`}>
+        <div className="filter2__overlay" onClick={cancelSort} />
+        <div className="filter2__content font-neusans">
+          <div className="filter2__header">
+            <h2 className="filter2__title font-neusans">Sort by</h2>
+            <button onClick={cancelSort} className="filter2__close" aria-label="Close">
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="filter2__body">
+            <div className="flex flex-col gap-2">
+              {sortOptions.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => handleSortSelect(opt.key)}
+                  className={`text-left rounded-xl px-4 py-3 border transition-colors ${
+                    pendingSort === opt.key
+                      ? "border-[#ff7c0a] bg-orange-50"
+                      : "border-gray-200 bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  <span className={`block text-sm font-medium font-neusans ${
+                    pendingSort === opt.key ? "text-[#ff7c0a]" : "text-gray-900"
+                  }`}>
+                    {opt.label}
+                  </span>
+                  <span className="block text-xs font-neusans text-gray-500 mt-0.5 leading-relaxed">
+                    {opt.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter2__footer">
+            <button onClick={cancelSort} className={FOOTER_RESET}>
+              Cancel
+            </button>
+            <button onClick={applySortOption} className={FOOTER_APPLY}>
+              Apply Sort
+            </button>
           </div>
         </div>
       </div>

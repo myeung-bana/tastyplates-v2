@@ -11,6 +11,7 @@ import VerificationRedirect from "@/components/auth/VerificationRedirect";
 import OnboardingRedirect from "@/components/auth/OnboardingRedirect";
 import BottomNav from "@/components/layout/BottomNav";
 import MobileTopBar from "@/components/layout/MobileTopBar";
+import PwaInstallBanner from "@/components/layout/PwaInstallBanner";
 import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -101,8 +102,9 @@ export default function RootLayout({
                     <InactivityLogout />
                     <AuthModalWrapper>
                       <div className="min-h-screen bg-white flex flex-col">
+                        <PwaInstallBanner />
                         <MobileTopBar />
-                        <main className="flex-1 pt-14 md:pt-0 pb-20 md:pb-0">
+                        <main className="flex-1 main-content pt-14 md:pt-0 pb-20 md:pb-0">
                           {children}
                         </main>
                         <ConditionalFooter />

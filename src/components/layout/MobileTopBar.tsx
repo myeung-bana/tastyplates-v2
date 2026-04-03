@@ -38,8 +38,11 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ onSearchClick }) => {
 
   return (
     <>
-      {/* Mobile Top Bar */}
-      <div className="mobile-top-bar md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 font-neusans">
+      {/* Mobile Top Bar — offset by PWA install banner height when visible */}
+      <div
+        className="mobile-top-bar md:hidden fixed left-0 right-0 z-50 bg-white border-b border-gray-200 font-neusans"
+        style={{ top: "var(--pwa-banner-height, 0px)" }}
+      >
         <div className="flex items-center justify-between px-4 py-3 h-14">
           {/* Hamburger Menu */}
           <button

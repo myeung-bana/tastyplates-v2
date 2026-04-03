@@ -1,86 +1,6 @@
 // CuisineFilter Component Styles
+// Trigger button is now pure Tailwind in the component — only modal/layout styles remain here.
 .cuisine-filter {
-  &__button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 50px;
-    border: 1.5px solid #494D5D;
-    padding: 12px 32px;
-    background: none;
-    background-repeat: no-repeat;
-    background-position-x: 90%;
-    background-position-y: 12px;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    -webkit-padding-end: 32px;
-    -moz-padding-end: 32px;
-    -webkit-padding-start: 24px;
-    -moz-padding-start: 24px;
-    background-color: #0000;
-    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    font-weight: 400;
-    color: #494D5D;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #F1F1F1;
-    }
-
-    &-text {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-  }
-
-  &__sort-indicator {
-    font-size: 14px;
-    margin-left: 4px;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 1;
-    }
-
-    &--secondary {
-      background: white;
-      color: #494D5D;
-      border: 1.5px solid #494D5D;
-
-      &:hover {
-        background-color: #F1F1F1;
-      }
-    }
-
-    &--primary {
-      background: #ff7c0a;
-      color: white;
-      border: 1.5px solid #ff7c0a;
-
-      &:hover {
-        background-color: #d55a00;
-      }
-    }
-  }
-
-  &__badge {
-    background: #ff7c0a;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Neusans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 12px;
-    font-weight: 400;
-  }
-
   // Modal Styles
   &__modal {
     position: fixed;
@@ -323,18 +243,13 @@
   // Footer
   &__footer {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     padding: 20px 24px;
     border-top: 1px solid #E5E5E5;
     background: white;
     position: sticky;
     bottom: 0;
     z-index: 10;
-
-    .cuisine-filter__button {
-      flex: 1;
-      justify-content: center;
-    }
   }
 }
 
@@ -356,11 +271,6 @@
 
     &__footer {
       padding: 16px 20px;
-      flex-direction: column;
-
-      .cuisine-filter__button {
-        width: 100%;
-      }
     }
 
     &__checkbox-grid {
