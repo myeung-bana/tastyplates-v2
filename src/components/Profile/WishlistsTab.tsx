@@ -43,7 +43,7 @@ const WishlistsTab: React.FC<WishlistsTabProps> = ({
         onWishlistChange: handleWishlistChange
       }}
       skeletonKeyPrefix="wishlist-skeleton"
-      gridClassName="restaurants__grid restaurants__grid--profile"
+      gridClassName="restaurants__grid restaurants__grid--profile restaurants__grid--profile-wishlists"
     />
   );
 };

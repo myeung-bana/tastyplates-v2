@@ -52,6 +52,22 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+
+    @media (max-width: 767px) {
+      touch-action: manipulation;
+    }
+  }
+
+  // Text-only “or” between primary and social login (no divider lines)
+  &__or {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    padding: 0.5rem 0;
+    margin: 0;
   }
 
   &__form-group {
@@ -113,9 +129,10 @@
       background-color: #F1F1F1 !important;
     }
 
+    // 16px minimum on mobile prevents iOS Safari zoom-on-focus
     @media (max-width: 767px) {
-      font-size: 0.75rem;
-      line-height: 1rem;
+      font-size: 1rem;
+      line-height: 1.5rem;
     }
   }
 

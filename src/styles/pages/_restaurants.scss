@@ -113,6 +113,28 @@
   }
 }
 
+// To-Dine list (profile): one column on mobile; 2 / 3 cols from tablet / desktop.
+// Triple class chain beats `.restaurants .restaurants__grid--profile` (0,2,0) for grid-template-columns.
+.restaurants__grid.restaurants__grid--profile.restaurants__grid--profile-wishlists {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 1200px) {
+    gap: 1rem;
+  }
+}
+
 .restaurant-card {
   font-family: "Neusans", sans-serif;
   background-color: transparent;

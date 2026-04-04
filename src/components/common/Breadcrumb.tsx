@@ -13,7 +13,10 @@ interface BreadcrumbProps {
 
 export default function Breadcrumb({ items, showHomeIcon = false }: BreadcrumbProps) {
   return (
-    <nav className="breadcrumb font-neusans" aria-label="Breadcrumb">
+    <nav
+      className="breadcrumb font-neusans hidden md:block"
+      aria-label="Breadcrumb"
+    >
       <ol className="flex items-center gap-2 text-sm text-gray-600">
         {showHomeIcon && (
           <li className="flex items-center">

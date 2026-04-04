@@ -17,6 +17,31 @@
     align-items: stretch;
     justify-content: flex-start;
     padding: 0;
+    opacity: 0;
+    transition: opacity 0.28s ease-out;
+
+    &.auth-sheet--visible {
+      opacity: 1;
+    }
+
+    .review-modal-panel--auth-sheet {
+      transform: translateY(100%);
+      transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    &.auth-sheet--visible .review-modal-panel--auth-sheet {
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+    opacity: 1 !important;
+    transition: none !important;
+
+    .review-modal-panel--auth-sheet {
+      transform: none !important;
+      transition: none !important;
+    }
   }
 }
 

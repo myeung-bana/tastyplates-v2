@@ -1,10 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import clsx from "clsx";
 import { FiX } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import LoginPage from "@/pages/Login/Login";
 import ForgotPasswordModal from "../ui/Modal/ForgotPasswordModal";
 import ForgotPassLinkModal from "../ui/Modal/ForgotPassLinkModal";
+import { useAuthSheetDismissal } from "@/hooks/useAuthSheetDismissal";
 
 interface SigninModalProps {
   isOpen: boolean;
@@ -20,6 +22,10 @@ const SigninModal: React.FC<SigninModalProps> = ({
 }) => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showForgotLinkSuccess, setShowForgotLinkSuccess] = useState(false);
+  const { panelRef, requestDismiss, authSheetVisible } = useAuthSheetDismissal(
+    isOpen,
+    onClose
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -30,19 +36,31 @@ const SigninModal: React.FC<SigninModalProps> = ({
 
   if (!isOpen) return null;
 
+  const overlayClass = clsx(
+    "review-modal-overlay review-modal-overlay--auth-sheet",
+    authSheetVisible && "auth-sheet--visible"
+  );
+
   return (
     <>
       {/* Login Modal */}
       {!showForgotPassword && !showForgotLinkSuccess && (
-        <div className="review-modal-overlay review-modal-overlay--auth-sheet">
-          <div className="review-modal-panel--auth-sheet !max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[700px] max-md:max-h-none !p-0 !rounded-3xl max-md:!rounded-none font-neusans relative overflow-y-auto bg-white">
-            <button className="review-modal__close !top-5 max-md:!top-4 max-md:!right-4" onClick={onClose}>
+        <div className={overlayClass}>
+          <div
+            ref={panelRef}
+            className="review-modal-panel--auth-sheet !max-w-[488px] w-[calc(100%-24px)] md:w-full max-h-[700px] max-md:max-h-none !p-0 !rounded-3xl max-md:!rounded-none font-neusans relative overflow-y-auto bg-white"
+          >
+            <button
+              type="button"
+              className="review-modal__close !top-5 max-md:!top-4 max-md:!right-4"
+              onClick={() => requestDismiss()}
+            >
               <FiX />
             </button>
             <LoginPage
               onOpenSignup={onOpenSignup}
               onOpenForgotPassword={() => setShowForgotPassword(true)}
-              onLoginSuccess={onClose}
+              onLoginSuccess={() => requestDismiss()}
             />
           </div>
         </div>
@@ -51,6 +69,8 @@ const SigninModal: React.FC<SigninModalProps> = ({
       {showForgotPassword && !showForgotLinkSuccess && (
         <ForgotPasswordModal
           isOpen={showForgotPassword}
+          sheetVisible={authSheetVisible}
+          authSheetPanelRef={panelRef}
           onClose={() => setShowForgotPassword(false)}
           onSuccess={() => {
             setShowForgotPassword(false);
@@ -63,9 +83,13 @@ const SigninModal: React.FC<SigninModalProps> = ({
       {showForgotLinkSuccess && (
         <ForgotPassLinkModal
           isOpen={showForgotLinkSuccess}
+          sheetVisible={authSheetVisible}
+          authSheetPanelRef={panelRef}
           onClose={() => {
-            setShowForgotLinkSuccess(false);
-            onClose();
+            requestDismiss(() => {
+              setShowForgotLinkSuccess(false);
+              onClose();
+            });
           }}
         />
       )}

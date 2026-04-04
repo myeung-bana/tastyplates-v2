@@ -68,7 +68,6 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
             <div className="auth__container">
                 <div className="auth__card !px-0 !p-5">
                     <h1 className="auth__title font-neusans">Forgot Password</h1>
-                    <div className="border-t border-[#CACACA]">
                         <form className="auth__form px-[2rem] !gap-4" onSubmit={handleSubmit}>
                             <div className="auth__form-group mt-6">
                                 <p className="text-sm text-[#31343F] font-neusans">Enter your email address, and we'll email you a link to reset your password.</p>
@@ -108,7 +107,6 @@ const ForgotPasswordPage = ({ onSuccess }: ForgotPasswordPageProps) => {
                                 </div>
                             )}
                         </form>
-                    </div>
                 </div>
             </div>
         </div>

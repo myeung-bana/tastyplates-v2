@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { RefObject, useEffect, useState } from "react";
+import clsx from "clsx";
 import { FiX } from "react-icons/fi";
 import "@/styles/components/_review-modal.scss";
 import "@/styles/pages/_auth.scss";
@@ -7,11 +8,15 @@ import { RESET_EMAIL_KEY } from "@/constants/session";
 
 interface ForgotPassowordModalProps {
     isOpen: boolean;
+    sheetVisible?: boolean;
+    authSheetPanelRef?: RefObject<HTMLDivElement | null>;
     onClose?: () => void;
 }
 
 const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
     isOpen,
+    sheetVisible = false,
+    authSheetPanelRef,
     onClose,
 }) => {
     const [email, setEmail] = useState("xxx@gmail.com");
@@ -27,8 +32,16 @@ const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="review-modal-overlay review-modal-overlay--auth-sheet">
-            <div className="review-modal-panel--auth-sheet !max-w-[488px] w-full !max-h-[auto] max-md:!max-h-none !p-0 !rounded-3xl max-md:!rounded-none font-neusans relative overflow-y-auto bg-white">
+        <div
+            className={clsx(
+                "review-modal-overlay review-modal-overlay--auth-sheet",
+                sheetVisible && "auth-sheet--visible"
+            )}
+        >
+            <div
+                ref={authSheetPanelRef}
+                className="review-modal-panel--auth-sheet !max-w-[488px] w-full !max-h-[auto] max-md:!max-h-none !p-0 !rounded-3xl max-md:!rounded-none font-neusans relative overflow-y-auto bg-white"
+            >
                 <button className="review-modal__close !top-5 max-md:!top-4 max-md:!right-4" onClick={onClose}>
                     <FiX />
                 </button>
@@ -36,8 +49,7 @@ const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
                     <div className="auth__container">
                         <div className="auth__card !px-0 !py-6">
                             <h1 className="auth__title font-neusans">Link Sent</h1>
-                            <div className="border-t border-[#CACACA]">
-                                <div className="auth__form-group px-[2rem] mt-6">
+                            <div className="auth__form-group px-[2rem] mt-6">
                                     <p className="text-sm text-[#31343F] font-neusans">A link to reset your password has been sent to {email}</p>
                                     <button
                                         type="button"
@@ -47,7 +59,6 @@ const ForgotPassLinkModal: React.FC<ForgotPassowordModalProps> = ({
                                         Done
                                     </button>
                                 </div>
-                            </div>
                         </div>
                     </div>
                 </div>

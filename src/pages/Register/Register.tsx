@@ -269,7 +269,6 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
           )}
           <div className="auth__container !max-w-[488px] w-full overflow-y-auto md:overflow-visible">
             <h1 className="auth__title !text-sm md:!text-xl md:!leading-[30px] !font-normal py-3.5 md:py-4 !mb-0 font-neusans">Sign up</h1>
-            <hr className="border-t border-[#CACACA]" />
             <div className="auth__card !px-4 md:!px-8 !pt-0 !pb-4 md:!pb-6 !rounded-none">
               <form className="auth__form !gap-3 md:!gap-4 overflow-y-auto" onSubmit={handleSubmit}>
                 <div className="auth__form-group mt-6">
@@ -370,11 +369,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                 >
                   Continue
                 </button>
-                <div className="text-sm font-normal flex flex-row flex-nowrap items-center gap-2 font-neusans">
-                  <hr className="w-full border-t border-[#494D5D]" />
-                  or
-                  <hr className="w-full border-t border-[#494D5D]" />
-                </div>
+                <p className="auth__or font-neusans">or</p>
 
                 <button
                   disabled={isLoading}
@@ -393,8 +388,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                 />
               )}
             </div>
-            <hr className="border-t border-[#CACACA]" />
-            <p className="auth__footer font-neusans">
+            <p className="auth__footer font-neusans mt-2 md:mt-0">
                 Already have an account?{" "}
                 <a
                   className="auth__link font-neusans"
