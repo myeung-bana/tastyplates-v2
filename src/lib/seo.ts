@@ -105,9 +105,13 @@ export function generateMetadata({
       creator: siteConfig.twitterHandle,
       site: siteConfig.twitterHandle,
     },
-    // Bing-specific meta tags
+    // Bing-specific meta tags; Google AdSense site association when configured
     other: {
       "msvalidate.01": process.env.NEXT_PUBLIC_BING_VERIFICATION_CODE || "",
+      ...(process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_PUBLISHER_ID && {
+        "google-adsense-account":
+          process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_PUBLISHER_ID,
+      }),
     },
     // Additional SEO meta tags
     keywords: tags?.join(", ") || "food reviews, restaurant reviews, food discovery, dining, cuisine, food experiences",
