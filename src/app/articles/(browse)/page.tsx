@@ -68,7 +68,7 @@ export default function ArticlesListingPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 8 }, (_, i) => (
               <ArticleCardSkeleton key={`skeleton-${i}`} />
             ))}
@@ -82,7 +82,7 @@ export default function ArticlesListingPage() {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {articles.map((article) => (
                 <ArticleCard key={article.id} article={article} />
               ))}

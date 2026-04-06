@@ -6,6 +6,7 @@ import ArticleCard from "./ArticleCard";
 import ArticleCardSkeleton from "@/components/ui/Skeleton/ArticleCardSkeleton";
 import { useLocation } from "@/contexts/LocationContext";
 import "@/styles/components/_articles.scss";
+import SeeAllButton from "@/components/ui/SeeAllButton";
 
 const Articles = () => {
   const { selectedLocation, isLoading: locationLoading } = useLocation();
@@ -38,11 +39,15 @@ const Articles = () => {
       <div className="articles__container mx-auto">
         <div className="articles__header">
           <h2 className="articles__title font-neusans">Articles</h2>
-          <a href="/articles" className="articles__see-all font-neusans">
+          <SeeAllButton
+            href="/articles"
+            variant="inline"
+            className="articles__see-all hidden md:inline-flex"
+          >
             See all
-          </a>
+          </SeeAllButton>
         </div>
-        <div className="articles__grid grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="articles__grid grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
           {locationLoading || loading
             ? Array.from({ length: 8 }, (_, i) => (
                 <ArticleCardSkeleton key={`article-skeleton-${i}`} large />
@@ -54,6 +59,11 @@ const Articles = () => {
                   size="large"
                 />
               ))}
+        </div>
+        <div className="mt-5 md:hidden">
+          <SeeAllButton href="/articles" variant="block">
+            See all
+          </SeeAllButton>
         </div>
       </div>
     </section>

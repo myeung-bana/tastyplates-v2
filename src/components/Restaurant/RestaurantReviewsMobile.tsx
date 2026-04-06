@@ -14,6 +14,7 @@ import { buildReviewViewerUrl } from "@/utils/reviewViewerUrl";
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import { DEFAULT_REVIEW_IMAGE, DEFAULT_USER_ICON } from "@/constants/images";
 import PalateTags from "../ui/PalateTags/PalateTags";
+import SeeAllButton from "@/components/ui/SeeAllButton";
 import "@/styles/components/_restaurant-reviews-mobile.scss";
 
 interface RestaurantReviewsMobileProps {
@@ -272,8 +273,8 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
 
       {/* See All Reviews Button */}
       {hasMoreReviews && (
-        <button
-          className="restaurant-reviews-mobile__see-all-btn"
+        <SeeAllButton
+          variant="block"
           onClick={() => {
             router.push(
               buildReviewViewerUrl({
@@ -286,7 +287,7 @@ const RestaurantReviewsMobile: React.FC<RestaurantReviewsMobileProps> = ({
           }}
         >
           See All Reviews
-        </button>
+        </SeeAllButton>
       )}
     </div>
   );

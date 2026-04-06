@@ -64,7 +64,7 @@ export default function CookieConsentAndAdSense() {
 
       {showBanner && (
         <div
-          className="fixed inset-x-0 z-[100] px-4 pt-3 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] md:pb-4 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] font-neusans md:bottom-0 bottom-[4.5rem]"
+          className="fixed inset-x-0 z-[100] px-4 pt-3 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] md:pb-4 bg-white border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] font-neusans md:bottom-0 bottom-[calc(4.5rem+10px)]"
           role="dialog"
           aria-labelledby="cookie-consent-title"
           aria-live="polite"

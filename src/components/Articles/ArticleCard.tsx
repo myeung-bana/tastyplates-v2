@@ -39,7 +39,11 @@ const ArticleCard = ({ article, size = "default" }: ArticleCardProps) => {
           alt={article.featured_image_alt || article.title}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-200"
-          sizes="(max-width: 767px) 50vw, 25vw"
+          sizes={
+            isLarge
+              ? "(max-width: 767px) 100vw, 25vw"
+              : "(max-width: 767px) 100vw, (max-width: 1023px) 33vw, 25vw"
+          }
         />
         {/* Category pill */}
         <span className="absolute bottom-2 left-2 bg-white/90 text-[#ff7c0a] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">

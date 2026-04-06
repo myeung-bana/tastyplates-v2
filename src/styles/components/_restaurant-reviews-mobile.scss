@@ -152,26 +152,5 @@
     }
   }
 
-  &__see-all-btn {
-    width: 100%;
-    padding: 0.75rem 1.5rem;
-    background: #ff7c0a;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.9375rem;
-    font-weight: 400;
-    font-family: var(--font-neusans), system-ui, -apple-system, sans-serif;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background: #e66d08;
-    }
-    
-    &:active {
-      background: #C04A00;
-    }
-  }
 }
 

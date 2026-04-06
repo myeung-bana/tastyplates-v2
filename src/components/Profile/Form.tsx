@@ -32,8 +32,7 @@ import {
 } from "@/constants/messages";
 import { MdOutlineEdit } from "react-icons/md";
 import { PiCaretLeftBold } from "react-icons/pi";
-import CustomModal from "../ui/Modal/Modal";
-import CustomMultipleSelect from "../ui/Select/CustomMultipleSelect";
+import EthnicPalatePicker from "./EthnicPalatePicker";
 import "@/styles/pages/_restaurants.scss";
 import "@/styles/pages/_add-listing.scss";
 import { PROFILE } from "@/constants/pages";
@@ -95,6 +94,7 @@ interface FormContentProps {
   tempImageSrc: string;
   setProfilePreview: (value: string) => void;
   setProfile: (value: string | null) => void;
+  setProfileImageFile: React.Dispatch<React.SetStateAction<File | null>>;
   cuisineOptions: CuisineOption[];
   cuisinesLoading: boolean;
   cuisinesError: string | null;
@@ -195,10 +195,10 @@ const FormContent = memo(({
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Bio
+                  Food Quote / Food Bio
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
-                  Tell others about your food journey, favorite cuisines, or what makes you passionate about dining. This helps people connect with your taste preferences.
+                  Tell others about your food journey, favorite cuisines, or what makes you passionate about dining.
                 </p>
               </div>
               
@@ -239,25 +239,23 @@ const FormContent = memo(({
                   Ethnic Palate Preferences
                 </label>
                 <p className="text-sm text-gray-500 mb-3">
-                  Select up to 2 ethnic cuisines that best represent your taste preferences. This helps others understand your culinary background and recommendations.
+                  Select up to 2 ethnic cuisines that best represent your taste preferences.
                 </p>
               </div>
               
-              <div className={`${isLoading || cuisinesLoading ? "opacity-50 pointer-events-none" : ""}`}>
-                <CustomMultipleSelect
-                  label="Palate (Select up to 2)"
-                  placeholder={cuisinesLoading ? "Loading cuisines..." : cuisinesError ? "Error loading cuisines" : "Choose your preferred ethnic cuisines..."}
-                  items={cuisineOptions}
-                  className="!rounded-xl w-full"
-                  value={selectedPalates}
-                  onChange={handlePalateChange}
-                  limitValueLength={palateLimit}
-                />
-              </div>
-              
-              {palateError && (
-                <p className="mt-2 text-sm text-red-600">{palateError}</p>
-              )}
+              <EthnicPalatePicker
+                cuisineOptions={cuisineOptions}
+                value={selectedPalates}
+                onChange={handlePalateChange}
+                maxSelections={palateLimit}
+                disabled={isLoading}
+                loading={!!cuisinesLoading}
+                error={
+                  cuisinesError
+                    ? "Could not load cuisines. Try again later."
+                    : palateError || null
+                }
+              />
             </div>
 
             {/* Action Buttons */}

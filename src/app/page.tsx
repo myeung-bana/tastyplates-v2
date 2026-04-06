@@ -6,6 +6,7 @@ import Discover from "@/components/Discover";
 import { Suspense } from "react";
 import { generateMetadata as generateSEOMetadata, siteConfig } from "@/lib/seo";
 import type { Metadata } from "next";
+import HomePageLoadingFallback from "@/components/layout/HomePageLoadingFallback";
 
 // Homepage metadata
 export const metadata: Metadata = generateSEOMetadata({
@@ -18,7 +19,7 @@ export const metadata: Metadata = generateSEOMetadata({
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"></div>}>
+    <Suspense fallback={<HomePageLoadingFallback />}>
       <Navbar isLandingPage={true} />
       <div className="grid items-start justify-items-center min-h-screen gap-16 font-[family-name:var(--font-geist-sans)]">
         <main className="!w-full flex flex-col gap-8 items-center sm:items-start">

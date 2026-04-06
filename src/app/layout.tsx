@@ -20,15 +20,42 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UploadProvider } from '@/contexts/UploadContext';
 import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
 import Script from "next/script";
+import PwaBrandSplash from "@/components/layout/PwaBrandSplash";
 
-// Enhanced root metadata for SEO
-export const metadata: Metadata = generateSEOMetadata({
+const rootSeo = generateSEOMetadata({
   title: siteConfig.name,
   description: siteConfig.description,
   canonical: siteConfig.url,
   image: siteConfig.ogImage,
   type: "website",
 });
+
+// Enhanced root metadata for SEO + PWA install / splash alignment
+export const metadata: Metadata = {
+  ...rootSeo,
+  manifest: "/manifest.json",
+  themeColor: "#ff7c0a",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: siteConfig.name,
+  },
+  icons: {
+    icon: [
+      {
+        url: "/icons/Favicon_Orange_Square.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icons/Favicon_Orange_Square.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: "/icons/Favicon_Orange_Square.png",
+  },
+};
 
 export default function RootLayout({
   children,
@@ -72,6 +99,7 @@ export default function RootLayout({
             }}
           />
         )}
+        <PwaBrandSplash />
         <Toaster 
           position="top-center" 
           reverseOrder={false}
@@ -106,7 +134,7 @@ export default function RootLayout({
                       <div className="min-h-screen bg-white flex flex-col">
                         <PwaInstallBanner />
                         <MobileTopBar />
-                        <main className="flex-1 main-content pt-14 md:pt-0 pb-20 md:pb-0">
+                        <main className="flex-1 main-content pt-14 md:pt-0 pb-[calc(5rem+10px)] md:pb-0">
                           <PullToRefreshWrapper>
                             {children}
                           </PullToRefreshWrapper>

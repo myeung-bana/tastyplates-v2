@@ -1,0 +1,51 @@
+// Slide-in sheet for profile ethnic palate picker only (stronger motion than default cuisine-filter).
+.ethnic-palate-picker {
+  &__modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+
+    &--visible {
+      pointer-events: all;
+    }
+
+    &--open {
+      .ethnic-palate-picker__overlay {
+        opacity: 1;
+      }
+
+      .ethnic-palate-picker__panel {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  &__panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    min-height: 0;
+    background: white;
+    transform: translateX(-105%);
+    transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
+  }
+}

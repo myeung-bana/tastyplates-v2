@@ -35,16 +35,11 @@
     }
   }
 
+  /* Desktop “See all” — SeeAllButton + absolute placement */
   &__see-all {
     position: absolute;
     right: 0;
-    font-size: 0.75rem;
-    color: #ff7c0a;
-    text-decoration: none;
-    font-family: "Neusans", sans-serif;
-
-    &:hover {
-      text-decoration: underline;
-    }
+    top: 50%;
+    transform: translateY(-50%);
   }
 }
