@@ -2,6 +2,27 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNhostSession } from '@/hooks/useNhostSession';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
+/** Prevents hung API calls from blocking the profile UI forever (common on slow mobile networks). */
+const FETCH_TIMEOUT_MS = 25_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
+    promise
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
+  });
+}
+
 interface UseProfileDataReturn {
   userData: Record<string, unknown> | null;
   nameLoading: boolean;
@@ -19,10 +40,12 @@ interface UseProfileDataReturn {
 export const useProfileData = (targetUserIdentifier: string | number): UseProfileDataReturn => {
   const { user } = useNhostSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
-  const [nameLoading, setNameLoading] = useState(true);
-  const [aboutMeLoading, setAboutMeLoading] = useState(true);
-  const [palatesLoading, setPalatesLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
+  // Start false: when targetUserIdentifier is empty (session not hydrated), we must not flash
+  // full-screen "loading" until the effect runs — initial true caused stuck spinner on mobile.
+  const [nameLoading, setNameLoading] = useState(false);
+  const [aboutMeLoading, setAboutMeLoading] = useState(false);
+  const [palatesLoading, setPalatesLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -83,14 +106,20 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
           targetUserIdentifierType: typeof targetUserIdentifier
         });
         
-        // Fetch user data based on identifier type
+        // Fetch user data based on identifier type (with timeout — do not hang forever)
         let response;
         if (isUsername) {
-          // Fetch by username
-          response = await restaurantUserService.getUserByUsername(identifierStr);
+          response = await withTimeout(
+            restaurantUserService.getUserByUsername(identifierStr),
+            FETCH_TIMEOUT_MS,
+            'getUserByUsername'
+          );
         } else if (isUUID || isNumeric) {
-          // Fetch by ID (UUID or numeric)
-          response = await restaurantUserService.getUserById(identifierStr);
+          response = await withTimeout(
+            restaurantUserService.getUserById(identifierStr),
+            FETCH_TIMEOUT_MS,
+            'getUserById'
+          );
         } else {
           console.error('useProfileData: Invalid user identifier format:', identifierStr);
           setError('Invalid user identifier format');
@@ -130,48 +159,62 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
           
           setUserData(mappedUser);
           setError(null);
-          
-          // Fetch follower and following counts separately using new endpoints
+
           const userId = mappedUser.id as string;
-          if (userId) {
-            // Check if it's a UUID format
-            const isUUIDFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
-            
-            if (isUUIDFormat) {
-              // Fetch counts from new API endpoints
-              const [followersCountResult, followingCountResult] = await Promise.allSettled([
+          const isUUIDFormat = userId
+            ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                userId
+              )
+            : false;
+
+          if (userId && !isUUIDFormat) {
+            setFollowersCount(response.data.followers_count ?? 0);
+            setFollowingCount(response.data.following_count ?? 0);
+          }
+          // UUID: load follower counts in the background so a hung count API cannot block
+          // loading=false / profile edit form (fixes mobile "stuck on loading profile").
+          if (userId && isUUIDFormat) {
+            void Promise.allSettled([
+              withTimeout(
                 restaurantUserService.getFollowersCount(userId),
-                restaurantUserService.getFollowingCount(userId)
-              ]);
-              
-              // Handle followers count
-              if (followersCountResult.status === 'fulfilled' && followersCountResult.value.success) {
+                FETCH_TIMEOUT_MS,
+                'getFollowersCount'
+              ),
+              withTimeout(
+                restaurantUserService.getFollowingCount(userId),
+                FETCH_TIMEOUT_MS,
+                'getFollowingCount'
+              ),
+            ]).then(([followersCountResult, followingCountResult]) => {
+              if (
+                followersCountResult.status === 'fulfilled' &&
+                followersCountResult.value.success
+              ) {
                 setFollowersCount(followersCountResult.value.data.followersCount);
               } else {
-                console.warn('Failed to load followers count:', 
-                  followersCountResult.status === 'rejected' 
-                    ? followersCountResult.reason 
+                console.warn(
+                  'Failed to load followers count:',
+                  followersCountResult.status === 'rejected'
+                    ? followersCountResult.reason
                     : followersCountResult.value.error
                 );
                 setFollowersCount(0);
               }
-              
-              // Handle following count
-              if (followingCountResult.status === 'fulfilled' && followingCountResult.value.success) {
+              if (
+                followingCountResult.status === 'fulfilled' &&
+                followingCountResult.value.success
+              ) {
                 setFollowingCount(followingCountResult.value.data.followingCount);
               } else {
-                console.warn('Failed to load following count:', 
-                  followingCountResult.status === 'rejected' 
-                    ? followingCountResult.reason 
+                console.warn(
+                  'Failed to load following count:',
+                  followingCountResult.status === 'rejected'
+                    ? followingCountResult.reason
                     : followingCountResult.value.error
                 );
                 setFollowingCount(0);
               }
-            } else {
-              // For non-UUID IDs, use legacy counts from user data or set to 0
-              setFollowersCount(response.data.followers_count ?? 0);
-              setFollowingCount(response.data.following_count ?? 0);
-            }
+            });
           }
         } else {
           const errorMsg = response.error || 'User not found';

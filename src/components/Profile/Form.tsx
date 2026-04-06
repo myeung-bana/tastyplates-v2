@@ -353,7 +353,8 @@ const Form = () => {
   const {
     userData,
     loading: isLoadingData,
-    isViewingOwnProfile
+    isViewingOwnProfile,
+    error: profileLoadError,
   } = useProfileData(currentUserId || '');
 
   // Fetch cuisines from API for palate selection - get both formatted options and raw cuisines
@@ -743,7 +744,7 @@ const Form = () => {
     hasInitialized.current = false;
   }, [currentUserId]);
 
-  // Show loading state while fetching data
+  // Show loading state while fetching profile (not while session is still resolving empty id — hook starts loading false)
   if (isLoadingData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -751,6 +752,23 @@ const Form = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff7c0a] mx-auto mb-4"></div>
           <p className="text-gray-600 font-neusans">Loading profile data...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (profileLoadError && !userData && currentUserId) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6">
+        <p className="max-w-md text-center text-sm text-red-600 font-neusans">
+          {profileLoadError}
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-full bg-[#ff7c0a] px-6 py-3 text-sm font-semibold text-white font-neusans hover:bg-[#e66d08]"
+        >
+          Retry
+        </button>
       </div>
     );
   }
