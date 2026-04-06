@@ -32,6 +32,7 @@ import RestaurantReviewHeader from "./RestaurantReviewHeader";
 import { RestaurantSelection } from "@/components/reviews/RestaurantSearch";
 import { GooglePlacesAutocomplete } from "@/components/ui/GooglePlacesAutocomplete";
 import { RestaurantMatchInline } from "@/components/reviews/RestaurantMatchInline";
+import RestaurantSearchSheet from "@/components/reviews/RestaurantSearchSheet";
 import { RestaurantPlaceData, formatAddressComponents, fetchPlaceDetails, getPhotoUrl } from "@/lib/google-places-utils";
 import { RestaurantV2 } from "@/app/api/v1/services/restaurantV2Service";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,7 @@ const ReviewSubmissionPage = () => {
   const [selectedPlace, setSelectedPlace] = useState<RestaurantPlaceData | null>(null);
   const [existingRestaurant, setExistingRestaurant] = useState<RestaurantV2 | null>(null);
   const [isMatching, setIsMatching] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -719,8 +721,32 @@ const ReviewSubmissionPage = () => {
           {/* Show restaurant search if no slug and restaurant not selected - moved outside card */}
           {!restaurantSlug && !isRestaurantSelected ? (
             <div className="mb-6 md:mb-8">
-              <h1 className="text-lg md:text-2xl text-[#31343F] font-neusans mb-6">Find a listing to review</h1>
-              <div className="w-full">
+              <h1 className="text-lg md:text-2xl text-[#31343F] font-neusans mb-6">Find a Restaurant to review</h1>
+
+              {/* Mobile: trigger button that opens bottom-sheet */}
+              <div className="md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSearchOpen(true)}
+                  className="flex w-full items-center gap-2 rounded-[50px] border border-[#E5E5E5] px-4 py-3 text-left text-sm text-gray-400 font-neusans drop-shadow-[0_0_10px_#E5E5E5] transition-colors hover:border-gray-300"
+                >
+                  <svg className="h-5 w-5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Search restaurant by name
+                </button>
+
+                <RestaurantSearchSheet
+                  isOpen={isMobileSearchOpen}
+                  onClose={() => setIsMobileSearchOpen(false)}
+                  onSelectExisting={handleSelectExisting}
+                  onCreateNew={handleCreateNew}
+                  selectedLocation={selectedLocation}
+                />
+              </div>
+
+              {/* Desktop: inline search */}
+              <div className="hidden md:block w-full">
                 <GooglePlacesAutocomplete
                   value={searchValue}
                   onChange={setSearchValue}
@@ -729,10 +755,9 @@ const ReviewSubmissionPage = () => {
                   searchType="restaurant"
                   disabled={isMatching}
                   selectedLocation={selectedLocation}
-                  showLocationHelper={true}
+                  showLocationHelper
                 />
-          
-                {/* Show inline match results instead of modal */}
+
                 {selectedPlace && (
                   <RestaurantMatchInline
                     googlePlaceData={selectedPlace}
@@ -747,18 +772,17 @@ const ReviewSubmissionPage = () => {
                   />
                 )}
               </div>
-                {/* Helper text */}
-                <p className="mt-4 text-sm text-gray-600 font-neusans">
-                  Still cannot find your listing? Reach out to the{' '}
-                  <a
-                    href="mailto:support@tastyplates.co"
-                    className="text-[#ff7c0a] hover:underline"
-                  >
-                    Tastyplates Team
-                  </a>
-                  {' '}and we can help put up the listing.
-                </p>
-                
+
+              <p className="mt-4 text-sm text-gray-600 font-neusans">
+                Still cannot find your listing? Reach out to the{' '}
+                <a
+                  href="mailto:support@tastyplates.co"
+                  className="text-[#ff7c0a] hover:underline"
+                >
+                  Tastyplates Team
+                </a>
+                {' '}and we can help put up the listing.
+              </p>
             </div>
           ) : null}
           

@@ -1,0 +1,54 @@
+// Bottom-sheet for mobile restaurant search (slide up from bottom, like auth sheet).
+.restaurant-search-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+
+  &--visible {
+    pointer-events: all;
+
+    .restaurant-search-sheet__overlay {
+      opacity: 1;
+    }
+
+    .restaurant-search-sheet__panel {
+      transform: translateY(0);
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.28s ease-out;
+  }
+
+  &__panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100dvh;
+    background: white;
+    transform: translateY(100%);
+    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__overlay {
+      opacity: 1 !important;
+      transition: none !important;
+    }
+
+    &__panel {
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+}

@@ -744,8 +744,10 @@ const Form = () => {
     hasInitialized.current = false;
   }, [currentUserId]);
 
-  // Show loading state while fetching profile (not while session is still resolving empty id — hook starts loading false)
-  if (isLoadingData) {
+  // Wait for Nhost session to resolve before attempting profile load.
+  // Without this gate, currentUserId flickers between null and a valid UUID
+  // on every render, causing useProfileData to fire redundant fetches.
+  if (sessionLoading || isLoadingData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

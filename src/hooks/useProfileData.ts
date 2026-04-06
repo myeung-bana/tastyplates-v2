@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNhostSession } from '@/hooks/useNhostSession';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 
@@ -69,7 +69,11 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
     return false;
   }, [user?.user_id, user?.username, targetUserIdentifier]);
 
+  const fetchIdRef = useRef(0);
+
   useEffect(() => {
+    const currentFetchId = ++fetchIdRef.current;
+
     const fetchPublicUserData = async () => {
       if (!targetUserIdentifier) {
         setUserData(null);
@@ -88,25 +92,19 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
       setError(null);
       
       try {
-        // Convert targetUserIdentifier to string for API call
         const identifierStr = String(targetUserIdentifier);
         
-        // Detect format: UUID, numeric ID, or username
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifierStr);
         const isNumeric = /^\d+$/.test(identifierStr);
         const isUsername = !isUUID && !isNumeric && /^[a-zA-Z0-9._-]+$/.test(identifierStr);
         
-        // Log identifier format for debugging
         console.log('[useProfileData] Fetching user data:', {
           identifier: identifierStr,
-          isUUID: isUUID,
-          isNumeric: isNumeric,
-          isUsername: isUsername,
-          targetUserIdentifier: targetUserIdentifier,
-          targetUserIdentifierType: typeof targetUserIdentifier
+          isUUID,
+          isNumeric,
+          isUsername,
         });
         
-        // Fetch user data based on identifier type (with timeout — do not hang forever)
         let response;
         if (isUsername) {
           response = await withTimeout(
@@ -130,6 +128,9 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
           setPalatesLoading(false);
           return;
         }
+
+        // Stale — a newer fetch has superseded this one
+        if (currentFetchId !== fetchIdRef.current) return;
         
         if (response.success && response.data) {
           // Map Hasura user data to expected format
@@ -223,21 +224,22 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
           console.error("Failed to fetch user data:", response);
         }
       } catch (error) {
+        if (currentFetchId !== fetchIdRef.current) return;
         console.error("Error fetching user data:", error);
         const errorMsg = error instanceof Error ? error.message : 'Failed to fetch user data';
         setError(errorMsg);
         setUserData(null);
       } finally {
-        setNameLoading(false);
-        setAboutMeLoading(false);
-        setPalatesLoading(false);
-        setLoading(false);
+        if (currentFetchId === fetchIdRef.current) {
+          setNameLoading(false);
+          setAboutMeLoading(false);
+          setPalatesLoading(false);
+          setLoading(false);
+        }
       }
     };
 
     fetchPublicUserData();
-  // user is intentionally excluded: it's only needed for isViewingOwnProfile (computed via useMemo),
-  // not for the API fetch. Including it caused a double-fetch and visible flicker on every page load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetUserIdentifier]);
   

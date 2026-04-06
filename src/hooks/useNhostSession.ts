@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthenticationStatus, useUserData } from '@nhost/nextjs';
 import { nhost } from '@/lib/nhost';
 
@@ -61,8 +61,15 @@ export function useNhostSession(): NhostSession {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const fetchIdRef = useRef(0);
+
+  // Stable primitive — avoids re-running the effect when Nhost refreshes
+  // the session and returns a new nhostUser object with the same .id.
+  const nhostUserId = nhostUser?.id ?? null;
 
   useEffect(() => {
+    const id = ++fetchIdRef.current;
+
     async function fetchUserProfile() {
       if (isLoading) return;
 
@@ -73,7 +80,10 @@ export function useNhostSession(): NhostSession {
         return;
       }
 
-      if (!nhostUser || !nhostUser.id) return;
+      if (!nhostUserId) {
+        setProfileLoading(false);
+        return;
+      }
 
       if (!nhost) {
         setProfileLoading(false);
@@ -84,15 +94,18 @@ export function useNhostSession(): NhostSession {
       setError(null);
 
       try {
-        // Fetch profile via server API (server can use Hasura admin access safely).
         const response = await fetch(
-          `/api/v1/restaurant-users/get-restaurant-user-by-id?id=${encodeURIComponent(nhostUser.id)}`
+          `/api/v1/restaurant-users/get-restaurant-user-by-id?id=${encodeURIComponent(nhostUserId)}`
         );
+
+        // Stale response — a newer fetch superseded this one
+        if (id !== fetchIdRef.current) return;
+
         const payload = await response.json().catch(() => ({} as any));
 
         if (!response.ok || !payload?.success) {
           console.error('[useNhostSession] API error fetching profile:', payload?.error || response.statusText);
-          if (isAuthenticated && nhostUser) {
+          if (isAuthenticated) {
             setError('User profile temporarily unavailable');
           }
           setUser(null);
@@ -102,7 +115,7 @@ export function useNhostSession(): NhostSession {
         const profileData = payload?.data;
         const profile: UserProfile | null = profileData
           ? {
-              user_id: profileData.user_id || profileData.id || nhostUser.id,
+              user_id: profileData.user_id || profileData.id || nhostUserId,
               username: profileData.username,
               about_me: profileData.about_me,
               birthdate: profileData.birthdate,
@@ -116,10 +129,8 @@ export function useNhostSession(): NhostSession {
           : null;
 
         if (!profile) {
-          // Profile doesn't exist - this might be a new user
-          console.warn('[useNhostSession] User profile not found for user:', nhostUser.id);
-          // Only set error if we're still authenticated
-          if (isAuthenticated && nhostUser) {
+          console.warn('[useNhostSession] User profile not found for user:', nhostUserId);
+          if (isAuthenticated) {
             setError('User profile not found');
           }
           setUser(null);
@@ -129,19 +140,21 @@ export function useNhostSession(): NhostSession {
         setUser(profile);
         setError(null);
       } catch (err) {
+        if (id !== fetchIdRef.current) return;
         console.error('[useNhostSession] Exception fetching profile:', err);
-        // Only set error if we're still authenticated
-        if (isAuthenticated && nhostUser) {
+        if (isAuthenticated) {
           setError(err instanceof Error ? err.message : 'Failed to fetch user data');
         }
         setUser(null);
       } finally {
-        setProfileLoading(false);
+        if (id === fetchIdRef.current) {
+          setProfileLoading(false);
+        }
       }
     }
 
     fetchUserProfile();
-  }, [isAuthenticated, isLoading, nhostUser]);
+  }, [isAuthenticated, isLoading, nhostUserId]);
 
   const authReady = !isLoading && !!isAuthenticated && !!nhostUser?.id;
 
