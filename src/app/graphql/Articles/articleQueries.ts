@@ -8,6 +8,7 @@ export const GET_RESTAURANT_LOCATION_BY_SLUG = `
       id
       type
       slug
+      parent_id
     }
   }
 `;
