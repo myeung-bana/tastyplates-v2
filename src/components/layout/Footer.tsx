@@ -1,5 +1,13 @@
 import { FACEBOOK, INSTAGRAM, TWITTER } from "@/constants/images";
-import { HELP, HOME, RESTAURANTS, PRIVACY_POLICY, TERMS_OF_SERVICE,CONTENT_GUIDELINES } from "@/constants/pages";
+import {
+  HELP,
+  HOME,
+  RESTAURANTS,
+  PRIVACY_POLICY,
+  TERMS_OF_SERVICE,
+  CONTENT_GUIDELINES,
+  COOKIE_POLICY,
+} from "@/constants/pages";
 import Image from "next/image";
 import "@/styles/components/_footer.scss";
 
@@ -24,7 +32,7 @@ const footerLinks = {
   legal: [
     { name: "Terms of Service", href: TERMS_OF_SERVICE },
     { name: "Content Guidelines", href: CONTENT_GUIDELINES },
-    { name: "Cookie Policy", href: "#" },
+    { name: "Cookie Policy", href: COOKIE_POLICY },
     { name: "Privacy Policy", href: PRIVACY_POLICY },
     // { name: "Sitemap", href: "/sitemap" },
   ],

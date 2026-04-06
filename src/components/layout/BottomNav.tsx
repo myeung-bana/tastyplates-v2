@@ -10,28 +10,8 @@ import {
 } from "react-icons/fi";
 import { HOME, RESTAURANTS, PROFILE, TASTYSTUDIO_ADD_REVIEW } from "@/constants/pages";
 import { useAuthModal } from "../auth/AuthModalWrapper";
-import { useProfileData } from "@/hooks/useProfileData";
-import { DEFAULT_USER_ICON } from "@/constants/images";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { useHaptic } from "@/hooks/useHaptic";
-
-// Helper function to extract profile image URL from JSONB format
-const getProfileImageUrl = (profileImage: any): string | null => {
-  if (!profileImage) return null;
-  
-  // If it's a string, return it directly
-  if (typeof profileImage === 'string') {
-    return profileImage;
-  }
-  
-  // If it's an object, extract the URL
-  if (typeof profileImage === 'object') {
-    // Try different possible URL fields
-    return profileImage.url || profileImage.thumbnail || profileImage.medium || profileImage.large || null;
-  }
-  
-  return null;
-};
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
@@ -41,10 +21,6 @@ const BottomNav: React.FC = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const { showSignin } = useAuthModal();
   const { trigger: haptic } = useHaptic();
-  
-  // Fetch current user profile data for authenticated users
-  const currentUserId = user?.user_id || null;
-  const { userData } = useProfileData(currentUserId || '');
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -137,8 +113,7 @@ const BottomNav: React.FC = () => {
       icon: FiUser,
       activePaths: [PROFILE, "/profile/"],
       requiresAuth: true,
-      isAvatar: true,
-      showWhenUnauthenticated: true, // Always show profile button
+      showWhenUnauthenticated: true,
     },
   ];
 
@@ -186,23 +161,11 @@ const BottomNav: React.FC = () => {
                   : 'text-gray-600 hover:text-gray-700'
               }`}
             >
-              {item.isAvatar ? (
-                <img
-                  src={
-                    (nhostUser?.avatarUrl && nhostUser.avatarUrl.trim() !== '') ? nhostUser.avatarUrl :
-                    getProfileImageUrl(userData?.profile_image) ||
-                    DEFAULT_USER_ICON
-                  }
-                  alt="Profile"
-                  className="w-6 h-6 mb-1 rounded-full object-cover"
-                />
-              ) : (
-                <Icon 
-                  className={`w-6 h-6 mb-1 transition-colors duration-200 ${
-                    active ? 'text-[#ff7c0a]' : 'text-gray-600'
-                  }`} 
-                />
-              )}
+              <Icon 
+                className={`w-6 h-6 mb-1 transition-colors duration-200 ${
+                  active ? 'text-[#ff7c0a]' : 'text-gray-600'
+                }`} 
+              />
               {/* Active indicator */}
               {active && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-[#ff7c0a] rounded-full" />

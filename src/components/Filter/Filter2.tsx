@@ -20,6 +20,8 @@ interface Filter2Props {
   canUsePreferenceSort?: boolean;
   /** When `?palate=` is present — sort list by reviewers matching that palate (client-side). */
   canUsePalateContextSort?: boolean;
+  /** Human-readable name of the active palate context (e.g. "Korean"). */
+  palateContextName?: string;
 }
 
 const BASE_SORT_OPTIONS: Array<{ key: string; label: string; description: string }> = [
@@ -57,6 +59,7 @@ const Filter2 = ({
   initialSortOption = 'SMART',
   canUsePreferenceSort = false,
   canUsePalateContextSort = false,
+  palateContextName,
 }: Filter2Props) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isSortModalOpen, setIsSortModalOpen] = useState<boolean>(false);
@@ -70,14 +73,19 @@ const Filter2 = ({
   const { trigger: haptic } = useHaptic();
 
   const sortOptions = useMemo(() => {
+    const base = BASE_SORT_OPTIONS.map((opt) =>
+      opt.key === "PALATE_CONTEXT" && palateContextName
+        ? { ...opt, label: `Palate Match - ${palateContextName}` }
+        : opt
+    );
     let opts = canUsePreferenceSort
-      ? BASE_SORT_OPTIONS
-      : BASE_SORT_OPTIONS.filter((opt) => opt.key !== 'MY_PREFERENCE');
+      ? base
+      : base.filter((opt) => opt.key !== "MY_PREFERENCE");
     if (!canUsePalateContextSort) {
-      opts = opts.filter((opt) => opt.key !== 'PALATE_CONTEXT');
+      opts = opts.filter((opt) => opt.key !== "PALATE_CONTEXT");
     }
     return opts;
-  }, [canUsePreferenceSort, canUsePalateContextSort]);
+  }, [canUsePreferenceSort, canUsePalateContextSort, palateContextName]);
 
   useEffect(() => {
     setSelectedCuisines(initialCuisines);

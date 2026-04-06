@@ -57,8 +57,18 @@ We may use third-party services that set cookies on your device:
 - **Firebase:** Authentication and backend services
 - **Social Media Platforms:** Share buttons and embedded content (Facebook, Twitter, Instagram)
 - **Upstash Redis:** Session management and caching
+- **Google AdSense:** Only if you click **Accept** on our cookie banner. Google may use cookies or similar technology for advertising and measurement. If you click **Decline**, we do not load AdSense on your device. Learn more: [Google AdSense](https://support.google.com/adsense), [Google’s Privacy Policy](https://policies.google.com/privacy), and [Ad Settings](https://adssettings.google.com/).
 
 These third-party services have their own privacy policies and cookie practices.
+
+## Cookie banner (your choice)
+
+When you first visit, we may show a banner asking whether to allow **Google AdSense** (advertising cookies/scripts).
+
+- **Accept:** We store your choice and load Google AdSense where configured.
+- **Decline:** We store your choice and **do not** load Google AdSense. Essential site features still work.
+
+Your choice is stored in your browser (local storage) under the key used by our app for cookie preferences.
 
 ## How We Use Cookies
 

@@ -186,6 +186,13 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
 
   const canUsePalateContextSort = palateUrlSlugs.length > 0;
 
+  const palateContextDisplayName = useMemo(() => {
+    if (!palateContext) return undefined;
+    const key = getFirstPalateKeyFromUrlParam(palateContext);
+    if (!key) return undefined;
+    return key.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }, [palateContext]);
+
   const userPreferencePalates = useMemo(() => normalizeUserPalates(user?.palates), [user?.palates]);
   const [preferenceStats, setPreferenceStats] = useState<PreferenceStatsMap>({});
   const [preferenceLoading, setPreferenceLoading] = useState(false);
@@ -601,6 +608,7 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
               }
               canUsePreferenceSort={userPreferencePalates.length > 0}
               canUsePalateContextSort={canUsePalateContextSort}
+              palateContextName={palateContextDisplayName}
             />
           )}
 

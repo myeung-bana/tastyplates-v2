@@ -15,7 +15,8 @@ import { getVersion } from '@/lib/redis-versioning';
  *
  * Notes:
  * - This endpoint is intentionally approximate and cached (Redis + CDN).
- * - It assumes `restaurant_reviews.palates` is a JSONB array of strings (slugs).
+ * - Palate matching uses the reviewer's **user profile** palates (AuthorProfile.palates),
+ *   mirroring the Search Score calculation on the restaurant detail page.
  */
 
 const GET_REVIEWS_FOR_PREFERENCE = `
@@ -26,6 +27,9 @@ const GET_REVIEWS_FOR_PREFERENCE = `
       palates
       deleted_at
       parent_review_id
+      AuthorProfile {
+        palates
+      }
     }
   }
 `;
@@ -89,16 +93,13 @@ export async function GET(request: NextRequest) {
       cacheKey,
       600,
       async () => {
-        // Best-effort server-side filtering (assumes palates is JSONB array of strings)
+        // Fetch all non-deleted top-level reviews with their AuthorProfile palates.
+        // Palate matching is done in JS on AuthorProfile.palates (the reviewer's profile),
+        // mirroring how Search Score works on the detail page.
         const where: any = {
           _and: [
             { deleted_at: { _is_null: true } },
             { parent_review_id: { _is_null: true } },
-            {
-              _or: palates.map((p) => ({
-                palates: { _contains: [p] },
-              })),
-            },
           ],
         };
 
@@ -113,26 +114,8 @@ export async function GET(request: NextRequest) {
           }
           rows = result.data?.restaurant_reviews || [];
         } catch (e) {
-          // Fallback: no server-side palate filtering; do filtering in JS on a smaller sample.
-          // This keeps the endpoint resilient if palates JSON shape differs in Hasura.
-          const fallbackWhere: any = {
-            _and: [{ deleted_at: { _is_null: true } }, { parent_review_id: { _is_null: true } }],
-          };
-          try {
-            const fallbackResult = await hasuraQuery<{ restaurant_reviews: any[] }>(GET_REVIEWS_FOR_PREFERENCE, {
-              where: fallbackWhere,
-              limit: 2000,
-            });
-            if (fallbackResult.errors) {
-              console.warn('Fallback query also failed:', fallbackResult.errors);
-              rows = [];
-            } else {
-              rows = fallbackResult.data?.restaurant_reviews || [];
-            }
-          } catch (fallbackError) {
-            console.error('Fallback query error:', fallbackError);
-            rows = [];
-          }
+          console.error('Preference stats query error:', e);
+          rows = [];
         }
 
         const palateSet = new Set(palates);
@@ -145,8 +128,12 @@ export async function GET(request: NextRequest) {
           const rating = Number(r.rating) || 0;
           if (rating <= 0) continue;
 
-          const reviewPalates = extractReviewPalates(r.palates);
-          const matches = reviewPalates.some((p) => palateSet.has(p));
+          // Use reviewer's profile palates first, fall back to review's own palates
+          const authorPalates = extractReviewPalates(r.AuthorProfile?.palates);
+          const reviewerPalates = authorPalates.length > 0
+            ? authorPalates
+            : extractReviewPalates(r.palates);
+          const matches = reviewerPalates.some((p) => palateSet.has(p));
           if (!matches) continue;
 
           const cur = acc.get(restaurantUuid) || { sum: 0, count: 0 };
@@ -159,6 +146,7 @@ export async function GET(request: NextRequest) {
         for (const [uuid, { sum, count }] of acc.entries()) {
           out[uuid] = { avg: sum / count, count };
         }
+
         return out;
       }
     );

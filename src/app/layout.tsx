@@ -14,6 +14,7 @@ import MobileTopBar from "@/components/layout/MobileTopBar";
 import PwaInstallBanner from "@/components/layout/PwaInstallBanner";
 import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
+import CookieConsentAndAdSense from "@/components/layout/CookieConsentAndAdSense";
 import PullToRefreshWrapper from "@/components/layout/PullToRefreshWrapper";
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UploadProvider } from '@/contexts/UploadContext';
@@ -112,6 +113,7 @@ export default function RootLayout({
                         </main>
                         <ConditionalFooter />
                         <BottomNav />
+                        <CookieConsentAndAdSense />
                       </div>
                     </AuthModalWrapper>
                   </LanguageProvider>

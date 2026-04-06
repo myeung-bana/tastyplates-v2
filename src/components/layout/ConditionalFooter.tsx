@@ -1,16 +1,21 @@
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
-import Footer from './Footer';
+import { usePathname } from "next/navigation";
+import Footer from "./Footer";
+import MobileLegalStrip from "./MobileLegalStrip";
 
 export default function ConditionalFooter() {
   const pathname = usePathname();
-  
-  // Hide footer on TastyStudio pages
-  if (pathname?.startsWith('/tastystudio')) {
+
+  if (pathname?.startsWith("/tastystudio")) {
     return null;
   }
-  
-  return <Footer />;
+
+  return (
+    <>
+      <Footer />
+      <MobileLegalStrip />
+    </>
+  );
 }
 

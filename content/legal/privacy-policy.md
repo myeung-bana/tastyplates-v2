@@ -50,6 +50,10 @@ TastyPlates ("we", "our", or "us") is committed to protecting your privacy. This
 - Protect against malicious activity
 - Comply with legal obligations
 
+## Advertising
+
+If you **accept** optional cookies and advertising through our on-site cookie banner, we may use **Google AdSense** to display ads. In that case, Google processes information as described in Google’s policies. If you **decline**, we do not load the AdSense script for your browser.
+
 ## Information Sharing
 
 ### We Do Not Sell Your Personal Information
@@ -61,6 +65,7 @@ TastyPlates ("we", "our", or "us") is committed to protecting your privacy. This
 - Analytics providers
 - Email service providers
 - Payment processors (if applicable)
+- **Google AdSense** (if you accept cookies/ads on our banner): Google may process data to show and measure ads. See [Google’s Privacy & Terms](https://policies.google.com/privacy) and [Google Advertising Policies](https://support.google.com/adsense/answer/48182). You can manage ad personalization via [Google Ad Settings](https://adssettings.google.com/).
 
 **Other Users**
 - Public profile information
