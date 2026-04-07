@@ -9,6 +9,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch; // iOS smooth scroll
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   scroll-behavior: smooth;
   scroll-snap-type: y mandatory;
   
@@ -425,25 +427,8 @@
   }
 }
 
-// Mobile single-review mode
-.review-screen--single {
-  overflow: hidden;
-  scroll-snap-type: none;
-
-  .review-screen__scroll-container {
-    min-height: 100dvh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
-  .review-screen__post {
-    min-height: 100dvh;
-    height: 100dvh;
-    scroll-snap-align: none;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
+// Legacy: `.review-screen--single` previously forced overflow:hidden and blocked vertical scroll on iOS.
+// Mobile now uses the same full-screen scroll container as desktop; do not reintroduce nested overflow traps.
 
 // Mobile optimizations
 @media (max-width: 768px) {

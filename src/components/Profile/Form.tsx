@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { Key } from "@react-types/shared";
 import { useRouter } from "next/navigation";
+import { useAuthenticationStatus } from "@nhost/nextjs";
 import { useNhostSession } from "@/hooks/useNhostSession";
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
 import { useCuisines } from "@/hooks/useCuisines";
@@ -63,8 +64,12 @@ const getProfileImageUrl = (profileImage: any): string | null => {
 // Helper function to convert base64 to File (used for S3 upload)
 const base64ToFile = (base64String: string, filename: string): File => {
   const arr = base64String.split(',');
-  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-  const bstr = atob(arr[1]);
+  const mime = arr[0]?.match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const dataPart = arr[1];
+  if (!dataPart) {
+    throw new Error('Invalid image data');
+  }
+  const bstr = atob(dataPart);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
   while (n--) {
@@ -89,12 +94,6 @@ interface FormContentProps {
   router: { push: (path: string) => void; back: () => void };
   bioError: string;
   bioCharacterCount: number;
-  showCropModal: boolean;
-  setShowCropModal: (value: boolean) => void;
-  tempImageSrc: string;
-  setProfilePreview: (value: string) => void;
-  setProfile: (value: string | null) => void;
-  setProfileImageFile: React.Dispatch<React.SetStateAction<File | null>>;
   cuisineOptions: CuisineOption[];
   cuisinesLoading: boolean;
   cuisinesError: string | null;
@@ -116,12 +115,6 @@ const FormContent = memo(({
   router,
   bioError,
   bioCharacterCount,
-  showCropModal,
-  setShowCropModal,
-  tempImageSrc,
-  setProfilePreview,
-  setProfile,
-  setProfileImageFile,
   cuisineOptions,
   cuisinesLoading,
   cuisinesError,
@@ -306,33 +299,50 @@ const FormContent = memo(({
           </form>
         </div>
       </div>
-
-      {/* Photo Crop Modal */}
-      <PhotoCropModal
-        isOpen={showCropModal}
-        onClose={() => setShowCropModal(false)}
-        onCrop={(croppedImage) => {
-          // Set preview (base64 for display)
-          setProfilePreview(croppedImage);
-          
-          // Convert base64 to File object for S3 upload
-          const file = base64ToFile(croppedImage, `profile-${Date.now()}.jpg`);
-          setProfileImageFile(file);
-          
-          // Keep base64 in profile state for preview only (will be replaced with S3 URL on submit)
-          setProfile(croppedImage);
-          setShowCropModal(false);
-        }}
-        imageSrc={tempImageSrc}
-      />
     </div>
   </>
   );
 });
 
+/** Same viewport shell for loading, error, and form on mobile — avoids layout jump. */
+function ProfileEditMobileShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  return (
+    <div className="md:hidden">
+      <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="-ml-2 p-2"
+            aria-label="Back"
+          >
+            <PiCaretLeftBold className="size-5 text-gray-900" />
+          </button>
+          <h1 className="text-lg font-neusans text-gray-900">Edit Profile</h1>
+          <div className="w-9" aria-hidden />
+        </div>
+        <div className="flex flex-1 flex-col px-4 py-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileEditDesktopShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-16 hidden font-inter md:mt-20 md:block">{children}</div>
+  );
+}
+
 const Form = () => {
   const router = useRouter();
-  const { user, nhostUser, loading: sessionLoading } = useNhostSession();
+  const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
+  const {
+    user,
+    nhostUser,
+    loading: sessionLoading,
+    error: sessionError,
+  } = useNhostSession();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aboutMe, setAboutMe] = useState("");
@@ -347,18 +357,24 @@ const Form = () => {
   const [tempImageSrc, setTempImageSrc] = useState("");
   const hasInitialized = useRef(false); // Track if we've initialized form state to prevent flickering
 
-  // Use the existing useProfileData hook - get current user ID from Nhost session
-  // Use user.user_id directly (should be UUID string)
-  const currentUserId = user?.user_id || null;
+  const profileIdentifier = user?.user_id ?? nhostUser?.id ?? "";
+  const currentUserId = user?.user_id ?? nhostUser?.id ?? null;
   const {
     userData,
     loading: isLoadingData,
     isViewingOwnProfile,
     error: profileLoadError,
-  } = useProfileData(currentUserId || '');
+  } = useProfileData(profileIdentifier);
 
   // Fetch cuisines from API for palate selection - get both formatted options and raw cuisines
   const { cuisineOptions, cuisines, loading: cuisinesLoading, error: cuisinesError } = useCuisines();
+
+  useEffect(() => {
+    if (authLoading || sessionLoading) return;
+    if (!isAuthenticated || !nhostUser?.id) {
+      router.replace("/");
+    }
+  }, [authLoading, sessionLoading, isAuthenticated, nhostUser?.id, router]);
 
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -514,10 +530,8 @@ const Form = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // ✅ VALIDATION: Check if user and nhostUser exist
-    if (!user || !nhostUser) {
-      console.error('❌ Profile Form: No user found');
-      toast.error('Session not found. Please log in again.');
+    if (!nhostUser) {
+      toast.error("Session not found. Please log in again.");
       setIsLoading(false);
       return;
     }
@@ -543,14 +557,12 @@ const Form = () => {
     }
 
     try {
-      // Get user UUID from Nhost session
-      if (!user?.user_id) {
-        toast.error('User ID not found. Please sign in again.');
+      const userId = (user?.user_id ?? nhostUser.id) as string;
+      if (!userId) {
+        toast.error("User ID not found. Please sign in again.");
         setIsLoading(false);
         return;
       }
-
-      const userId = user.user_id as string;
 
       // Upload profile image to S3 if a new image was selected
       let profileImageUrl: string | undefined = undefined;
@@ -584,6 +596,9 @@ const Form = () => {
 
       // Get Nhost access token for authentication
       const { nhost } = await import('@/lib/nhost');
+      if (!nhost) {
+        throw new Error('Authentication client unavailable. Please try again.');
+      }
       const session = nhost.auth.getSession();
       const accessToken = session?.accessToken;
       
@@ -618,7 +633,7 @@ const Form = () => {
         errorMessage: error?.message,
         errorType: error?.constructor?.name || typeof error,
         hasUser: !!user,
-        userId: user?.id
+        userId: user?.user_id
       });
       toast.error(error?.message || profileUpdateFailed);
     } finally {
@@ -643,28 +658,11 @@ const Form = () => {
       router={router}
       bioError={bioError}
       bioCharacterCount={aboutMe.length}
-      showCropModal={showCropModal}
-      setShowCropModal={setShowCropModal}
-      tempImageSrc={tempImageSrc}
-      setProfilePreview={setProfilePreview}
-      setProfile={setProfile}
-      setProfileImageFile={setProfileImageFile}
       cuisineOptions={cuisineOptions}
       cuisinesLoading={cuisinesLoading}
       cuisinesError={cuisinesError}
     />
   );
-
-  // Debug: Log session status changes
-  useEffect(() => {
-    console.log('🔍 Profile Form - Session status changed:', {
-      sessionLoading,
-      hasUser: !!user,
-      hasNhostUser: !!nhostUser,
-      userId: user?.user_id,
-      userEmail: nhostUser?.email
-    });
-  }, [sessionLoading, user, nhostUser]);
 
   // Update form state when userData is loaded from useProfileData hook
   // Initialize immediately with available data, update palates when cuisines load
@@ -701,11 +699,13 @@ const Form = () => {
       }
       
       hasInitialized.current = true; // Mark as initialized
-    } else if (!isLoadingData && !userData && user && currentUserId && !hasInitialized.current) {
-      // Fallback to user data
-      const userWithExtras = user as any;
-      setAboutMe(userWithExtras?.about_me ?? "");
-      const fallbackProfileImage = getProfileImageUrl(user?.profile_image) || DEFAULT_USER_ICON;
+    } else if (!isLoadingData && !userData && currentUserId && !hasInitialized.current) {
+      const userWithExtras = (user as Record<string, unknown> | null) ?? {};
+      setAboutMe((userWithExtras.about_me as string) ?? "");
+      const fallbackProfileImage =
+        getProfileImageUrl(
+          (user as { profile_image?: unknown } | null)?.profile_image
+        ) || DEFAULT_USER_ICON;
       setProfilePreview(fallbackProfileImage);
       
       if (fallbackProfileImage && 
@@ -744,65 +744,72 @@ const Form = () => {
     hasInitialized.current = false;
   }, [currentUserId]);
 
-  // Wait for Nhost session to resolve before attempting profile load.
-  // Without this gate, currentUserId flickers between null and a valid UUID
-  // on every render, causing useProfileData to fire redundant fetches.
-  if (sessionLoading || isLoadingData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff7c0a] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-neusans">Loading profile data...</p>
-        </div>
+  const authPending = authLoading || sessionLoading;
+  const needsGuestRedirect =
+    !authPending && (!isAuthenticated || !nhostUser?.id);
+  const waitingForProfileData = !!profileIdentifier && isLoadingData;
+
+  const showDataError =
+    !authPending &&
+    !needsGuestRedirect &&
+    !waitingForProfileData &&
+    !!profileIdentifier &&
+    !userData &&
+    (!!profileLoadError || (!!sessionError && !user));
+
+  const dataErrorMessage =
+    profileLoadError ||
+    (sessionError && !user ? sessionError : null) ||
+    "Could not load your profile. Please try again.";
+
+  const loadingSpinner = (
+    <div className="flex flex-1 flex-col items-center justify-center py-16">
+      <div className="text-center">
+        <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[#ff7c0a]" />
+        <p className="font-neusans text-gray-600">Loading profile data…</p>
       </div>
+    </div>
+  );
+
+  const errorBlock = (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-12">
+      <p className="max-w-md text-center text-sm text-red-600 font-neusans">
+        {dataErrorMessage}
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="rounded-full bg-[#ff7c0a] px-6 py-3 text-sm font-semibold text-white font-neusans hover:bg-[#e66d08]"
+      >
+        Retry
+      </button>
+    </div>
+  );
+
+  // Wait for auth + profile fetch; guests are redirected in useEffect.
+  if (authPending || needsGuestRedirect || waitingForProfileData) {
+    return (
+      <>
+        <ProfileEditMobileShell>{loadingSpinner}</ProfileEditMobileShell>
+        <ProfileEditDesktopShell>{loadingSpinner}</ProfileEditDesktopShell>
+      </>
     );
   }
 
-  if (profileLoadError && !userData && currentUserId) {
+  if (showDataError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6">
-        <p className="max-w-md text-center text-sm text-red-600 font-neusans">
-          {profileLoadError}
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="rounded-full bg-[#ff7c0a] px-6 py-3 text-sm font-semibold text-white font-neusans hover:bg-[#e66d08]"
-        >
-          Retry
-        </button>
-      </div>
+      <>
+        <ProfileEditMobileShell>{errorBlock}</ProfileEditMobileShell>
+        <ProfileEditDesktopShell>{errorBlock}</ProfileEditDesktopShell>
+      </>
     );
   }
 
   return (
     <>
-      {/* Mobile Layout - Full Screen */}
-      <div className="md:hidden">
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-          {/* Mobile Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
-            <button
-              onClick={() => router.back()}
-              className="p-2 -ml-2"
-            >
-              <PiCaretLeftBold className="size-5 text-gray-900" />
-            </button>
-            <h1 className="text-lg font-neusans text-gray-900">Edit Profile</h1>
-            <div className="w-9" /> {/* Spacer for centering */}
-          </div>
-          
-          {/* Mobile Content */}
-          <div className="px-4 py-6">
-            {formContent}
-          </div>
-        </div>
-      </div>
+      <ProfileEditMobileShell>{formContent}</ProfileEditMobileShell>
 
-      {/* Desktop Layout */}
-      <div className="hidden md:block font-inter mt-16 md:mt-20">
-        {formContent}
-      </div>
+      <ProfileEditDesktopShell>{formContent}</ProfileEditDesktopShell>
 
       {/* Photo Crop Modal */}
       <PhotoCropModal

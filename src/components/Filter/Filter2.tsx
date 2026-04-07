@@ -24,6 +24,9 @@ interface Filter2Props {
   palateContextName?: string;
 }
 
+/** Default / neutral sort when opening the listing (matches server `rating` desc). */
+export const DEFAULT_SORT_OPTION = 'DESC';
+
 const BASE_SORT_OPTIONS: Array<{ key: string; label: string; description: string }> = [
   { key: 'MY_PREFERENCE', label: 'My Preference', description: 'Ranks restaurants based on your personal palate profile and past reviews.' },
   { key: 'PALATE_CONTEXT', label: 'Palate match', description: 'Ranks by ratings from reviewers who share the selected palate.' },
@@ -32,6 +35,9 @@ const BASE_SORT_OPTIONS: Array<{ key: string; label: string; description: string
   { key: 'ASC', label: 'Lowest Rated', description: 'Shows the lowest-rated restaurants first.' },
   { key: 'NEWEST', label: 'Newest', description: 'Shows the most recently added restaurants first.' },
 ];
+
+/** Temporarily hidden in the Sort UI — logic may still exist server-side for later re-enable. */
+const HIDDEN_SORT_KEYS = new Set(['MY_PREFERENCE', 'SMART']);
 
 const RATING_OPTIONS: Array<{ value: number; label: string }> = [
   { value: 3.0, label: '3.0' },
@@ -56,7 +62,7 @@ const Filter2 = ({
   onFilterChange,
   initialCuisines = [],
   initialPalates = [],
-  initialSortOption = 'SMART',
+  initialSortOption = DEFAULT_SORT_OPTION,
   canUsePreferenceSort = false,
   canUsePalateContextSort = false,
   palateContextName,
@@ -67,7 +73,7 @@ const Filter2 = ({
   const [selectedPalates, setSelectedPalates] = useState<string[]>(initialPalates);
   const [price, setPrice] = useState<string>("");
   const [rating, setRating] = useState<number>(0);
-  const [sortOption, setSortOption] = useState<string>(initialSortOption || 'SMART');
+  const [sortOption, setSortOption] = useState<string>(initialSortOption || DEFAULT_SORT_OPTION);
 
   const { priceRanges, loading: isLoadingPrices } = usePriceRanges();
   const { trigger: haptic } = useHaptic();
@@ -78,52 +84,63 @@ const Filter2 = ({
         ? { ...opt, label: `Palate Match - ${palateContextName}` }
         : opt
     );
-    let opts = canUsePreferenceSort
-      ? base
-      : base.filter((opt) => opt.key !== "MY_PREFERENCE");
+    let opts = base.filter((opt) => !HIDDEN_SORT_KEYS.has(opt.key));
     if (!canUsePalateContextSort) {
       opts = opts.filter((opt) => opt.key !== "PALATE_CONTEXT");
     }
     return opts;
-  }, [canUsePreferenceSort, canUsePalateContextSort, palateContextName]);
+  }, [canUsePalateContextSort, palateContextName]);
 
   useEffect(() => {
     setSelectedCuisines(initialCuisines);
     setSelectedPalates(initialPalates);
-    const nextSort =
-      !canUsePreferenceSort && initialSortOption === 'MY_PREFERENCE'
-        ? 'SMART'
-        : !canUsePalateContextSort && initialSortOption === 'PALATE_CONTEXT'
-          ? 'SMART'
-          : (initialSortOption || 'SMART');
+    const hiddenOrInvalid =
+      HIDDEN_SORT_KEYS.has(initialSortOption || '') ||
+      (!canUsePalateContextSort && initialSortOption === 'PALATE_CONTEXT');
+    const nextSort = hiddenOrInvalid
+      ? DEFAULT_SORT_OPTION
+      : initialSortOption || DEFAULT_SORT_OPTION;
     setSortOption(nextSort);
   }, [initialCuisines, initialPalates, initialSortOption, canUsePreferenceSort, canUsePalateContextSort]);
 
   useEffect(() => {
     if (!canUsePreferenceSort && sortOption === 'MY_PREFERENCE') {
-      setSortOption('SMART');
+      setSortOption(DEFAULT_SORT_OPTION);
       onFilterChange({
         cuisine: selectedCuisines,
         price: price || null,
         rating: rating > 0 ? rating : null,
         palates: selectedPalates,
-        sortOption: 'SMART',
+        sortOption: DEFAULT_SORT_OPTION,
       });
     }
   }, [canUsePreferenceSort, sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
 
   useEffect(() => {
     if (!canUsePalateContextSort && sortOption === 'PALATE_CONTEXT') {
-      setSortOption('SMART');
+      setSortOption(DEFAULT_SORT_OPTION);
       onFilterChange({
         cuisine: selectedCuisines,
         price: price || null,
         rating: rating > 0 ? rating : null,
         palates: selectedPalates,
-        sortOption: 'SMART',
+        sortOption: DEFAULT_SORT_OPTION,
       });
     }
   }, [canUsePalateContextSort, sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
+
+  useEffect(() => {
+    if (HIDDEN_SORT_KEYS.has(sortOption)) {
+      setSortOption(DEFAULT_SORT_OPTION);
+      onFilterChange({
+        cuisine: selectedCuisines,
+        price: price || null,
+        rating: rating > 0 ? rating : null,
+        palates: selectedPalates,
+        sortOption: DEFAULT_SORT_OPTION,
+      });
+    }
+  }, [sortOption, onFilterChange, selectedCuisines, selectedPalates, price, rating]);
 
   const handleCuisineChange = (cuisines: string[], palates: string[]) => {
     setSelectedCuisines(cuisines);
@@ -230,7 +247,7 @@ const Filter2 = ({
         <div className="filter2__buttons-right">
           <button
             onClick={() => { haptic("light"); setPendingSort(sortOption); setIsSortModalOpen(true); }}
-            className={sortOption !== 'SMART' ? PILL_ACTIVE : PILL_BASE}
+            className={sortOption !== DEFAULT_SORT_OPTION ? PILL_ACTIVE : PILL_BASE}
             aria-label="Sort"
           >
             <PiArrowsDownUp className="w-4 h-4" />

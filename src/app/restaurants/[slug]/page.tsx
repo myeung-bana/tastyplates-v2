@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { restaurantV2Service } from "@/app/api/v1/services/restaurantV2Service";
@@ -284,26 +283,12 @@ export default function RestaurantDetail() {
           />
         </div>
         
-        {/* Full-Width Gallery Section */}
+        {/* Full-width gallery: mobile carousel + desktop masonry (see ImageGallery) */}
         {getRestaurantImages(restaurant).length > 0 ? (
-          <div className="relative h-64 md:h-96 rounded-2xl overflow-hidden mx-2 mb-8 group">
-            <Image
-              src={restaurant.featuredImage?.node?.sourceUrl || "/placeholder-restaurant.jpg"}
-              alt={restaurant.title}
-              fill
-              className="object-cover"
-              priority
-            />
-            {/* See All Photos Badge */}
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 cursor-pointer hover:bg-white transition-all z-10">
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-[0.9375rem] font-normal font-neusans">See All Photos</span>
-            </div>
-            <ImageGallery 
-              images={getRestaurantImages(restaurant)} 
-              restaurantTitle={restaurant.title} 
+          <div className="relative mx-2 mb-8 h-64 overflow-hidden rounded-2xl md:h-auto md:min-h-[320px] md:overflow-visible">
+            <ImageGallery
+              images={getRestaurantImages(restaurant)}
+              restaurantTitle={restaurant.title}
             />
           </div>
         ) : (

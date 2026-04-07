@@ -434,19 +434,18 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
     isFirstLoad.current = false;
   }, [debouncedSearchTerm, fetchRestaurants]);
 
-  // Default sort: `?palate=` → PALATE_CONTEXT; else logged-in palates → MY_PREFERENCE (never override an explicit choice)
+  // Default sort: `?palate=` → PALATE_CONTEXT; else Highest Rated (DESC). Smart / My Preference hidden in UI for now.
   useEffect(() => {
-    if (!userPreferencePalates || userPreferencePalates.length === 0) {
-      setFilters((prev) => (prev.sortOption === 'MY_PREFERENCE' ? { ...prev, sortOption: 'SMART' } : prev));
-    }
-    if (!canUsePalateContextSort) {
-      setFilters((prev) => (prev.sortOption === 'PALATE_CONTEXT' ? { ...prev, sortOption: 'SMART' } : prev));
-    }
     setFilters((prev) => {
+      if (prev.sortOption === 'MY_PREFERENCE' || prev.sortOption === 'SMART') {
+        return { ...prev, sortOption: 'DESC' };
+      }
+      if (!canUsePalateContextSort && prev.sortOption === 'PALATE_CONTEXT') {
+        return { ...prev, sortOption: 'DESC' };
+      }
       if (prev.sortOption) return prev;
       if (canUsePalateContextSort) return { ...prev, sortOption: 'PALATE_CONTEXT' };
-      if (userPreferencePalates && userPreferencePalates.length > 0) return { ...prev, sortOption: 'MY_PREFERENCE' };
-      return prev;
+      return { ...prev, sortOption: 'DESC' };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPreferencePalates.join('|'), canUsePalateContextSort]);
@@ -600,13 +599,9 @@ const RestaurantPage = ({ cuisineSlug, cuisineName, hideCuisineFilter = false }:
               initialPalates={filters.cuisine || []}
               initialSortOption={
                 filters.sortOption ||
-                (canUsePalateContextSort
-                  ? 'PALATE_CONTEXT'
-                  : userPreferencePalates.length > 0
-                    ? 'MY_PREFERENCE'
-                    : 'SMART')
+                (canUsePalateContextSort ? 'PALATE_CONTEXT' : 'DESC')
               }
-              canUsePreferenceSort={userPreferencePalates.length > 0}
+              canUsePreferenceSort={false}
               canUsePalateContextSort={canUsePalateContextSort}
               palateContextName={palateContextDisplayName}
             />

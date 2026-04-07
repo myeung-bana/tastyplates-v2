@@ -38,7 +38,7 @@ interface UseProfileDataReturn {
 
 // Support username, UUID (string), and legacy numeric IDs
 export const useProfileData = (targetUserIdentifier: string | number): UseProfileDataReturn => {
-  const { user } = useNhostSession();
+  const { user, nhostUser } = useNhostSession();
   const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   // Start false: when targetUserIdentifier is empty (session not hydrated), we must not flash
   // full-screen "loading" until the effect runs — initial true caused stuck spinner on mobile.
@@ -51,23 +51,13 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
   const [followingCount, setFollowingCount] = useState(0);
 
   const isViewingOwnProfile = useMemo(() => {
-    if (!user || !targetUserIdentifier) return false;
-    
-    // Compare by ID (UUID) if available
-    if (user.user_id) {
-      const identifierStr = String(targetUserIdentifier);
-      const userIdStr = String(user.user_id);
-      
-      // Direct ID match
-      if (identifierStr === userIdStr) return true;
-      
-      // If identifier is username, check if it matches user's username
-      // We'll need to fetch user data first to compare usernames, so this is a fallback
-      // The actual comparison will happen after userData is loaded
-    }
-    
+    if (!targetUserIdentifier) return false;
+    const identifierStr = String(targetUserIdentifier);
+    if (user?.user_id && identifierStr === String(user.user_id)) return true;
+    // Restaurant profile fetch can fail while Nhost session is valid — still "own" if ids match
+    if (nhostUser?.id && identifierStr === String(nhostUser.id)) return true;
     return false;
-  }, [user?.user_id, user?.username, targetUserIdentifier]);
+  }, [user?.user_id, nhostUser?.id, targetUserIdentifier]);
 
   const fetchIdRef = useRef(0);
 
@@ -245,20 +235,19 @@ export const useProfileData = (targetUserIdentifier: string | number): UseProfil
   
   // Update isViewingOwnProfile after userData is loaded (for username comparison)
   const actualIsViewingOwnProfile = useMemo(() => {
-    if (!user || !userData) return isViewingOwnProfile;
-    
-    // Compare by ID
-    if (user.user_id && userData.id && String(user.user_id) === String(userData.id)) {
+    if (!userData) return isViewingOwnProfile;
+
+    if (user?.user_id && userData.id && String(user.user_id) === String(userData.id)) {
       return true;
     }
-    
-    // Compare by username
-    if (user.username && userData.username && user.username === userData.username) {
+    if (nhostUser?.id && userData.id && String(nhostUser.id) === String(userData.id)) {
       return true;
     }
-    
-    return false;
-  }, [user?.user_id, user?.username, userData?.id, userData?.username, isViewingOwnProfile]);
+    if (user?.username && userData.username && user.username === userData.username) {
+      return true;
+    }
+    return isViewingOwnProfile;
+  }, [user?.user_id, user?.username, nhostUser?.id, userData?.id, userData?.username, isViewingOwnProfile]);
 
   // Function to refresh follower and following counts
   const refreshCounts = useCallback(async () => {

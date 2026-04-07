@@ -335,17 +335,19 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, []);
 
-  // Scroll to initial index on open (desktop multi-review mode only)
+  // Scroll to initial review on open (mobile + desktop)
   useEffect(() => {
-    if (isMobile) return;
-    if (isOpen && scrollContainerRef.current && initialIndex >= 0 && initialIndex < reviews.length) {
+    if (!isOpen || initialIndex < 0 || initialIndex >= reviews.length) return;
+    const t = setTimeout(() => {
       const targetPost = postRefs.current[initialIndex];
       if (targetPost) {
-        setTimeout(() => {
-          targetPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        targetPost.scrollIntoView({
+          behavior: isMobile ? "auto" : "smooth",
+          block: "start",
+        });
       }
-    }
+    }, isMobile ? 80 : 100);
+    return () => clearTimeout(t);
   }, [isOpen, initialIndex, reviews.length, isMobile]);
 
   // Keep ref in sync so we don't have to rebuild observers on every activeIndex change.
@@ -360,9 +362,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     activeIndexRef.current = initialIndex;
   }, [isOpen, initialIndex, reviewsKey]);
 
-  // Track which post is "active" (most visible) — desktop multi-review mode only.
+  // Track which post is "active" (most visible)
   useEffect(() => {
-    if (!isOpen || isMobile) return;
+    if (!isOpen) return;
     const root = scrollContainerRef.current;
     if (!root) return;
 
@@ -397,7 +399,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
     elementToIndex.forEach((_, el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [isOpen, isMobile, reviewsKey, onActiveIndexChange]);
+  }, [isOpen, reviewsKey, onActiveIndexChange]);
 
   // Fetch first comment for initial post and adjacent posts immediately
   useEffect(() => {
@@ -420,9 +422,9 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     }
   }, [isOpen, initialIndex, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
-  // Use Intersection Observer to detect visible posts and lazy load comments (desktop only)
+  // Use Intersection Observer to detect visible posts and lazy load comments
   useEffect(() => {
-    if (!isOpen || isMobile) return;
+    if (!isOpen) return;
     
     const observers = new Map<string, IntersectionObserver>();
     
@@ -453,7 +455,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
-  }, [isOpen, isMobile, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
+  }, [isOpen, reviews, firstComments, loadingFirstComments, fetchFirstCommentForReview]);
 
   // Infinite scroll
   const loadMore = useCallback(async (): Promise<void> => {
@@ -756,11 +758,6 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
   if (!isOpen || reviews.length === 0) return null;
   if (typeof document === "undefined") return null;
 
-  // On mobile: show only the single review at initialIndex
-  const displayReviews = isMobile
-    ? [reviews[Math.min(initialIndex, reviews.length - 1)]]
-    : reviews;
-
   const renderPost = (review: GraphQLReview, index: number, actualIndex: number) => {
     const images = review.reviewImages || [];
     const mainImage = images[0]?.sourceUrl || DEFAULT_REVIEW_IMAGE;
@@ -1017,7 +1014,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
   const content = (
     <>
-      <div className={`review-screen ${isMobile ? 'review-screen--single' : ''}`} ref={scrollContainerRef}>
+      <div className="review-screen" ref={scrollContainerRef}>
         {/* Close / Back Button */}
         <button
           className="review-screen__close"
@@ -1033,13 +1030,10 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({
 
         {/* Scroll Container */}
         <div className="review-screen__scroll-container">
-          {displayReviews.map((review, index) => {
-            const actualIndex = isMobile ? initialIndex : index;
-            return renderPost(review, index, actualIndex);
-          })}
+          {reviews.map((review, index) => renderPost(review, index, index))}
 
-          {/* Infinite Scroll Trigger — desktop only */}
-          {!isMobile && onLoadMore && hasNextPage && (
+          {/* Infinite scroll sentinel */}
+          {onLoadMore && hasNextPage && (
             <div ref={observerRef} className="review-screen__load-more">
               {loadingMore && (
                 <div className="review-screen__skeleton-post">
