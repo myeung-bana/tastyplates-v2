@@ -2,8 +2,18 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import PullToRefresh from "react-simple-pull-to-refresh";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useHaptic } from "@/hooks/useHaptic";
+
+/** Routes with full-viewport `fixed` UI must not sit inside PTR: transform breaks `position:fixed`. */
+const PULL_TO_REFRESH_BLOCKLIST = ["/profile/edit"] as const;
+
+function isPullToRefreshBlockedPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return PULL_TO_REFRESH_BLOCKLIST.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
 
 const Spinner = () => (
   <div className="flex justify-center py-3">
@@ -15,17 +25,19 @@ const PullToRefreshWrapper: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const { trigger: haptic } = useHaptic();
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    setEnabled(isMobile);
-
-    const onResize = () => setEnabled(window.innerWidth < 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+    const update = () => {
+      const isMobile = window.innerWidth < 768;
+      setEnabled(isMobile && !isPullToRefreshBlockedPath(pathname));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [pathname]);
 
   const handleRefresh = useCallback(async () => {
     haptic("medium");
