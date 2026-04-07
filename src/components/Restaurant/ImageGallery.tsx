@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 interface ImageGalleryProps {
   images: string[];
+  /** Full set of images for lightbox browsing. Defaults to `images` when omitted. */
+  allImages?: string[];
   restaurantTitle: string;
 }
 
@@ -68,7 +70,6 @@ function DesktopHeroGrid({
   const sizesMain = "(min-width: 768px) 45vw, 100vw";
   const sizesMid = "(min-width: 768px) 22vw, 50vw";
   const sizesRight = "(min-width: 768px) 18vw, 33vw";
-  const sizesExtra = "(min-width: 768px) 28vw, 33vw";
 
   const alt = (i: number) => `${restaurantTitle} - Photo ${i + 1}`;
 
@@ -198,88 +199,65 @@ function DesktopHeroGrid({
     );
   }
 
-  const rest = images.slice(5);
-
   return (
-    <div className="flex w-full flex-col gap-2 md:gap-3">
-      {/* 3 columns: main | H + V1/V2 | R */}
-      <div
-        className={cn(
-          "grid w-full grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,0.82fr)] grid-rows-2 gap-2 md:gap-3",
-          HERO_HEIGHT
-        )}
-      >
-        <GalleryTile
-          src={images[0]}
-          alt={alt(0)}
-          index={0}
-          onOpen={onOpen}
-          className="row-span-2 col-start-1 min-h-0"
-          priority
-          sizes={sizesMain}
-        />
+    <div
+      className={cn(
+        "grid w-full grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)_minmax(0,0.82fr)] grid-rows-2 gap-2 md:gap-3",
+        HERO_HEIGHT
+      )}
+    >
+      <GalleryTile
+        src={images[0]}
+        alt={alt(0)}
+        index={0}
+        onOpen={onOpen}
+        className="row-span-2 col-start-1 min-h-0"
+        priority
+        sizes={sizesMain}
+      />
 
+      <GalleryTile
+        src={images[1]}
+        alt={alt(1)}
+        index={1}
+        onOpen={onOpen}
+        className="row-start-1 col-start-2 min-h-0 aspect-[2/1]"
+        sizes={sizesMid}
+      />
+
+      <div className="row-start-2 col-start-2 grid min-h-0 grid-cols-2 gap-2 md:gap-3">
         <GalleryTile
-          src={images[1]}
-          alt={alt(1)}
-          index={1}
+          src={images[2]}
+          alt={alt(2)}
+          index={2}
           onOpen={onOpen}
-          className="row-start-1 col-start-2 min-h-0 aspect-[2/1]"
+          className="min-h-0 aspect-[3/4]"
           sizes={sizesMid}
         />
-
-        <div className="row-start-2 col-start-2 grid min-h-0 grid-cols-2 gap-2 md:gap-3">
-          <GalleryTile
-            src={images[2]}
-            alt={alt(2)}
-            index={2}
-            onOpen={onOpen}
-            className="min-h-0 aspect-[3/4]"
-            sizes={sizesMid}
-          />
-          <GalleryTile
-            src={images[3]}
-            alt={alt(3)}
-            index={3}
-            onOpen={onOpen}
-            className="min-h-0 aspect-[3/4]"
-            sizes={sizesMid}
-          />
-        </div>
-
         <GalleryTile
-          src={images[4]}
-          alt={alt(4)}
-          index={4}
+          src={images[3]}
+          alt={alt(3)}
+          index={3}
           onOpen={onOpen}
-          className="row-span-2 col-start-3 h-full min-h-0"
-          sizes={sizesRight}
+          className="min-h-0 aspect-[3/4]"
+          sizes={sizesMid}
         />
       </div>
 
-      {rest.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          {rest.map((src, j) => {
-            const idx = j + 5;
-            return (
-              <GalleryTile
-                key={`${src}-${idx}`}
-                src={src}
-                alt={alt(idx)}
-                index={idx}
-                onOpen={onOpen}
-                className="aspect-[4/3]"
-                sizes={sizesExtra}
-              />
-            );
-          })}
-        </div>
-      )}
+      <GalleryTile
+        src={images[4]}
+        alt={alt(4)}
+        index={4}
+        onOpen={onOpen}
+        className="row-span-2 col-start-3 h-full min-h-0"
+        sizes={sizesRight}
+      />
     </div>
   );
 }
 
-export default function ImageGallery({ images, restaurantTitle }: ImageGalleryProps) {
+export default function ImageGallery({ images, allImages, restaurantTitle }: ImageGalleryProps) {
+  const lightboxImages = allImages ?? images;
   const [selectedImage, setSelectedImage] = useState(0);
   const [showAllImages, setShowAllImages] = useState(false);
 
@@ -294,11 +272,11 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
   }
 
   const nextImage = () => {
-    setSelectedImage((prev) => (prev + 1) % images.length);
+    setSelectedImage((prev) => (prev + 1) % lightboxImages.length);
   };
 
   const prevImage = () => {
-    setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
+    setSelectedImage((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length);
   };
 
   const openLightbox = (index: number) => {
@@ -313,15 +291,15 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
       if (e.key === "Escape") {
         setShowAllImages(false);
       } else if (e.key === "ArrowLeft") {
-        setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
+        setSelectedImage((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length);
       } else if (e.key === "ArrowRight") {
-        setSelectedImage((prev) => (prev + 1) % images.length);
+        setSelectedImage((prev) => (prev + 1) % lightboxImages.length);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showAllImages, images.length]);
+  }, [showAllImages, lightboxImages.length]);
 
   const photosIcon = (
     <svg
@@ -341,7 +319,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
   );
 
   const seeAllLabel =
-    images.length > 1 ? `See all photos (${images.length})` : "View photo";
+    lightboxImages.length > 1 ? `See all photos (${lightboxImages.length})` : "View photo";
 
   return (
     <>
@@ -455,7 +433,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
         </div>
       </div>
 
-      {/* Full-screen lightbox */}
+      {/* Full-screen lightbox — browses ALL images */}
       {showAllImages && (
         <div
           className="fixed inset-0 z-[1001] bg-black transition-opacity duration-300"
@@ -480,7 +458,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
               onClick={(e) => e.stopPropagation()}
             >
               <Image
-                src={images[selectedImage] || "/images/tastyplates_placeholder_landscape.jpg"}
+                src={lightboxImages[selectedImage] || "/images/tastyplates_placeholder_landscape.jpg"}
                 alt={`${restaurantTitle} - Image ${selectedImage + 1}`}
                 fill
                 className="object-contain"
@@ -489,7 +467,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
               />
             </div>
 
-            {images.length > 1 && (
+            {lightboxImages.length > 1 && (
               <>
                 <button
                   type="button"
@@ -516,12 +494,12 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
               </>
             )}
 
-            {images.length > 1 && (
+            {lightboxImages.length > 1 && (
               <div
                 className="absolute bottom-4 left-1/2 flex max-w-full -translate-x-1/2 space-x-2 overflow-x-auto px-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                {images.map((image, index) => (
+                {lightboxImages.map((image, index) => (
                   <button
                     key={index}
                     type="button"
@@ -544,7 +522,7 @@ export default function ImageGallery({ images, restaurantTitle }: ImageGalleryPr
             )}
 
             <div className="pointer-events-none absolute right-4 top-14 text-lg font-medium text-white md:top-4">
-              {selectedImage + 1} / {images.length}
+              {selectedImage + 1} / {lightboxImages.length}
             </div>
           </div>
         </div>

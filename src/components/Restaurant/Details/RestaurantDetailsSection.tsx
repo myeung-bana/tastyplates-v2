@@ -3,6 +3,7 @@ import React from "react";
 import { FiPhone, FiDollarSign } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import OpeningHoursDisplay from "./OpeningHoursDisplay";
+import RestaurantDescription from "./RestaurantDescription";
 import { usePriceRanges } from "@/hooks/usePriceRanges";
 
 interface RestaurantDetailsSectionProps {
@@ -27,13 +28,10 @@ const RestaurantDetailsSection: React.FC<RestaurantDetailsSectionProps> = ({
         Restaurant Details
       </h3>
       <div className="space-y-4">
-        {/* Restaurant Description */}
+        {/* Restaurant Description with See More / BottomSheet */}
         {restaurant.content && (
           <div className="pb-4 border-b border-gray-200">
-            <div
-              className="text-gray-700 leading-relaxed prose prose-sm max-w-none font-neusans font-normal text-sm line-clamp-6"
-              dangerouslySetInnerHTML={{ __html: restaurant.content }}
-            />
+            <RestaurantDescription restaurant={restaurant} embedded />
           </div>
         )}
 

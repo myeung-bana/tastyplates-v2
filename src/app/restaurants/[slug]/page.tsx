@@ -283,11 +283,12 @@ export default function RestaurantDetail() {
           />
         </div>
         
-        {/* Full-width gallery: mobile carousel + desktop masonry (see ImageGallery) */}
+        {/* Full-width gallery: hero shows ≤5 images; lightbox browses all */}
         {getRestaurantImages(restaurant).length > 0 ? (
           <div className="relative mx-2 mb-8 h-64 overflow-hidden rounded-2xl md:h-auto md:min-h-[320px] md:overflow-visible">
             <ImageGallery
-              images={getRestaurantImages(restaurant)}
+              images={getRestaurantImages(restaurant).slice(0, 5)}
+              allImages={getRestaurantImages(restaurant)}
               restaurantTitle={restaurant.title}
             />
           </div>
