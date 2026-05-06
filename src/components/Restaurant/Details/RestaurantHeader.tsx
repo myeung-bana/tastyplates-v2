@@ -9,6 +9,7 @@ import CheckInRestaurantButton from "@/components/Restaurant/CheckInRestaurantBu
 import SaveRestaurantButton from "./SaveRestaurantButton";
 import toast from "react-hot-toast";
 import { useHaptic } from "@/hooks/useHaptic";
+import { openUrl } from "@/lib/capacitor";
 import "@/styles/components/_restaurant-card.scss";
 
 interface RestaurantHeaderProps {
@@ -178,15 +179,13 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
         <div className="flex flex-wrap gap-2">
           {/* Website */}
           {websiteUrl ? (
-            <a
-              href={websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openUrl(websiteUrl)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
             >
               <FiGlobe className="w-4 h-4 text-gray-500" />
               <span>Website</span>
-            </a>
+            </button>
           ) : (
             <button
               disabled
@@ -217,15 +216,13 @@ const RestaurantHeader: React.FC<RestaurantHeaderProps> = ({
           )}
           
           {/* Directions */}
-          <a
-            href={getDirectionsUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => openUrl(getDirectionsUrl())}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-normal text-sm font-neusans"
           >
             <FiNavigation className="w-4 h-4 text-gray-500" />
             <span>Directions</span>
-          </a>
+          </button>
           
           <SaveRestaurantButton
             restaurantSlug={restaurant.slug}

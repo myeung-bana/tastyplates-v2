@@ -360,7 +360,7 @@ const RegisterContent: React.FC<RegisterPageProps> = ({ onOpenSignin }) => {
                     </div>
                   </>
                 )}
-                <p className="auth__terms font-neusans">By signing up, I agree to TastyPlate's <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
+                <p className="auth__terms font-neusans">By signing up, I agree to TastyPlate&apos;s <a href="/terms-of-service">Terms of Service</a> and <a href="/listing-guidelines">Listing Guidelines</a></p>
 
                 <button
                   disabled={isLoading}

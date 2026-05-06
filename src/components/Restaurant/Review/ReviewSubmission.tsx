@@ -940,7 +940,6 @@ const ReviewSubmissionPage = () => {
                 <Link
                   href={WRITING_GUIDELINES}
                   className="underline"
-                  target="_blank"
                 >
                   Writing Guidelines
                 </Link>

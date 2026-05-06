@@ -1,4 +1,12 @@
 // restaurantV2Service.ts - Service for Hasura-based restaurant API (v2)
+//
+// When NEXT_PUBLIC_API_MODE=nhost, function-backed operations (search, match)
+// route to Nhost Functions. All other reads continue to use direct GraphQL.
+//
+// To activate: set NEXT_PUBLIC_API_MODE=nhost in .env
+
+const API_MODE = process.env.NEXT_PUBLIC_API_MODE || 'legacy';
+const FUNCTIONS_URL = process.env.NEXT_PUBLIC_NHOST_FUNCTIONS_URL || '';
 
 export interface RestaurantV2 {
   id: number;
@@ -95,6 +103,18 @@ export interface RestaurantV2Response {
 class RestaurantV2Service {
   private baseUrl: string = '/api/v1/restaurants-v2';
 
+  private get searchUrl(): string {
+    return API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/restaurants/search`
+      : `${this.baseUrl}/get-restaurants`;
+  }
+
+  private get matchUrl(): string {
+    return API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/restaurants/match`
+      : `${this.baseUrl}/match-restaurant`;
+  }
+
   async getAllRestaurants(params?: {
     limit?: number;
     offset?: number;
@@ -138,7 +158,7 @@ class RestaurantV2Service {
       if (params?.country_short) queryParams.append('country_short', params.country_short);
       if (params?.order_by) queryParams.append('order_by', params.order_by);
 
-      const url = `${this.baseUrl}/get-restaurants${queryParams.toString() ? `?${queryParams}` : ''}`;
+      const url = `${this.searchUrl}${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await fetch(url);
 
       if (!response.ok) {

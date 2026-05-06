@@ -4,6 +4,7 @@ import { FiMapPin, FiExternalLink } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
 import RestaurantMap from "./RestaurantMap";
 import { formatAddressMultiLine, formatAddressSingleLine, getStreetCity } from "@/utils/addressUtils";
+import { openUrl } from "@/lib/capacitor";
 
 interface RestaurantLocationSectionProps {
   restaurant: Listing;
@@ -95,15 +96,13 @@ const RestaurantLocationSection: React.FC<RestaurantLocationSectionProps> = ({
               {singleLineAddress}
             </span>
             {googleMapsUrl && (
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => openUrl(googleMapsUrl)}
                 className="flex-shrink-0 text-[#ff7c0a] hover:text-[#e66d08] transition-colors"
                 aria-label="Open in Google Maps"
               >
                 <FiExternalLink className="w-4 h-4" />
-              </a>
+              </button>
             )}
           </div>
         )}

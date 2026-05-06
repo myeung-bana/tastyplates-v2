@@ -1,11 +1,17 @@
 // restaurantUserService.ts - Frontend service for user data API
-// 
+//
+// When NEXT_PUBLIC_API_MODE=nhost, auth-gated operations (follow, unfollow,
+// suggested, me, delete) route to Nhost Functions instead of /api/v1.
+//
 // MIGRATION NOTE: This service is transitioning from `restaurant_users` table
 // to Nhost's `auth.users` + `user_profiles` tables:
 // - auth.users: Nhost-managed authentication data (email, displayName, avatarUrl, etc.)
 // - user_profiles: Custom application data (username, about_me, birthdate, palates, etc.)
 //
 // The API routes handle both old and new schemas for backward compatibility.
+
+const API_MODE = process.env.NEXT_PUBLIC_API_MODE || 'legacy';
+const FUNCTIONS_URL = process.env.NEXT_PUBLIC_NHOST_FUNCTIONS_URL || '';
 
 import { Restaurant } from '@/utils/restaurantTransformers';
 
@@ -309,10 +315,13 @@ class RestaurantUserService {
     return result;
   }
 
-  async deleteUser(id: string, hardDelete: boolean = false): Promise<RestaurantUserResponse> {
-    const response = await fetch(`${this.baseUrl}/delete-restaurant-user?id=${id}${hardDelete ? '&hard_delete=true' : ''}`, {
-      method: 'DELETE',
-    });
+  async deleteUser(id: string, hardDelete: boolean = false, accessToken?: string): Promise<RestaurantUserResponse> {
+    const url = API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/users/delete?id=${id}${hardDelete ? '&hard_delete=true' : ''}`
+      : `${this.baseUrl}/delete-restaurant-user?id=${id}${hardDelete ? '&hard_delete=true' : ''}`;
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    const response = await fetch(url, { method: 'DELETE', headers });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

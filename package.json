@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:native": "NEXT_BUILD_TARGET=native next build && npx cap sync",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
@@ -18,6 +19,18 @@
     "@apollo/server": "^4.11.2",
     "@as-integrations/next": "^3.2.0",
     "@aws-sdk/client-s3": "^3.700.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/camera": "^8.2.0",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.3",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@headlessui/react": "^2.2.4",
     "@heroui/dropdown": "^2.3.20",
     "@heroui/modal": "^2.2.14",
@@ -75,6 +88,9 @@
     "web-haptics": "^0.0.6"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@types/js-cookie": "^3.0.6",
     "@types/lodash.debounce": "^4.0.9",
     "@types/minimatch": "^6.0.0",

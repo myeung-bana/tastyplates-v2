@@ -2,6 +2,7 @@
 import React from "react";
 import { FiEdit3, FiPhone, FiGlobe, FiNavigation } from "react-icons/fi";
 import { Listing } from "@/interfaces/restaurant/restaurant";
+import { openUrl } from "@/lib/capacitor";
 
 interface RestaurantQuickActionsProps {
   onAddReview: () => void;
@@ -49,15 +50,13 @@ const RestaurantQuickActions: React.FC<RestaurantQuickActionsProps> = ({
 
         {/* Website */}
         {websiteUrl ? (
-          <a
-            href={websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => openUrl(websiteUrl)}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-black border-2 border-black rounded-xl hover:bg-gray-50 transition-colors font-neusans font-normal"
           >
             <FiGlobe className="w-4 h-4" />
             <span className="font-neusans font-normal">Website</span>
-          </a>
+          </button>
         ) : (
           <button
             disabled
@@ -88,15 +87,13 @@ const RestaurantQuickActions: React.FC<RestaurantQuickActionsProps> = ({
         )}
 
         {/* Directions */}
-        <a
-          href={getDirectionsUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => openUrl(getDirectionsUrl())}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-black border-2 border-black rounded-xl hover:bg-gray-50 transition-colors font-neusans font-normal"
         >
           <FiNavigation className="w-4 h-4" />
           <span className="font-neusans font-normal">Directions</span>
-        </a>
+        </button>
       </div>
     </div>
   );

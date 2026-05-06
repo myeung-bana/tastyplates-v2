@@ -1,4 +1,13 @@
 // Service layer for restaurant reviews (Hasura V2 API)
+//
+// When NEXT_PUBLIC_API_MODE=nhost, write operations (create, update, delete,
+// create-comment, following-feed) route to Nhost Functions instead of /api/v1.
+// Read operations remain as-is (Next.js API routes proxy to Hasura).
+//
+// To activate: set NEXT_PUBLIC_API_MODE=nhost in .env
+
+const API_MODE = process.env.NEXT_PUBLIC_API_MODE || 'legacy';
+const FUNCTIONS_URL = process.env.NEXT_PUBLIC_NHOST_FUNCTIONS_URL || '';
 
 export interface ReviewImage {
   id: string;
@@ -107,6 +116,18 @@ export interface ToggleLikeResponse {
 class ReviewV2Service {
   private baseUrl = '/api/v1/restaurant-reviews';
 
+  private fnUrl(path: string): string {
+    return API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}${path}`
+      : `${this.baseUrl}${path.replace('/reviews/', '/').replace(/^\/reviews\//, '/')}`;
+  }
+
+  private feedUrl(params: URLSearchParams): string {
+    return API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/reviews/following-feed?${params}`
+      : `${this.baseUrl}/get-following-feed?${params}`;
+  }
+
   async getReviewById(reviewId: string, userId?: string): Promise<ReviewV2> {
     const params = new URLSearchParams({ id: reviewId });
     if (userId) {
@@ -209,7 +230,7 @@ class ReviewV2Service {
       params.append('offset', options.offset.toString());
     }
 
-    const response = await fetch(`${this.baseUrl}/get-following-feed?${params}`, {
+    const response = await fetch(this.feedUrl(params), {
       signal: options.signal,
     });
 
@@ -254,12 +275,13 @@ class ReviewV2Service {
     return result.data;
   }
 
-  async createReview(input: CreateReviewInput): Promise<ReviewV2> {
-    const response = await fetch(`${this.baseUrl}/create-review`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
+  async createReview(input: CreateReviewInput, accessToken?: string): Promise<ReviewV2> {
+    const url = API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/reviews/create`
+      : `${this.baseUrl}/create-review`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(input) });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to create review' }));
       throw new Error(error.error || 'Failed to create review');
@@ -271,12 +293,13 @@ class ReviewV2Service {
     return result.data;
   }
 
-  async updateReview(reviewId: string, input: UpdateReviewInput): Promise<ReviewV2> {
-    const response = await fetch(`${this.baseUrl}/update-review`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: reviewId, ...input }),
-    });
+  async updateReview(reviewId: string, input: UpdateReviewInput, accessToken?: string): Promise<ReviewV2> {
+    const url = API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/reviews/update`
+      : `${this.baseUrl}/update-review`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    const response = await fetch(url, { method: 'PUT', headers, body: JSON.stringify({ id: reviewId, ...input }) });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to update review' }));
       throw new Error(error.error || 'Failed to update review');
@@ -288,10 +311,13 @@ class ReviewV2Service {
     return result.data;
   }
 
-  async deleteReview(reviewId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/delete-review?id=${reviewId}`, {
-      method: 'DELETE',
-    });
+  async deleteReview(reviewId: string, accessToken?: string): Promise<void> {
+    const url = API_MODE === 'nhost' && FUNCTIONS_URL
+      ? `${FUNCTIONS_URL}/reviews/delete?id=${reviewId}`
+      : `${this.baseUrl}/delete-review?id=${reviewId}`;
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    const response = await fetch(url, { method: 'DELETE', headers });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to delete review' }));
       throw new Error(error.error || 'Failed to delete review');

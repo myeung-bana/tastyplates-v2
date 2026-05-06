@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 import withPWA from "next-pwa";
 
+const isNative = process.env.NEXT_BUILD_TARGET === "native";
+
 const nextConfig: NextConfig = {
+  // Static export for Capacitor native builds; standard server output for web
+  ...(isNative && { output: "export", trailingSlash: true }),
   // Add TypeScript configuration for Vercel deployment
   typescript: {
     // Ignore TypeScript errors during build (temporary fix)
@@ -13,6 +17,8 @@ const nextConfig: NextConfig = {
     includePaths: ["./src/styles"],
   },
   images: {
+    // next/image optimisation is unavailable in static export; use CDN on web
+    unoptimized: isNative ? true : false,
     remotePatterns: [
       {
         protocol: "http",

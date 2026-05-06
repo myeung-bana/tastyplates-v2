@@ -15,8 +15,6 @@ export default function ContentGuidelinesReminder() {
             <Link 
               href={CONTENT_GUIDELINES}
               className="font-medium text-orange-700 hover:text-orange-900 underline underline-offset-2 transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               Content Guidelines
             </Link>

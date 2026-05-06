@@ -21,6 +21,9 @@ import { UploadProvider } from '@/contexts/UploadContext';
 import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
 import Script from "next/script";
 import PwaBrandSplash from "@/components/layout/PwaBrandSplash";
+import PushHandler from "@/components/native/PushHandler";
+import BackButtonHandler from "@/components/native/BackButtonHandler";
+import DeepLinkHandler from "@/components/native/DeepLinkHandler";
 
 const rootSeo = generateSEOMetadata({
   title: siteConfig.name,
@@ -128,6 +131,9 @@ export default function RootLayout({
                   <OAuthCallbackHandler />
                   <VerificationRedirect />
                   <OnboardingRedirect />
+                  <PushHandler />
+                  <BackButtonHandler />
+                  <DeepLinkHandler />
                   <LanguageProvider>
                     <InactivityLogout />
                     <AuthModalWrapper>

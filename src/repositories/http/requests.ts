@@ -6,6 +6,7 @@ import { SESSION_EXPIRED_KEY } from "@/constants/session";
 import { HttpResponse } from "@/interfaces/httpResponse";
 import { removeAllCookies } from "@/utils/removeAllCookies";
 import { nhostAuthService } from "@/services/auth/nhostAuthService";
+import { storageClear, storageSet } from "@/lib/storage";
 
 const handleUnauthorized = async () => {
     try {
@@ -17,9 +18,11 @@ const handleUnauthorized = async () => {
     }
     
     removeAllCookies();
-    localStorage.clear();
-    sessionStorage.clear();
-    localStorage.setItem(SESSION_EXPIRED_KEY, sessionExpired);
+    await storageClear();
+    if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+    }
+    await storageSet(SESSION_EXPIRED_KEY, sessionExpired);
     
     // Redirect to home
     if (typeof window !== 'undefined') {

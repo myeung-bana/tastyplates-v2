@@ -714,7 +714,6 @@ const EditReviewSubmissionPage = () => {
                 <Link
                   href={WRITING_GUIDELINES}
                   className="underline text-sm md:text-sm font-neusans"
-                  target="_blank"
                 >
                   Writing Guidelines
                 </Link>

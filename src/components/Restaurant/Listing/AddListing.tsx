@@ -955,7 +955,6 @@ const AddListingPage = () => {
                   <Link
                     href={WRITING_GUIDELINES}
                     className="underline"
-                    target="_blank"
                   >
                     Listing Guidelines
                   </Link>
@@ -1170,7 +1169,6 @@ const AddListingPage = () => {
                 <Link
                   href={WRITING_GUIDELINES}
                   className="underline"
-                  target="_blank"
                 >
                   Writing Guidelines
                 </Link>

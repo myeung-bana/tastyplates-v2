@@ -10,6 +10,7 @@ import { Dialog } from "@headlessui/react";
 import { FiX, FiMapPin } from "react-icons/fi";
 import { GOOGLE_MAPS } from "@/constants/pages";
 import { GoogleMapUrl } from "@/utils/addressUtils";
+import { openUrl } from "@/lib/capacitor";
 
 type Props = {
     lat?: number | null | undefined;
@@ -244,14 +245,12 @@ const RestaurantMap = ({ lat, lng, googleMapUrl, address, small = false }: Props
                         </div>
 
                         <div className="p-4 text-right">
-                            <a
-                                href={GOOGLE_MAPS(coordinates.lat, coordinates.lng)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block bg-[#ff7c0a] no-underline text-decoration-line: none; text-white font-medium py-2 px-4 rounded-xl"
+                            <button
+                                onClick={() => openUrl(GOOGLE_MAPS(coordinates.lat, coordinates.lng))}
+                                className="inline-block bg-[#ff7c0a] text-white font-medium py-2 px-4 rounded-xl"
                             >
                                 Get Directions
-                            </a>
+                            </button>
                         </div>
                     </Dialog.Panel>
                 </div>

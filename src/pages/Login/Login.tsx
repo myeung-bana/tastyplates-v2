@@ -281,7 +281,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onOpenSignup, onOpenForgotPasswor
                   <div className="text-red-600 text-xs font-neusans">{passwordError}</div>
                 )}
               </div>
-              <p className="auth__terms font-neusans text-sm">By logging in, you agree to TastyPlate's <a className="auth__terms font-neusans text-sm" href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a className="auth__terms font-neusans text-sm" href="/listing-guidelines" target="_blank" rel="noopener noreferrer">Listing Guidelines</a></p>
+              <p className="auth__terms font-neusans text-sm">By logging in, you agree to TastyPlate&apos;s <a className="auth__terms font-neusans text-sm" href="/terms-of-service">Terms of Service</a> and <a className="auth__terms font-neusans text-sm" href="/listing-guidelines">Listing Guidelines</a></p>
               <button
                 type="submit"
                 disabled={isLoading}

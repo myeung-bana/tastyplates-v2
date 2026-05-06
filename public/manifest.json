@@ -1,7 +1,9 @@
 {
   "name": "TastyPlates",
   "short_name": "TastyPlates",
+  "description": "Discover and review restaurants with TastyPlates",
   "start_url": "/",
+  "scope": "/",
   "id": "/",
   "display": "standalone",
   "background_color": "#ff7c0a",
@@ -19,6 +21,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/Favicon_Orange_Square.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/Favicon_Orange_Square.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [

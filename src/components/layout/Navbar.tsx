@@ -22,6 +22,7 @@ import { DEFAULT_USER_ICON, TASTYPLATES_LOGO_BLACK, TASTYPLATES_LOGO_COLOUR, TAS
 import FallbackImage, { FallbackImageType } from "../ui/Image/FallbackImage";
 import PasswordUpdatedModal from "../ui/Modal/PasswordUpdatedModal";
 import { LOGOUT_KEY, LOGIN_BACK_KEY, WELCOME_KEY, SESSION_EXPIRED_KEY, UPDATE_PASSWORD_KEY } from "@/constants/session";
+import { storageGet, storageRemove } from "@/lib/storage";
 import CustomModal from "../ui/Modal/Modal";
 import { MdArrowBackIos } from "react-icons/md";
 import NavbarSearchBar from "../navigation/NavbarSearchBar";
@@ -160,12 +161,13 @@ export default function Navbar(props: Record<string, unknown>) {
     // Update tracked state
     prevAuthState.current = isAuthenticated;
     
-    // Handle session expired
-    const sessionExpiredMessage = localStorage.getItem(SESSION_EXPIRED_KEY);
-    if (sessionExpiredMessage) {
-      toast.error(sessionExpiredMessage, { duration: 3000 });
-      localStorage.removeItem(SESSION_EXPIRED_KEY);
-    }
+    // Handle session expired (uses storage adapter — Keychain on native, localStorage on web)
+    storageGet(SESSION_EXPIRED_KEY).then((sessionExpiredMessage) => {
+      if (sessionExpiredMessage) {
+        toast.error(sessionExpiredMessage, { duration: 3000 });
+        storageRemove(SESSION_EXPIRED_KEY);
+      }
+    });
     
     // Handle password update modal
     const openPasswordUpdateModal = localStorage.getItem(UPDATE_PASSWORD_KEY);
