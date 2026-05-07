@@ -53,21 +53,21 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
 
       <div className="md:hidden -mx-6 px-6">
         <div className="overflow-x-auto pb-2 hide-scrollbar">
-          <div className="flex gap-3 min-w-max">
-            <div className="flex flex-col items-center min-w-[110px]">
-              <h3 className="font-neusans font-semibold text-xs mb-0.5">Overall Score</h3>
+          <div className="flex gap-4 min-w-max">
+            <div className="flex flex-col items-center min-w-[132px]">
+              <h3 className="font-neusans font-semibold text-sm mb-0.5">Overall Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-1">
-                  <span className="font-neusans text-gray-800 text-xl font-bold">
+                  <span className="font-neusans text-gray-800 text-2xl font-bold">
                     {displayRating(ratingMetrics.overallRating)}
                   </span>
-                  <div className="absolute -bottom-0.5 -right-3 flex items-center justify-center w-4 h-4 rounded-full bg-[#ff7c0a]">
-                    <span className="text-[8px] font-bold text-white">
+                  <div className="absolute -bottom-0.5 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                    <span className="text-[10px] font-bold text-white">
                       {formatCount(ratingMetrics.overallCount)}
                     </span>
                   </div>
                 </div>
-                <span className="text-[9px] text-gray-500 text-center leading-tight">
+                <span className="text-[11px] text-gray-500 text-center leading-tight">
                   What platform<br />users think
                 </span>
               </div>
@@ -75,45 +75,45 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            <div className="flex flex-col items-center min-w-[110px]">
-              <h3 className="font-neusans font-semibold text-xs mb-0.5">Search Score</h3>
+            <div className="flex flex-col items-center min-w-[132px]">
+              <h3 className="font-neusans font-semibold text-sm mb-0.5">Search Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-1">
                   {showSearchScoreValues ? (
                     <>
-                      <span className="font-neusans text-gray-800 text-xl font-bold">
+                      <span className="font-neusans text-gray-800 text-2xl font-bold">
                         {displayRating(ratingMetrics.searchRating)}
                       </span>
-                      <div className="absolute -bottom-0.5 -right-3 flex items-center justify-center w-4 h-4 rounded-full bg-[#ff7c0a]">
-                        <span className="text-[8px] font-bold text-white">
+                      <div className="absolute -bottom-0.5 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                        <span className="text-[10px] font-bold text-white">
                           {formatCount(ratingMetrics.searchCount)}
                         </span>
                       </div>
                     </>
                   ) : (
-                    <FiLock className="w-5 h-5 text-gray-400" />
+                    <FiLock className="w-6 h-6 text-gray-400" />
                   )}
                 </div>
-                <span className="text-[9px] text-gray-500 text-center leading-tight">{searchSubtitleMobile}</span>
+                <span className="text-[11px] text-gray-500 text-center leading-tight">{searchSubtitleMobile}</span>
               </div>
             </div>
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            <div className="flex flex-col items-center min-w-[110px]">
-              <h3 className="font-neusans font-semibold text-xs mb-0.5">Authentic Score</h3>
+            <div className="flex flex-col items-center min-w-[132px]">
+              <h3 className="font-neusans font-semibold text-sm mb-0.5">Authentic Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-1">
-                  <span className="font-neusans text-gray-800 text-xl font-bold">
+                  <span className="font-neusans text-gray-800 text-2xl font-bold">
                     {displayRating(ratingMetrics.authenticRating)}
                   </span>
-                  <div className="absolute -bottom-0.5 -right-3 flex items-center justify-center w-4 h-4 rounded-full bg-[#ff7c0a]">
-                    <span className="text-[8px] font-bold text-white">
+                  <div className="absolute -bottom-0.5 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                    <span className="text-[10px] font-bold text-white">
                       {formatCount(ratingMetrics.authenticCount)}
                     </span>
                   </div>
                 </div>
-                <span className="text-[9px] text-gray-500 text-center leading-tight">
+                <span className="text-[11px] text-gray-500 text-center leading-tight">
                   How authentic<br />this restaurant is
                 </span>
               </div>
@@ -121,26 +121,26 @@ export default function RatingSection({ ratingMetrics, palatesParam }: RatingSec
 
             <div className="w-px bg-[#CACACA] self-stretch my-1"></div>
 
-            <div className="flex flex-col items-center min-w-[110px]">
-              <h3 className="font-neusans font-semibold text-xs mb-0.5">Shared Score</h3>
+            <div className="flex flex-col items-center min-w-[132px]">
+              <h3 className="font-neusans font-semibold text-sm mb-0.5">Shared Score</h3>
               <div className="flex flex-col items-center">
                 <div className="relative inline-block mb-1">
                   {sharedScoreUnlocked ? (
                     <>
-                      <span className="font-neusans text-gray-800 text-xl font-bold">
+                      <span className="font-neusans text-gray-800 text-2xl font-bold">
                         {displayRating(ratingMetrics.myPreferenceRating)}
                       </span>
-                      <div className="absolute -bottom-0.5 -right-3 flex items-center justify-center w-4 h-4 rounded-full bg-[#ff7c0a]">
-                        <span className="text-[8px] font-bold text-white">
+                      <div className="absolute -bottom-0.5 -right-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#ff7c0a]">
+                        <span className="text-[10px] font-bold text-white">
                           {formatCount(ratingMetrics.myPreferenceCount)}
                         </span>
                       </div>
                     </>
                   ) : (
-                    <FiLock className="w-5 h-5 text-gray-400" />
+                    <FiLock className="w-6 h-6 text-gray-400" />
                   )}
                 </div>
-                <span className="text-[9px] text-gray-500 text-center leading-tight">
+                <span className="text-[11px] text-gray-500 text-center leading-tight">
                   {sharedScoreUnlocked ? (
                     <>What shared<br />preference users think</>
                   ) : (

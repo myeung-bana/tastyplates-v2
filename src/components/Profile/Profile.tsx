@@ -436,8 +436,8 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
         onFollow={handleFollow}
       />
 
-      {/* Centered Tabs Container */}
-      <div className="w-full max-w-4xl mx-auto px-4">
+      {/* Tabs — aligned to same max-width as the header */}
+      <div className="w-full max-w-[900px] mx-auto px-4">
         <Tabs
           aria-label="Dynamic tabs"
           items={tabs}

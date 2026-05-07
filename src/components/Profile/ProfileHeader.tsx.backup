@@ -75,7 +75,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {isViewingOwnProfile ? (
               <Link
                 href={PROFILE_EDIT}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors font-semibold text-sm whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-[50px] hover:bg-gray-50 transition-colors text-sm whitespace-nowrap"
               >
                 <FaPen className="text-gray-500" />
                 <span>Edit Profile</span>

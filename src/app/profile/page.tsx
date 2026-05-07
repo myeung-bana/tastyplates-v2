@@ -29,7 +29,7 @@ const ProfilePage = () => {
   }, [user, loading, authLoading, isAuthenticated, nhostUser, router]);
 
   return (
-    <div className="flex flex-col items-start justify-items-center min-h-screen gap-6 md:gap-8 font-inter mt-4 md:mt-20 text-[#31343F]">
+    <div className="min-h-screen font-inter text-[#31343F]">
       <ProfileHeaderSkeleton />
     </div>
   );

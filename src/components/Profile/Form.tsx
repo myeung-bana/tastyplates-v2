@@ -190,9 +190,6 @@ const FormContent = memo(({
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Food Quote / Food Bio
                 </label>
-                <p className="text-sm text-gray-500 mb-3">
-                  Tell others about your food journey, favorite cuisines, or what makes you passionate about dining.
-                </p>
               </div>
               
               <div className="relative">
