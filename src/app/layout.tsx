@@ -1,162 +1,63 @@
-import type { Metadata } from "next";
-import "@/styles/global.scss";
-import SessionWrapper from "@/components/auth/SessionWrapper";
-import NhostProviderWrapperDynamic from "@/components/auth/NhostProviderWrapperDynamic";
-import { Toaster } from 'react-hot-toast';
-import { FollowProvider } from "@/components/FollowContext";
-import { LocationProvider } from "@/contexts/LocationContext";
-import InactivityLogout from "@/components/common/InactivityLogout";
-import OAuthCallbackHandler from "@/components/auth/OAuthCallbackHandler";
-import VerificationRedirect from "@/components/auth/VerificationRedirect";
-import OnboardingRedirect from "@/components/auth/OnboardingRedirect";
-import BottomNav from "@/components/layout/BottomNav";
-import MobileTopBar from "@/components/layout/MobileTopBar";
-import PwaInstallBanner from "@/components/layout/PwaInstallBanner";
-import AuthModalWrapper from "@/components/auth/AuthModalWrapper";
-import ConditionalFooter from "@/components/layout/ConditionalFooter";
-import CookieConsentAndAdSense from "@/components/layout/CookieConsentAndAdSense";
-import PullToRefreshWrapper from "@/components/layout/PullToRefreshWrapper";
-import { LanguageProvider } from '@/contexts/LanguageContext';
-import { UploadProvider } from '@/contexts/UploadContext';
-import { generateMetadata as generateSEOMetadata, siteConfig, generateStructuredData } from "@/lib/seo";
-import Script from "next/script";
-import PwaBrandSplash from "@/components/layout/PwaBrandSplash";
-import PushHandler from "@/components/native/PushHandler";
-import BackButtonHandler from "@/components/native/BackButtonHandler";
-import DeepLinkHandler from "@/components/native/DeepLinkHandler";
+import type { Metadata } from 'next'
+import { headers } from 'next/headers'
+import '@/styles/global.scss'
+import RootAppChrome from '@/components/layout/RootAppChrome'
+import { generateMetadata as generateSEOMetadata, siteConfig } from '@/lib/seo'
 
 const rootSeo = generateSEOMetadata({
   title: siteConfig.name,
   description: siteConfig.description,
   canonical: siteConfig.url,
   image: siteConfig.ogImage,
-  type: "website",
-});
+  type: 'website',
+})
 
-// Enhanced root metadata for SEO + PWA install / splash alignment
 export const metadata: Metadata = {
   ...rootSeo,
-  manifest: "/manifest.json",
-  themeColor: "#ff7c0a",
+  manifest: '/manifest.json',
+  themeColor: '#ff7c0a',
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: 'default',
     title: siteConfig.name,
   },
   icons: {
     icon: [
       {
-        url: "/icons/Favicon_Orange_Square.png",
-        sizes: "192x192",
-        type: "image/png",
+        url: '/icons/Favicon_Orange_Square.png',
+        sizes: '192x192',
+        type: 'image/png',
       },
       {
-        url: "/icons/Favicon_Orange_Square.png",
-        sizes: "512x512",
-        type: "image/png",
+        url: '/icons/Favicon_Orange_Square.png',
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
-    apple: "/icons/Favicon_Orange_Square.png",
+    apple: '/icons/Favicon_Orange_Square.png',
   },
-};
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  // Generate structured data for organization and website
-  const organizationData = generateStructuredData({ type: "Organization" });
-  const websiteData = generateStructuredData({ type: "WebSite" });
+  const minimal = (await headers()).get('x-tp-minimal-layout') === '1'
+
+  if (minimal) {
+    return (
+      <html lang="en">
+        <body>{children}</body>
+      </html>
+    )
+  }
 
   return (
     <html lang="en">
       <body>
-        {/* Organization Structured Data - Search engines will read this from body */}
-        {organizationData && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
-          />
-        )}
-        {/* Website Structured Data - Search engines will read this from body */}
-        {websiteData && (
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteData) }}
-          />
-        )}
-        {/* Bing Clarity Analytics - Add your project ID */}
-        {process.env.NEXT_PUBLIC_BING_CLARITY_ID && (
-          <Script
-            id="bing-clarity"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function(c,l,a,r,i,t,y){
-                  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-                })(window, document, "clarity", "script", "${process.env.NEXT_PUBLIC_BING_CLARITY_ID}");
-              `,
-            }}
-          />
-        )}
-        <PwaBrandSplash />
-        <Toaster 
-          position="top-center" 
-          reverseOrder={false}
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#ffffff',
-              color: '#374151',
-              fontSize: '14px',
-              fontWeight: '500',
-              padding: '12px 24px',
-              borderRadius: '50px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-              border: '1px solid #E5E7EB',
-              maxWidth: '400px',
-              width: 'fit-content',
-              minWidth: '200px',
-            },
-          }}
-        />
-        <NhostProviderWrapperDynamic>
-          <UploadProvider>
-            <FollowProvider>
-              <LocationProvider>
-                <SessionWrapper>
-                  <OAuthCallbackHandler />
-                  <VerificationRedirect />
-                  <OnboardingRedirect />
-                  <PushHandler />
-                  <BackButtonHandler />
-                  <DeepLinkHandler />
-                  <LanguageProvider>
-                    <InactivityLogout />
-                    <AuthModalWrapper>
-                      <div className="min-h-screen bg-white flex flex-col">
-                        <PwaInstallBanner />
-                        <MobileTopBar />
-                        <main className="flex-1 main-content pt-14 md:pt-0 pb-[calc(5rem+10px)] md:pb-0">
-                          <PullToRefreshWrapper>
-                            {children}
-                          </PullToRefreshWrapper>
-                        </main>
-                        <ConditionalFooter />
-                        <BottomNav />
-                        <CookieConsentAndAdSense />
-                      </div>
-                    </AuthModalWrapper>
-                  </LanguageProvider>
-                </SessionWrapper>
-              </LocationProvider>
-            </FollowProvider>
-          </UploadProvider>
-        </NhostProviderWrapperDynamic>
+        <RootAppChrome>{children}</RootAppChrome>
       </body>
     </html>
-  );
+  )
 }
