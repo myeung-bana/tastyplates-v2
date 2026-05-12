@@ -56,19 +56,6 @@ export default async function UptimePage() {
             <UptimeRefreshButton />
           </div>
 
-          <p className="mb-6 rounded-lg border border-gray-100 bg-gray-50/80 p-4 text-sm leading-relaxed text-gray-600">
-            This route uses a <strong className="text-[#31343F]">minimal layout</strong> (no Nhost client), so opening it does{' '}
-            <strong className="text-[#31343F]">not</strong> call <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">/v1/token</code> — useful for monitoring and debugging session noise. Probes run on the server. Before migrating traffic, confirm{' '}
-            <strong className="text-[#31343F]">Functions health</strong>, at least one{' '}
-            <strong className="text-[#31343F]">public read</strong>, your{' '}
-            <strong className="text-[#31343F]">auth healthz</strong>, and that private endpoints return{' '}
-            <strong className="text-[#31343F]">401/403 as expected</strong>. Configure{' '}
-            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">NEXT_PUBLIC_NHOST_FUNCTIONS_URL</code>{' '}
-            to match your Nhost dashboard (include the version segment once, e.g.{' '}
-            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">/v1</code> or{' '}
-            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">/v0</code>).
-          </p>
-
           <ul className="mb-6 flex flex-wrap gap-3 text-xs text-gray-500">
             <li>
               Functions URL:{' '}
@@ -100,10 +87,7 @@ export default async function UptimePage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 font-neusans font-semibold text-[#31343F]">Check</th>
-                  <th className="hidden px-4 py-3 font-neusans font-semibold text-[#31343F] sm:table-cell">
-                    Path
-                  </th>
+                  <th className="px-4 py-3 font-neusans font-semibold text-[#31343F]">Service</th>
                   <th className="px-4 py-3 font-neusans font-semibold text-[#31343F]">Status</th>
                   <th className="px-4 py-3 text-right font-neusans font-semibold text-[#31343F]">
                     Latency
@@ -125,13 +109,6 @@ export default async function UptimePage() {
                           {p.message}
                         </div>
                       ) : null}
-                    </td>
-                    <td className="hidden max-w-[200px] px-4 py-4 align-top sm:table-cell">
-                      {p.path ? (
-                        <code className="break-all text-xs text-gray-600">{p.path}</code>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
                     </td>
                     <td className="px-4 py-4 align-top">
                       <StatusBadge status={p.status} />

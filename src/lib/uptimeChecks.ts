@@ -13,16 +13,6 @@ export type ProbeResult = {
   status: ProbeStatus
   latencyMs: number | null
   message?: string
-  /** Public URL path only (no query secrets) */
-  path?: string
-}
-
-function safePathname(url: string): string {
-  try {
-    return new URL(url).pathname
-  } catch {
-    return '/graphql'
-  }
 }
 
 export function resolveNhostFunctionsUrl(relativePath: string): string | null {
@@ -45,7 +35,6 @@ async function probeHttpOk(
   name: string,
   description: string,
   url: string,
-  path: string,
 ): Promise<ProbeResult> {
   const t0 = performance.now()
   try {
@@ -62,7 +51,6 @@ async function probeHttpOk(
         description,
         status: 'error',
         latencyMs,
-        path,
         message: `HTTP ${res.status} ${res.statusText}`,
       }
     }
@@ -71,7 +59,6 @@ async function probeHttpOk(
       description,
       status: 'ok',
       latencyMs,
-      path,
       message: `HTTP ${res.status}`,
     }
   } catch (e) {
@@ -80,7 +67,6 @@ async function probeHttpOk(
       description,
       status: 'error',
       latencyMs: msSince(t0),
-      path,
       message: e instanceof Error ? e.message : 'Request failed',
     }
   }
@@ -94,7 +80,6 @@ async function probeJson(
   name: string,
   description: string,
   url: string,
-  path: string,
   init?: RequestInit,
   isOk?: (json: unknown, res: Response) => boolean,
 ): Promise<ProbeResult> {
@@ -116,7 +101,6 @@ async function probeJson(
         description,
         status: 'error',
         latencyMs,
-        path,
         message: `HTTP ${res.status} — response was not JSON`,
       }
     }
@@ -140,7 +124,6 @@ async function probeJson(
         description,
         status: 'error',
         latencyMs,
-        path,
         message: err || 'Unexpected response',
       }
     }
@@ -150,7 +133,6 @@ async function probeJson(
       description,
       status: 'ok',
       latencyMs,
-      path,
       message: `HTTP ${res.status}`,
     }
   } catch (e) {
@@ -159,7 +141,6 @@ async function probeJson(
       description,
       status: 'error',
       latencyMs: msSince(t0),
-      path,
       message: e instanceof Error ? e.message : 'Request failed',
     }
   }
@@ -189,10 +170,9 @@ export async function runUptimeChecks(): Promise<{
   if (healthUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — health',
+        'Functions',
         'Liveness of the Functions runtime (no database work).',
         healthUrl,
-        'health',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json) => {
           if (
@@ -211,7 +191,7 @@ export async function runUptimeChecks(): Promise<{
     )
   } else {
     probes.push({
-      name: 'Nhost Functions — health',
+      name: 'Functions',
       description: 'Liveness of the Functions runtime.',
       status: 'skipped',
       latencyMs: null,
@@ -223,10 +203,9 @@ export async function runUptimeChecks(): Promise<{
   if (categoriesUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions → Hasura',
+        'Categories',
         'Public read through Functions (validates admin GraphQL path on the server).',
         categoriesUrl,
-        'categories/get-categories?limit=1',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json) => {
           if (
@@ -243,7 +222,7 @@ export async function runUptimeChecks(): Promise<{
     )
   } else {
     probes.push({
-      name: 'Nhost Functions → Hasura',
+      name: 'Categories',
       description: 'Public categories read via Functions.',
       status: 'skipped',
       latencyMs: null,
@@ -254,10 +233,9 @@ export async function runUptimeChecks(): Promise<{
   if (publicReviewsUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — public reviews read',
+        'Reviews',
         'Anonymous public feed should stay readable.',
         publicReviewsUrl,
-        'restaurant-reviews/get-all-reviews?limit=1',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json) => {
           if (
@@ -277,10 +255,9 @@ export async function runUptimeChecks(): Promise<{
   if (echoUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — auth guard (echo)',
+        'Echo',
         'Unauthenticated request should be rejected with 401.',
         echoUrl,
-        'echo',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json, res) => {
           return (
@@ -297,10 +274,9 @@ export async function runUptimeChecks(): Promise<{
   if (draftReviewsUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — auth guard (draft reviews)',
+        'Draft reviews',
         'Draft reviews must require login.',
         draftReviewsUrl,
-        'restaurant-reviews/get-draft-reviews',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json, res) => {
           return (
@@ -317,10 +293,9 @@ export async function runUptimeChecks(): Promise<{
   if (wishlistUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — auth guard (wishlist)',
+        'Wishlist',
         'User wishlist should reject anonymous access.',
         wishlistUrl,
-        'restaurant-users/get-wishlist?user_id=<uuid>',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json, res) => {
           return (
@@ -337,10 +312,9 @@ export async function runUptimeChecks(): Promise<{
   if (followingFeedUrl) {
     probes.push(
       await probeJson(
-        'Nhost Functions — auth guard (following feed)',
+        'Following feed',
         'Following feed should reject anonymous access.',
         followingFeedUrl,
-        'restaurant-reviews/get-following-feed?user_id=<uuid>',
         { method: 'GET', headers: { Accept: 'application/json' } },
         (json, res) => {
           return (
@@ -357,15 +331,14 @@ export async function runUptimeChecks(): Promise<{
   if (authHealthUrl) {
     probes.push(
       await probeHttpOk(
-        'Nhost Auth — healthz',
+        'Auth',
         'Public health endpoint on the auth service (no tokens, no /v1/token).',
         authHealthUrl,
-        '/healthz',
       ),
     )
   } else {
     probes.push({
-      name: 'Nhost Auth — healthz',
+      name: 'Auth',
       description: 'Public auth service liveness.',
       status: 'skipped',
       latencyMs: null,
@@ -400,7 +373,6 @@ export async function runUptimeChecks(): Promise<{
           description: 'Direct GraphQL endpoint (anonymous probe).',
           status: 'error',
           latencyMs,
-          path: safePathname(hasuraUrl),
           message: json.errors?.[0]?.message || `HTTP ${res.status}`,
         })
       } else if (json.data != null && typeof json.data === 'object') {
@@ -409,7 +381,6 @@ export async function runUptimeChecks(): Promise<{
           description: 'Direct GraphQL endpoint (anonymous probe).',
           status: 'ok',
           latencyMs,
-          path: safePathname(hasuraUrl),
           message: `HTTP ${res.status}`,
         })
       } else {
@@ -418,7 +389,6 @@ export async function runUptimeChecks(): Promise<{
           description: 'Direct GraphQL endpoint (anonymous probe).',
           status: 'error',
           latencyMs,
-          path: safePathname(hasuraUrl),
           message: 'Unexpected GraphQL response shape',
         })
       }
@@ -428,7 +398,6 @@ export async function runUptimeChecks(): Promise<{
         description: 'Direct GraphQL endpoint (anonymous probe).',
         status: 'error',
         latencyMs: msSince(t0),
-        path: safePathname(hasuraUrl),
         message: e instanceof Error ? e.message : 'Request failed',
       })
     }
