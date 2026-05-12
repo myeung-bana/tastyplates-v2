@@ -568,14 +568,19 @@ class RestaurantUserService {
     user_id: string;
     limit?: number;
     offset?: number;
-  }): Promise<WishlistResponse> {
+  }, accessToken?: string): Promise<WishlistResponse> {
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('user_id', params.user_id);
       if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.offset) queryParams.append('offset', params.offset.toString());
 
-      const response = await fetch(`${this.baseUrl}/get-wishlist?${queryParams}`);
+      const headers: HeadersInit = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const response = await fetch(`${this.baseUrl}/get-wishlist?${queryParams}`, { headers });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -602,14 +607,19 @@ class RestaurantUserService {
     user_id: string;
     limit?: number;
     offset?: number;
-  }): Promise<CheckinsResponse> {
+  }, accessToken?: string): Promise<CheckinsResponse> {
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('user_id', params.user_id);
       if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.offset) queryParams.append('offset', params.offset.toString());
 
-      const response = await fetch(`${this.baseUrl}/get-checkins?${queryParams}`);
+      const headers: HeadersInit = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const response = await fetch(`${this.baseUrl}/get-checkins?${queryParams}`, { headers });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -637,7 +647,7 @@ class RestaurantUserService {
     limit?: number;
     offset?: number;
     status?: string;
-  }): Promise<ReviewsResponse> {
+  }, accessToken?: string): Promise<ReviewsResponse> {
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('user_id', params.user_id);
@@ -645,7 +655,12 @@ class RestaurantUserService {
       if (params.offset) queryParams.append('offset', params.offset.toString());
       if (params.status) queryParams.append('status', params.status);
 
-      const response = await fetch(`${this.baseUrl}/get-reviews?${queryParams}`);
+      const headers: HeadersInit = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      const response = await fetch(`${this.baseUrl}/get-reviews?${queryParams}`, { headers });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

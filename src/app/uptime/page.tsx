@@ -59,9 +59,10 @@ export default async function UptimePage() {
           <p className="mb-6 rounded-lg border border-gray-100 bg-gray-50/80 p-4 text-sm leading-relaxed text-gray-600">
             This route uses a <strong className="text-[#31343F]">minimal layout</strong> (no Nhost client), so opening it does{' '}
             <strong className="text-[#31343F]">not</strong> call <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">/v1/token</code> — useful for monitoring and debugging session noise. Probes run on the server. Before migrating traffic, confirm{' '}
-            <strong className="text-[#31343F]">Functions health</strong>, a{' '}
-            <strong className="text-[#31343F]">public read</strong>, and{' '}
-            <strong className="text-[#31343F]">Auth healthz</strong>. Configure{' '}
+            <strong className="text-[#31343F]">Functions health</strong>, at least one{' '}
+            <strong className="text-[#31343F]">public read</strong>, your{' '}
+            <strong className="text-[#31343F]">auth healthz</strong>, and that private endpoints return{' '}
+            <strong className="text-[#31343F]">401/403 as expected</strong>. Configure{' '}
             <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">NEXT_PUBLIC_NHOST_FUNCTIONS_URL</code>{' '}
             to match your Nhost dashboard (include the version segment once, e.g.{' '}
             <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">/v1</code> or{' '}

@@ -257,6 +257,11 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     const fetchWishlist = async () => {
       // Only fetch if wishlist tab is active and not already fetched
       if (activeTab !== "wishlists" || wishlistFetched) return;
+      if (!isViewingOwnProfile) {
+        setWishlist([]);
+        setWishlistFetched(true);
+        return;
+      }
       
       if (!userData?.id) return;
       
@@ -270,11 +275,16 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
       
       setWishlistLoading(true);
       try {
+        const token = await getNhostToken();
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
         const response = await restaurantUserService.getWishlist({
           user_id: userId,
           limit: 50,
           offset: 0
-        });
+        }, token);
 
         if (response.success && response.data) {
           // Extract restaurants from wishlist items
@@ -294,13 +304,18 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     fetchWishlist();
-  }, [activeTab, userData?.id, wishlistFetched]);
+  }, [activeTab, userData?.id, wishlistFetched, isViewingOwnProfile, getNhostToken]);
 
   // Fetch check-ins data - Only when checkins tab is active
   useEffect(() => {
     const fetchCheckins = async () => {
       // Only fetch if checkins tab is active and not already fetched
       if (activeTab !== "checkins" || checkinsFetched) return;
+      if (!isViewingOwnProfile) {
+        setCheckins([]);
+        setCheckinsFetched(true);
+        return;
+      }
       
       if (!userData?.id) return;
       
@@ -314,11 +329,16 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
       
       setCheckinsLoading(true);
       try {
+        const token = await getNhostToken();
+        if (!token) {
+          throw new Error('Authentication required');
+        }
+
         const response = await restaurantUserService.getCheckins({
           user_id: userId,
           limit: 50,
           offset: 0
-        });
+        }, token);
 
         if (response.success && response.data) {
           // Extract restaurants from check-in items
@@ -338,7 +358,7 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     };
 
     fetchCheckins();
-  }, [activeTab, userData?.id, checkinsFetched]);
+  }, [activeTab, userData?.id, checkinsFetched, isViewingOwnProfile, getNhostToken]);
 
   // Tab configuration with review count callback
   const tabs = [
@@ -357,23 +377,25 @@ const Profile = ({ targetUserId, targetUserIdentifier }: ProfileProps) => {
     //   label: "Listings",
     //   content: <ListingsTab targetUserId={validUserId} isViewingOwnProfile={isViewingOwnProfile} />
     // },
-    {
-      id: "wishlists",
-      label: "To-Dine List",
-      content: <WishlistsTab 
-        wishlist={wishlist} 
-        wishlistLoading={wishlistLoading} 
-        handleWishlistChange={handleWishlistChange} 
-      />
-    },
-    {
-      id: "checkins",
-      label: "Check-ins",
-      content: <CheckinsTab 
-        checkins={checkins} 
-        checkinsLoading={checkinsLoading} 
-      />
-    }
+    ...(isViewingOwnProfile ? [
+      {
+        id: "wishlists",
+        label: "To-Dine List",
+        content: <WishlistsTab 
+          wishlist={wishlist} 
+          wishlistLoading={wishlistLoading} 
+          handleWishlistChange={handleWishlistChange} 
+        />
+      },
+      {
+        id: "checkins",
+        label: "Check-ins",
+        content: <CheckinsTab 
+          checkins={checkins} 
+          checkinsLoading={checkinsLoading} 
+        />
+      }
+    ] : [])
   ];
 
   // Show error message if profile data failed to load

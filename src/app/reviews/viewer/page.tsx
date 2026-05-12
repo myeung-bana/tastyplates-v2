@@ -7,6 +7,7 @@ import { reviewV2Service } from "@/app/api/v1/services/reviewV2Service";
 import { transformReviewV2ToGraphQLReview } from "@/utils/reviewTransformers";
 import { GraphQLReview } from "@/types/graphql";
 import { useFirebaseSession } from "@/hooks/useFirebaseSession";
+import { nhost } from "@/lib/nhost";
 import { buildReviewViewerUrl, ReviewViewerSource } from "@/utils/reviewViewerUrl";
 import { HOME } from "@/constants/pages";
 
@@ -104,13 +105,19 @@ function ReviewsViewerContent() {
 
       setLoading(true);
       try {
+        const accessToken = nhost?.auth.getAccessToken() || undefined;
         let response;
         if (source.src === "global") {
           response = await reviewV2Service.getAllReviews({ limit, offset: start, signal: controller.signal });
         } else if (source.src === "restaurant") {
           response = await reviewV2Service.getReviewsByRestaurant(source.restaurantUuid, { limit, offset: start });
         } else if (source.src === "user") {
-          response = await reviewV2Service.getUserReviews(source.userId, { limit, offset: start, status: source.status });
+          response = await reviewV2Service.getUserReviews(source.userId, {
+            limit,
+            offset: start,
+            status: source.status,
+            accessToken,
+          });
         } else {
           // following
           if (!viewerUserId) {
@@ -119,7 +126,13 @@ function ReviewsViewerContent() {
             setLoading(false);
             return;
           }
-          response = await reviewV2Service.getFollowingFeed({ userId: viewerUserId, limit, offset: start, signal: controller.signal });
+          response = await reviewV2Service.getFollowingFeed({
+            userId: viewerUserId,
+            limit,
+            offset: start,
+            signal: controller.signal,
+            accessToken,
+          });
         }
 
         const transformed = (response.reviews || []).map((r: any) => transformReviewV2ToGraphQLReview(r));

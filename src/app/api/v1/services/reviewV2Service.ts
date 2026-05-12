@@ -221,6 +221,7 @@ class ReviewV2Service {
     offset?: number;
     cursor?: string;
     signal?: AbortSignal;
+    accessToken?: string;
   }): Promise<ReviewsResponse> {
     const params = new URLSearchParams({ user_id: options.userId });
     if (options.limit) params.append('limit', options.limit.toString());
@@ -230,8 +231,14 @@ class ReviewV2Service {
       params.append('offset', options.offset.toString());
     }
 
+    const headers: HeadersInit = {};
+    if (options.accessToken) {
+      headers['Authorization'] = `Bearer ${options.accessToken}`;
+    }
+
     const response = await fetch(this.feedUrl(params), {
       signal: options.signal,
+      headers,
     });
 
     if (!response.ok) {
@@ -256,14 +263,19 @@ class ReviewV2Service {
 
   async getUserReviews(
     authorId: string,
-    options?: { limit?: number; offset?: number; status?: string }
+    options?: { limit?: number; offset?: number; status?: string; accessToken?: string }
   ): Promise<ReviewsResponse> {
     const params = new URLSearchParams({ author_id: authorId });
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.offset) params.append('offset', options.offset.toString());
     if (options?.status) params.append('status', options.status);
 
-    const response = await fetch(`${this.baseUrl}/get-user-reviews?${params}`);
+    const headers: HeadersInit = {};
+    if (options?.accessToken) {
+      headers['Authorization'] = `Bearer ${options.accessToken}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}/get-user-reviews?${params}`, { headers });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to fetch user reviews' }));
       throw new Error(error.error || 'Failed to fetch user reviews');

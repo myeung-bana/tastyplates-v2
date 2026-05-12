@@ -3,6 +3,7 @@ import { useNhostSession } from '@/hooks/useNhostSession';
 import { reviewV2Service } from '@/app/api/v1/services/reviewV2Service';
 import { transformReviewV2ToGraphQLReview } from '@/utils/reviewTransformers';
 import { GraphQLReview } from '@/types/graphql';
+import { nhost } from '@/lib/nhost';
 
 interface UseFollowingReviewsGraphQLReturn {
   reviews: GraphQLReview[];
@@ -44,10 +45,12 @@ export const useFollowingReviewsGraphQL = (enabled: boolean = true): UseFollowin
     setLoading(true);
 
     try {
+      const accessToken = nhost?.auth.getAccessToken() || undefined;
       const response = await reviewV2Service.getFollowingFeed({
         userId,
         limit: append ? LOAD_MORE_LIMIT : LIMIT,
         ...(cursor ? { cursor } : { offset: 0 }),
+        accessToken,
       });
 
       const transformed = (response.reviews || []).map((review) =>

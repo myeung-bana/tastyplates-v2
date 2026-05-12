@@ -96,7 +96,7 @@ async function probeJson(
   url: string,
   path: string,
   init?: RequestInit,
-  isOk?: (json: unknown) => boolean,
+  isOk?: (json: unknown, res: Response) => boolean,
 ): Promise<ProbeResult> {
   const t0 = performance.now()
   try {
@@ -128,7 +128,7 @@ async function probeJson(
       'ok' in json &&
       (json as { ok: unknown }).ok === true
 
-    const ok = isOk ? isOk(json) : defaultOk
+    const ok = isOk ? isOk(json, res) : defaultOk
 
     if (!ok) {
       const err =
@@ -177,6 +177,11 @@ export async function runUptimeChecks(): Promise<{
 
   const healthUrl = resolveNhostFunctionsUrl('health')
   const categoriesUrl = resolveNhostFunctionsUrl('categories/get-categories?limit=1')
+  const publicReviewsUrl = resolveNhostFunctionsUrl('restaurant-reviews/get-all-reviews?limit=1')
+  const echoUrl = resolveNhostFunctionsUrl('echo')
+  const draftReviewsUrl = resolveNhostFunctionsUrl('restaurant-reviews/get-draft-reviews')
+  const wishlistUrl = resolveNhostFunctionsUrl('restaurant-users/get-wishlist?user_id=00000000-0000-0000-0000-000000000000')
+  const followingFeedUrl = resolveNhostFunctionsUrl('restaurant-reviews/get-following-feed?user_id=00000000-0000-0000-0000-000000000000&limit=1')
   const authHealthUrl = resolveNhostAuthHealthUrl()
   const functionsBaseConfigured = Boolean(healthUrl)
   const nhostAuthConfigured = Boolean(authHealthUrl)
@@ -244,6 +249,109 @@ export async function runUptimeChecks(): Promise<{
       latencyMs: null,
       message: 'Same as health — configure NEXT_PUBLIC_NHOST_FUNCTIONS_URL',
     })
+  }
+
+  if (publicReviewsUrl) {
+    probes.push(
+      await probeJson(
+        'Nhost Functions — public reviews read',
+        'Anonymous public feed should stay readable.',
+        publicReviewsUrl,
+        'restaurant-reviews/get-all-reviews?limit=1',
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        (json) => {
+          if (
+            typeof json !== 'object' ||
+            json === null ||
+            (json as { ok?: unknown }).ok !== true
+          ) {
+            return false
+          }
+          const data = (json as { data?: { reviews?: unknown } }).data
+          return Array.isArray(data?.reviews)
+        },
+      ),
+    )
+  }
+
+  if (echoUrl) {
+    probes.push(
+      await probeJson(
+        'Nhost Functions — auth guard (echo)',
+        'Unauthenticated request should be rejected with 401.',
+        echoUrl,
+        'echo',
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        (json, res) => {
+          return (
+            res.status === 401 &&
+            typeof json === 'object' &&
+            json !== null &&
+            (json as { ok?: unknown }).ok === false
+          )
+        },
+      ),
+    )
+  }
+
+  if (draftReviewsUrl) {
+    probes.push(
+      await probeJson(
+        'Nhost Functions — auth guard (draft reviews)',
+        'Draft reviews must require login.',
+        draftReviewsUrl,
+        'restaurant-reviews/get-draft-reviews',
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        (json, res) => {
+          return (
+            res.status === 401 &&
+            typeof json === 'object' &&
+            json !== null &&
+            (json as { ok?: unknown }).ok === false
+          )
+        },
+      ),
+    )
+  }
+
+  if (wishlistUrl) {
+    probes.push(
+      await probeJson(
+        'Nhost Functions — auth guard (wishlist)',
+        'User wishlist should reject anonymous access.',
+        wishlistUrl,
+        'restaurant-users/get-wishlist?user_id=<uuid>',
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        (json, res) => {
+          return (
+            res.status === 401 &&
+            typeof json === 'object' &&
+            json !== null &&
+            (json as { ok?: unknown }).ok === false
+          )
+        },
+      ),
+    )
+  }
+
+  if (followingFeedUrl) {
+    probes.push(
+      await probeJson(
+        'Nhost Functions — auth guard (following feed)',
+        'Following feed should reject anonymous access.',
+        followingFeedUrl,
+        'restaurant-reviews/get-following-feed?user_id=<uuid>',
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        (json, res) => {
+          return (
+            res.status === 401 &&
+            typeof json === 'object' &&
+            json !== null &&
+            (json as { ok?: unknown }).ok === false
+          )
+        },
+      ),
+    )
   }
 
   if (authHealthUrl) {

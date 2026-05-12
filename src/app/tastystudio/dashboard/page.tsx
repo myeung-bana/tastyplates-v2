@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useNhostSession } from '@/hooks/useNhostSession';
 import { useProfileData } from '@/hooks/useProfileData';
 import { restaurantUserService } from '@/app/api/v1/services/restaurantUserService';
+import { nhost } from '@/lib/nhost';
 import Link from 'next/link';
 import { FiEdit3, FiList, FiTrendingUp, FiClock } from 'react-icons/fi';
 import { LOGIN, TASTYSTUDIO_ADD_REVIEW, TASTYSTUDIO_REVIEW_LISTING } from '@/constants/pages';
@@ -48,6 +49,7 @@ const TastyStudioDashboard = () => {
       try {
         setStatsLoading(true);
         const userId = userData.id as string;
+        const accessToken = nhost?.auth.getAccessToken() || undefined;
 
         // Fetch all three counts in parallel
         const [totalResponse, approvedResponse, draftResponse] = await Promise.allSettled([
@@ -56,19 +58,19 @@ const TastyStudioDashboard = () => {
             limit: 1, // Only need meta.total
             offset: 0,
             // No status filter = all reviews
-          }),
+          }, accessToken),
           restaurantUserService.getReviews({
             user_id: userId,
             limit: 1,
             offset: 0,
             status: 'approved', // Published/approved reviews
-          }),
+          }, accessToken),
           restaurantUserService.getReviews({
             user_id: userId,
             limit: 1,
             offset: 0,
             status: 'draft', // Draft reviews
-          }),
+          }, accessToken),
         ]);
 
         // Process total reviews
